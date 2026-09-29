@@ -48,19 +48,19 @@ enum SharingServiceError: Error, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .notAuthenticated:
-      return "Not authenticated"
+      return String(localized: .commonErrorNotAuthenticated)
 
     case .networkError(let error):
-      return "Network error: \(error.localizedDescription)"
+      return String(localized: .commonErrorNetwork(error.localizedDescription))
 
-    case .decodingError(let error):
-      return "Failed to decode response: \(error.localizedDescription)"
+    case .decodingError:
+      return String(localized: .commonErrorUnexpectedResponse)
 
     case .httpError(_, let message):
-      return message ?? "Something went wrong. Please try again."
+      return message ?? String(localized: .commonErrorGeneric)
 
     case .noShareAccess:
-      return "No access to shared shifts"
+      return String(localized: .sharingErrorNoShareAccess)
     }
   }
 }

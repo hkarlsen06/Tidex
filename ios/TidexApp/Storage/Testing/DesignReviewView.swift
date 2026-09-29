@@ -168,7 +168,7 @@
           VStack(spacing: Spacing.lg) {
             PaySettingsReviewCard(
               isExpanded: $isPayReviewExpanded,
-              workDate: $payReviewDate, snapshots: Self.payReviewSnapshots, entries: entries,
+              workDate: $payReviewDate, snapshots: Self.payReviewSnapshots,
               currency: "kr", payrollDay: 15, halfTaxMonth: 12,
               onEdit: { snapshot, section in
                 payEditorSelection = PayEditorSelection(snapshot: snapshot, section: section)

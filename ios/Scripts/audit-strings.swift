@@ -152,7 +152,7 @@ private let allowedPatterns: [NSRegularExpression] = {
 
 private let rawLocalizationKeyPatterns: [(regex: NSRegularExpression, name: String)] = {
   let patterns: [(String, String)] = [
-    (#"String\(localized:\s*"[^"]+""#, "String(localized: \"...\")"),
+    (#"String\(\s*localized:\s*"[^"]+""#, "String(localized: \"...\")"),
     (#"LocalizedStringResource\(\s*"[^"]+""#, "LocalizedStringResource(\"...\")"),
     (#"LocalizedStringKey\("#, "LocalizedStringKey(...)"),
     (#"NSLocalizedString\(\s*"[^"]+""#, "NSLocalizedString(\"...\")"),
@@ -173,14 +173,22 @@ private let rawErrorDescriptionReturnPattern = try? NSRegularExpression(
   options: []
 )
 
+// Build output and third-party code, never scanned
+private let buildOutputPaths = [
+  ".build/",
+  "/build/",
+  "DerivedData/",
+  "SourcePackages/",
+  "/Vendor/",
+  "node_modules/",
+]
+
 // Files/directories to skip
 private let skipPaths = [
   "/Preview Content/",
   "/Previews/",
   "Tests.swift",
   "Mock",
-  ".build/",
-  "DerivedData/",
   "/Admin/",
   "DebugView.swift",
   "/Scripts/",
@@ -262,6 +270,10 @@ private func findSwiftFiles(in directory: String, includeSkippedPaths: Bool = fa
     guard file.hasSuffix(".swift") else { continue }
 
     let fullPath = (directory as NSString).appendingPathComponent(file)
+
+    if buildOutputPaths.contains(where: { fullPath.contains($0) }) {
+      continue
+    }
 
     // Skip excluded paths
     if !includeSkippedPaths, skipPaths.contains(where: { fullPath.contains($0) }) {
@@ -346,29 +358,34 @@ private func scanFileForRawLocalizationKeys(_ path: String) -> [Violation] {
     return []
   }
 
+  // Match the whole file so calls split across lines are caught too
+  let nsContent = content as NSString
+  let fullRange = NSRange(location: 0, length: nsContent.length)
+  let relativePath = path.components(separatedBy: "/ios/").last ?? path
   var violations: [Violation] = []
-  let lines = content.components(separatedBy: .newlines)
+  var flaggedLines = Set<Int>()
 
-  for (index, line) in lines.enumerated() {
-    let trimmed = line.trimmingCharacters(in: .whitespaces)
-    guard !trimmed.hasPrefix("//") else { continue }
+  for (regex, patternName) in rawLocalizationKeyPatterns {
+    for match in regex.matches(in: content, options: [], range: fullRange) {
+      let line = nsContent.substring(
+        with: nsContent.lineRange(for: NSRange(location: match.range.location, length: 0)))
+      guard !line.trimmingCharacters(in: .whitespaces).hasPrefix("//") else { continue }
 
-    let range = NSRange(line.startIndex..., in: line)
-    for (regex, patternName) in rawLocalizationKeyPatterns
-    where regex.firstMatch(in: line, options: [], range: range) != nil {
-      let relativePath = path.components(separatedBy: "/ios/").last ?? path
+      let lineNumber =
+        nsContent.substring(to: match.range.location).components(separatedBy: "\n").count
+      guard flaggedLines.insert(lineNumber).inserted else { continue }
+
       violations.append(
         Violation(
           file: relativePath,
-          line: index + 1,
+          line: lineNumber,
           code: line,
           pattern: patternName
         ))
-      break
     }
   }
 
-  return violations
+  return violations.sorted { $0.line < $1.line }
 }
 
 private func scanFileForRawErrorDescriptions(_ path: String) -> [Violation] {

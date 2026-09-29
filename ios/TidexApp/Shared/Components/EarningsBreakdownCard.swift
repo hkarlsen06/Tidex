@@ -59,55 +59,55 @@ struct EarningsBreakdownDetailCard<Content: View>: View {
   }
 }
 
-struct EarningsBreakdownDetailPrimaryRow: View {
+/// An indented two-line row under an expanded total: label and amount, then a muted detail line.
+/// Kept flat, with no card, so a list of six segments reads as one column of amounts.
+struct EarningsBreakdownDetailLine: View {
   let title: String
-  let value: String
+  let amount: String
+  let detail: String?
   var valueColor: Color = .tidexTextPrimary
+  var forcesLeftToRight: Bool = false
+
+  @Environment(\.layoutDirection) private var layoutDirection
 
   var body: some View {
-    HStack {
-      Text(title)
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextPrimary)
-
-      Spacer()
-
-      Text(value)
-        .font(.tidexLabelStrong)
-        .foregroundColor(valueColor)
-    }
-  }
-}
-
-struct EarningsBreakdownDetailSecondaryRow: View {
-  let title: String
-  let value: String?
-
-  var body: some View {
-    HStack {
-      Text(title)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-
-      Spacer()
-
-      if let value {
-        Text(value)
+    VStack(alignment: .leading, spacing: 2) {
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+        Text(title)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
+          .environment(\.layoutDirection, forcesLeftToRight ? .leftToRight : layoutDirection)
+
+        Spacer(minLength: Spacing.sm)
+
+        Text(amount)
+          .font(.tidexSubheadline)
+          .monospacedDigit()
+          .foregroundColor(valueColor)
+      }
+
+      if let detail {
+        Text(detail)
+          .font(.tidexFootnote)
+          .monospacedDigit()
+          .foregroundColor(.tidexTextMuted)
+          .environment(\.layoutDirection, forcesLeftToRight ? .leftToRight : layoutDirection)
       }
     }
+    .padding(.leading, Spacing.md)
+    .accessibilityElement(children: .combine)
   }
 }
 
 struct EarningsSupplementBreakdownDetailCard: View {
-  let title: String
+  /// Shown only when it adds information, such as "Overtime". Plain supplements need no label.
+  let title: String?
   let timeRange: String?
   let hoursAndRate: String
   let amount: String
 
   init(
-    title: String = String(localized: .shiftsSupplementLabel),
+    title: String? = nil,
     timeRange: String?,
     hoursAndRate: String,
     amount: String
@@ -119,24 +119,19 @@ struct EarningsSupplementBreakdownDetailCard: View {
   }
 
   var body: some View {
-    EarningsBreakdownDetailCard {
-      EarningsBreakdownDetailPrimaryRow(
-        title: title,
-        value: amount
+    if let timeRange {
+      EarningsBreakdownDetailLine(
+        title: [title, timeRange].compactMap { $0 }.joined(separator: " · "),
+        amount: amount,
+        detail: hoursAndRate,
+        forcesLeftToRight: true
       )
-
-      if let timeRange {
-        EarningsBreakdownDetailSecondaryRow(
-          title: timeRange,
-          value: hoursAndRate
-        )
-        .environment(\.layoutDirection, .leftToRight)
-      } else {
-        EarningsBreakdownDetailSecondaryRow(
-          title: hoursAndRate,
-          value: nil
-        )
-      }
+    } else {
+      EarningsBreakdownDetailLine(
+        title: title ?? hoursAndRate,
+        amount: amount,
+        detail: title == nil ? nil : hoursAndRate
+      )
     }
   }
 }
@@ -150,25 +145,12 @@ struct EarningsBreakDeductionDetailCard: View {
   var forcesLeftToRight: Bool = false
 
   var body: some View {
-    EarningsBreakdownDetailCard {
-      EarningsBreakdownDetailPrimaryRow(
-        title: title,
-        value: amount,
-        valueColor: valueColor
-      )
-
-      if forcesLeftToRight {
-        EarningsBreakdownDetailSecondaryRow(
-          title: detailTitle,
-          value: detailValue
-        )
-        .environment(\.layoutDirection, .leftToRight)
-      } else {
-        EarningsBreakdownDetailSecondaryRow(
-          title: detailTitle,
-          value: detailValue
-        )
-      }
-    }
+    EarningsBreakdownDetailLine(
+      title: title,
+      amount: amount,
+      detail: [detailTitle, detailValue].compactMap { $0 }.joined(separator: " · "),
+      valueColor: valueColor,
+      forcesLeftToRight: forcesLeftToRight
+    )
   }
 }

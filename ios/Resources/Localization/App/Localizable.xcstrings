@@ -306967,287 +306967,6 @@
         }
       }
     },
-    "settings.pay.review.breakOff" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا يوجد خصم تلقائي للاستراحة"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Без автоматично приспадане на почивка"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "কোনও স্বয়ংক্রিয় বিরতি কর্তন নেই"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sense deducció automàtica de les pauses"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bez automatického odečítání přestávky"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intet automatisk pausefradrag"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kein automatischer Pausenabzug"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Χωρίς αυτόματη αφαίρεση διαλείμματος"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No automatic break deduction"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se deduce automáticamente el descanso"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automaatset pauside mahaarvamist ei toimu"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "بدون کسر خودکار زمان استراحت"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ei automaattista taukovähennystä"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Walang awtomatikong kaltas para sa pahinga"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucune déduction automatique de pause"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ללא ניכוי אוטומטי של הפסקה"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कोई स्वचालित ब्रेक कटौती नहीं"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nema automatskog odbitka za pauzu"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nincs automatikus szünetlevonás"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak ada pemotongan istirahat otomatis"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enginn sjálfvirkur frádráttur vegna hlés"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessuna detrazione automatica della pausa"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動休憩控除なし"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "자동 휴게시간 공제 없음"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatinis pertraukos išskaičiavimas netaikomas"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nav automātiska pārtraukuma ieturējuma"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen automatisk pausetrekk"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Geen automatische pauzeaftrek"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen automatisk pausetrekking"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Brak automatycznego odliczania przerwy"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sem desconto automático de intervalo"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fără deducere automată pentru pauză"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Без автоматического вычета за перерыв"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bez automatického odpočítania prestávky"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Brez samodejnega odtegljaja za odmor"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nema automatskog odbitka za pauzu"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inget automatiskt pausavdrag"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hakuna makato ya mapumziko ya kiotomatiki"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "தானியங்கி இடைவேளைக் கழித்தல் இல்லை"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ไม่มีการหักเวลาพักอัตโนมัติ"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otomatik mola kesintisi yok"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Без автоматичного віднімання перерви"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "خودکار وقفے کی کٹوتی نہیں"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không tự động khấu trừ thời gian nghỉ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不自动扣除休息时间"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不自動扣除休息時間"
-          }
-        }
-      }
-    },
     "settings.pay.review.breakSummary" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -307806,287 +307525,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "薪資、津貼、休息時間和加班依工作日期計算。稅額依下個月的預定發薪日計算。"
-          }
-        }
-      }
-    },
-    "settings.pay.review.editTaxSettings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "راجع إعدادات الضرائب هذه"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Прегледайте тези настройки за данъка"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "এই কর সেটিংস দেখুন"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revisa aquestes opcions fiscals"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zkontrolovat tato daňová nastavení"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gennemgå disse skatteindstillinger"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Steuereinstellungen prüfen"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ελέγξτε αυτές τις φορολογικές ρυθμίσεις"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Review these tax settings"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revise esta configuración fiscal"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vaata need maksuseaded üle"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "این تنظیمات مالیاتی را بررسی کنید"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tarkista nämä veroasetukset"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suriin ang mga setting ng buwis na ito"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vérifier ces paramètres fiscaux"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "בדקו את הגדרות המס האלה"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "इन कर सेटिंग्स की समीक्षा करें"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pregledajte ove porezne postavke"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tekintsd át ezeket az adóbeállításokat"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinjau pengaturan pajak ini"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skoða þessar skattstillingar"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Controlla queste impostazioni fiscali"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "これらの税設定を確認"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 세금 설정 확인"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Peržiūrėkite šiuos mokesčių nustatymus"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pārskatīt šos nodokļu iestatījumus"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se disse skatteinnstillingene"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Controleer deze belastinginstellingen"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sjå over desse skatteinnstillingane"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sprawdź te ustawienia podatkowe"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revise estas configurações de impostos"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verifică aceste setări fiscale"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Проверьте эти налоговые настройки"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skontrolovať tieto daňové nastavenia"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preglejte te davčne nastavitve"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Proverite ova podešavanja poreza"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se över dessa skatteinställningar"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kagua mipangilio hii ya kodi"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "இந்த வரி அமைப்புகளைச் சரிபார்க்கவும்"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตรวจสอบการตั้งค่าภาษีเหล่านี้"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu vergi ayarlarını incele"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перегляньте ці податкові налаштування"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ان ٹیکس کی ترتیبات کا جائزہ لیں"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xem các cài đặt thuế này"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看这些税务设置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看這些稅務設定"
           }
         }
       }
@@ -309216,846 +308654,44 @@
         }
       }
     },
-    "settings.pay.review.overtimeOff" : {
+    "settings.pay.review.rules" : {
+      "comment" : "Supplements value in the pay settings date review: how many supplement rules apply, e.g. '6 rules'.",
       "extractionState" : "manual",
       "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "العمل الإضافي التلقائي متوقف"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматичният извънреден труд е изключен"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "স্বয়ংক্রিয় ওভারটাইম বন্ধ আছে"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les hores extres automàtiques estan desactivades"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatické přesčasy jsou vypnuté"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk overarbejde er slået fra"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatische Überstunden sind deaktiviert"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Η αυτόματη υπερωρία είναι απενεργοποιημένη"
-          }
-        },
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatic overtime is off"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Las horas extra automáticas están desactivadas"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automaatne ületunnitöö on välja lülitatud"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اضافه‌کاری خودکار خاموش است"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automaattinen ylityö on pois käytöstä"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Naka-off ang awtomatikong overtime"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les heures supplémentaires automatiques sont désactivées"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "שעות נוספות אוטומטיות מושבתות"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "स्वचालित ओवरटाइम बंद है"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatski prekovremeni rad je isključen"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Az automatikus túlóra ki van kapcsolva"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lembur otomatis nonaktif"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sjálfvirk yfirvinna er óvirk"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gli straordinari automatici sono disattivati"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動時間外労働はオフです"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "자동 초과 근무가 꺼져 있습니다."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatiniai viršvalandžiai išjungti"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automātiskās virsstundas ir izslēgtas"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld rule"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld rules"
+                }
+              }
+            }
           }
         },
         "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk overtid er slått av"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisch overwerk staat uit"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk overtid er slått av"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatyczne naliczanie nadgodzin jest wyłączone"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As horas extras automáticas estão desativadas"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Orele suplimentare automate sunt dezactivate"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматическая сверхурочная работа отключена"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatické nadčasy sú vypnuté"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Samodejno nadurno delo je izklopljeno"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatski prekovremeni rad je isključen"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk övertid är avstängd"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Muda wa ziada wa kiotomatiki umezimwa"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "தானியங்கி கூடுதல் நேரம் முடக்கப்பட்டுள்ளது"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ปิดการทำงานล่วงเวลาอัตโนมัติแล้ว"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otomatik fazla mesai kapalı"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматичний розрахунок понаднормових вимкнено"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "خودکار اوور ٹائم بند ہے"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã tắt tính làm thêm giờ tự động"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动加班已关闭"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動加班已關閉"
-          }
-        }
-      }
-    },
-    "settings.pay.review.overtimeSummary" : {
-      "comment" : "Overtime rule summary. %@ is a number of hours.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "بعد %@ ساعة مدفوعة أسبوعيًا في هذه الوظيفة"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "След %@ платени часа седмично на тази работа"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "এই কাজে প্রতি সপ্তাহে %@ বেতনযোগ্য ঘণ্টার পর"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Després de %@ hores remunerades a la setmana en aquesta feina"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Po %@ placených hodinách týdně na této pracovní pozici"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Efter %@ betalte timer om ugen i dette job"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nach %@ bezahlten Stunden pro Woche in diesem Job"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Μετά από %@ αμειβόμενες ώρες την εβδομάδα σε αυτήν την εργασία"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After %@ paid hours per week in this job"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Después de %@ horas pagadas por semana en este trabajo"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pärast %@ tasustatud tundi nädalas sellel töökohal"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "پس از %@ ساعت کاریِ پرداخت‌شده در هفته در این شغل"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kun tässä työssä on tehty %@ palkallista tuntia viikossa"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Matapos ang %@ oras na may bayad bawat linggo sa trabahong ito"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Après %@ heures rémunérées par semaine dans cet emploi"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "לאחר %@ שעות בתשלום בשבוע במשרה זו"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "इस जॉब में प्रति सप्ताह %@ सशुल्क घंटों के बाद"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nakon %@ plaćenih sati tjedno na ovom poslu"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Heti %@ fizetett óra után ezen a munkahelyen"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setelah %@ jam kerja berbayar per minggu pada pekerjaan ini"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eftir %@ greidda tíma á viku í þessu starfi"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dopo %@ ore retribuite a settimana in questo lavoro"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この勤務先で週 %@ 時間勤務した後"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 근무지에서 주당 %@시간의 유급 근무 후"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Po %@ apmokamų valandų per savaitę šiame darbe"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pēc %@ apmaksātām stundām nedēļā šajā darbā"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Etter %@ betalte timer per uke i denne jobben"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Na %@ betaalde uren per week in deze baan"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Etter %@ betalte timar per veke i denne jobben"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Po %@ płatnych godzinach tygodniowo w tej pracy"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Após %@ horas remuneradas por semana neste emprego"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "După %@ de ore plătite pe săptămână în acest job"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "После %@ оплачиваемых часов в неделю на этой работе"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Po %@ platených hodinách týždenne na tomto pracovnom mieste"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Po %@ plačanih urah na teden v tej službi"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nakon %@ plaćenih sati nedeljno na ovom poslu"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Efter %@ betalda timmar per vecka på det här jobbet"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Baada ya saa %@ zinazolipwa kwa wiki katika kazi hii"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "இந்தப் பணியில் வாரத்திற்கு %@ ஊதிய மணிநேரங்களுக்குப் பிறகு"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "หลังจาก %@ ชั่วโมงที่ได้รับค่าจ้างต่อสัปดาห์ในงานนี้"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu işte haftada %@ ücretli saatten sonra"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Після %@ оплачуваних годин на тиждень на цій роботі"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اس ملازمت میں فی ہفتہ %@ ادا شدہ گھنٹوں کے بعد"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sau %@ giờ làm việc được trả lương mỗi tuần trong công việc này"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在此工作中每周超过 %@ 个带薪小时后"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此工作每週超過 %@ 個計薪小時後"
-          }
-        }
-      }
-    },
-    "settings.pay.review.ruleCount" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "القواعد: %d"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Правила: %d"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "নিয়ম: %d"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regles: %d"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pravidla: %d"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regler: %d"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regeln: %d"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Κανόνες: %d"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rules: %d"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reglas: %d"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reeglid: %d"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "قوانین: %d"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Säännöt: %d"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mga panuntunan: %d"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Règles : %d"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "כללים: %d"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "नियम: %d"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pravila: %d"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Szabályok: %d"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aturan: %d"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reglur: %d"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regole: %d"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ルール: %d"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "규칙: %d"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Taisyklės: %d"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Noteikumi: %d"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regler: %d"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regels: %d"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reglar: %d"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zasady: %d"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regras: %d"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reguli: %d"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Правила: %d"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pravidlá: %d"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pravila: %d"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pravila: %d"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Regler: %d"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kanuni: %d"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "விதிகள்: %d"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "กฎ: %d"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kurallar: %d"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Правила: %d"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "قواعد: %d"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quy tắc: %d"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "规则：%d"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "規則：%d"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld regel"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld regler"
+                }
+              }
+            }
           }
         }
       }
@@ -310622,567 +309258,287 @@
         }
       }
     },
-    "settings.pay.review.taxRate" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الخصم التقديري: %@"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Прогнозирано удържане: %@"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "আনুমানিক কর কর্তন: %@"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retenció estimada: %@"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odhadovaná srážka: %@"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anslået skattetræk: %@"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Geschätzter Steuerabzug: %@"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Εκτιμώμενη παρακράτηση: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estimated deduction: %@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deducción estimada: %@"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hinnanguline maksukinnipeetav summa: %@"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "کسر مالیات برآوردی: %@"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arvioitu veronpidätys: %@"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinatayang kaltas: %@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retenue estimée : %@"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ניכוי מס משוער: %@"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अनुमानित कटौती: %@"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Procijenjeni odbitak: %@"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Becsült adólevonás: %@"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perkiraan potongan: %@"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Áætlaður skattfrádráttur: %@"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ritenuta fiscale stimata: %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "推定控除額: %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "예상 세금 공제액: %@"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Numatomas mokesčių išskaičiavimas: %@"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aprēķinātais ieturējums: %@"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anslått skattetrekk: %@"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Geschatte belastinginhouding: %@"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anslått skattetrekk: %@"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Szacowane potrącenie: %@"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desconto estimado: %@"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deducere estimată: %@"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Расчётное удержание налога: %@"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odhadovaná daňová zrážka: %@"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ocenjeni davčni odtegljaj: %@"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Procenjeni odbitak: %@"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Uppskattat skatteavdrag: %@"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Makato yanayokadiriwa: %@"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "மதிப்பிடப்பட்ட வரிப் பிடித்தம்: %@"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ยอดหักภาษีโดยประมาณ: %@"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tahmini vergi kesintisi: %@"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Орієнтовне податкове утримання: %@"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "متوقع ٹیکس کٹوتی: %@"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khoản khấu trừ ước tính: %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "预计扣款：%@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "預估扣稅：%@"
-          }
-        }
-      }
-    },
     "settings.pay.review.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "تحقّق من إعدادات الأجر ليوم معيّن"
           }
         },
         "bg" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Проверка на настройките за заплащане за дата"
           }
         },
         "bn" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "একটি তারিখের বেতন সেটিংস দেখুন"
           }
         },
         "ca" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Consulta la configuració salarial d’una data"
           }
         },
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Zkontrolovat nastavení odměny k datu"
           }
         },
         "da" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Se lønindstillinger for en dato"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Gehaltsabrechnungseinstellungen für ein Datum prüfen"
           }
         },
         "el" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Έλεγχος ρυθμίσεων αμοιβής για ημερομηνία"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check pay settings for a date"
+            "value" : "Pay settings on a date"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Consultar la configuración de pago de una fecha"
           }
         },
         "et" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Kontrolli konkreetse kuupäeva palgaseadeid"
           }
         },
         "fa" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "تنظیمات پرداخت را برای یک تاریخ بررسی کنید"
           }
         },
         "fi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Tarkista päivämäärän palkka-asetukset"
           }
         },
         "fil" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Suriin ang mga setting ng sahod para sa isang petsa"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Vérifier les paramètres de paie pour une date"
           }
         },
         "he" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "בדיקת הגדרות השכר לתאריך"
           }
         },
         "hi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "किसी तारीख की वेतन सेटिंग देखें"
           }
         },
         "hr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Provjerite postavke plaće za datum"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Fizetési beállítások ellenőrzése egy dátumra"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Periksa pengaturan gaji untuk tanggal tertentu"
           }
         },
         "is" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Skoða launastillingar fyrir ákveðinn dag"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Controlla le impostazioni di paga per una data"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "日付の給与設定を確認"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "날짜별 급여 설정 확인"
           }
         },
         "lt" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Patikrinti atlygio nustatymus pagal datą"
           }
         },
         "lv" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Pārbaudīt algas iestatījumus datumam"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sjekk hva som gjaldt på en dato"
+            "value" : "Lønnsinnstillinger på en dato"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Controleer de looninstellingen voor een datum"
           }
         },
         "nn" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Sjekk kva som gjaldt på ein dato"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Sprawdź ustawienia wynagrodzenia dla daty"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Ver configurações de pagamento de uma data"
           }
         },
         "ro" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Verifică setările de plată pentru o dată"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Проверить настройки оплаты за дату"
           }
         },
         "sk" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Skontrolovať nastavenia odmeny pre dátum"
           }
         },
         "sl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Preverite nastavitve plačila za datum"
           }
         },
         "sr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Proverite podešavanja zarade za datum"
           }
         },
         "sv" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Kontrollera löneinställningar för ett datum"
           }
         },
         "sw" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Angalia mipangilio ya malipo ya siku"
           }
         },
         "ta" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "ஒரு தேதிக்கான ஊதிய அமைப்புகளைச் சரிபார்க்கவும்"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "ตรวจสอบการตั้งค่าค่าจ้างของวันที่"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Bir tarihin ücret ayarlarını kontrol edin"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Перевірити налаштування оплати на дату"
           }
         },
         "ur" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "کسی تاریخ کی اجرت کی ترتیبات دیکھیں"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Kiểm tra cài đặt lương cho một ngày"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "查看某日期的薪资设置"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "查看某日的薪資設定"
           }
         }
-      }
+      },
+      "comment" : "Title of the collapsible card in pay settings that shows which wage, supplements, break, overtime and tax settings applied on a chosen work date."
     },
     "settings.pay.review.workDate" : {
       "extractionState" : "manual",
@@ -345203,287 +343559,6 @@
         }
       }
     },
-    "shifts.details.note.add" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف ملاحظة"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Добави бележка"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "নোট যোগ করুন"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afegeix una nota"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přidat poznámku"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tilføj note"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notiz hinzufügen"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Προσθήκη σημείωσης"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add note"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añadir nota"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lisa märkus"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "افزودن یادداشت"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lisää muistiinpano"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Magdagdag ng tala"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajouter une note"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "הוסף הערה"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "नोट जोड़ें"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj bilješku"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jegyzet hozzáadása"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tambahkan catatan"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bæta við athugasemd"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiungi nota"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモを追加"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "메모 추가"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pridėti pastabą"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pievienot piezīmi"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg til notat"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notitie toevoegen"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg til notat"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj notatkę"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adicionar nota"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adaugă notă"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Добавить заметку"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pridať poznámku"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj opombo"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj belešku"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lägg till anteckning"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ongeza dokezo"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "குறிப்பைச் சேர்"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เพิ่มบันทึก"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not ekle"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Додати нотатку"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "نوٹ شامل کریں"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thêm ghi chú"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加备注"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新增備註"
-          }
-        }
-      }
-    },
     "shifts.details.note.edit" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -356444,287 +354519,6 @@
         }
       }
     },
-    "shifts.pause.section.deductedLabel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "المخصوم"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Приспаднато"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "কাটা হয়েছে"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deduït"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odečteno"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fratrukket"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abgezogen"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Αφαιρέθηκε"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deducted"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deducido"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Maha arvatud"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "کسرشده"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vähennetty"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Binawas"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Déduit"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "נוכה"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "काटा गया"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odbijeno"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Levonva"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dikurangi"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dregið frá"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Detratto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "控除済み"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "차감됨"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Išskaičiuota"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ieturēts"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trukket"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afgetrokken"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trekt frå"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odjęto"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Descontado"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scăzut"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вычтено"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odpočítané"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Odšteto"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Oduzeto"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avdraget"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Imekatwa"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "கழிக்கப்பட்டது"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "หักแล้ว"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Düşülen"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вирахувано"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "منہا شدہ"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã trừ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已扣除"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已扣除"
-          }
-        }
-      }
-    },
     "shifts.pause.section.editWindows" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -357002,1692 +354796,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "編輯休息時段"
-          }
-        }
-      }
-    },
-    "shifts.pause.section.summary.addHint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف أوقات استراحة دقيقة إذا أردت أن تستخدم هذه الوردية فترات الاستراحة المحفوظة بدلًا من قاعدة الاستراحة التلقائية."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Добавете точни паузи, ако искате тази смяна да ползва запазени паузи вместо автоматичното правило за почивка."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "এই শিফটে স্বয়ংক্রিয় বিরতি নিয়মের বদলে সংরক্ষিত বিরতি ব্যবহার করতে চাইলে নির্দিষ্ট বিরতির সময়সীমা যোগ করুন।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afegeix pauses exactes si vols que aquest torn faci servir pauses desades en lloc de la regla automàtica de descans."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přidejte přesné časy pauz, pokud má tato směna použít uložené pauzy místo automatického pravidla přestávky."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tilføj præcise pausetider, hvis denne vagt skal bruge gemte pauser i stedet for den automatiske pauseregel."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Füge genaue Pausenfenster hinzu, wenn diese Schicht gespeicherte Pausen statt der automatischen Pausenregel verwenden soll."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Προσθέστε ακριβή διαστήματα διαλείμματος αν θέλετε αυτή η βάρδια να χρησιμοποιεί αποθηκευμένα διαλείμματα αντί για τον αυτόματο κανόνα διαλείμματος."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add exact pause windows if you want this shift to use saved pauses instead of the automatic break rule."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añade pausas exactas si quieres que este turno use pausas guardadas en lugar de la regla automática de descanso."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lisa täpsed pausiajad, kui soovid, et see vahetus kasutaks automaatse pausireegli asemel salvestatud pause."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اگر می‌خواهید این شیفت به‌جای قانون خودکار کسر استراحت از استراحت‌های ذخیره‌شده استفاده کند، بازه‌های دقیق استراحت را اضافه کنید."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lisää tarkat taukoajat, jos haluat tämän vuoron käyttävän tallennettuja taukoja automaattisen taukosäännön sijaan."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Magdagdag ng eksaktong oras ng pahinga kung gusto mong gamitin ng shift na ito ang mga naka-save na pahinga sa halip na ang awtomatikong tuntunin ng pahinga."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajoutez des pauses exactes si vous voulez que ce service utilise les pauses enregistrées au lieu de la règle de pause automatique."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "הוסף זמני הפסקה מדויקים אם ברצונך שהמשמרת הזו תשתמש בהפסקות שמורות במקום בכלל הניכוי האוטומטי."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अगर आप चाहते हैं कि यह शिफ्ट स्वचालित ब्रेक नियम के बजाय सहेजे गए विराम इस्तेमाल करे, तो सटीक विराम समय जोड़ें।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodajte točne intervale pauze ako želite da ova smjena koristi spremljene pauze umjesto automatskog pravila pauze."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adjon meg pontos szünetidőket, ha azt szeretné, hogy ez a műszak a mentett szüneteket használja az automatikus szünetszabály helyett."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tambahkan waktu jeda yang tepat jika Anda ingin shift ini memakai jeda tersimpan, bukan aturan istirahat otomatis."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bættu við nákvæmum pásutímum ef þú vilt að þessi vakt noti vistaðar pásur í stað sjálfvirku pásureglunnar."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiungi fasce di pausa esatte se vuoi che questo turno usi le pause salvate invece della regola automatica della pausa."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このシフトで自動休憩ルールではなく保存済み休憩を使う場合は、正確な休憩時間を追加してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 근무에 자동 휴게 규칙 대신 저장된 휴게를 사용하려면 정확한 휴게 시간을 추가하세요."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pridėkite tikslius pertraukos laikus, jei norite, kad ši pamaina naudotų išsaugotas pertraukas vietoj automatinės pertraukų taisyklės."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pievienojiet precīzus pauzes laikus, ja vēlaties, lai šī maiņa izmantotu saglabātās pauzes automātiskā pārtraukuma noteikuma vietā."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg til eksakte pausetider hvis du vil at denne vakten skal bruke lagrede pauser i stedet for den automatiske pauseregelen."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voeg exacte pauzetijden toe als je wilt dat deze dienst opgeslagen pauzes gebruikt in plaats van de automatische pauzeregel."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg til eksakte pausetider viss du vil at denne vakta skal bruke lagra pausar i staden for den automatiske pauseregelen."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj dokładne okna przerw, jeśli chcesz, aby ta zmiana używała zapisanych przerw zamiast automatycznej reguły przerw."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adicione pausas exatas se quiser que este turno use pausas salvas em vez da regra automática de intervalo."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adaugă intervale exacte de pauză dacă vrei ca această tură să folosească pauzele salvate în locul regulii automate de pauză."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Добавьте точные интервалы перерыва, если хотите, чтобы для этой смены использовались сохранённые перерывы вместо автоматического правила перерыва."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pridajte presné časy prestávok, ak má táto zmena použiť uložené prestávky namiesto automatického pravidla prestávky."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodajte točne intervale odmora, če želite, da ta izmena uporablja shranjene odmore namesto samodejnega pravila odmora."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj tačna vremena pauze ako želiš da ova smena koristi sačuvane pauze umesto automatskog pravila pauze."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lägg till exakta paustider om du vill att detta pass ska använda sparade pauser i stället för den automatiska pausregeln."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ongeza nyakati halisi za pausa ikiwa unataka zamu hii itumie pausa zilizohifadhiwa badala ya sheria ya mapumziko ya kiotomatiki."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "இந்த ஷிப்ட் தானியங்கி இடைவேளை விதிக்கு பதிலாக சேமித்த இடைவேளைகளைப் பயன்படுத்த வேண்டுமெனில், துல்லியமான இடைவேளை நேரங்களைச் சேர்க்கவும்."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เพิ่มช่วงพักที่แน่นอน หากต้องการให้กะนี้ใช้ช่วงพักที่บันทึกไว้แทนกฎหักพักอัตโนมัติ"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu vardiyada otomatik mola kuralı yerine kayıtlı molaların kullanılması için kesin mola aralıkları ekleyin."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Додайте точні інтервали пауз, якщо хочете, щоб ця зміна використовувала збережені паузи замість автоматичного правила перерви."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اگر آپ چاہتے ہیں کہ یہ شفٹ خودکار وقفہ اصول کے بجائے محفوظ شدہ وقفے استعمال کرے تو درست وقفے کے اوقات شامل کریں۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thêm khoảng nghỉ cụ thể nếu bạn muốn ca này dùng các khoảng nghỉ đã lưu thay cho quy tắc nghỉ tự động."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果希望此班次使用已保存的休息时段而非自动休息规则，请添加精确休息时段。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "若要此班次使用已儲存的休息時段而非自動休息規則，請新增精確休息時段。"
-          }
-        }
-      }
-    },
-    "shifts.pause.section.summary.automaticApplied" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يُطبّق خصم الاستراحة التلقائي من إعدادات الأجر الخاصة بك."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматичното приспадане на почивка се прилага от настройките ви за заплащане."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "আপনার পে সেটিংস থেকে স্বয়ংক্রিয় বিরতি কর্তন প্রয়োগ করা হয়েছে।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La deducció automàtica de descans s'aplica des de la configuració de sou."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatický odpočet přestávky se použije z nastavení mzdy."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk pausefradrag anvendes fra dine lønindstillinger."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der automatische Pausenabzug wird aus deinen Lohneinstellungen angewendet."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Η αυτόματη αφαίρεση διαλείμματος εφαρμόζεται από τις ρυθμίσεις αμοιβής σας."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatic break deduction is applied from your pay settings."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La deducción automática de descansos se aplica desde tus ajustes de pago."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automaatne pausi mahaarvamine rakendub sinu palgaseadetest."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "کسر خودکار استراحت از تنظیمات پرداخت شما اعمال می‌شود."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automaattinen taukovähennys käytetään palkka-asetuksistasi."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inilalapat ang awtomatikong bawas sa pahinga mula sa iyong mga setting ng sahod."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La déduction de pause automatique est appliquée depuis vos réglages de paie."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ניכוי הפסקה אוטומטי מוחל מהגדרות השכר שלך."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "स्वचालित ब्रेक कटौती आपकी वेतन सेटिंग्स से लागू होती है।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatski odbitak pauze primjenjuje se iz vaših postavki plaće."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Az automatikus szünetlevonás a fizetési beállításokból érvényesül."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Potongan istirahat otomatis diterapkan dari pengaturan gaji Anda."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sjálfvirkur pásufrádráttur er notaður úr launastillingunum þínum."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La detrazione automatica della pausa viene applicata dalle impostazioni di paga."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動休憩控除は給与設定から適用されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "자동 휴게 차감은 급여 설정에서 적용됩니다."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatinis pertraukos išskaitymas taikomas pagal jūsų atlygio nustatymus."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automātiskā pārtraukuma atvilkums tiek piemērots no jūsu algas iestatījumiem."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk pausetrekk brukes fra lønnsinnstillingene dine."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatische pauzeaftrek wordt toegepast vanuit je looninstellingen."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk pausetrekk blir brukt frå lønsinnstillingane dine."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatyczne odliczanie przerw jest stosowane z ustawień płacy."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O desconto automático de intervalo é aplicado das suas configurações salariais."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scăderea automată a pauzei se aplică din setările de plată."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматический вычет перерыва применяется из ваших настроек оплаты."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatické odpočítanie prestávky sa uplatňuje podľa nastavení mzdy."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Samodejni odštevek odmora se uporabi iz vaših nastavitev plačila."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatski odbitak pauze primenjuje se iz tvojih podešavanja plate."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatiskt pausavdrag används från dina löneinställningar."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ukataji wa mapumziko wa kiotomatiki hutumika kutoka kwa mipangilio yako ya malipo."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "உங்கள் ஊதிய அமைப்புகளிலிருந்து தானியங்கி இடைவேளை கழிப்பு பயன்படுத்தப்படுகிறது."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ใช้การหักพักอัตโนมัติตามการตั้งค่าค่าจ้างของคุณ"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otomatik mola kesintisi ödeme ayarlarınızdan uygulanır."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматичне вирахування перерви застосовується з ваших налаштувань оплати."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "خودکار وقفہ کٹوتی آپ کی تنخواہ کی ترتیبات سے لاگو ہوتی ہے۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khấu trừ nghỉ tự động được áp dụng từ cài đặt lương của bạn."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动休息扣除将按你的薪资设置应用。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "將套用你薪資設定中的自動休息扣除。"
-          }
-        }
-      }
-    },
-    "shifts.pause.section.summary.automaticAppliedOwner" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يُطبق خصم الاستراحة التلقائي من إعدادات الدفع الخاصة بـ %@."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматичното приспадане на почивка се прилага от настройките за заплащане на %@."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@-এর বেতন সেটিংস থেকে স্বয়ংক্রিয় বিরতি কর্তন প্রযোজ্য।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La deducció automàtica de pausa s'aplica des dels ajustos de sou de %@."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatický odpočet přestávky se použije z nastavení mzdy uživatele %@."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk pausefradrag bruges fra %@s lønindstillinger."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatischer Pausenabzug wird aus den Lohneinstellungen von %@ angewendet."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Η αυτόματη αφαίρεση διαλείμματος εφαρμόζεται από τις ρυθμίσεις πληρωμής του %@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatic break deduction is applied from %@'s pay settings."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La deducción automática de pausa se aplica desde los ajustes salariales de %@."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automaatne pausi mahaarvamine rakendub %@ palgaseadetest."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "کسر خودکار استراحت از تنظیمات حقوق %@ اعمال می‌شود."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automaattinen taukovähennys käytetään %@:n palkka-asetuksista."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ilalapat ang awtomatikong bawas sa break mula sa mga setting ng sahod ni %@."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La déduction automatique de pause est appliquée depuis les réglages de paie de %@."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ניכוי הפסקה אוטומטי מוחל מהגדרות השכר של %@."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ की वेतन सेटिंग्स से स्वचालित ब्रेक कटौती लागू है।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatski odbitak pauze primjenjuje se iz postavki plaće za %@."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Az automatikus szünetlevonás %@ bérbeállításaiból érvényesül."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Potongan istirahat otomatis diterapkan dari pengaturan gaji %@."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sjálfvirkur pásudráttur er notaður úr launastillingum %@."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La detrazione automatica della pausa viene applicata dalle impostazioni di paga di %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動休憩控除は%@の給与設定から適用されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "자동 휴게 차감은 %@의 급여 설정에서 적용됩니다."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatinis pertraukos atskaitymas taikomas pagal %@ atlygio nustatymus."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automātiskais pārtraukuma atvilkums tiek piemērots no %@ algas iestatījumiem."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk pausetrekk brukes fra lønnsinnstillingene til %@."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatische pauzeaftrek wordt toegepast vanuit de looninstellingen van %@."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisk pausetrekk blir brukt frå lønsinnstillingane til %@."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatyczne odliczenie przerwy jest stosowane z ustawień płacy %@."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O desconto automático de pausa é aplicado nas configurações de pagamento de %@."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deducerea automată a pauzei se aplică din setările de plată ale lui %@."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматический вычет перерыва применяется из настроек оплаты %@."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatický odpočet prestávky sa použije z nastavení mzdy používateľa %@."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Samodejni odbitek odmora se uporabi iz nastavitev plačila za %@."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatski odbitak za pauzu se primenjuje iz podešavanja plate za %@."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatiskt pausavdrag används från %@s löneinställningar."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Makato ya mapumziko ya kiotomatiki yanatumika kutoka mipangilio ya malipo ya %@."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "தானியங்கி இடைவேளை கழிவு %@-இன் ஊதிய அமைப்புகளில் இருந்து பயன்படுத்தப்படுகிறது."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ใช้การหักเวลาพักอัตโนมัติตามการตั้งค่าค่าจ้างของ %@"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otomatik mola kesintisi, %@ için ücret ayarlarından uygulanır."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автоматичне вирахування перерви застосовується з налаштувань оплати %@."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "خودکار وقفہ کٹوتی %@ کی تنخواہ کی ترتیبات سے لاگو ہوتی ہے۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khấu trừ nghỉ tự động được áp dụng từ cài đặt lương của %@."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动扣除休息时间将应用 %@ 的薪资设置。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動扣除休息時間將套用 %@ 的薪資設定。"
-          }
-        }
-      }
-    },
-    "shifts.pause.section.summary.customOverride" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تتجاوز أوقات الاستراحة المخصصة قاعدة الاستراحة التلقائية لهذه الوردية."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Персонализираните паузи заменят автоматичното правило за почивка за тази смяна."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "কাস্টম বিরতির সময়সীমা এই শিফটের জন্য স্বয়ংক্রিয় বিরতি নিয়ম ওভাররাইড করে।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les pauses personalitzades substitueixen la regla automàtica de descans d'aquest torn."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vlastní časy pauz přepisují automatické pravidlo přestávky pro tuto směnu."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Brugerdefinerede pausetider tilsidesætter den automatiske pauseregel for denne vagt."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Benutzerdefinierte Pausenfenster überschreiben die automatische Pausenregel für diese Schicht."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Τα προσαρμοσμένα διαστήματα διαλείμματος παρακάμπτουν τον αυτόματο κανόνα διαλείμματος για αυτή τη βάρδια."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom pause windows override the automatic break rule for this shift."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Las pausas personalizadas anulan la regla automática de descanso de este turno."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kohandatud pausiajad tühistavad selle vahetuse automaatse pausireegli."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "بازه‌های سفارشی استراحت قانون خودکار کسر استراحت را برای این شیفت نادیده می‌گیرند."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mukautetut taukoajat ohittavat tämän vuoron automaattisen taukosäännön."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ang custom na oras ng pahinga ay nag-o-override sa awtomatikong tuntunin ng pahinga para sa shift na ito."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les pauses personnalisées remplacent la règle de pause automatique pour ce service."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "זמני הפסקה מותאמים אישית עוקפים את כלל הניכוי האוטומטי למשמרת הזו."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कस्टम विराम समय इस शिफ्ट के लिए स्वचालित ब्रेक नियम को ओवरराइड करते हैं।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prilagođeni intervali pauze nadjačavaju automatsko pravilo pauze za ovu smjenu."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Az egyéni szünetidők felülbírálják az automatikus szünetszabályt ennél a műszaknál."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Waktu jeda khusus mengganti aturan istirahat otomatis untuk shift ini."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sérsniðnir pásutímar yfirskrifa sjálfvirku pásuregluna fyrir þessa vakt."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le fasce di pausa personalizzate ignorano la regola automatica della pausa per questo turno."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カスタム休憩時間はこのシフトの自動休憩ルールを上書きします。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "사용자 지정 휴게 시간은 이 근무의 자동 휴게 규칙을 덮어씁니다."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pasirinkti pertraukos laikai nepaiso automatinės pertraukų taisyklės šiai pamainai."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pielāgoti pauzes laiki ignorē automātisko pārtraukuma noteikumu šai maiņai."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Egendefinerte pausetider overstyrer den automatiske pauseregelen for denne vakten."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aangepaste pauzetijden overschrijven de automatische pauzeregel voor deze dienst."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eigendefinerte pausetider overstyrer den automatiske pauseregelen for denne vakta."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Własne okna przerw zastępują automatyczną regułę przerw dla tej zmiany."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausas personalizadas substituem a regra automática de intervalo neste turno."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervalele personalizate de pauză înlocuiesc regula automată de pauză pentru această tură."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Пользовательские интервалы перерыва переопределяют автоматическое правило перерыва для этой смены."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vlastné časy prestávok prepíšu automatické pravidlo prestávky pre túto zmenu."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervali odmora po meri preglasijo samodejno pravilo odmora za to izmeno."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prilagođena vremena pauze zamenjuju automatsko pravilo pauze za ovu smenu."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anpassade paustider åsidosätter den automatiska pausregeln för detta pass."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nyakati maalum za pausa hubatilisha sheria ya mapumziko ya kiotomatiki kwa zamu hii."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "தனிப்பயன் இடைவேளை நேரங்கள் இந்த ஷிப்டுக்கான தானியங்கி இடைவேளை விதியை மீறும்."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ช่วงพักแบบกำหนดเองจะแทนที่กฎหักพักอัตโนมัติสำหรับกะนี้"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Özel mola aralıkları bu vardiyada otomatik mola kuralını geçersiz kılar."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Користувацькі вікна пауз перевизначають автоматичне правило перерви для цієї зміни."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "حسبِ ضرورت وقفے کے اوقات اس شفٹ کے لیے خودکار وقفہ اصول کو بدل دیتے ہیں۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khoảng nghỉ tùy chỉnh sẽ ghi đè quy tắc nghỉ tự động cho ca này."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自定义休息时段会覆盖此班次的自动休息规则。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自訂休息時段會覆蓋此班次的自動休息規則。"
-          }
-        }
-      }
-    },
-    "shifts.pause.section.summary.savedOnShift" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أوقات الاستراحة هذه محفوظة على الوردية."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Тези паузи са запазени към смяната."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "এই বিরতির সময়সীমাগুলো শিফটে সংরক্ষিত আছে।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aquestes pauses es desen al torn."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tyto časy pauz jsou uloženy ve směně."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disse pausetider er gemt på vagten."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Pausenfenster sind in der Schicht gespeichert."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Αυτά τα διαστήματα διαλείμματος έχουν αποθηκευτεί στη βάρδια."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "These pause windows are saved on the shift."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estas pausas están guardadas en el turno."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Need pausiajad on vahetusele salvestatud."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "این بازه‌های استراحت روی شیفت ذخیره شده‌اند."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nämä taukoajat on tallennettu vuorolle."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Naka-save sa shift ang mga oras ng pahinga na ito."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ces pauses sont enregistrées sur le service."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "זמני ההפסקה האלה נשמרים במשמרת."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ये विराम समय शिफ्ट में सहेजे गए हैं।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ovi intervali pauze spremljeni su na smjeni."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ezek a szünetidők a műszakhoz vannak mentve."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Waktu jeda ini disimpan pada shift."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Þessir pásutímar eru vistaðir á vaktinni."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Queste fasce di pausa sono salvate nel turno."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "これらの休憩時間はシフトに保存されています。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 휴게 시간은 근무에 저장됩니다."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Šie pertraukos laikai išsaugoti pamainoje."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Šie pauzes laiki ir saglabāti pie maiņas."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disse pausetidene er lagret på vakten."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deze pauzetijden zijn opgeslagen bij de dienst."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desse pausetidene er lagra på vakta."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Te okna przerw są zapisane przy zmianie."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estas pausas estão salvas no turno."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aceste intervale de pauză sunt salvate în tură."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Эти интервалы перерыва сохранены в смене."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tieto časy prestávok sú uložené pri zmene."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ti intervali odmora so shranjeni pri izmeni."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ova vremena pauze su sačuvana u smeni."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dessa paustider är sparade på passet."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nyakati hizi za pausa zimehifadhiwa kwenye zamu."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "இந்த இடைவேளை நேரங்கள் ஷிப்டில் சேமிக்கப்பட்டுள்ளன."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ช่วงพักเหล่านี้ถูกบันทึกไว้ในกะ"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu mola aralıkları vardiyaya kaydedilir."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ці вікна пауз збережені у зміні."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "یہ وقفے کے اوقات شفٹ پر محفوظ ہیں۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Các khoảng nghỉ này được lưu trên ca làm."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这些休息时段已保存在班次中。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這些休息時段已儲存在班次中。"
-          }
-        }
-      }
-    },
-    "shifts.pause.section.windowsLabel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أوقات الاستراحة"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Паузи"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "বিরতির সময়সীমা"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pauses"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Časy pauz"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausetider"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausenfenster"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Διαστήματα διαλείμματος"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pause windows"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausas"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausiajad"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "بازه‌های استراحت"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Taukoajat"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mga oras ng pahinga"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pauses"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "זמני הפסקה"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "विराम समय"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervali pauze"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Szünetidők"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Waktu jeda"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pásutímar"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fasce di pausa"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "休憩時間"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "휴게 시간"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pertraukos laikai"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pauzes laiki"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausetider"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pauzetijden"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausetider"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Okna przerw"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausas"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervale de pauză"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Интервалы перерыва"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Časy prestávok"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Intervali odmora"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vremena pauze"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paustider"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nyakati za pausa"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "இடைவேளை நேரங்கள்"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ช่วงพัก"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mola aralıkları"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вікна пауз"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "وقفے کے اوقات"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khoảng nghỉ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "休息时段"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "休息時段"
           }
         }
       }
@@ -360093,287 +356201,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重複班次"
-          }
-        }
-      }
-    },
-    "shifts.recurringShiftDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "هذه النوبة جزء من نوبة متكررة"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Тази смяна е част от повтаряща се смяна"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "এই শিফটটি একটি পুনরাবৃত্ত শিফটের অংশ"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aquesta vàcua és part d'una vàcua recurrent"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tato směna je součástí pravidelné směny"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Denne vagt er en del af en fast vagt"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Schicht ist Teil einer wiederkehrenden Schicht"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Αυτή η βάρδια είναι μέρος μιας επαναλαμβανόμενης βάρδιας"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This shift is part of a recurring shift"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esta vakt es parte de una vakt recurrente"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "See vahetus on osa korduvasest vahetus'est"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "این شیفت بخشی از یک شیفت تکراری است"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tämä vuoro on osa jaksoittaista vuoroa"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ang shift na ito ay bahagi ng paulit-ulit na shift"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cette vaction fait partie d'une vaction récurrente"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "שיבוץ זה הוא חלק משיבוץ חוזר"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "यह शिफ्ट एक आवर्ती शिफ्ट का हिस्सा है"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ova smjena je dio ponavljajuće smjene"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ez a műszak egy ismétlődő műszak része"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vakt ini adalah bagian dari vakt berulang"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Þessi vakt er hluti af endurtekinni vakt"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Questa vakt fa parte di una vakt ricorrente"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このシフトは固定シフトの一部です"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 근무는 반복 근무의 일부입니다"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Šis darbas yra pasikartojančio darbo dalis"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Šī maiņa ir daļa no atkārtojošās maiņas"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Denne vakten er en del av en fast vakt"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deze dienst hoort bij een terugkerende dienst"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Denne vakten er ein del av ei fast vakt"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ta zmiana jest częścią powtarzającej się zmiany"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Este turno faz parte de um turno recorrente"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acest schimb face parte din schimbul recurent"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Эта смена является частью повторяющейся смены"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Táto zmena je súčasťou pravidelnej zmeny"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ta izmena je del ponavljajoče izmene"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ova smena je dio ponavljajuće smene"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Detta arbetspass är en del av ett återkommande arbetspass"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zamu hii ni sehemu ya zamu inayorudia"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "இந்த shift மீண்டும் வரும் shift இன் பகுதியாகும்"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "การเลื่อนเวลานี้เป็นส่วนหนึ่งของการเลื่อนเวลาปกติ"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu vardiya, tekrarlanan bir vardiyasının parçası"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ця зміна є частиною повторюваної зміни"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "یہ شفٹ ایک بار بار آنے والی شفٹ کا حصہ ہے"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ca làm việc này là một phần của ca làm việc định kỳ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此班次是循环班次的一部分"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此班次是重複班次的一部分"
           }
         }
       }
@@ -392418,9 +388245,7 @@
         }
       }
     },
-    "To change who is in the share, delete it and create a new one." : {
-
-    },
+    "To change who is in the share, delete it and create a new one." : {},
     "Used %@" : {
       "localizations" : {
         "ar" : {
@@ -397477,6 +393302,1644 @@
           }
         }
       }
+    },
+    "shifts.details.breakRow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Break"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      },
+      "comment" : "Row title in the shift details sheet for the shift's break. Tapping opens the pause editor."
+    },
+    "settings.pay.review.off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Av"
+          }
+        }
+      },
+      "comment" : "Short value in the pay settings date review when a setting (break deduction, overtime or tax) is turned off."
+    },
+    "settings.pay.review.breakShort" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ after %2$@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ etter %2$@"
+          }
+        }
+      },
+      "comment" : "Short break deduction value in the pay settings date review. First argument is the unpaid break, e.g. '30 min'. Second is the shift length that triggers it, e.g. '5.5 hr'."
+    },
+    "settings.pay.review.overtimeShort" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After %@ a week"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etter %@ i uka"
+          }
+        }
+      },
+      "comment" : "Short overtime value in the pay settings date review. Argument is the weekly paid hours after which overtime starts, e.g. '37.5 hr'."
+    },
+    "settings.pay.review.taxPayday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payday %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lønningsdag %@"
+          }
+        }
+      },
+      "comment" : "Subtitle under the tax deduction row in the pay settings date review. Argument is the payday date whose tax settings apply, e.g. '10 August 2026'."
+    },
+    "settings.pay.review.taxRateHalf" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, half tax"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, halv skatt"
+          }
+        }
+      },
+      "comment" : "Tax deduction value in the pay settings date review when the payout month uses half tax. Argument is the percentage, e.g. '32 %'."
+    },
+    "common.month" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Month"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Måned"
+          }
+        }
+      },
+      "comment" : "Accessibility label for the month wheel in the month picker"
+    },
+    "common.year" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Year"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "År"
+          }
+        }
+      },
+      "comment" : "Accessibility label for the year wheel in the month picker"
+    },
+    "common.error.generic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something went wrong. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noe gikk galt. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Fallback error when the server gives no message"
+    },
+    "common.error.network" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network error: %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nettverksfeil: %@"
+          }
+        }
+      },
+      "comment" : "Network failure. %@ is the system's description of the connection problem"
+    },
+    "common.error.unexpectedResponse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server sent an unexpected response. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serveren sendte et uventet svar. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "The server replied with data the app could not read"
+    },
+    "sharing.error.noShareAccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You don't have access to these shared shifts."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du har ikke tilgang til disse delte vaktene."
+          }
+        }
+      },
+      "comment" : "Shown when the user opens shared shifts they no longer have access to"
+    },
+    "stats.error.computationFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't calculate your stats. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke beregne statistikken. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Stats screen error when calculating statistics fails"
+    },
+    "settings.pay.error.noTariffVersions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No rates found for this collective agreement."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fant ingen satser for denne tariffavtalen."
+          }
+        }
+      },
+      "comment" : "Pay settings error when no rates exist for the selected collective agreement"
+    },
+    "settings.pay.error.jobNameEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a name for the job."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv inn et navn på jobben."
+          }
+        }
+      },
+      "comment" : "Validation error when saving a job without a name"
+    },
+    "settings.pay.error.jobNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't find this job."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fant ikke jobben."
+          }
+        }
+      },
+      "comment" : "Error when the selected job no longer exists"
+    },
+    "settings.pay.error.jobDeleted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This job has been deleted."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jobben er slettet."
+          }
+        }
+      },
+      "comment" : "Error when acting on a job that was deleted"
+    },
+    "settings.pay.error.tariffCurrencyLocked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can't change the currency for a job that uses collective-agreement rates."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan ikke endre valuta for en jobb som bruker tariffsatser."
+          }
+        }
+      },
+      "comment" : "Error when changing currency on a job paid by collective-agreement rates"
+    },
+    "settings.pay.error.cannotArchiveLastActiveJob" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can't archive your only active job."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan ikke arkivere den eneste aktive jobben."
+          }
+        }
+      },
+      "comment" : "Error when archiving the user's only active job"
+    },
+    "settings.pay.error.cannotArchiveDefaultJob" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set another job as default before archiving this one."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg en annen jobb som standard før du arkiverer denne."
+          }
+        }
+      },
+      "comment" : "Error when archiving the default job"
+    },
+    "settings.pay.error.cannotDeleteDefaultJob" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set another job as default before deleting this one."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg en annen jobb som standard før du sletter denne."
+          }
+        }
+      },
+      "comment" : "Error when deleting the default job"
+    },
+    "settings.pay.error.cannotSetInactiveDefault" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An archived or deleted job can't be the default."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En arkivert eller slettet jobb kan ikke være standard."
+          }
+        }
+      },
+      "comment" : "Error when making an archived or deleted job the default"
+    },
+    "addShift.error.jobNotAvailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose an active job before adding a shift."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg en aktiv jobb før du legger til en vakt."
+          }
+        }
+      },
+      "comment" : "Add Shift error when no active job is selected"
+    },
+    "addShift.error.paySetupRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish pay setup for this job before adding shifts."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fullfør lønnsoppsettet for denne jobben før du legger til vakter."
+          }
+        }
+      },
+      "comment" : "Add Shift error when the selected job has no pay setup"
+    },
+    "login.passkey.errors.unexpectedResponse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The passkey request returned an unexpected response. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passnøkkelforespørselen ga et uventet svar. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Passkey sign-in or registration got data the app could not read"
+    },
+    "login.passkey.errors.noWindow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't show the passkey prompt. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke vise passnøkkelvinduet. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "The app could not show the system passkey sheet"
+    },
+    "login.passkey.errors.inProgress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A passkey request is already in progress."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En passnøkkelforespørsel pågår allerede."
+          }
+        }
+      },
+      "comment" : "User started a second passkey request while one is running"
+    },
+    "login.passkey.errors.timedOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The passkey request timed out. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passnøkkelforespørselen ble tidsavbrutt. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Passkey request took too long"
+    },
+    "login.passkey.errors.notHandled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No passkey provider could handle this request."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen passnøkkelleverandør kunne håndtere forespørselen."
+          }
+        }
+      },
+      "comment" : "No password manager on the device handled the passkey request"
+    },
+    "login.passkey.errors.notInteractive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkeys aren't available right now. Try again in a moment."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passnøkler er ikke tilgjengelige akkurat nå. Prøv igjen om litt."
+          }
+        }
+      },
+      "comment" : "The system can't show a passkey prompt right now"
+    },
+    "login.passkey.errors.alreadyRegistered" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This passkey is already registered."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne passnøkkelen er allerede registrert."
+          }
+        }
+      },
+      "comment" : "User tried to add a passkey that is already on the account"
+    },
+    "login.passkey.errors.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkey authentication failed. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passnøkkelautentiseringen mislyktes. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Generic passkey sign-in or registration failure"
+    },
+    "onboarding.wage.level" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Level %lld"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lønnstrinn %lld"
+          }
+        }
+      },
+      "comment" : "Collective-agreement wage level name. %lld is the level number"
+    },
+    "onboarding.wage.level.under16" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under 16"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under 16"
+          }
+        }
+      },
+      "comment" : "Youth wage rate for workers under 16 years old"
+    },
+    "auth.error.invalidLoginCredentials" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid email or password"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig e-post eller passord"
+          }
+        }
+      },
+      "comment" : "Sign-in error: wrong email or password"
+    },
+    "auth.error.emailNotConfirmed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email address is not confirmed"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-postadressen er ikke bekreftet"
+          }
+        }
+      },
+      "comment" : "Sign-in error: email address not confirmed yet"
+    },
+    "auth.error.userAlreadyRegistered" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User is already registered"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brukeren er allerede registrert"
+          }
+        }
+      },
+      "comment" : "Sign-up error: account already exists"
+    },
+    "auth.error.passwordMin6" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password must be at least 6 characters"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passordet må være minst 6 tegn"
+          }
+        }
+      },
+      "comment" : "Password validation error"
+    },
+    "auth.error.passwordMin8" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password must be at least 8 characters"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passordet må være minst 8 tegn"
+          }
+        }
+      },
+      "comment" : "Password validation error"
+    },
+    "auth.error.passwordSameAsOld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new password must be different from the old one."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det nye passordet må være forskjellig fra det gamle."
+          }
+        }
+      },
+      "comment" : "Password change error: new password equals the old one"
+    },
+    "auth.error.invalidEmailFormat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid email format"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig e-postformat"
+          }
+        }
+      },
+      "comment" : "Email validation error"
+    },
+    "auth.error.invalidEmail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid email"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig e-post"
+          }
+        }
+      },
+      "comment" : "Email validation error"
+    },
+    "auth.error.signupRequiresPassword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign-up requires a valid password"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrering krever et gyldig passord"
+          }
+        }
+      },
+      "comment" : "Sign-up error: missing or invalid password"
+    },
+    "auth.error.requestRateLimited" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For security reasons, you can only request this once every 60 seconds"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Av sikkerhetsgrunner kan du bare be om dette én gang hvert 60. sekund"
+          }
+        }
+      },
+      "comment" : "Rate limit error for auth requests such as reset emails"
+    },
+    "auth.error.userNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User not found"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bruker ikke funnet"
+          }
+        }
+      },
+      "comment" : "Auth error: no account found"
+    },
+    "auth.error.invalidRefreshToken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid refresh token"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig oppdateringstoken"
+          }
+        }
+      },
+      "comment" : "Session error: the stored session is invalid"
+    },
+    "auth.error.tokenExpiredOrInvalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Token has expired or is invalid"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Token har utløpt eller er ugyldig"
+          }
+        }
+      },
+      "comment" : "Auth error: link or token expired"
+    },
+    "auth.error.emailLinkInvalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email link is invalid or has expired"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-postlenken er ugyldig eller har utløpt"
+          }
+        }
+      },
+      "comment" : "Auth error: email link expired"
+    },
+    "auth.error.databaseSavingUser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Database error while saving new user"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Databasefeil ved lagring av ny bruker"
+          }
+        }
+      },
+      "comment" : "Sign-up error from the server database"
+    },
+    "auth.error.serverUnreachable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't connect to the server"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke koble til serveren"
+          }
+        }
+      },
+      "comment" : "Network error: the server could not be reached"
+    },
+    "auth.error.networkRequestFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network request failed"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nettverksforespørsel feilet"
+          }
+        }
+      },
+      "comment" : "Network error during an auth request"
+    },
+    "auth.error.eventNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't find the event. Refresh and try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fant ikke hendelsen. Oppdater og prøv igjen."
+          }
+        }
+      },
+      "comment" : "Calendar event no longer exists on the server"
+    },
+    "auth.error.invalidEventDateRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid date range for the event"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig datointervall for hendelsen"
+          }
+        }
+      },
+      "comment" : "Calendar event has an end before its start"
+    },
+    "auth.error.invalidPhone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid phone number"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig telefonnummer"
+          }
+        }
+      },
+      "comment" : "Phone number validation error"
+    },
+    "auth.error.phoneNotConfirmed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone number is not confirmed"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefonnummeret er ikke bekreftet"
+          }
+        }
+      },
+      "comment" : "Sign-in error: phone number not confirmed yet"
+    },
+    "auth.error.smsCodeExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The SMS code has expired"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS-koden har utløpt"
+          }
+        }
+      },
+      "comment" : "SMS verification code expired"
+    },
+    "auth.error.invalidCode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid code"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig kode"
+          }
+        }
+      },
+      "comment" : "Wrong one-time or authenticator code"
+    },
+    "auth.error.codeExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The code has expired"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koden har utløpt"
+          }
+        }
+      },
+      "comment" : "One-time code expired"
+    },
+    "auth.error.phoneInUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone number is already in use"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefonnummeret er allerede i bruk"
+          }
+        }
+      },
+      "comment" : "Phone number belongs to another account"
+    },
+    "auth.error.phoneRegisteredToOtherAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This phone number is already registered to another account"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette telefonnummeret er allerede registrert på en annen konto"
+          }
+        }
+      },
+      "comment" : "Phone number belongs to another account"
+    },
+    "auth.error.emailRegisteredToOtherAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This email address is already registered to another account"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne e-postadressen er allerede registrert på en annen konto"
+          }
+        }
+      },
+      "comment" : "Email address belongs to another account"
+    },
+    "auth.error.smsSendFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't send SMS"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke sende SMS"
+          }
+        }
+      },
+      "comment" : "SMS could not be sent"
+    },
+    "auth.error.smsRateLimited" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many SMS requests. Try again later."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For mange SMS-forespørsler. Prøv igjen senere."
+          }
+        }
+      },
+      "comment" : "Too many SMS codes requested"
+    },
+    "auth.error.verificationCodeSendFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't send a verification code right now. Try again later."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke sende bekreftelseskode akkurat nå. Prøv igjen senere."
+          }
+        }
+      },
+      "comment" : "SMS provider failed to send a verification code"
+    },
+    "auth.error.smsProviderRejected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The SMS provider rejected the request. Try again later."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SMS-leverandøren avviste forespørselen. Prøv igjen senere."
+          }
+        }
+      },
+      "comment" : "SMS provider rejected the request"
+    },
+    "auth.error.signupRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You need to sign up before you can log in"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du må registrere deg før du kan logge inn"
+          }
+        }
+      },
+      "comment" : "User tried to log in without an account"
+    },
+    "auth.error.reauthCodeInvalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid verification code. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig bekreftelseskode. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Wrong code when confirming identity"
+    },
+    "auth.error.reauthRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm your identity before changing your password"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du må bekrefte identiteten din før du kan endre passordet"
+          }
+        }
+      },
+      "comment" : "User must confirm identity before changing password"
+    },
+    "auth.error.reauthCodeInvalidOrExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid or expired verification code"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig eller utløpt bekreftelseskode"
+          }
+        }
+      },
+      "comment" : "Identity confirmation code is wrong or expired"
+    },
+    "auth.error.reauthCodeExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The verification code has expired. Request a new code."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bekreftelseskoden har utløpt. Be om en ny kode."
+          }
+        }
+      },
+      "comment" : "Identity confirmation code expired"
+    },
+    "auth.error.mfaVerificationFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MFA verification failed"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MFA-verifisering feilet"
+          }
+        }
+      },
+      "comment" : "Two-factor authentication code check failed"
+    },
+    "auth.apple.error.cancelled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sign-in was canceled."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-innloggingen ble avbrutt."
+          }
+        }
+      },
+      "comment" : "Sign in with Apple was canceled by the user"
+    },
+    "auth.apple.error.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sign-in failed: %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-innloggingen mislyktes: %@"
+          }
+        }
+      },
+      "comment" : "Sign in with Apple failed. %@ is the system's error description"
+    },
+    "auth.apple.error.unexpectedResponse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sent an unexpected response. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sendte et uventet svar. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Apple returned data the app could not use"
+    },
+    "auth.apple.error.notHandled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sign-in couldn't handle this request. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-innloggingen kunne ikke håndtere forespørselen. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "The system did not handle the Sign in with Apple request"
+    },
+    "auth.apple.error.notInteractive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sign-in isn't available right now. Try again in a moment."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-innlogging er ikke tilgjengelig akkurat nå. Prøv igjen om litt."
+          }
+        }
+      },
+      "comment" : "The system can't show the Sign in with Apple sheet right now"
+    },
+    "auth.apple.error.excludedCredential" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Apple account can't be used here."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne Apple-kontoen kan ikke brukes her."
+          }
+        }
+      },
+      "comment" : "The chosen Apple account is excluded from this request"
+    },
+    "auth.apple.error.noWindow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't show Apple sign-in. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke vise Apple-innloggingen. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "The app could not show the Sign in with Apple sheet"
+    },
+    "auth.apple.error.inProgress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sign-in is already in progress."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-innlogging pågår allerede."
+          }
+        }
+      },
+      "comment" : "User started Sign in with Apple while a request is running"
+    },
+    "auth.apple.error.timedOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sign-in timed out. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-innloggingen ble tidsavbrutt. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Sign in with Apple took too long"
+    },
+    "auth.apple.error.unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple sign-in failed. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-innloggingen mislyktes. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Generic Sign in with Apple failure"
+    },
+    "auth.google.error.cancelled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google sign-in was canceled."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google-innloggingen ble avbrutt."
+          }
+        }
+      },
+      "comment" : "Google sign-in was canceled by the user"
+    },
+    "auth.google.error.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google sign-in failed: %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google-innloggingen mislyktes: %@"
+          }
+        }
+      },
+      "comment" : "Google sign-in failed. %@ is the error description from Google"
+    },
+    "auth.google.error.unexpectedResponse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google sent an unexpected response. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google sendte et uventet svar. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Google returned no result or no ID token"
+    },
+    "auth.google.error.noWindow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't show Google sign-in. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke vise Google-innloggingen. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "The app could not show the Google sign-in screen"
+    },
+    "auth.google.error.inProgress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google sign-in is already in progress."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google-innlogging pågår allerede."
+          }
+        }
+      },
+      "comment" : "User started Google sign-in while a request is running"
+    },
+    "auth.google.error.timedOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google sign-in timed out. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google-innloggingen ble tidsavbrutt. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Google sign-in took too long"
+    },
+    "auth.error.sessionTimedOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading your session took too long. Check your connection and try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det tok for lang tid å hente økten din. Sjekk tilkoblingen og prøv igjen."
+          }
+        }
+      },
+      "comment" : "Loading or refreshing the user's session took too long"
+    },
+    "auth.error.sessionMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign-in didn't complete. Try again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Innloggingen ble ikke fullført. Prøv igjen."
+          }
+        }
+      },
+      "comment" : "Sign-in finished without a session from the server"
+    },
+    "dashboard.payrollDetails.adjustmentsBeforeTax" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adjustments before tax"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Justeringer før skatt"
+          }
+        }
+      },
+      "comment" : "Payout details row label: total of manual pay adjustments that are added before tax is calculated."
+    },
+    "dashboard.payrollDetails.adjustmentsAfterTax" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adjustments after tax"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Justeringer etter skatt"
+          }
+        }
+      },
+      "comment" : "Payout details row label: total of manual adjustments paid out directly, after tax has been deducted."
     }
   },
   "version" : "1.0"

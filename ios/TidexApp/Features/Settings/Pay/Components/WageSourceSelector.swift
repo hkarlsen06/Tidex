@@ -101,9 +101,7 @@ struct WageSourceSelector: View {
     VStack(spacing: Spacing.xs) {
       ForEach(tariffLevels) { level in
         TariffLevelSelectionRow(
-          level: TariffLevel(
-            level: level.level, rate: wageRate(for: level.level), displayName: level.displayName
-          ),
+          level: TariffLevel(level: level.level, rate: wageRate(for: level.level)),
           isSelected: wageLevel == level.level,
           action: {
             withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {

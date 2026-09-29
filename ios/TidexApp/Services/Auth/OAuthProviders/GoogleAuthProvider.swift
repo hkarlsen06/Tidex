@@ -199,25 +199,25 @@ enum GoogleAuthError: Error, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .userCancelled:
-      return "Google Sign-In was cancelled"
+      return String(localized: .authGoogleErrorCancelled)
 
     case .noPresenter:
-      return "No view controller available to present Google Sign-In"
+      return String(localized: .authGoogleErrorNoWindow)
 
     case .noResult:
-      return "No result received from Google Sign-In"
+      return String(localized: .authGoogleErrorUnexpectedResponse)
 
     case .noIDToken:
-      return "No ID token received from Google"
+      return String(localized: .authGoogleErrorUnexpectedResponse)
 
     case .requestInProgress:
-      return "Google Sign-In is already in progress"
+      return String(localized: .authGoogleErrorInProgress)
 
     case .timedOut:
-      return "Google Sign-In timed out"
+      return String(localized: .authGoogleErrorTimedOut)
 
     case .failed(let message):
-      return "Google Sign-In failed: \(message)"
+      return String(localized: .authGoogleErrorFailed(message))
     }
   }
 

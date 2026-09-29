@@ -230,37 +230,37 @@ enum AppleAuthError: Error, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .userCancelled:
-      return "Apple Sign-In was cancelled"
+      return String(localized: .authAppleErrorCancelled)
 
     case .failed(let message):
-      return "Apple Sign-In failed: \(message)"
+      return String(localized: .authAppleErrorFailed(message))
 
     case .invalidResponse:
-      return "Invalid response from Apple"
+      return String(localized: .authAppleErrorUnexpectedResponse)
 
     case .invalidCredentials:
-      return "Invalid credentials from Apple Sign-In"
+      return String(localized: .authAppleErrorUnexpectedResponse)
 
     case .notHandled:
-      return "Apple Sign-In request was not handled"
+      return String(localized: .authAppleErrorNotHandled)
 
     case .notInteractive:
-      return "Apple Sign-In requires user interaction"
+      return String(localized: .authAppleErrorNotInteractive)
 
     case .matchedExcludedCredential:
-      return "Apple Sign-In credential was excluded"
+      return String(localized: .authAppleErrorExcludedCredential)
 
     case .presentationAnchorUnavailable:
-      return "Unable to present Apple Sign-In"
+      return String(localized: .authAppleErrorNoWindow)
 
     case .requestInProgress:
-      return "Apple Sign-In is already in progress"
+      return String(localized: .authAppleErrorInProgress)
 
     case .timedOut:
-      return "Apple Sign-In timed out"
+      return String(localized: .authAppleErrorTimedOut)
 
     case .unknown:
-      return "An unknown error occurred during Apple Sign-In"
+      return String(localized: .authAppleErrorUnknown)
     }
   }
 

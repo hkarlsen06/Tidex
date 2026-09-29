@@ -216,8 +216,7 @@ private final class SendAttachmentToChatViewModel {
     do {
       let attachment = try buildAttachment(recipient)
       guard attachment.shiftSnapshot == nil || capabilities.canSendShiftSnapshots else {
-        errorMessage = String(
-          localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+        errorMessage = String(localized: .friendsChatShiftSnapshotSendUnavailable)
         return nil
       }
 

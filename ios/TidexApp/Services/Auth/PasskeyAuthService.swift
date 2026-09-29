@@ -205,7 +205,7 @@ final class PasskeyAuthService: NSObject {
 
   private func decodeAPIError(from data: Data, statusCode: Int) -> PasskeyAuthError {
     guard !data.isEmpty else {
-      return .api(code: nil, message: "Supabase Auth request failed with HTTP \(statusCode)")
+      return .api(code: nil, message: String(localized: .loginPasskeyErrorsFailed))
     }
 
     if let error = try? decoder.decode(SupabaseAuthErrorResponse.self, from: data) {
@@ -213,13 +213,13 @@ final class PasskeyAuthService: NSObject {
         code: error.errorCode ?? error.code ?? error.error,
         message: error.message ?? error.msg ?? error.errorDescription ?? error.error
           ?? error.errorCode
-          ?? "Supabase Auth request failed with HTTP \(statusCode)"
+          ?? String(localized: .loginPasskeyErrorsFailed)
       )
     }
 
     let message =
       String(data: data, encoding: .utf8)
-      ?? "Supabase Auth request failed with HTTP \(statusCode)"
+      ?? String(localized: .loginPasskeyErrorsFailed)
     return .api(code: nil, message: message)
   }
 
@@ -757,40 +757,40 @@ enum PasskeyAuthError: Error, LocalizedError {
       return message
 
     case .invalidBase64URL:
-      return "Invalid WebAuthn challenge encoding."
+      return String(localized: .loginPasskeyErrorsUnexpectedResponse)
 
     case .invalidServerResponse:
-      return "Invalid Supabase Auth response."
+      return String(localized: .loginPasskeyErrorsUnexpectedResponse)
 
     case .invalidCredentialResponse:
-      return "Invalid passkey credential response."
+      return String(localized: .loginPasskeyErrorsUnexpectedResponse)
 
     case .decodingFailed(let error):
       return error.localizedDescription
 
     case .presentationAnchorUnavailable:
-      return "No active window was available for passkey authentication."
+      return String(localized: .loginPasskeyErrorsNoWindow)
 
     case .requestInProgress:
-      return "A passkey request is already in progress."
+      return String(localized: .loginPasskeyErrorsInProgress)
 
     case .timedOut:
-      return "Passkey authentication timed out."
+      return String(localized: .loginPasskeyErrorsTimedOut)
 
     case .failed(let message):
       return message
 
     case .notHandled:
-      return "No passkey provider handled this request."
+      return String(localized: .loginPasskeyErrorsNotHandled)
 
     case .notInteractive:
-      return "Passkey authentication is not interactive right now."
+      return String(localized: .loginPasskeyErrorsNotInteractive)
 
     case .matchedExcludedCredential:
-      return "This passkey is already registered."
+      return String(localized: .loginPasskeyErrorsAlreadyRegistered)
 
     case .unknown:
-      return "Passkey authentication failed."
+      return String(localized: .loginPasskeyErrorsFailed)
     }
   }
 

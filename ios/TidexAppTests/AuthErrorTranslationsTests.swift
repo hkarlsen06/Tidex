@@ -13,6 +13,14 @@ internal final class AuthErrorTranslationsTests: XCTestCase {
     )
   }
 
+  internal func testKnownSupabaseMessageUsesCatalogString() {
+    XCTAssertEqual(
+      ErrorTranslations.translate("Invalid login credentials"),
+      String(localized: .authErrorInvalidLoginCredentials)
+    )
+    XCTAssertEqual(ErrorTranslations.translate("Unmapped server error"), "Unmapped server error")
+  }
+
   deinit {
     // Required by SwiftLint for XCTestCase subclasses.
   }

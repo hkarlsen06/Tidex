@@ -9,7 +9,6 @@ internal final class ShiftDetailsPresentationPolicyTests: XCTestCase {
     )
 
     XCTAssertTrue(policy.showsEarningsDetails)
-    XCTAssertNil(policy.automaticBreakOwnerName)
   }
 
   internal func testSharedShiftHidesEarningsDetailsWhenOwnerDoesNotShareEarnings() {
@@ -18,27 +17,22 @@ internal final class ShiftDetailsPresentationPolicyTests: XCTestCase {
     )
 
     XCTAssertFalse(policy.showsEarningsDetails)
-    XCTAssertNil(policy.automaticBreakOwnerName)
   }
 
-  internal func testSharedShiftUsesOwnerNameForAutomaticBreakSummaryWhenEarningsAreVisible() {
+  internal func testSharedShiftShowsEarningsDetailsWhenOwnerSharesEarnings() {
     let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(
-      snapshotShareContext: .shared(owner: makeSharedUser(firstName: "Ask Karlsen"))
+      snapshotShareContext: .shared(owner: makeSharedUser())
     )
 
     XCTAssertTrue(policy.showsEarningsDetails)
-    XCTAssertEqual(policy.automaticBreakOwnerName, "Ask")
   }
 
-  private func makeSharedUser(
-    firstName: String? = "Ask",
-    showEarnings: Bool = true
-  ) -> SharedUser {
+  private func makeSharedUser(showEarnings: Bool = true) -> SharedUser {
     SharedUser(
       id: "11111111-2222-4333-8444-555555555555",
       email: "ask@example.com",
       phone: nil,
-      firstName: firstName,
+      firstName: "Ask",
       profilePictureUrl: nil,
       oauthAvatarUrl: nil,
       sharedAt: "2026-03-11T10:00:00Z",

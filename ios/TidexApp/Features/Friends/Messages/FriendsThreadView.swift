@@ -1428,10 +1428,7 @@ struct FriendsThreadView: View {
     var errorDescription: String? {
       switch self {
       case .permissionDenied:
-        return String(
-          localized: "friends.chat.image.save_permission_denied",
-          table: "Localizable"
-        )
+        return String(localized: .friendsChatImageSavePermissionDenied)
 
       case .saveFailed:
         return String(localized: .friendsChatImageSaveFailed)

@@ -8,7 +8,7 @@ enum AuthError: Error, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .sessionMissing:
-      return "No session returned from authentication"
+      return String(localized: .authErrorSessionMissing)
     }
   }
 }

@@ -17,10 +17,10 @@ enum JobPaySetupError: Error, LocalizedError, Equatable {
   var errorDescription: String? {
     switch self {
     case .jobNotAvailable:
-      return "Choose an active job before adding a shift."
+      return String(localized: .addShiftErrorJobNotAvailable)
 
     case .jobPaySetupRequired:
-      return "Finish pay setup for this job before adding shifts."
+      return String(localized: .addShiftErrorPaySetupRequired)
     }
   }
 }

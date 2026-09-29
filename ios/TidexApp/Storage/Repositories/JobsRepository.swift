@@ -37,33 +37,31 @@ enum JobsRepositoryError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .jobNameEmpty:
-      return "Job name cannot be empty."
+      return String(localized: .settingsPayErrorJobNameEmpty)
 
     case .jobNotFound:
-      return "Job not found."
+      return String(localized: .settingsPayErrorJobNotFound)
 
     case .jobDeleted:
-      return "Job has been deleted."
+      return String(localized: .settingsPayErrorJobDeleted)
 
     case .cannotChangeTariffJobCurrency:
-      return "Currency cannot be changed for jobs using tariff rates."
+      return String(localized: .settingsPayErrorTariffCurrencyLocked)
 
     case .cannotArchiveLastActiveJob:
-      return "Cannot archive the last active job."
+      return String(localized: .settingsPayErrorCannotArchiveLastActiveJob)
 
     case .cannotArchiveDefaultJob:
-      return "Set another job as default before archiving this one."
+      return String(localized: .settingsPayErrorCannotArchiveDefaultJob)
 
     case .cannotDeleteUnarchivedJob:
       return String(localized: .settingsPayErrorArchiveBeforeDeleting)
 
     case .cannotDeleteDefaultJob:
-      return "Set another job as default before deleting this one."
+      return String(localized: .settingsPayErrorCannotDeleteDefaultJob)
 
     case .cannotDeleteJobWithHistory:
-      return String(
-        localized: "settings.pay.error.cannotDeleteWorkplaceWithHistory.message"
-      )
+      return String(localized: .settingsPayErrorCannotDeleteWorkplaceWithHistoryMessage)
 
     case .deletionSyncRequired:
       return String(localized: .settingsPayErrorDeletionSyncRequired)
@@ -75,7 +73,7 @@ enum JobsRepositoryError: LocalizedError {
       return String(localized: .settingsPayErrorDeletionRefreshFailed)
 
     case .cannotSetArchivedOrDeletedDefault:
-      return "Cannot set archived or deleted job as default."
+      return String(localized: .settingsPayErrorCannotSetInactiveDefault)
     }
   }
 

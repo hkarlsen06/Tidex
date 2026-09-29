@@ -1077,13 +1077,13 @@ enum StatsServiceError: Error, LocalizedError {  // swiftlint:disable:this expli
   var errorDescription: String? {  // swiftlint:disable:this explicit_acl
     switch self {
     case .notAuthenticated:
-      return "Not authenticated"
+      return String(localized: .commonErrorNotAuthenticated)
 
     case .noLocalData:
-      return "No local data available. Please wait for sync to complete."
+      return String(localized: .commonErrorNoLocalData)
 
-    case .computationFailed(let error):
-      return "Failed to compute stats: \(error.localizedDescription)"
+    case .computationFailed:
+      return String(localized: .statsErrorComputationFailed)
     }
   }
 }  // swiftlint:disable:this file_length

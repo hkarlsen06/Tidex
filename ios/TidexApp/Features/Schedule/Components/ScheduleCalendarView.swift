@@ -1,11 +1,6 @@
 import SwiftUI
 import UIKit
 
-private enum SingleSelectionActionMode: Equatable {
-  case primary
-  case copyMoveChoices
-}
-
 // MARK: - Shifts Calendar View
 
 /// Full-featured calendar for the Shifts tab
@@ -100,7 +95,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   var excludedFromTotalIds: Set<String> = []
 
   @State private var viewMode = CalendarViewMode.load()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
-  @State private var singleSelectionActionMode: SingleSelectionActionMode = .primary
   @State private var showSingleSelectionDeleteConfirm = false
   @State private var showMultiSelectionDeleteConfirm = false
   @State private var showMixedCurrencyBreakdownPopover = false
@@ -227,11 +221,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     presentation.hoursByDate
   }
 
-  /// Monthly totals (net and gross, excludes conflicting shifts)
-  private var monthlyTotals: (net: Double, gross: Double) {
-    (net: presentation.monthlyTotals.net, gross: presentation.monthlyTotals.gross)
-  }
-
   /// Shifts grouped by ISO date string
   private var shiftsByDate: [String: [ShiftWithComputations]] {
     presentation.shiftsByDate
@@ -325,7 +314,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       CalendarHeaderRow(
         totals: headerTotals,
         selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
-        secondaryStyle: headerSecondaryStyle
+        secondaryStyle: headerSecondaryStyle,
+        secondaryCurrency: selectedDates.isEmpty ? nil : selectedCurrencyAggregate?.primary.currency
       )
       .userCurrency(headerDisplayCurrency)
       .contentShape(Rectangle())
@@ -367,36 +357,39 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       return copyPreviewHeaderTotals
     }
 
-    let primaryAmount: Double?
+    // The month total stays on the leading side. While dates are selected, the trailing side
+    // shows the selection total instead of the month's before-tax amount.
+    let aggregate = monthlyCurrencyAggregate
+    let primaryAmount = aggregate.primary.displayAmount > 0 ? aggregate.primary.displayAmount : nil
     let secondaryAmount: Double?
 
     if selectedDates.isEmpty {
-      let aggregate = monthlyCurrencyAggregate
-      primaryAmount = aggregate.primary.displayAmount > 0 ? aggregate.primary.displayAmount : nil
-      secondaryAmount =
-        (!aggregate.hasMixedCurrency && aggregate.primary.hasTaxEnabled
-          && aggregate.primary.grossAmount > 0
-          && aggregate.primary.grossAmount != aggregate.primary.displayAmount)
-        ? aggregate.primary.grossAmount : nil
-    } else if let aggregate = selectedCurrencyAggregate {
-      primaryAmount = aggregate.primary.displayAmount > 0 ? aggregate.primary.displayAmount : nil
       secondaryAmount =
         (!aggregate.hasMixedCurrency && aggregate.primary.hasTaxEnabled
           && aggregate.primary.grossAmount > 0
           && aggregate.primary.grossAmount != aggregate.primary.displayAmount)
         ? aggregate.primary.grossAmount : nil
     } else {
-      let displayTotals = selectedEarnings ?? monthlyTotals
-      let showTax = selectedHasTaxEnabled
-      primaryAmount =
-        displayTotals.gross > 0 ? (showTax ? displayTotals.net : displayTotals.gross) : nil
-      secondaryAmount = (showTax && displayTotals.gross > 0) ? displayTotals.gross : nil
+      secondaryAmount = selectionTotal
     }
 
     return CalendarHeaderTotals(
       primary: primaryAmount,
       secondary: secondaryAmount
     )
+  }
+
+  /// Selection total after tax when tax is on, otherwise before tax.
+  private var selectionTotal: Double? {
+    let amount: Double
+    if let aggregate = selectedCurrencyAggregate {
+      amount = aggregate.primary.displayAmount
+    } else if let earnings = selectedEarnings {
+      amount = selectedHasTaxEnabled ? earnings.net : earnings.gross
+    } else {
+      return nil
+    }
+    return amount > 0 ? amount : nil
   }
 
   private var copyPreviewHeaderTotals: CalendarHeaderTotals? {
@@ -438,7 +431,10 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   }
 
   private var headerSecondaryStyle: CalendarHeaderSecondaryStyle {
-    isCopyMode && !copyPreviewEarnings.isEmpty ? .delta : .detail
+    if isCopyMode && !copyPreviewEarnings.isEmpty {
+      return .delta
+    }
+    return selectedDates.isEmpty ? .detail : .selection
   }
 
   private func isDateInDisplayedMonth(_ dateISO: String) -> Bool {
@@ -460,7 +456,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   }
 
   private var headerDisplayCurrency: String {
-    activeCurrencyAggregate?.primary.currency ?? currency
+    monthlyCurrencyAggregate.primary.currency
   }
 
   private var activeCurrencyAggregate: JobCurrencyAggregateResolution? {
@@ -799,25 +795,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     .animation(
       reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: isMoveMode
     )
-    .animation(
-      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8),
-      value: singleSelectionActionMode
-    )
     .onAppear {
       toggleHaptic.prepare()
       warningHaptic.prepare()
-    }
-    .onChange(of: selectedDates) { _, _ in
-      singleSelectionActionMode = .primary
-    }
-    .onChange(of: confirmingDelete) { _, _ in
-      singleSelectionActionMode = .primary
-    }
-    .onChange(of: isCopyMode) { _, _ in
-      singleSelectionActionMode = .primary
-    }
-    .onChange(of: isMoveMode) { _, _ in
-      singleSelectionActionMode = .primary
     }
     .alert(
       singleDeleteConfirmTitle,
@@ -924,51 +904,38 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
   @ViewBuilder
   private var singleSelectionBar: some View {
-    if singleSelectionActionMode == .copyMoveChoices {
-      copyMoveChoicesBar
-    } else {
-      primarySingleSelectionBar
-    }
-  }
-
-  @ViewBuilder
-  private var primarySingleSelectionBar: some View {
     HStack(spacing: Spacing.xxs) {
-      Button {
-        toggleHaptic.impactOccurred()
-        onDetails?()
-      } label: {
-        HStack(spacing: Spacing.xxxs) {
-          Image(systemName: "info.circle")
-            .font(.tidexLabel)
-          Text(.shiftsDetails)
-            .font(.tidexLabelStrong)
-        }
-        .foregroundColor(.tidexTextPrimary)
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-        .background(
-          Capsule().fill(.clear)
-            .tidexGlass(shape: .capsule, interactive: true)
-        )
-      }
-      .buttonStyle(.plain)
-
-      Button {
-        toggleHaptic.impactOccurred()
+      singleSelectionButton(
+        systemImage: "pencil",
+        label: .shiftsActionsEdit,
+        tint: .tidexTextPrimary
+      ) {
         onEdit?()
-      } label: {
-        Image(systemName: "pencil")
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextMuted)
-          .frame(width: 44, height: 44)
-          .background(
-            Capsule().fill(.clear)
-              .tidexGlass(shape: .capsule, interactive: true)
-          )
       }
-      .buttonStyle(.plain)
-      .accessibilityLabel(Text(.shiftsActionsEdit))
+
+      singleSelectionButton(
+        systemImage: "doc.on.doc",
+        label: .commonCopy,
+        tint: .tidexBlue
+      ) {
+        onCopy?()
+      }
+
+      singleSelectionButton(
+        systemImage: "arrow.left.arrow.right",
+        label: .shiftsMove,
+        tint: .tidexWarning
+      ) {
+        onMove?()
+      }
+
+      singleSelectionButton(
+        systemImage: "info.circle",
+        label: .shiftsDetails,
+        tint: .tidexTextMuted
+      ) {
+        onDetails?()
+      }
 
       Button {
         toggleHaptic.impactOccurred()
@@ -985,7 +952,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           }
         }
         .foregroundColor(.tidexError)
-        .frame(width: 44, height: 44)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
         .background(
           Capsule().fill(.clear)
             .tidexGlass(shape: .capsule, tint: .tidexError.opacity(0.15), interactive: true)
@@ -994,93 +962,33 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       .buttonStyle(.plain)
       .disabled(isDeleting)
       .accessibilityLabel(Text(.shiftsActionsDelete))
-
-      Button {
-        toggleHaptic.impactOccurred()
-        singleSelectionActionMode = .copyMoveChoices
-      } label: {
-        Image(systemName: "line.3.horizontal")
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextMuted)
-          .frame(width: 44, height: 44)
-          .background(
-            Capsule().fill(.clear)
-              .tidexGlass(shape: .capsule, interactive: true)
-          )
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel(Text(.shiftsMoreActionsLabel))
     }
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
   }
 
-  @ViewBuilder
-  private var copyMoveChoicesBar: some View {
-    HStack(spacing: Spacing.xxs) {
-      Button {
-        toggleHaptic.impactOccurred()
-        onCopy?()
-      } label: {
-        HStack(spacing: Spacing.xxxs) {
-          Image(systemName: "doc.on.doc")
-            .font(.tidexLabel)
-            .foregroundColor(.tidexTextPrimary)
-          Text(.commonCopy)
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexBlue)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-        .background(
-          Capsule().fill(.clear)
-            .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.15), interactive: true)
-        )
-      }
-      .buttonStyle(.plain)
-
-      Button {
-        toggleHaptic.impactOccurred()
-        onMove?()
-      } label: {
-        HStack(spacing: Spacing.xxxs) {
-          Image(systemName: "arrow.left.arrow.right")
-            .font(.tidexLabel)
-          Text(.shiftsMove)
-            .font(.tidexLabelStrong)
-        }
-        .foregroundColor(.tidexWarning)
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-        .background(
-          Capsule().fill(.clear)
-            .tidexGlass(shape: .capsule, tint: .tidexWarning.opacity(0.15), interactive: true)
-        )
-      }
-      .buttonStyle(.plain)
-
-      Button {
-        toggleHaptic.impactOccurred()
-        singleSelectionActionMode = .primary
-      } label: {
-        HStack(spacing: Spacing.xxxs) {
-          Image(systemName: "xmark")
-            .font(.tidexLabel)
-          Text(.commonCancel)
-            .font(.tidexLabelStrong)
-        }
-        .foregroundColor(.tidexTextPrimary)
+  private func singleSelectionButton(
+    systemImage: String,
+    label: LocalizedStringResource,
+    tint: Color,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button {
+      toggleHaptic.impactOccurred()
+      action()
+    } label: {
+      Image(systemName: systemImage)
+        .font(.tidexLabel)
+        .foregroundColor(tint)
         .frame(maxWidth: .infinity)
         .frame(height: 44)
         .background(
           Capsule().fill(.clear)
             .tidexGlass(shape: .capsule, interactive: true)
         )
-      }
-      .buttonStyle(.plain)
     }
-    .padding(Spacing.xxs)
-    .background(Capsule().fill(Color.tidexSurfaceSecondary))
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(label))
   }
 
   @ViewBuilder

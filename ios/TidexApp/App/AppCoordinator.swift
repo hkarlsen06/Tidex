@@ -146,7 +146,7 @@ final class AppCoordinator {
     var errorDescription: String? {
       switch self {
       case .notAuthenticated:
-        return "User is not authenticated"
+        return String(localized: .commonErrorNotAuthenticated)
       }
     }
   }

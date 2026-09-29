@@ -13,10 +13,10 @@ enum AuthSessionManagerError: Error, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .sessionFetchTimedOut:
-      return "Session fetch timed out"
+      return String(localized: .authErrorSessionTimedOut)
 
     case .refreshTimedOut:
-      return "Session refresh timed out"
+      return String(localized: .authErrorSessionTimedOut)
     }
   }
 }

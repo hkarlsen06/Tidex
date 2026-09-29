@@ -269,37 +269,33 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           .frame(maxWidth: .infinity, alignment: .leading)
       }
 
+      // Line items sit without dividers; a divider only precedes a subtotal, like a receipt.
       EarningsBreakdownCard<EmptyView>.Row(
         label: String(localized: .shiftsBasePay),
         value: formatCurrency(breakdown.basePay, currency: breakdown.currency)
       )
 
       if breakdown.supplementPay > 0 {
-        Divider()
         supplementBreakdownSection(breakdown)
       }
 
       if breakdown.postDeductions > 0 {
-        Divider()
         postDeductionBreakdownSection(breakdown)
       }
 
       if breakdown.taxEnabled,
         !taxableAdjustments(for: breakdown).isEmpty || onCreateAdjustment != nil
       {
-        Divider()
         taxableAdjustmentBreakdownSection(breakdown)
       }
 
       if showsTaxDeduction(for: breakdown), let tax = breakdown.tax {
         Divider()
 
-        EarningsBreakdownCard<EmptyView>.Row(
+        subtotalRow(
           label: String(localized: .dashboardPayrollDetailsGross),
           value: formatCurrency(preDirectPayoutAmount(for: breakdown), currency: breakdown.currency)
         )
-
-        Divider()
 
         EarningsBreakdownCard<EmptyView>.Row(
           label: String(localized: .dashboardPayrollDetailsEstimatedTax),
@@ -308,14 +304,12 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       }
 
       if breakdown.taxEnabled, !directPayoutAdjustments(for: breakdown).isEmpty {
-        Divider()
         directPayoutAdjustmentBreakdownSection(breakdown)
       }
 
       if !breakdown.taxEnabled,
         !directPayoutAdjustments(for: breakdown).isEmpty || onCreateAdjustment != nil
       {
-        Divider()
         directPayoutAdjustmentBreakdownSection(breakdown)
       }
 
@@ -380,6 +374,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       } label: {
         adjustmentTotalRow(
           breakdown,
+          kind: kind,
           adjustments: adjustments,
           isExpanded: isExpanded
         )
@@ -451,12 +446,18 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
   private func adjustmentTotalRow(
     _ breakdown: PayrollCardJobBreakdown,
+    kind: AdjustmentSectionKind,
     adjustments: [PayrollAdjustment],
     isExpanded: Bool
   ) -> some View {
     let total = adjustmentTotal(for: adjustments)  // swiftlint:disable:this explicit_type_interface
+    // With tax on, adjustments appear twice (before and after tax), so the labels must differ.
+    let label: LocalizedStringResource =
+      !breakdown.taxEnabled
+      ? .dashboardPayrollDetailsAdjustments
+      : kind == .taxable ? .dashboardPayrollDetailsAdjustmentsBeforeTax : .dashboardPayrollDetailsAdjustmentsAfterTax
     return HStack(spacing: Spacing.xs) {
-      Text(.dashboardPayrollDetailsAdjustments)
+      Text(label)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
@@ -467,7 +468,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       Spacer()
 
-      Text(total == 0 ? "–" : formatCurrency(total, currency: breakdown.currency))
+      Text(total == 0 ? "–" : formatSignedCurrency(total, currency: breakdown.currency))
         .font(.tidexLabel)
         .foregroundColor(.tidexTextPrimary)
     }
@@ -527,7 +528,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       Spacer()
 
-      Text(formatCurrency(breakdown.supplementPay, currency: breakdown.currency))
+      Text(formatSignedCurrency(breakdown.supplementPay, currency: breakdown.currency))
         .font(.tidexLabel)
         .foregroundColor(.tidexTextPrimary)
     }
@@ -540,8 +541,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   ) -> some View {
     let segment = supplement.segment  // swiftlint:disable:this explicit_type_interface
     return EarningsSupplementBreakdownDetailCard(
-      title: String(
-        localized: supplement.isOvertime ? .shiftsOvertimeLabel : .shiftsSupplementLabel),
+      title: supplement.isOvertime ? String(localized: .shiftsOvertimeLabel) : nil,
       timeRange: segment.timeRange,
       hoursAndRate:
         "\(formatHoursValue(supplement.hours)) × \(formatCurrency(supplement.rate, currency: currency))",
@@ -800,6 +800,25 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
   private func formatCurrency(_ amount: Double, currency: String) -> String {
     CurrencyConfig.format(amount, currency: currency)
+  }
+
+  /// "+2 300 kr" or "−596 kr", so line items read as additions or deductions at a glance.
+  private func formatSignedCurrency(_ amount: Double, currency: String) -> String {
+    let sign = amount < 0 ? "−" : "+"  // swiftlint:disable:this explicit_type_interface
+    return sign + formatCurrency(abs(amount), currency: currency)
+  }
+
+  /// Brutto sits between line items and the total, so its label reads in primary color.
+  private func subtotalRow(label: String, value: String) -> some View {
+    HStack {
+      Text(label)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextPrimary)
+      Spacer()
+      Text(value)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextPrimary)
+    }
   }
 
   private func formatHoursValue(_ hours: Double) -> String {

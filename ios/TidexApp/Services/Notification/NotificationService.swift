@@ -115,14 +115,8 @@ final class NotificationService {
   func registerNotificationCategories() {
     let center = UNUserNotificationCenter.current()
     let replyTitle = String(localized: .friendsChatActionReply)
-    let replyPlaceholder = String(
-      localized: "notifications.chat.action.reply_placeholder",
-      table: "Localizable"
-    )
-    let markReadTitle = String(
-      localized: "notifications.chat.action.mark_read",
-      table: "Localizable"
-    )
+    let replyPlaceholder = String(localized: .notificationsChatActionReplyPlaceholder)
+    let markReadTitle = String(localized: .notificationsChatActionMarkRead)
 
     let categories: Set<UNNotificationCategory> = [
       UNNotificationCategory(

@@ -622,10 +622,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
           systemName: "photo.on.rectangle.angled",
           isActive: hasImageAttachments,
           isDisabled: !canAddMoreImages,
-          accessibilityLabel: String(
-            localized: "friends.chat.composer.photo_library",
-            table: "Localizable"
-          ),
+          accessibilityLabel: String(localized: .friendsChatComposerPhotoLibrary),
           action: onOpenPhotoLibrary
         )
 
@@ -633,10 +630,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
           systemName: "camera",
           isActive: false,
           isDisabled: !canAddMoreImages,
-          accessibilityLabel: String(
-            localized: "friends.chat.composer.camera",
-            table: "Localizable"
-          ),
+          accessibilityLabel: String(localized: .friendsChatComposerCamera),
           action: onOpenCamera
         )
 
@@ -645,10 +639,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
             systemName: "calendar",
             isActive: hasShiftSnapshotAttachment,
             isDisabled: !canStageShiftSnapshot,
-            accessibilityLabel: String(
-              localized: "friends.chat.composer.shift_calendar",
-              table: "Localizable"
-            ),
+            accessibilityLabel: String(localized: .friendsChatComposerShiftCalendar),
             action: onOpenShiftCalendar
           )
         }

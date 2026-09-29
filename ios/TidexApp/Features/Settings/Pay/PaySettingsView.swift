@@ -281,7 +281,6 @@ struct PaySettingsView: View {
       isExpanded: $isPayReviewExpanded,
       workDate: $viewModel.reviewDate,
       snapshots: viewModel.snapshots,
-      entries: viewModel.timelineEntries,
       currency: viewModel.userCurrency,
       payrollDay: viewModel.selectedJobPayrollDay,
       halfTaxMonth: viewModel.selectedJobHalfTaxMonth,

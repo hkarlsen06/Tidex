@@ -48,9 +48,9 @@ final class TidexAppUITests: XCTestCase {
     app.launch()
     let review = app.buttons["pay-settings.review-disclosure"]
     XCTAssertTrue(review.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    XCTAssertTrue(review.label.contains("Check pay settings for a date"), review.label)
+    XCTAssertTrue(review.label.contains("Pay settings on a date"), review.label)
     XCTAssertTrue(review.label.contains("November 15, 2026"), review.label)
-    let taxSettings = app.buttons["Review these tax settings"]
+    let taxSettings = app.buttons["pay-settings.review-tax"]
     XCTAssertFalse(taxSettings.exists, "The pay-settings date review should start collapsed")
     attachAppStoreScreenshot(app, name: "pay-review-collapsed")
     review.tap()
@@ -172,7 +172,7 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(review.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     attachAppStoreScreenshot(app, name: "pay-review-large-text-top")
     review.tap()
-    let taxSettings = app.buttons["Review these tax settings"]
+    let taxSettings = app.buttons["pay-settings.review-tax"]
     for _ in 0..<6 where !taxSettings.isHittable { app.swipeUp() }
     XCTAssertTrue(taxSettings.isHittable, app.debugDescription)
     attachAppStoreScreenshot(app, name: "pay-review-large-text")

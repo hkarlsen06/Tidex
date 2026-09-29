@@ -235,11 +235,11 @@ enum TariffVersionServiceError: Error, LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .noVersionsFound(let tariffType):
-      return "No tariff versions found for type: \(tariffType)"
+    case .noVersionsFound:
+      return String(localized: .settingsPayErrorNoTariffVersions)
 
     case .networkError(let error):
-      return "Network error: \(error.localizedDescription)"
+      return String(localized: .commonErrorNetwork(error.localizedDescription))
     }
   }
 }

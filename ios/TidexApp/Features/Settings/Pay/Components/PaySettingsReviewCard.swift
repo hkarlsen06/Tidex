@@ -6,7 +6,6 @@ struct PaySettingsReviewCard: View {
   @Binding var isExpanded: Bool
   @Binding var workDate: Date
   let snapshots: [WageSnapshot]
-  let entries: [WageTimelineEntry]
   let currency: String
   let payrollDay: Int
   let halfTaxMonth: Int?
@@ -23,22 +22,20 @@ struct PaySettingsReviewCard: View {
   var body: some View {
     DisclosureGroup(isExpanded: $isExpanded) {
       reviewContent
-        .padding(.top, Spacing.md)
-
-      Text(.settingsPayReviewDateExplanation)
-        .font(.tidexFootnote)
-        .foregroundStyle(Color.tidexTextSecondary)
         .padding(.top, Spacing.sm)
     } label: {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(.settingsPayReviewTitle)
           .font(.tidexTitle2)
           .accessibilityAddTraits(.isHeader)
-        Text(
-          .settingsPayReviewActiveOn(
-            workDate.formatted(.dateTime.day().month(.wide).year().calendar(.gregorian))))
-          .font(.tidexSubheadline)
-          .foregroundStyle(Color.tidexTextSecondary)
+        // The date picker row shows the date once the card is open.
+        if !isExpanded {
+          Text(
+            .settingsPayReviewActiveOn(
+              workDate.formatted(.dateTime.day().month(.wide).year().calendar(.gregorian))))
+            .font(.tidexSubheadline)
+            .foregroundStyle(Color.tidexTextSecondary)
+        }
       }
       .multilineTextAlignment(.leading)
       .frame(minHeight: 44, alignment: .leading)
@@ -54,84 +51,62 @@ struct PaySettingsReviewCard: View {
     .fixedSize(horizontal: false, vertical: true)
   }
 
+  /// One line per setting: what it is on the left, the value on the right.
   private var reviewContent: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      if dynamicTypeSize.isAccessibilitySize {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-          Text(.settingsPayReviewWorkDate)
-          workDatePicker.labelsHidden()
+    VStack(alignment: .leading, spacing: 0) {
+      Group {
+        if dynamicTypeSize.isAccessibilitySize {
+          VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(.settingsPayReviewWorkDate)
+            workDatePicker.labelsHidden()
+          }
+        } else {
+          workDatePicker
         }
-      } else {
-        workDatePicker
       }
-
-      Divider()
+      .padding(.bottom, Spacing.xs)
 
       if let snapshot = context.wageSnapshot {
-        VStack(alignment: .leading, spacing: 0) {
-          Text(periodLabel(for: snapshot))
-            .font(.tidexFootnote)
-            .foregroundStyle(Color.tidexTextSecondary)
-            .padding(.bottom, Spacing.xs)
-
-          row(
-            .settingsPayReviewHourlyWage, value: hourlyAmount(snapshot.hourly_wage),
-            snapshot: snapshot, section: .wage)
-          Divider()
-          row(
-            .settingsPayEditorSupplementsTitle,
-            value: String(
-              localized: .settingsPayReviewRuleCount(Int32(snapshot.supplements.rules.count))
-            ), snapshot: snapshot, section: .supplements)
-          Divider()
-          row(
-            .settingsPayEditorBreakTitle, value: breakSummary(snapshot),
-            snapshot: snapshot, section: .breaks)
-          Divider()
-          row(
-            .settingsPayEditorOvertimeTitle, value: overtimeSummary(snapshot),
-            snapshot: snapshot, section: .overtime)
-        }
-      } else {
-        Text(.settingsPayReviewMissingSettings)
-          .foregroundStyle(Color.tidexWarning)
+        wageRows(snapshot)
       }
 
-      Divider()
+      if let snapshot = context.taxSnapshot {
+        Divider()
+        row(
+          .settingsPayEditorTaxTitle, value: taxSummary(snapshot),
+          subtitle: String(localized: .settingsPayReviewTaxPayday(formattedDate(context.taxDate))),
+          snapshot: snapshot, section: .tax)
+          .accessibilityIdentifier("pay-settings.review-tax")
+      }
 
-      VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(.settingsPayReviewTaxDate(formattedDate(context.taxDate)))
-          .font(.tidexLabelStrong)
-          .accessibilityAddTraits(.isHeader)
-
-        if let snapshot = context.taxSnapshot {
-          Text(periodLabel(for: snapshot))
-            .font(.tidexFootnote)
-            .foregroundStyle(Color.tidexTextSecondary)
-
-          Text(
-            snapshot.effectiveTaxEnabled
-              ? String(
-                localized: .settingsPayReviewTaxRate(
-                  FormatterCache.percentagePoints(context.effectiveTaxPercentage, fractionDigits: 2)
-                ))
-              : String(localized: .settingsPayReviewTaxOff)
-          )
-          .font(.tidexBodyMedium)
-
-          if snapshot.effectiveTaxEnabled, context.appliesHalfTax {
-            Text(.settingsPayReviewHalfTax)
-              .font(.tidexFootnote)
-              .foregroundStyle(Color.tidexTextSecondary)
-          }
-
-          editButton(snapshot, section: .tax, title: .settingsPayReviewEditTaxSettings)
-        } else {
-          Text(.settingsPayReviewMissingSettings)
-            .foregroundStyle(Color.tidexWarning)
-        }
+      if context.wageSnapshot == nil || context.taxSnapshot == nil {
+        Text(.settingsPayReviewMissingSettings)
+          .font(.tidexFootnote)
+          .foregroundStyle(Color.tidexWarning)
+          .padding(.top, Spacing.sm)
       }
     }
+  }
+
+  @ViewBuilder
+  private func wageRows(_ snapshot: WageSnapshot) -> some View {
+    Divider()
+    row(
+      .settingsPayReviewHourlyWage, value: hourlyAmount(snapshot.hourly_wage),
+      snapshot: snapshot, section: .wage)
+    Divider()
+    row(
+      .settingsPayEditorSupplementsTitle,
+      value: String(localized: .settingsPayReviewRules(snapshot.supplements.rules.count)),
+      snapshot: snapshot, section: .supplements)
+    Divider()
+    row(
+      .settingsPayEditorBreakTitle, value: breakSummary(snapshot),
+      snapshot: snapshot, section: .breaks)
+    Divider()
+    row(
+      .settingsPayEditorOvertimeTitle, value: overtimeSummary(snapshot),
+      snapshot: snapshot, section: .overtime)
   }
 
   private var workDatePicker: some View {
@@ -144,75 +119,96 @@ struct PaySettingsReviewCard: View {
   }
 
   private func row(
-    _ title: LocalizedStringResource, value: String,
+    _ title: LocalizedStringResource, value: String, subtitle: String? = nil,
     snapshot: WageSnapshot, section: WageSnapshotEditorSection
   ) -> some View {
     Button {
       onEdit(snapshot, section)
     } label: {
       HStack(spacing: Spacing.sm) {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(title)
-            .font(.tidexLabel)
-          Text(value)
-            .font(section == .wage ? .tidexTitle : .tidexSubheadline)
-            .foregroundStyle(section == .wage ? Color.tidexTextPrimary : .tidexTextSecondary)
-            .monospacedDigit()
-        }
-        Spacer(minLength: 0)
+        rowText(title, value: value, subtitle: subtitle)
         Image(systemName: "chevron.right")
           .font(.tidexCaption)
           .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
       }
-      .frame(minHeight: 44, alignment: .leading)
-      .padding(.vertical, Spacing.xs)
+      .frame(minHeight: 44)
+      .padding(.vertical, Spacing.xxs)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
     .accessibilityElement(children: .combine)
   }
 
-  private func editButton(
-    _ snapshot: WageSnapshot, section: WageSnapshotEditorSection, title: LocalizedStringResource
+  @ViewBuilder
+  private func rowText(
+    _ title: LocalizedStringResource, value: String, subtitle: String?
   ) -> some View {
-    Button {
-      onEdit(snapshot, section)
-    } label: {
-      Label(title, systemImage: "slider.horizontal.3")
-        .font(.tidexLabel)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .contentShape(Rectangle())
+    let label = VStack(alignment: .leading, spacing: Spacing.micro) {
+      Text(title)
+        .font(.tidexBody)
+      if let subtitle {
+        Text(subtitle)
+          .font(.tidexFootnote)
+          .foregroundStyle(Color.tidexTextSecondary)
+      }
     }
-    .buttonStyle(.plain)
-    .foregroundStyle(Color.tidexBlue)
-  }
+    let valueText = Text(value)
+      .font(.tidexBody)
+      .foregroundStyle(Color.tidexTextSecondary)
+      .monospacedDigit()
 
-  private func periodLabel(for snapshot: WageSnapshot) -> String {
-    entries.first { $0.id == snapshot.id }?.dateRange
-      ?? String(localized: .settingsPayPeriodAllDates)
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        label
+        valueText
+      }
+      Spacer(minLength: 0)
+    } else {
+      label
+      Spacer(minLength: Spacing.sm)
+      valueText
+        .multilineTextAlignment(.trailing)
+    }
   }
 
   private func breakSummary(_ snapshot: WageSnapshot) -> String {
     guard snapshot.effectiveBreakEnabled, snapshot.breakMethod != .none else {
-      return String(localized: .settingsPayReviewBreakOff)
+      return String(localized: .settingsPayReviewOff)
     }
     return String(
-      localized: .settingsPayReviewBreakSummary(
-        String(localized: .settingsPayBreakMinutes(Int32(snapshot.effectiveBreakDeductionMinutes))),
-        String(
-          localized: .settingsPayBreakHoursDecimal(
-            snapshot.effectiveBreakThresholdHours.formatted(.number.locale(.appLocale))))
+      localized: .settingsPayReviewBreakShort(
+        duration(Double(snapshot.effectiveBreakDeductionMinutes), unit: .minutes),
+        duration(snapshot.effectiveBreakThresholdHours, unit: .hours)
       ))
   }
 
   private func overtimeSummary(_ snapshot: WageSnapshot) -> String {
     guard let overtime = snapshot.overtime.runtimeEnabledConfig else {
-      return String(localized: .settingsPayReviewOvertimeOff)
+      return String(localized: .settingsPayReviewOff)
     }
     return String(
-      localized: .settingsPayReviewOvertimeSummary(
-        overtime.weeklyThresholdHours.formatted(.number.locale(.appLocale))))
+      localized: .settingsPayReviewOvertimeShort(
+        duration(overtime.weeklyThresholdHours, unit: .hours)))
+  }
+
+  private func taxSummary(_ snapshot: WageSnapshot) -> String {
+    guard snapshot.effectiveTaxEnabled else {
+      return String(localized: .settingsPayReviewOff)
+    }
+    let rate = (context.effectiveTaxPercentage / 100).formatted(
+      .percent.precision(.fractionLength(0...2)).locale(.appLocale))
+    return context.appliesHalfTax ? String(localized: .settingsPayReviewTaxRateHalf(rate)) : rate
+  }
+
+  /// "30 min", "5,5 t": abbreviated units in the app locale.
+  private func duration(_ value: Double, unit: UnitDuration) -> String {
+    Measurement(value: value, unit: unit).formatted(
+      .measurement(
+        width: .abbreviated, usage: .asProvided,
+        numberFormatStyle: .number.precision(.fractionLength(0...2))
+      )
+      .locale(.appLocale))
   }
 
   private func hourlyAmount(_ amount: Double) -> String {

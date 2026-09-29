@@ -379,44 +379,44 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
 struct TariffLevel: Identifiable {
   let level: Int
   let rate: Double
-  let displayName: String
+  var displayName: String { Self.displayName(forLevel: level) }
 
   var id: Int { level }
 
   /// Format rate for display (e.g., "184,54 kr/t").
   /// These tariff levels are Norwegian collective-agreement rates denominated in NOK regardless
-  /// of the user's chosen display currency, so the "kr/t" suffix stays fixed; only the number's
-  /// digit grouping and decimal separator follow the app's locale.
+  /// of the user's chosen display currency, so the "kr" stays fixed; the per-hour suffix, digit
+  /// grouping and decimal separator follow the app's locale.
   var formattedRate: String {
     let formatted = rate.formatted(
       .number.precision(.fractionLength(2)).locale(.appLocale)
     )
-    return "\(formatted) kr/t"
+    return "\(formatted) kr\(String(localized: .commonPerHourShort))"
   }
 
   /// All available tariff levels from PayrollCalculator (fallback for offline)
   static let all: [Self] = [  // swiftlint:disable:this explicit_acl
-    Self(level: -1, rate: 129.91, displayName: "Under 16"),  // swiftlint:disable:this no_magic_numbers
-    Self(level: -2, rate: 132.90, displayName: "16 - 18"),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 1, rate: 184.54, displayName: "Lønnstrinn 1"),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 2, rate: 185.38, displayName: "Lønnstrinn 2"),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 3, rate: 187.46, displayName: "Lønnstrinn 3"),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 4, rate: 193.05, displayName: "Lønnstrinn 4"),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 5, rate: 210.81, displayName: "Lønnstrinn 5"),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 6, rate: 256.14, displayName: "Lønnstrinn 6"),  // swiftlint:disable:this no_magic_numbers
+    Self(level: -1, rate: 129.91),  // swiftlint:disable:this no_magic_numbers
+    Self(level: -2, rate: 132.90),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 1, rate: 184.54),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 2, rate: 185.38),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 3, rate: 187.46),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 4, rate: 193.05),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 5, rate: 210.81),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 6, rate: 256.14),  // swiftlint:disable:this no_magic_numbers
   ]
 
-  /// Standard level display names by level number
-  private static let levelDisplayNames: [Int: String] = [
-    -1: "Under 16",
-    -2: "16 - 18",
-    1: "Lønnstrinn 1",
-    2: "Lønnstrinn 2",
-    3: "Lønnstrinn 3",
-    4: "Lønnstrinn 4",
-    5: "Lønnstrinn 5",
-    6: "Lønnstrinn 6",
-  ]
+  /// Display name for a level number: -1 and -2 are the youth rates, the rest are wage levels
+  static func displayName(forLevel level: Int) -> String {  // swiftlint:disable:this explicit_acl
+    switch level {
+    case -1:
+      return String(localized: .onboardingWageLevelUnder16)
+    case -2:
+      return "16 - 18"
+    default:
+      return String(localized: .onboardingWageLevel(level))
+    }
+  }
 
   /// Build tariff levels dynamically from a TariffVersion
   /// - Parameter tariffVersion: The tariff version containing rates
@@ -427,8 +427,7 @@ struct TariffLevel: Identifiable {
 
     return levelOrder.compactMap { level in
       guard let rate = tariffVersion.rate(forLevel: level) else { return nil }
-      let displayName = levelDisplayNames[level] ?? "Level \(level)"
-      return Self(level: level, rate: rate, displayName: displayName)
+      return Self(level: level, rate: rate)
     }
   }
 }

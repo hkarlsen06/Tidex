@@ -8,7 +8,7 @@ import SwiftUI
 
 /// Totals shown in a calendar header.
 /// `primary` is the net amount on the leading side. `secondary` is optional and shown on the
-/// trailing side, as the before-tax amount or as the change new shifts make.
+/// trailing side, as the before-tax amount, the change new shifts make, or the selection total.
 struct CalendarHeaderTotals: Equatable {
   let primary: Double?
   let secondary: Double?
@@ -40,18 +40,24 @@ struct CalendarHeaderDeltaLabel<Amount: View>: View {
 enum CalendarHeaderSecondaryStyle {
   case detail
   case delta
+  /// Total for the selected dates, with the selection count.
+  case selection
 }
 
 /// One-line totals header above a calendar. The month and year live in the month picker, so the
-/// row shows the amount on the leading side and the before-tax amount or change on the trailing
-/// side. It keeps the same height whether or not the amounts are there, so selecting dates
+/// row shows the amount on the leading side and the before-tax amount, change, or selection
+/// total on the trailing side. It keeps the same height whether or not the amounts are there, so selecting dates
 /// never moves the calendar. It shows nothing when there are no totals, such as when earnings
 /// are turned off.
 struct CalendarHeaderRow: View {
   let totals: CalendarHeaderTotals?
-  /// Number of selected dates, shown after the amount when the amount covers a selection.
+  /// Number of selected dates, shown before the selection total in the `.selection` style.
   var selectionCount: Int?
   var secondaryStyle: CalendarHeaderSecondaryStyle = .detail
+  /// Currency for the secondary amount when it differs from the row's currency.
+  var secondaryCurrency: String?
+
+  @Environment(\.userCurrency) private var userCurrency
 
   @State private var lastDisplayedPrimary: Double = 0
   @State private var lastDisplayedSecondary: Double = 0
@@ -67,16 +73,11 @@ struct CalendarHeaderRow: View {
 
         primaryAmountText(totals.primary)
 
-        if let selectionCount {
-          Text(verbatim: "(\(selectionCount))")
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
-        }
-
         Spacer(minLength: Spacing.xs)
 
         if let secondary = totals.secondary {
           secondaryAmountText(secondary, isAfterTax: totals.primaryIsAfterTax)
+            .userCurrency(secondaryCurrency ?? userCurrency)
             .lineLimit(1)
         }
       }
@@ -142,6 +143,18 @@ struct CalendarHeaderRow: View {
       }
       .font(.tidexFootnote)
       .transition(.opacity)
+
+    case .selection:
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+        if let selectionCount {
+          Text(verbatim: "(\(selectionCount))")
+            .foregroundColor(.tidexTextMuted)
+        }
+        amountText
+          .foregroundColor(.tidexBlue)
+      }
+      .font(.tidexFootnote)
+      .accessibilityElement(children: .combine)
     }
   }
 

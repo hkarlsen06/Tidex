@@ -58,20 +58,14 @@ struct PurposeScreen: View {
 
       VStack(spacing: Spacing.sm) {
         PreviewSection(
-          title: String(
-            localized: "onboarding.post_auth.purpose.pay_preview_title",
-            table: "Localizable"
-          ),
+          title: String(localized: .onboardingPostAuthPurposePayPreviewTitle),
           previewTopOffset: Spacing.xxs
         ) {
           PayPreviewCard()
         }
 
         PreviewSection(
-          title: String(
-            localized: "onboarding.post_auth.purpose.friends_preview_title",
-            table: "Localizable"
-          ),
+          title: String(localized: .onboardingPostAuthPurposeFriendsPreviewTitle),
           previewTopOffset: Spacing.xxs
         ) {
           FriendsPreviewCard()
@@ -138,10 +132,7 @@ struct PurposeScreen: View {
   private var bottomCTASection: some View {
     VStack(spacing: Spacing.md) {
       OnboardingButton(
-        title: String(
-          localized: "onboarding.post_auth.purpose.pay_option.title",
-          table: "Localizable"
-        ),
+        title: String(localized: .onboardingPostAuthPurposePayOptionTitle),
         action: {
           Haptics.play(.success)
           onSelectPaySetup()
@@ -152,22 +143,17 @@ struct PurposeScreen: View {
         Haptics.play(.light)
         onSelectFriendsOnly()
       }) {
-        Text(
-          String(
-            localized: "onboarding.post_auth.purpose.friends_option.title",
-            table: "Localizable"
-          )
-        )
-        .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
-        .frame(maxWidth: .infinity)
-        .frame(height: 54)
-        .background(Color.tidexSurfaceSecondary)
-        .overlay {
-          RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-            .stroke(Color.tidexBorder, lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+        Text(.onboardingPostAuthPurposeFriendsOptionTitle)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
+          .frame(maxWidth: .infinity)
+          .frame(height: 54)
+          .background(Color.tidexSurfaceSecondary)
+          .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+              .stroke(Color.tidexBorder, lineWidth: 1)
+          }
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
       }
       .buttonStyle(.plain)
     }
@@ -289,10 +275,7 @@ private struct FriendsPreviewCard: View {
 
   private var sampleMessagePreview: FriendCardMessagePreview {
     FriendCardMessagePreview(
-      text: String(
-        localized: "onboarding.post_auth.purpose.friends_preview_message",
-        table: "Localizable"
-      ),
+      text: String(localized: .onboardingPostAuthPurposeFriendsPreviewMessage),
       timestamp: Date().addingTimeInterval(-900),
       state: .incomingUnread
     )

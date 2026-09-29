@@ -207,8 +207,7 @@ struct SuccessScreen: View {
         return String(localized: .onboardingSuccessTitle)
 
       case .friendOnlySkip:
-        return String(
-          localized: "onboarding.success.friend_only.title", table: "Localizable")
+        return String(localized: .onboardingSuccessFriendOnlyTitle)
       }
 
     case .saving:
@@ -227,8 +226,7 @@ struct SuccessScreen: View {
         return String(localized: .onboardingSuccessSubtitle)
 
       case .friendOnlySkip:
-        return String(
-          localized: "onboarding.success.friend_only.subtitle", table: "Localizable")
+        return String(localized: .onboardingSuccessFriendOnlySubtitle)
       }
 
     case .saving:

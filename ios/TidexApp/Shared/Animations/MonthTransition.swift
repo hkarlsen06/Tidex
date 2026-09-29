@@ -292,7 +292,7 @@ struct MonthYearPickerSheet: View {
         .background(Color.tidexSeparator)
 
       HStack(spacing: 0) {
-        Picker("Month", selection: $selectedMonth) {
+        Picker(String(localized: .commonMonth), selection: $selectedMonth) {
           ForEach(1...12, id: \.self) { month in
             Text(monthNames[month - 1])
               .tag(month)
@@ -302,7 +302,7 @@ struct MonthYearPickerSheet: View {
         .frame(maxWidth: .infinity)
         .clipped()
 
-        Picker("Year", selection: $selectedYear) {
+        Picker(String(localized: .commonYear), selection: $selectedYear) {
           ForEach(yearRange, id: \.self) { year in
             Text(String(year))
               .tag(year)
