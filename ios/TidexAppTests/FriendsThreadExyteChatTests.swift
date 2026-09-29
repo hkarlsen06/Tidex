@@ -80,6 +80,39 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testCounterpartOnlyReactionChangeProducesUnequalExyteMessage() {
+    let context = FriendsThreadExyteMessageFactory.Context(
+      messagesById: [:],
+      viewerUserId: "viewer",
+      currentUserDisplayName: "Viewer Person",
+      counterpartDisplayName: "Other Person",
+      counterpartAvatarUrl: nil,
+      latestOutgoingMessageId: nil,
+      readReceiptMessageId: nil
+    )
+    let createdAt = Date(timeIntervalSince1970: 1_775_433_600)
+    let plain = FriendsThreadExyteMessageFactory.makeMessage(
+      makeMessage(id: "message-1", senderUserId: "viewer", createdAt: createdAt),
+      context: context
+    )
+    let reacted = FriendsThreadExyteMessageFactory.makeMessage(
+      makeMessage(
+        id: "message-1",
+        senderUserId: "viewer",
+        createdAt: createdAt,
+        reactions: [FriendMessageReaction(emoji: "🔥", count: 1, viewerHasReacted: false)]
+      ),
+      context: context
+    )
+    let unchanged = FriendsThreadExyteMessageFactory.makeMessage(
+      makeMessage(id: "message-1", senderUserId: "viewer", createdAt: createdAt),
+      context: context
+    )
+
+    XCTAssertNotEqual(plain, reacted)
+    XCTAssertEqual(plain, unchanged)
+  }
+
   func testAttachmentTapGuardSuppressesTapImmediatelyAfterMenuRecognition() {
     let now = Date(timeIntervalSince1970: 1_775_433_600)
     let suppressedUntil = FriendsThreadAttachmentTapGuard.suppressedUntilAfterMenuRecognition(

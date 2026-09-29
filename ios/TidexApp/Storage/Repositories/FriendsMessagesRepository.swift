@@ -18,6 +18,12 @@ protocol FriendsMessagesRepositoryProviding: AnyObject {
   func saveMessagingSyncState(_ state: FriendMessagingSyncState) async
   func deleteThread(id: String, viewerUserId: String) async
   func deleteMessage(id: String, viewerUserId: String) async
+  func deleteSentMessagesMissingFromSnapshot(
+    _ snapshot: FriendThreadSyncSnapshot,
+    includingOlderHistory: Bool,
+    writtenBefore cutoff: Date,
+    for viewerUserId: String
+  ) async
 }
 
 @MainActor
@@ -290,6 +296,24 @@ extension FriendsMessagesRepository {
       logger.info("Saved \(messages.count) messages for thread \(threadId, privacy: .private)")
     } catch {
       logger.error("Failed to save messages: \(error.localizedDescription)")
+    }
+  }
+
+  func deleteSentMessagesMissingFromSnapshot(
+    _ snapshot: FriendThreadSyncSnapshot,
+    includingOlderHistory: Bool,
+    writtenBefore cutoff: Date,
+    for viewerUserId: String
+  ) async {
+    do {
+      try await storeActor.deleteSentMessagesMissingFromSnapshot(
+        snapshot,
+        includingOlderHistory: includingOlderHistory,
+        writtenBefore: cutoff,
+        viewerUserId: viewerUserId
+      )
+    } catch {
+      logger.error("Failed to delete messages missing from snapshot: \(error.localizedDescription)")
     }
   }
 

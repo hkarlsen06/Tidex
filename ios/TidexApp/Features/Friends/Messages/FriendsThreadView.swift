@@ -576,17 +576,20 @@ struct FriendsThreadView: View {
     .keyboardDismissMode(.interactive)
     .contentInsets(bottom: Self.bottomMessageComposerClearance)
     .onWillDisplayCell(handleChatCellWillDisplay)
-    .enableLoadMore(offset: 50) {
-      guard
-        let lastWillDisplayPresentedMessageID = chatListRuntime.lastWillDisplayPresentedMessageID,
-        let currentFirstMessageId = messageID(for: lastWillDisplayPresentedMessageID)
-      else { return }
-      Task {
+    .enableLoadMoreOlderMessages(
+      triggerType: .cellIndex(50),
+      hasMoreToLoad: viewModel.hasMoreHistoricalMessages,
+      handleClosure: {
+        guard
+          let lastWillDisplayPresentedMessageID = chatListRuntime.lastWillDisplayPresentedMessageID,
+          let currentFirstMessageId = messageID(for: lastWillDisplayPresentedMessageID)
+        else { return }
         await viewModel.loadOlderMessagesIfNeeded(
           currentFirstMessageId: currentFirstMessageId
         )
-      }
-    }
+      },
+      loadingIndicatorBuilder: { EmptyView() }
+    )
     .onMessageReaction(
       didReactTo: { message, draftReaction in
         guard case .emoji(let emoji) = draftReaction.type else { return }
@@ -818,8 +821,9 @@ struct FriendsThreadView: View {
     pendingAttachmentReactionTarget = target
   }
 
+  /// Unsent rows have a local id that the send RPC rejects as a reply reference.
   private func canReply(to message: FriendMessage) -> Bool {
-    message.messageType == .user && message.deletedAt == nil
+    message.messageType == .user && message.deletedAt == nil && message.sendState == .sent
   }
 
   private func handleBackgroundTimestampRevealChanged(_ value: FriendsChatReplyDragValue) {

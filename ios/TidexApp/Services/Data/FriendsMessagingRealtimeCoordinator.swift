@@ -359,7 +359,8 @@ final class FriendsMessagingRealtimeCoordinator {
 
     do {
       try await subscribeWithTimeout(channel)
-      guard authenticatedViewerUserId == viewerUserId else {
+      // clearActiveThread can run during the subscribe and finds no channel to tear down.
+      guard authenticatedViewerUserId == viewerUserId, activeThreadId == threadId else {
         await supabase.removeChannel(channel)
         return
       }
@@ -554,22 +555,25 @@ final class FriendsMessagingRealtimeCoordinator {
     shouldNotify: Bool = true,
     allowIncrementalSync: Bool = true
   ) async {
+    // True when the server no longer has the events since our cursor, so deletions in them are lost.
+    var eventHistoryExpired = false
     if allowIncrementalSync {
       do {
         if let syncState = await repository.getMessagingSyncState(
           viewerUserId: viewerUserId,
           scope: .thread(threadId: threadId)
-        ),
-          try await replayThreadEvents(
+        ) {
+          if try await replayThreadEvents(
             threadId: threadId,
             viewerUserId: viewerUserId,
             startingAt: syncState
-          )
-        {
-          if shouldNotify {
-            notifyThreadUpdated(threadId: threadId)
+          ) {
+            if shouldNotify {
+              notifyThreadUpdated(threadId: threadId)
+            }
+            return
           }
-          return
+          eventHistoryExpired = true
         }
       } catch {
         realtimeLogger.error(
@@ -579,6 +583,7 @@ final class FriendsMessagingRealtimeCoordinator {
     }
 
     do {
+      let requestedAt = Date()
       let snapshot = try await service.fetchThreadSyncSnapshotV2(
         threadId: threadId,
         messageLimit: Pagination.pageSize
@@ -587,6 +592,12 @@ final class FriendsMessagingRealtimeCoordinator {
       await repository.saveMessages(
         snapshot.messages,
         in: threadId,
+        for: viewerUserId
+      )
+      await repository.deleteSentMessagesMissingFromSnapshot(
+        snapshot,
+        includingOlderHistory: eventHistoryExpired,
+        writtenBefore: requestedAt,
         for: viewerUserId
       )
       await repository.saveThreadState(snapshot.viewerState)

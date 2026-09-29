@@ -103,7 +103,7 @@ internal struct FriendThreadState: Codable, Equatable {
   internal let updatedAt: Date
 }
 
-internal struct FriendMessageAttachment: Identifiable, Codable, Equatable {
+internal struct FriendMessageAttachment: Identifiable, Codable, Equatable, Hashable {
   internal let id: String
   internal let attachmentIndex: Int
   internal let kind: FriendMessageAttachmentKind

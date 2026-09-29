@@ -1,6 +1,6 @@
 import Foundation
 
-internal struct FriendMessage: Identifiable, Codable, Equatable {
+internal struct FriendMessage: Identifiable, Codable, Equatable, Hashable {
   internal let id: String
   internal let threadId: String
   internal let senderUserId: String

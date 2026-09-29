@@ -207,6 +207,10 @@ internal final class FriendsThreadViewModel {
   @ObservationIgnored private var localTypingPushTask: Task<Void, Never>?
   @ObservationIgnored private var lastTypingPushQueuedAt: Date?
   @ObservationIgnored private var activeThreadCatchUpTask: Task<Void, Never>?
+  // Bumped by every startRealtime and stopRealtime call so a start that suspended
+  // can tell that a stop (or a newer start) happened while it waited.
+  @ObservationIgnored private var realtimeToken = 0
+  @ObservationIgnored private var isRealtimeActive = false
   @ObservationIgnored private var counterpartTypingTimeoutTask: Task<Void, Never>?
   @ObservationIgnored private var counterpartTypingStopGraceTask: Task<Void, Never>?
   @ObservationIgnored private var pendingNotificationTypingUserId: String?
@@ -585,6 +589,8 @@ internal final class FriendsThreadViewModel {
     if SensitiveContentPresentationState.shared.activeFriendThreadId == route.threadId {
       return
     }
+    isRealtimeActive = false
+    realtimeToken += 1
     await stopTypingIfNeeded()
     activeThreadCatchUpTask?.cancel()
     activeThreadCatchUpTask = nil
@@ -597,14 +603,28 @@ internal final class FriendsThreadViewModel {
   }
 
   func startRealtime() async {
+    isRealtimeActive = true
+    realtimeToken += 1
+    let token = realtimeToken
     guard await resolveViewerUserIdIfNeeded(forceReloadCache: false) else {
       kThreadLogger.error("Skipping realtime thread subscription because viewer user ID is missing")
       return
     }
+    guard token == realtimeToken else { return }
     await realtimeCoordinator.setActiveThread(
       threadId: route.threadId,
       viewerUserId: viewerUserId
     )
+    guard token == realtimeToken else {
+      // stopRealtime may have cleared the thread before setActiveThread set it. Leave it alone
+      // when another view of this thread is visible, since that view owns the subscription now.
+      if !isRealtimeActive,
+        SensitiveContentPresentationState.shared.activeFriendThreadId != route.threadId
+      {
+        await realtimeCoordinator.clearActiveThread(threadId: route.threadId)
+      }
+      return
+    }
     startActiveThreadCatchUpLoopIfNeeded()
   }
 
@@ -822,6 +842,11 @@ internal final class FriendsThreadViewModel {
       return
     }
 
+    // Mark it before any await, so a send that confirms meanwhile deletes it on the server.
+    if message.sendState != .sent {
+      outbox.discard(message)
+    }
+
     let originalThread = repository.getThread(id: route.threadId, viewerUserId: viewerUserId)
     let shouldCancelComposerMode =
       draftReplyTarget.map { $0.matchesLogicalRow(of: message, viewerUserId: viewerUserId) }
@@ -840,7 +865,6 @@ internal final class FriendsThreadViewModel {
 
     // Queued and failed messages never reached the server, so there is nothing to delete there.
     guard message.sendState == .sent else {
-      outbox.discardPendingData(for: message)
       Haptics.play(.light)
       return
     }
@@ -1009,6 +1033,7 @@ internal final class FriendsThreadViewModel {
 
   private func refreshThreadSnapshotFromServer() async {
     do {
+      let requestedAt = Date()
       let snapshot = try await service.fetchThreadSyncSnapshotV2(
         threadId: route.threadId,
         messageLimit: Pagination.pageSize
@@ -1016,6 +1041,8 @@ internal final class FriendsThreadViewModel {
       hasMoreHistoricalMessages = snapshot.hasMore
       await repository.saveThread(snapshot.thread, for: viewerUserId)
       await repository.saveMessages(snapshot.messages, in: route.threadId, for: viewerUserId)
+      await repository.deleteSentMessagesMissingFromSnapshot(
+        snapshot, includingOlderHistory: false, writtenBefore: requestedAt, for: viewerUserId)
       await repository.saveThreadState(snapshot.viewerState)
       loadFromCache()
       notifyThreadUpdated()
@@ -1045,8 +1072,6 @@ internal final class FriendsThreadViewModel {
     guard activeThreadCatchUpTask == nil else { return }
 
     activeThreadCatchUpTask = Task { @MainActor [weak self] in
-      guard let self else { return }
-
       while !Task.isCancelled {
         do {
           try await Task.sleep(for: ActiveThreadReconciliation.interval)
@@ -1054,7 +1079,7 @@ internal final class FriendsThreadViewModel {
           return
         }
 
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, let self else { return }
         guard SensitiveContentPresentationState.shared.activeFriendThreadId == route.threadId
         else {
           continue

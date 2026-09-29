@@ -1,13 +1,13 @@
 import Foundation
 
-enum FriendsChatMessageGroupPosition: Equatable {
+enum FriendsChatMessageGroupPosition: Hashable {
   case standalone
   case leading
   case middle
   case trailing
 }
 
-struct FriendsChatMessageGroupContext: Equatable {
+struct FriendsChatMessageGroupContext: Hashable {
   let position: FriendsChatMessageGroupPosition
   let isCurrentUser: Bool
 

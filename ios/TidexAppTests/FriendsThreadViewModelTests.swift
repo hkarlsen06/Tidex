@@ -556,6 +556,30 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.composerFocusRequestToken, 1)
   }
 
+  func testStartRealtimeDoesNotSubscribeWhenStoppedWhileResolvingViewer() async throws {
+    let repository = try makeRepository()
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+    let viewModel = FriendsThreadViewModel(
+      route: makeRoute(),
+      viewerUserId: "",
+      service: MockFriendsMessagingService(),
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator,
+      viewerUserIdResolver: {
+        try? await Task.sleep(for: .milliseconds(100))
+        return "viewer-1"
+      }
+    )
+
+    let startTask = Task { await viewModel.startRealtime() }
+    try await Task.sleep(for: .milliseconds(20))
+    SensitiveContentPresentationState.shared.setVisibleContext(nil)
+    await viewModel.stopRealtime()
+    await startTask.value
+
+    XCTAssertEqual(realtimeCoordinator.startThreadSubscriptionCallCount, 0)
+  }
+
   func testStartEditingSeedsComposerStateAndClearsReplyAndAttachment() async throws {
     let repository = try makeRepository()
     let route = makeRoute()

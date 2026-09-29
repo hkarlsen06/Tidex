@@ -911,7 +911,7 @@ struct FriendsThreadChatProjection {
       counterpartLastReadMessageId: input.counterpartLastReadMessageId,
       counterpartLastReadAt: input.counterpartLastReadAt
     )
-    let exyteMessages = FriendsThreadExyteMessageFactory.makeMessages(
+    var exyteMessages = FriendsThreadExyteMessageFactory.makeMessages(
       messages: input.messages,
       conversation: .init(
         viewerUserId: input.viewerUserId,
@@ -970,6 +970,11 @@ struct FriendsThreadChatProjection {
         viewerUserId: input.viewerUserId,
         latestOutgoingMessageId: latestOutgoingMessageId,
         readReceiptMessageId: readReceiptMessageId
+      )
+
+      // Neighbouring messages change the bubble shape without changing this row's own message.
+      exyteMessages[index].triggerRedraw = FriendsThreadExyteMessageFactory.redrawToken(
+        of: [AnyHashable(exyteMessages[index].triggerRedraw), AnyHashable(groupContext)]
       )
 
       presentedMessageIDs.append(presentedMessageID)
@@ -2156,7 +2161,7 @@ enum FriendsThreadExyteMessageFactory {
         )
       }
 
-    return ExyteChat.Message(
+    var exyteMessage = ExyteChat.Message(
       id: FriendsThreadMessagePresentationID.make(for: message, viewerUserId: context.viewerUserId),
       user: user,
       status: exyteStatus(
@@ -2175,6 +2180,38 @@ enum FriendsThreadExyteMessageFactory {
         attachmentId: context.reactionAttachmentTargets[message.id]
       ),
       replyMessage: replyMessage
+    )
+    exyteMessage.triggerRedraw = redrawToken(for: message, context: context)
+    return exyteMessage
+  }
+
+  private static func redrawToken(for message: FriendMessage, context: Context) -> UUID {
+    redrawToken(
+      of: RowRedrawKey(
+        message: message,
+        quotedMessage: message.replyToMessageId.flatMap { context.messagesById[$0] },
+        reactionAttachmentId: context.reactionAttachmentTargets[message.id]
+      )
+    )
+  }
+
+  /// Everything the row renders from the full `FriendMessage` that the Exyte message does not carry.
+  private struct RowRedrawKey: Hashable {
+    let message: FriendMessage
+    let quotedMessage: FriendMessage?
+    let reactionAttachmentId: String?
+  }
+
+  /// A UUID that changes whenever `value` changes, so Exyte sees the row as updated. The hash is
+  /// seeded per process, so compare tokens only within one run.
+  static func redrawToken(of value: some Hashable) -> UUID {
+    let bits = UInt64(bitPattern: Int64(value.hashValue))
+    let bytes = (0..<8).map { UInt8(truncatingIfNeeded: bits >> ($0 * 8)) }
+    return UUID(
+      uuid: (
+        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        0, 0, 0, 0, 0, 0, 0, 0
+      )
     )
   }
 

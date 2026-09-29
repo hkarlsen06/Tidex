@@ -268,6 +268,15 @@ private final class MockFriendsMessagesRepository: FriendsMessagesRepositoryProv
     messages[id] = nil
   }
 
+  func deleteSentMessagesMissingFromSnapshot(
+    _: FriendThreadSyncSnapshot,
+    includingOlderHistory _: Bool,
+    writtenBefore _: Date,
+    for _: String
+  ) async {
+    await Task.yield()
+  }
+
   func getMessagingSyncState(viewerUserId _: String, scope _: FriendMessagingSyncScope) async
     -> FriendMessagingSyncState?
   {

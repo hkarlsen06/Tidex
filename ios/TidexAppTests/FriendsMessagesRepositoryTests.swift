@@ -843,6 +843,71 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     XCTAssertEqual(storedThread?.lastMessageBody, "Edited body")
   }
 
+  func testDeleteSentMessagesMissingFromSnapshotOnlyPrunesTheSnapshotWindow() async throws {
+    let repository = try makeRepository()
+    func message(_ id: String, second: TimeInterval, sendState: FriendMessageSendState = .sent)
+      -> FriendMessage
+    {
+      FriendMessage(
+        id: id,
+        threadId: "thread-1",
+        senderUserId: "friend-1",
+        messageType: .user,
+        body: id,
+        clientId: "client-\(id)",
+        replyToMessageId: nil,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_000 + second),
+        editedAt: nil,
+        deletedAt: nil,
+        sendState: sendState
+      )
+    }
+    let beforeSave = Date()
+    await repository.saveMessages(
+      [message("m1", second: 1), message("m2", second: 2), message("m3", second: 3),
+       message("m4", second: 4)],
+      in: "thread-1",
+      for: viewerUserId
+    )
+    await repository.saveOptimisticMessage(
+      message("local-q", second: 5, sendState: .sending), in: "thread-1", for: viewerUserId)
+    func prune(snapshot: [FriendMessage], olderHistory: Bool, cutoff: Date) async {
+      let snapshot = FriendThreadSyncSnapshot(
+        thread: makeThread(lastMessageId: "m3"),
+        viewerState: FriendThreadState(
+          threadId: "thread-1",
+          userId: viewerUserId,
+          lastReadMessageId: nil,
+          lastReadAt: nil,
+          muted: false,
+          updatedAt: Date()
+        ),
+        counterpartPresence: nil,
+        messages: snapshot,
+        nextCursor: nil,
+        snapshotVersion: 1,
+        retainedFromVersion: 0,
+        hasMore: true
+      )
+      await repository.deleteSentMessagesMissingFromSnapshot(
+        snapshot, includingOlderHistory: olderHistory, writtenBefore: cutoff, for: viewerUserId)
+    }
+    func cachedIds() -> [String] {
+      repository.getMessages(threadId: "thread-1", viewerUserId: viewerUserId).map(\.id)
+    }
+
+    // Rows written after the request started can be newer than the snapshot.
+    await prune(snapshot: [message("m3", second: 3)], olderHistory: false, cutoff: beforeSave)
+    XCTAssertEqual(cachedIds(), ["m1", "m2", "m3", "m4", "local-q"])
+
+    // m4 is inside the window but missing, so the server deleted it. Older rows are unknown.
+    await prune(snapshot: [message("m3", second: 3)], olderHistory: false, cutoff: .distantFuture)
+    XCTAssertEqual(cachedIds(), ["m1", "m2", "m3", "local-q"])
+
+    await prune(snapshot: [message("m3", second: 3)], olderHistory: true, cutoff: .distantFuture)
+    XCTAssertEqual(cachedIds(), ["m3", "local-q"])
+  }
+
   func testGetMessagesFiltersDeletedMessages() async throws {
     let repository = try makeRepository()
 

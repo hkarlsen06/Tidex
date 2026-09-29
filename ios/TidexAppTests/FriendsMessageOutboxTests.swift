@@ -128,15 +128,8 @@ final class FriendsMessageOutboxTests: XCTestCase {
     store.save(ImageAttachment(id: "image-1", data: Data([1, 2, 3])))
     await queue(message, in: repository)
 
-    let viewModel = FriendsThreadViewModel(
-      route: makeRoute(threadId: "thread-a"),
-      viewerUserId: viewerId,
-      service: service,
-      repository: repository,
-      realtimeCoordinator: FriendsMessagingRealtimeCoordinator(
-        service: service, repository: repository),
-      outbox: outbox
-    )
+    let viewModel = makeViewModel(
+      threadId: "thread-a", service: service, repository: repository, outbox: outbox)
 
     await viewModel.deleteMessage(messageId: "local-a1")
 
@@ -144,6 +137,47 @@ final class FriendsMessageOutboxTests: XCTestCase {
     XCTAssertNil(store.load(id: "image-1", mediaType: "image/jpeg"))
     XCTAssertTrue(service.sentClientIds.isEmpty)
     XCTAssertNil(service.deletedMessageId)
+  }
+
+  func testDrainSkipsQueuedMessageDeletedWhileAnEarlierOneSends() async throws {
+    let repository = try makeRepository()
+    let service = OutboxStubService()
+    service.sendDelay = .milliseconds(100)
+    let outbox = makeOutbox(service: service, repository: repository)
+    await queue(makeMessage(id: "local-a1", threadId: "thread-a", second: 1), in: repository)
+    await queue(makeMessage(id: "local-a2", threadId: "thread-a", second: 2), in: repository)
+    let viewModel = makeViewModel(
+      threadId: "thread-a", service: service, repository: repository, outbox: outbox)
+
+    async let drain: Void = outbox.drain(userId: viewerId)
+    try await Task.sleep(for: .milliseconds(20))
+    await viewModel.deleteMessage(messageId: "local-a2")
+    await drain
+
+    XCTAssertEqual(service.sentClientIds, ["client-local-a1"])
+  }
+
+  func testDeletingMessageWhileItSendsDeletesItOnTheServer() async throws {
+    let repository = try makeRepository()
+    let service = OutboxStubService()
+    service.sendDelay = .milliseconds(100)
+    let outbox = makeOutbox(service: service, repository: repository)
+    await queue(makeMessage(id: "local-a1", threadId: "thread-a", second: 1), in: repository)
+    let viewModel = makeViewModel(
+      threadId: "thread-a", service: service, repository: repository, outbox: outbox)
+
+    async let drain: Void = outbox.drain(userId: viewerId)
+    try await Task.sleep(for: .milliseconds(20))
+    await viewModel.deleteMessage(messageId: "local-a1")
+    await drain
+
+    XCTAssertEqual(service.sentClientIds, ["client-local-a1"])
+    XCTAssertEqual(service.deletedMessageId, "server-client-local-a1")
+    // The stub's delete fails, so the sent message comes back for the user to delete again.
+    XCTAssertEqual(
+      repository.getMessages(threadId: "thread-a", viewerUserId: viewerId).map(\.id),
+      ["server-client-local-a1"]
+    )
   }
 
   func testPendingBytesSurviveCacheEvictionAndAreDeletedAfterSend() async throws {
@@ -218,6 +252,23 @@ final class FriendsMessageOutboxTests: XCTestCase {
       service: service,
       repository: repository,
       pendingStore: store ?? makePendingStore()
+    )
+  }
+
+  private func makeViewModel(
+    threadId: String,
+    service: OutboxStubService,
+    repository: FriendsMessagesRepository,
+    outbox: FriendsMessageOutbox
+  ) -> FriendsThreadViewModel {
+    FriendsThreadViewModel(
+      route: makeRoute(threadId: threadId),
+      viewerUserId: viewerId,
+      service: service,
+      repository: repository,
+      realtimeCoordinator: FriendsMessagingRealtimeCoordinator(
+        service: service, repository: repository),
+      outbox: outbox
     )
   }
 

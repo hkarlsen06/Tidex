@@ -80,6 +80,8 @@ final class FriendsMessageOutbox {
   private let repository: FriendsMessagesRepository
   private let pendingStore: FriendsPendingAttachmentStore
   private var inFlightMessageIds: Set<String> = []
+  /// In-flight messages the user deleted. They are deleted on the server once the send confirms.
+  private var discardedInFlightMessageIds: Set<String> = []
   private var attemptCounts: [String: Int] = [:]
   private var isDraining = false
 
@@ -103,8 +105,13 @@ final class FriendsMessageOutbox {
     defer { isDraining = false }
 
     var blockedThreadIds: Set<String> = []
-    for message in repository.getQueuedMessages(viewerUserId: userId) {
-      guard !blockedThreadIds.contains(message.threadId) else { continue }
+    for queuedMessage in repository.getQueuedMessages(viewerUserId: userId) {
+      guard !blockedThreadIds.contains(queuedMessage.threadId) else { continue }
+      // Earlier sends in this loop await, so the user may have deleted or retried this one since.
+      guard
+        let message = repository.getMessage(id: queuedMessage.id, viewerUserId: userId),
+        message.sendState == .sending
+      else { continue }
       // Another sender owns this message. Skip the rest of the thread to keep the order.
       guard claim(message.id) else {
         blockedThreadIds.insert(message.threadId)
@@ -139,6 +146,7 @@ final class FriendsMessageOutbox {
 
   func release(_ messageId: String) {
     inFlightMessageIds.remove(messageId)
+    discardedInFlightMessageIds.remove(messageId)
   }
 
   func isSending(_ messageId: String) -> Bool {
@@ -164,12 +172,18 @@ final class FriendsMessageOutbox {
     replacing message: FriendMessage,
     userId: String
   ) async {
-    await repository.saveConfirmedMessage(
-      sentMessage,
-      replacingLocalMessageId: message.id,
-      in: message.threadId,
-      for: userId
-    )
+    if discardedInFlightMessageIds.remove(message.id) == nil {
+      await repository.saveConfirmedMessage(
+        sentMessage,
+        replacingLocalMessageId: message.id,
+        in: message.threadId,
+        for: userId
+      )
+      discardPendingData(for: message)
+      // The user can delete it while the save above awaits.
+      guard discardedInFlightMessageIds.remove(message.id) != nil else { return }
+    }
+    await deleteConfirmedMessage(sentMessage, userId: userId)
     discardPendingData(for: message)
   }
 
@@ -210,6 +224,15 @@ final class FriendsMessageOutbox {
     return outcome
   }
 
+  /// Drops a message the user deleted before it was sent. If a send is in flight, the message is
+  /// deleted on the server when that send confirms.
+  func discard(_ message: FriendMessage) {
+    if isSending(message.id) {
+      discardedInFlightMessageIds.insert(message.id)
+    }
+    discardPendingData(for: message)
+  }
+
   /// Forgets the retry count and deletes the durable image bytes of a message that will not send.
   func discardPendingData(for message: FriendMessage) {
     attemptCounts[message.id] = nil
@@ -221,6 +244,21 @@ final class FriendsMessageOutbox {
   /// Resets the retry count when the user retries a failed message by hand.
   func resetAttempts(for messageId: String) {
     attemptCounts[messageId] = nil
+  }
+
+  private func deleteConfirmedMessage(_ sentMessage: FriendMessage, userId: String) async {
+    // Realtime can store the server row before the send returns.
+    await repository.deleteMessage(id: sentMessage.id, viewerUserId: userId)
+    do {
+      let updatedThread = try await service.deleteMessage(messageId: sentMessage.id)
+      await repository.saveThread(updatedThread, for: userId)
+    } catch {
+      // Show the message again so the user sees it was sent and can delete it once more.
+      await repository.saveMessages([sentMessage], in: sentMessage.threadId, for: userId)
+      outboxLogger.error(
+        "Failed to delete a message the user deleted while sending: \(error.localizedDescription)")
+    }
+    notifyThreadUpdated(sentMessage.threadId)
   }
 
   // MARK: - Pending attachments

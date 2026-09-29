@@ -269,6 +269,54 @@ extension LocalStoreActor {
     try modelContext.save()
   }
 
+  /// Deletes cached sent messages that a server snapshot should have returned but didn't, because
+  /// the server deleted them. The snapshot holds the newest messages, so only rows inside its
+  /// window count, unless `includingOlderHistory` says the whole cached history is stale.
+  /// Rows written after `writtenBefore` are kept, since they can be newer than the snapshot.
+  func deleteSentMessagesMissingFromSnapshot(
+    _ snapshot: FriendThreadSyncSnapshot,
+    includingOlderHistory: Bool,
+    writtenBefore cutoff: Date,
+    viewerUserId: String
+  ) throws {
+    let threadId = snapshot.thread.id
+    let snapshotMessages = snapshot.messages
+    let hasMore = snapshot.hasMore
+    let windowStart = snapshotMessages.map { ($0.createdAt, $0.id) }.min { $0 < $1 }
+    if hasMore, !includingOlderHistory, windowStart == nil { return }
+    let checksWindow = hasMore && !includingOlderHistory
+
+    let snapshotIds = Set(snapshotMessages.map(\.id))
+    let sentState = FriendMessageSendState.sent.rawValue
+    let descriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.threadId == threadId
+          && localMessage.viewerUserId == viewerUserId
+          && localMessage.updatedAt < cutoff
+      }
+    )
+
+    var deletedAny = false
+    for message in try modelContext.fetch(descriptor) {
+      guard (message.sendStateRaw ?? sentState) == sentState,
+        !snapshotIds.contains(message.id)
+      else { continue }
+      if checksWindow {
+        // The viewer's own rows keep their device send time, which can differ from the server
+        // time the window uses, so only the server's window check is reliable for other rows.
+        guard message.senderUserId != viewerUserId, let windowStart,
+          (message.createdAt, message.id) >= windowStart
+        else { continue }
+      }
+      try deleteStoredMessage(id: message.id, viewerUserId: viewerUserId)
+      deletedAny = true
+    }
+
+    if deletedAny {
+      try modelContext.save()
+    }
+  }
+
   func saveMessage(_ message: FriendMessage, in threadId: String, for viewerUserId: String) throws {
     var storedMessage = message
 
