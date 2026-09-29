@@ -217,7 +217,7 @@ struct ShiftWithComputations: Identifiable, Equatable {
   let taxEnabled: Bool
   /// Tax percentage for this shift's payout
   let taxPercentage: Double
-  var calculationContext: ShiftCalculationContext? = nil
+  var calculationContext: ShiftCalculationContext?
 
   var effectiveTaxPercentage: Double {
     calculationContext?.effectiveTaxPercentage ?? taxPercentage

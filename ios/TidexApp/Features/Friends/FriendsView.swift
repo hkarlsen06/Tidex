@@ -284,57 +284,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     switch deepLink {
     case .sharing(let sharerId, let dates, let changes):
       if let sharerId {
-        // Wait for sharers to load, then select the sharer
-        deepLinkNavigationTask?.cancel()
-        deepLinkNavigationTask = Task { @MainActor in
-          // Wait for sharers to be loaded if still loading
-          await viewModel.waitForSharersLoaded()
-          guard !Task.isCancelled else { return }
-
-          // Find and select the sharer
-          if let sharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
-            $0.id == sharerId
-          }) {
-            let shouldPreserveNavigationPath =
-              SharingDeepLinkNavigationPathResolver.shouldPreserveExistingPath(
-                navigationPathIsEmpty: navigationPath.isEmpty,
-                selectedSharerId: viewModel.selectedSharer?.id,
-                activeChatHighlightUserId: activeChatHighlightUserId
-              )
-            if !shouldPreserveNavigationPath {
-              navigationPath = NavigationPath()
-            }
-            viewModel.selectSharer(sharer)
-            navigationPath.append(sharer)
-
-            // Extract shift IDs for precise highlighting (excludes deleted shifts)
-            if let changes, !changes.isEmpty {
-              let shiftIds = changes.filter { $0.op != "deleted" }.map(\.shiftId)
-              highlightShiftIds = Set(shiftIds)
-            }
-
-            // If dates were provided, navigate to the correct month and set highlight
-            if let dates, let firstDate = dates.first,
-              let date = Date.fromISODateString(firstDate)
-            {
-              let calendar = Calendar.gregorianCurrent
-              let components = calendar.dateComponents([.year, .month], from: date)
-              if let year = components.year, let month = components.month {
-                // Navigate to the month containing the highlighted shifts
-                SharedMonthContext.shared.navigateTo(year: year, month: month)
-              }
-
-              // Set highlight dates for the calendar (fallback for older payloads without shift IDs)
-              highlightDates = Set(dates)
-            }
-
-            await viewModel.loadShiftsForSelectedSharer()
-
-            if !highlightDates.isEmpty || !highlightShiftIds.isEmpty {
-              scheduleHighlightAutoClear()
-            }
-          }
-        }
+        handleSharingDeepLink(sharerId: sharerId, dates: dates, changes: changes)
       }
       coordinator.clearPendingDeepLink()
 
@@ -344,23 +294,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
         showAddFriendSheet = true
         return
       }
-
-      // A named friend has their settings on their profile. Anyone else
-      // (blocked, or not loaded) is reachable from the add friend sheet.
-      deepLinkNavigationTask?.cancel()
-      deepLinkNavigationTask = Task { @MainActor in
-        await viewModel.waitForSharersLoaded()
-        guard !Task.isCancelled else { return }
-
-        if let sharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
-          $0.id == highlightId
-        }) {
-          navigationPath = NavigationPath()
-          profileSharer = sharer
-        } else {
-          showAddFriendSheet = true
-        }
-      }
+      handleSharingManageDeepLink(highlightId: highlightId)
 
     case .friendChat(
       let threadId,
@@ -381,17 +315,93 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       }
       coordinator.clearPendingDeepLink()
 
-    case .shifts:
-      // Not handled here - ShiftsView will handle this
+    case .shifts, .addShift, .settings, .feedback, .adminFeedback, .adminReport:
+      // Not handled here. ShiftsView, AddShiftView and MainTabView own these.
       break
+    }
+  }
 
-    case .addShift:
-      // Not handled here - AddShiftView will handle this
-      break
+  private func handleSharingDeepLink(
+    sharerId: String,
+    dates: [String]?,
+    changes: [AppCoordinator.ShiftChange]?
+  ) {
+    // Wait for sharers to load, then select the sharer
+    deepLinkNavigationTask?.cancel()
+    deepLinkNavigationTask = Task { @MainActor in
+      // Wait for sharers to be loaded if still loading
+      await viewModel.waitForSharersLoaded()
+      guard !Task.isCancelled else { return }
 
-    case .settings, .feedback, .adminFeedback, .adminReport:
-      // Not handled here - MainTabView handles these
-      break
+      // Find and select the sharer
+      guard
+        let sharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
+          $0.id == sharerId
+        })
+      else { return }
+
+      let shouldPreserveNavigationPath =
+        SharingDeepLinkNavigationPathResolver.shouldPreserveExistingPath(
+          navigationPathIsEmpty: navigationPath.isEmpty,
+          selectedSharerId: viewModel.selectedSharer?.id,
+          activeChatHighlightUserId: activeChatHighlightUserId
+        )
+      if !shouldPreserveNavigationPath {
+        navigationPath = NavigationPath()
+      }
+      viewModel.selectSharer(sharer)
+      navigationPath.append(sharer)
+
+      // Extract shift IDs for precise highlighting (excludes deleted shifts)
+      if let changes, !changes.isEmpty {
+        let shiftIds = changes.filter { $0.op != "deleted" }.map(\.shiftId)
+        highlightShiftIds = Set(shiftIds)
+      }
+
+      if let dates {
+        applyDeepLinkHighlightDates(dates)
+      }
+
+      await viewModel.loadShiftsForSelectedSharer()
+
+      if !highlightDates.isEmpty || !highlightShiftIds.isEmpty {
+        scheduleHighlightAutoClear()
+      }
+    }
+  }
+
+  /// If dates were provided, navigates to the month of the first date and sets the highlight.
+  private func applyDeepLinkHighlightDates(_ dates: [String]) {
+    guard let firstDate = dates.first, let date = Date.fromISODateString(firstDate) else {
+      return
+    }
+    let calendar = Calendar.gregorianCurrent
+    let components = calendar.dateComponents([.year, .month], from: date)
+    if let year = components.year, let month = components.month {
+      // Navigate to the month containing the highlighted shifts
+      SharedMonthContext.shared.navigateTo(year: year, month: month)
+    }
+
+    // Set highlight dates for the calendar (fallback for older payloads without shift IDs)
+    highlightDates = Set(dates)
+  }
+
+  private func handleSharingManageDeepLink(highlightId: String) {
+    // A named friend has their settings on their profile. Anyone else
+    // (blocked, or not loaded) is reachable from the add friend sheet.
+    deepLinkNavigationTask?.cancel()
+    deepLinkNavigationTask = Task { @MainActor in
+      await viewModel.waitForSharersLoaded()
+      guard !Task.isCancelled else { return }
+
+      if let sharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
+        $0.id == highlightId
+      }) {
+        navigationPath = NavigationPath()
+        profileSharer = sharer
+      } else {
+        showAddFriendSheet = true
+      }
     }
   }
 

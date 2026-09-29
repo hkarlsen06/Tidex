@@ -219,43 +219,11 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
 
   private var connectedAccountsSection: some View {
     Section {
-      // New numbers cannot be linked without SMS, but existing ones can still be removed.
-      if viewModel.hasPhoneConnected {
-        connectionRow(
-          id: "phone",
-          icon: "phone.fill",
-          title: String(localized: .securityConnectionsPhoneTitle),
-          isConnected: true,
-          connectedText: formatPhoneForDisplay(viewModel.phoneNumber)
-            ?? String(localized: .securityConnectionsPhoneConnected),
-          notConnectedText: "",
-          canDisconnect: viewModel.canUnlinkPhone
-        )
-      }
+      phoneConnectionRow
 
-      connectionRow(
-        id: "google",
-        icon: "g.circle.fill",
-        title: String(localized: .securityConnectionsGoogleTitle),
-        isConnected: viewModel.hasGoogleConnected,
-        connectedText: String(localized: .securityConnectionsGoogleConnected),
-        notConnectedText: String(localized: .securityConnectionsGoogleNotConnected),
-        canDisconnect: viewModel.canDisconnectGoogle
-      ) {
-        Task { await viewModel.connectGoogle() }
-      }
+      googleConnectionRow
 
-      connectionRow(
-        id: "apple",
-        icon: "apple.logo",
-        title: String(localized: .securityConnectionsAppleTitle),
-        isConnected: viewModel.hasAppleConnected,
-        connectedText: String(localized: .securityConnectionsAppleConnected),
-        notConnectedText: String(localized: .securityConnectionsAppleNotConnected),
-        canDisconnect: viewModel.canDisconnectApple
-      ) {
-        Task { await viewModel.connectApple() }
-      }
+      appleConnectionRow
     } header: {
       Text(String(localized: .securityConnectionsSectionTitle))
     } footer: {
@@ -266,6 +234,51 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           Text(.securityConnectionsAddOtherMethod)
         }
       }
+    }
+  }
+
+  // New numbers cannot be linked without SMS, but existing ones can still be removed.
+  @ViewBuilder
+  private var phoneConnectionRow: some View {
+    if viewModel.hasPhoneConnected {
+      connectionRow(
+        id: "phone",
+        icon: "phone.fill",
+        title: String(localized: .securityConnectionsPhoneTitle),
+        isConnected: true,
+        connectedText: formatPhoneForDisplay(viewModel.phoneNumber)
+          ?? String(localized: .securityConnectionsPhoneConnected),
+        notConnectedText: "",
+        canDisconnect: viewModel.canUnlinkPhone
+      )
+    }
+  }
+
+  private var googleConnectionRow: some View {
+    connectionRow(
+      id: "google",
+      icon: "g.circle.fill",
+      title: String(localized: .securityConnectionsGoogleTitle),
+      isConnected: viewModel.hasGoogleConnected,
+      connectedText: String(localized: .securityConnectionsGoogleConnected),
+      notConnectedText: String(localized: .securityConnectionsGoogleNotConnected),
+      canDisconnect: viewModel.canDisconnectGoogle
+    ) {
+      Task { await viewModel.connectGoogle() }
+    }
+  }
+
+  private var appleConnectionRow: some View {
+    connectionRow(
+      id: "apple",
+      icon: "apple.logo",
+      title: String(localized: .securityConnectionsAppleTitle),
+      isConnected: viewModel.hasAppleConnected,
+      connectedText: String(localized: .securityConnectionsAppleConnected),
+      notConnectedText: String(localized: .securityConnectionsAppleNotConnected),
+      canDisconnect: viewModel.canDisconnectApple
+    ) {
+      Task { await viewModel.connectApple() }
     }
   }
 
@@ -493,7 +506,8 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   }
 
   /// A centered numeric code field that keeps at most `maxLength` digits.
-  private func codeField(_ placeholder: String, text: Binding<String>, maxLength: Int) -> some View {
+  private func codeField(_ placeholder: String, text: Binding<String>, maxLength: Int) -> some View
+  {
     TextField(placeholder, text: text)
       .font(.tidexMonoTitle)
       .multilineTextAlignment(.center)
@@ -515,58 +529,66 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       : String(localized: .securityPasswordSetInstructions)
   }
 
+  private var passwordFieldsSection: some View {
+    Section {
+      SecureField(
+        viewModel.hasPassword
+          ? String(localized: .securityPasswordNewPasswordLabel)
+          : String(localized: .securityPasswordPasswordLabel),
+        text: $viewModel.newPassword
+      )
+      .textContentType(.newPassword)
+
+      SecureField(
+        String(localized: .securityPasswordConfirmPasswordLabel),
+        text: $viewModel.confirmPassword
+      )
+      .textContentType(.newPassword)
+    } footer: {
+      sheetFooter("\(passwordInstructions) \(String(localized: .securityPasswordHint))")
+    }
+  }
+
+  private var passwordForm: some View {
+    Form {
+      Group {
+        passwordFieldsSection
+
+        sheetActionSection(
+          title: viewModel.isSettingPassword
+            ? String(localized: .securityPasswordSetting)
+            : viewModel.hasPassword
+              ? String(localized: .securityPasswordUpdate)
+              : String(localized: .securityPasswordSet),
+          isLoading: viewModel.isSettingPassword,
+          isEnabled: canSubmitPassword
+        ) {
+          Task {
+            await viewModel.setPassword()
+          }
+        }
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
+    }
+  }
+
   private var passwordFormSheet: some View {
     NavigationStack {
-      Form {
-        Group {
-          Section {
-            SecureField(
-              viewModel.hasPassword
-                ? String(localized: .securityPasswordNewPasswordLabel)
-                : String(localized: .securityPasswordPasswordLabel),
-              text: $viewModel.newPassword
-            )
-            .textContentType(.newPassword)
-
-            SecureField(
-              String(localized: .securityPasswordConfirmPasswordLabel),
-              text: $viewModel.confirmPassword
-            )
-            .textContentType(.newPassword)
-          } footer: {
-            sheetFooter("\(passwordInstructions) \(String(localized: .securityPasswordHint))")
-          }
-
-          sheetActionSection(
-            title: viewModel.isSettingPassword
-              ? String(localized: .securityPasswordSetting)
-              : viewModel.hasPassword
-                ? String(localized: .securityPasswordUpdate)
-                : String(localized: .securityPasswordSet),
-            isLoading: viewModel.isSettingPassword,
-            isEnabled: canSubmitPassword
-          ) {
-            Task {
-              await viewModel.setPassword()
+      passwordForm
+        .tidexListBackground()
+        .navigationTitle(
+          viewModel.hasPassword
+            ? String(localized: .securityPasswordChangeTitle)
+            : String(localized: .securityPasswordSetTitle)
+        )
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button(String(localized: .commonCancel)) {
+              viewModel.resetPasswordForm()
             }
           }
         }
-        .listRowBackground(Color.tidexSurfacePrimary)
-      }
-      .tidexListBackground()
-      .navigationTitle(
-        viewModel.hasPassword
-          ? String(localized: .securityPasswordChangeTitle)
-          : String(localized: .securityPasswordSetTitle)
-      )
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            viewModel.resetPasswordForm()
-          }
-        }
-      }
     }
     .presentationDetents([.medium, .large])
   }
@@ -577,103 +599,115 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
 
   // MARK: - MFA Enrollment Sheet
 
+  private var mfaEnrollmentForm: some View {
+    Form {
+      Group {
+        if let totpUri = viewModel.mfaTotpUri {
+          qrCodeSection(totpUri)
+        }
+
+        if let secret = viewModel.mfaSecret {
+          mfaManualEntrySection(secret)
+        }
+
+        Section {
+          codeField("000000", text: $viewModel.mfaVerifyCode, maxLength: 6)
+        } footer: {
+          sheetFooter(String(localized: .securityMfaVerifyLabel))
+        }
+
+        sheetActionSection(
+          title: viewModel.isVerifyingMFA
+            ? String(localized: .securityMfaVerifying)
+            : String(localized: .securityMfaVerify),
+          isLoading: viewModel.isVerifyingMFA,
+          isEnabled: viewModel.mfaVerifyCode.count == 6
+        ) {
+          Task {
+            await viewModel.verifyMFAEnrollment()
+          }
+        }
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
+    }
+  }
+
+  private func mfaManualEntrySection(_ secret: String) -> some View {
+    Section {
+      HStack(spacing: Spacing.sm) {
+        Text(secret)
+          .font(.tidexMonoCaptionRegular)
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(1)
+          .truncationMode(.middle)
+          .textSelection(.enabled)
+
+        Spacer(minLength: Spacing.sm)
+
+        Button {
+          UIPasteboard.general.string = secret
+        } label: {
+          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+            .labelStyle(.iconOnly)
+        }
+        .buttonStyle(.borderless)
+      }
+    } header: {
+      Text(.securityMfaManualEntry)
+    }
+  }
+
   private var mfaEnrollmentSheet: some View {
     NavigationStack {
-      Form {
-        Group {
-          if let totpUri = viewModel.mfaTotpUri {
-            qrCodeSection(totpUri)
-          }
-
-          if let secret = viewModel.mfaSecret {
-            Section {
-              HStack(spacing: Spacing.sm) {
-                Text(secret)
-                  .font(.tidexMonoCaptionRegular)
-                  .foregroundColor(.tidexTextPrimary)
-                  .lineLimit(1)
-                  .truncationMode(.middle)
-                  .textSelection(.enabled)
-
-                Spacer(minLength: Spacing.sm)
-
-                Button {
-                  UIPasteboard.general.string = secret
-                } label: {
-                  Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
-                    .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.borderless)
+      mfaEnrollmentForm
+        .tidexListBackground()
+        .navigationTitle(String(localized: .securityMfaEnrollTitle))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button(String(localized: .commonCancel)) {
+              Task {
+                await viewModel.cancelMFAEnrollment()
               }
-            } header: {
-              Text(.securityMfaManualEntry)
-            }
-          }
-
-          Section {
-            codeField("000000", text: $viewModel.mfaVerifyCode, maxLength: 6)
-          } footer: {
-            sheetFooter(String(localized: .securityMfaVerifyLabel))
-          }
-
-          sheetActionSection(
-            title: viewModel.isVerifyingMFA
-              ? String(localized: .securityMfaVerifying)
-              : String(localized: .securityMfaVerify),
-            isLoading: viewModel.isVerifyingMFA,
-            isEnabled: viewModel.mfaVerifyCode.count == 6
-          ) {
-            Task {
-              await viewModel.verifyMFAEnrollment()
             }
           }
         }
-        .listRowBackground(Color.tidexSurfacePrimary)
-      }
-      .tidexListBackground()
-      .navigationTitle(String(localized: .securityMfaEnrollTitle))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            Task {
-              await viewModel.cancelMFAEnrollment()
-            }
-          }
-        }
-      }
     }
     .presentationDetents([.large])
   }
 
-  private func qrCodeSection(_ totpUri: String) -> some View {
-    Section {
-      Group {
-        if let qrImage = generateQRCode(from: totpUri) {
-          Image(uiImage: qrImage)
-            .interpolation(.none)
-            .resizable()
-            .scaledToFit()
+  private func qrCodeImage(_ totpUri: String) -> some View {
+    Group {
+      if let qrImage = generateQRCode(from: totpUri) {
+        Image(uiImage: qrImage)
+          .interpolation(.none)
+          .resizable()
+          .scaledToFit()
+          .accessibilityHidden(true)
+      } else {
+        VStack(spacing: Spacing.xs) {
+          Image(systemName: "qrcode")
+            .font(.system(size: 60))
+            .foregroundColor(.tidexTextMuted)
             .accessibilityHidden(true)
-        } else {
-          VStack(spacing: Spacing.xs) {
-            Image(systemName: "qrcode")
-              .font(.system(size: 60))
-              .foregroundColor(.tidexTextMuted)
-              .accessibilityHidden(true)
 
-            Text(.securityMfaUseSecretBelow)
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-              .multilineTextAlignment(.center)
-          }
+          Text(.securityMfaUseSecretBelow)
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextMuted)
+            .multilineTextAlignment(.center)
         }
       }
-      .frame(width: 184, height: 184)
-      .padding(Spacing.xs)
-      // QR scanners need dark modules on a light background in both appearances.
-      .background(Color.white, in: RoundedRectangle(cornerRadius: CornerRadius.lg))
-      .frame(maxWidth: .infinity)
+    }
+  }
+
+  private func qrCodeSection(_ totpUri: String) -> some View {
+    Section {
+      qrCodeImage(totpUri)
+        .frame(width: 184, height: 184)
+        .padding(Spacing.xs)
+        // QR scanners need dark modules on a light background in both appearances.
+        .background(Color.white, in: RoundedRectangle(cornerRadius: CornerRadius.lg))
+        .frame(maxWidth: .infinity)
 
       if let url = URL(string: totpUri) {
         Button {

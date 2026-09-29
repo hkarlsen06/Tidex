@@ -140,52 +140,20 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
   }
 
   func testDashboardDependencyIncludesDisplayedAndPreviousMonthsOnly() throws {
-    let april: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 4)
-    )
-    let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5)
-    )
-    let june: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 6)
-    )
+    func dependsOn(month: Int) throws -> Bool {
+      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
+        on: [try XCTUnwrap(ShiftChangeAffectedMonth(year: 2_026, month: month))],
+        displayYear: 2_026,
+        displayMonth: 5
+      )
+    }
 
-    XCTAssertTrue(
-      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
-        on: [april],
-        displayYear: 2_026,
-        displayMonth: 5
-      )
-    )
-    XCTAssertTrue(
-      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
-        on: [may],
-        displayYear: 2_026,
-        displayMonth: 5
-      )
-    )
-    XCTAssertFalse(
-      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
-        on: [june],
-        displayYear: 2_026,
-        displayMonth: 5
-      )
-    )
+    XCTAssertTrue(try dependsOn(month: 4))
+    XCTAssertTrue(try dependsOn(month: 5))
+    XCTAssertFalse(try dependsOn(month: 6))
     // A 16th-to-15th period paid the month after reaches two months back.
-    XCTAssertTrue(
-      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
-        on: [try XCTUnwrap(ShiftChangeAffectedMonth(year: 2_026, month: 3))],
-        displayYear: 2_026,
-        displayMonth: 5
-      )
-    )
-    XCTAssertFalse(
-      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
-        on: [try XCTUnwrap(ShiftChangeAffectedMonth(year: 2_026, month: 2))],
-        displayYear: 2_026,
-        displayMonth: 5
-      )
-    )
+    XCTAssertTrue(try dependsOn(month: 3))
+    XCTAssertFalse(try dependsOn(month: 2))
   }
 
   func testScheduleInvalidatesAffectedMonthAndAdjacentDisplayMonths() throws {

@@ -48,29 +48,7 @@ struct WageSourceSelector: View {
 
       // Toggle buttons: Tariff vs Custom (only show if tariff is available)
       if showTariffOption {
-        HStack(spacing: Spacing.sm) {
-          WageTypeToggleButton(
-            title: String(localized: .onboardingWageTariff),
-            icon: "building.2",
-            isSelected: usePreset,
-            action: {
-              withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                usePreset = true
-              }
-            }
-          )
-
-          WageTypeToggleButton(
-            title: String(localized: .onboardingWageCustom),
-            icon: "slider.horizontal.3",
-            isSelected: !usePreset,
-            action: {
-              withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                usePreset = false
-              }
-            }
-          )
-        }
+        sourceToggleButtons
       }
 
       if let selectorFooterContent {
@@ -92,6 +70,32 @@ struct WageSourceSelector: View {
     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: usePreset)
     .sensoryFeedback(.selection, trigger: usePreset)
     .sensoryFeedback(.selection, trigger: wageLevel)
+  }
+
+  private var sourceToggleButtons: some View {
+    HStack(spacing: Spacing.sm) {
+      WageTypeToggleButton(
+        title: String(localized: .onboardingWageTariff),
+        icon: "building.2",
+        isSelected: usePreset,
+        action: {
+          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            usePreset = true
+          }
+        }
+      )
+
+      WageTypeToggleButton(
+        title: String(localized: .onboardingWageCustom),
+        icon: "slider.horizontal.3",
+        isSelected: !usePreset,
+        action: {
+          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            usePreset = false
+          }
+        }
+      )
+    }
   }
 
   // MARK: - Tariff Level Picker

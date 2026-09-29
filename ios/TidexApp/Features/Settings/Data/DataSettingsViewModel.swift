@@ -201,24 +201,9 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     removePreviousShareFile()
 
     // Set loading state
-    switch format {
-    case .pdf:
-      isExportingPdf = true
-
-    case .csv:
-      isExportingCsv = true
-    }
+    setExporting(format, true)
     errorMessage = nil
-
-    defer {
-      switch format {
-      case .pdf:
-        isExportingPdf = false
-
-      case .csv:
-        isExportingCsv = false
-      }
-    }
+    defer { setExporting(format, false) }
 
     do {
       // PDF/CSV export is generated from local synced data.
@@ -240,35 +225,59 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
         in: .whitespacesAndNewlines
       )
 
-      // Handle export based on format
-      switch format {
-      case .pdf:
-        let session = try? await AuthSessionManager.shared.getSession()
-        let userContact = (session?.user.email ?? session?.user.phone ?? "").trimmingCharacters(
-          in: .whitespacesAndNewlines
-        )
-        let fileURL = try await Self.generatePDFOffMain(
-          from: exportData,
-          range: range,
-          localeIdentifier: locale.identifier,
-          userName: userName,
-          userContact: userContact
-        )
-        shareURL = fileURL
-
-      case .csv:
-        let fileURL = try await Self.generateCSVOffMain(
-          from: exportData,
-          range: range,
-          localeIdentifier: locale.identifier,
-          userName: userName
-        )
-        shareURL = fileURL
-      }
+      shareURL = try await makeExportFile(
+        format: format,
+        data: exportData,
+        range: range,
+        locale: locale,
+        userName: userName
+      )
 
     } catch {
       kLogger.error("Export failed: \(error.localizedDescription)")
       errorMessage = error.localizedDescription
+    }
+  }
+
+  private func setExporting(_ format: ExportFormat, _ isExporting: Bool) {
+    switch format {
+    case .pdf:
+      isExportingPdf = isExporting
+
+    case .csv:
+      isExportingCsv = isExporting
+    }
+  }
+
+  /// Generate the export file in the requested format.
+  private func makeExportFile(
+    format: ExportFormat,
+    data exportData: ExportResponse,
+    range: (from: String, to: String),
+    locale: Locale,
+    userName: String
+  ) async throws -> URL {
+    switch format {
+    case .pdf:
+      let session = try? await AuthSessionManager.shared.getSession()
+      let userContact = (session?.user.email ?? session?.user.phone ?? "").trimmingCharacters(
+        in: .whitespacesAndNewlines
+      )
+      return try await Self.generatePDFOffMain(
+        from: exportData,
+        range: range,
+        localeIdentifier: locale.identifier,
+        userName: userName,
+        userContact: userContact
+      )
+
+    case .csv:
+      return try await Self.generateCSVOffMain(
+        from: exportData,
+        range: range,
+        localeIdentifier: locale.identifier,
+        userName: userName
+      )
     }
   }
 
@@ -395,7 +404,8 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     guard let userId else {
       throw ExportError.unauthorized
     }
-    guard let startDate = Date.fromISODateString(from), let endDate = Date.fromISODateString(to) else {
+    guard let startDate = Date.fromISODateString(from), let endDate = Date.fromISODateString(to)
+    else {
       throw ExportError.invalidDateRange
     }
 
@@ -571,7 +581,8 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
 
     let generatedAtFormat = Date.FormatStyle(date: .abbreviated, time: .shortened).locale(locale)
       .calendar(.gregorian)
-    let monthFormat = Date.FormatStyle.dateTime.year().month(.wide).locale(locale).calendar(.gregorian)
+    let monthFormat = Date.FormatStyle.dateTime.year().month(.wide).locale(locale).calendar(
+      .gregorian)
     let weekdayFormat = Date.FormatStyle.dateTime.weekday(.abbreviated).locale(locale)
       .calendar(.gregorian)
 
@@ -591,13 +602,17 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     let jobColumnWidth: CGFloat = 81
     let jobColumns: [PDFColumn] =
       showsJob
-      ? [.init(title: String(localized: .dataExportTableJob), width: jobColumnWidth, alignment: .left)]
+      ? [
+        .init(
+          title: String(localized: .dataExportTableJob), width: jobColumnWidth, alignment: .left)
+      ]
       : []
     let columns: [PDFColumn] =
       [
         .init(title: String(localized: .dataExportTableDate), width: 60, alignment: .left),
         .init(
-          title: "\(String(localized: .dataExportTableStart))–\(String(localized: .dataExportTableEnd))",
+          title:
+            "\(String(localized: .dataExportTableStart))–\(String(localized: .dataExportTableEnd))",
           width: showsJob ? 80 : 80 + jobColumnWidth,
           alignment: .left
         ),
@@ -654,7 +669,8 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
 
         // Logo and wordmark sit top right, the way a letterhead carries a company mark.
         let wordmark = "Tidex"
-        let wordmarkWidth = ceil((wordmark as NSString).size(withAttributes: [.font: wordmarkFont]).width) + 2
+        let wordmarkWidth =
+          ceil((wordmark as NSString).size(withAttributes: [.font: wordmarkFont]).width) + 2
         var markX = pageWidth - margin - wordmarkWidth
         Self.drawPDFText(
           wordmark,
@@ -666,7 +682,8 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
           let logoHeight: CGFloat = 15
           let logoWidth = logoHeight * logoImage.size.width / max(logoImage.size.height, 1)
           markX -= logoWidth + 5
-          logoImage.draw(in: CGRect(x: markX, y: margin + 4.5, width: logoWidth, height: logoHeight))
+          logoImage.draw(
+            in: CGRect(x: markX, y: margin + 4.5, width: logoWidth, height: logoHeight))
         }
 
         Self.drawLine(
@@ -697,10 +714,12 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
         let nameDetail = userName.isEmpty || userContact.isEmpty ? nil : userContact
         var fields: [PDFField] = [
           .init(label: periodLabel, value: periodText, width: 205),
-          .init(label: exportedLabel, value: data.generatedAt.formatted(generatedAtFormat), width: 140),
+          .init(
+            label: exportedLabel, value: data.generatedAt.formatted(generatedAtFormat), width: 140),
         ]
         if !nameValue.isEmpty {
-          fields.insert(.init(label: nameLabel, value: nameValue, detail: nameDetail, width: 170), at: 0)
+          fields.insert(
+            .init(label: nameLabel, value: nameValue, detail: nameDetail, width: 170), at: 0)
         }
 
         var xPosition = margin
@@ -901,7 +920,8 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
         )
         Self.drawPDFText(
           shiftDate.map { $0.formatted(weekdayFormat) } ?? "",
-          in: CGRect(x: dateRect.minX + 22, y: dateRect.minY, width: dateRect.width - 22, height: rowHeight),
+          in: CGRect(
+            x: dateRect.minX + 22, y: dateRect.minY, width: dateRect.width - 22, height: rowHeight),
           font: rowFont,
           color: secondaryTextColor
         )
@@ -970,7 +990,8 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     }
 
     // Save to temp file
-    let filename = Self.buildFilename(range: range, format: .pdf, locale: locale, userName: userName)
+    let filename = Self.buildFilename(
+      range: range, format: .pdf, locale: locale, userName: userName)
     let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
     try pdfData.write(to: tempURL)
 
@@ -990,9 +1011,11 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
 
     let calendar = Calendar.gregorianCurrent
     let startsOnFirst = calendar.component(.day, from: fromDate) == 1
-    let endsOnLast = calendar.date(byAdding: .day, value: 1, to: toDate)
+    let endsOnLast =
+      calendar.date(byAdding: .day, value: 1, to: toDate)
       .map { calendar.component(.day, from: $0) == 1 } ?? false
-    if startsOnFirst, endsOnLast, calendar.isDate(fromDate, equalTo: toDate, toGranularity: .month) {
+    if startsOnFirst, endsOnLast, calendar.isDate(fromDate, equalTo: toDate, toGranularity: .month)
+    {
       return fromDate.formatted(
         Date.FormatStyle.dateTime.year().month(.wide).locale(locale).calendar(.gregorian)
       )
@@ -1016,7 +1039,8 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     userName: String
   ) async throws -> URL {
     try await Task.detached(priority: .utility) {
-      try generateCSV(from: data, range: range, localeIdentifier: localeIdentifier, userName: userName)
+      try generateCSV(
+        from: data, range: range, localeIdentifier: localeIdentifier, userName: userName)
     }.value
   }
 
@@ -1031,22 +1055,11 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     var csvContent = ""
 
     // Headers
-    let headers = [
-      String(localized: .dataExportTableDate),
-      String(localized: .dataExportTableDay),
-      String(localized: .dataExportTableJob),
-      String(localized: .dataExportTableStart),
-      String(localized: .dataExportTableEnd),
-      String(localized: .dataExportTableHours),
-      String(localized: .dataExportCsvBasePay),
-      String(localized: .dataExportTableSupplement),
-      String(localized: .dataExportTableTotal),
-    ]
-
-    csvContent += headers.joined(separator: ";") + "\n"
+    csvContent += csvHeaders.joined(separator: ";") + "\n"
 
     // Date formats
-    let dateFormat = Date.FormatStyle(date: .numeric, time: .omitted).locale(locale).calendar(.gregorian)
+    let dateFormat = Date.FormatStyle(date: .numeric, time: .omitted).locale(locale).calendar(
+      .gregorian)
     let weekdayFormat = Date.FormatStyle.dateTime.weekday(.abbreviated).locale(locale)
       .calendar(.gregorian)
 
@@ -1071,14 +1084,40 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
       csvContent += row.map { Self.escapeCSV($0) }.joined(separator: ";") + "\n"
     }
 
-    // Totals row
-    let totalHours = data.shifts.reduce(0.0) { $0 + $1.calc.hours }
-    let totalBaseWage = data.shifts.reduce(0.0) { $0 + $1.calc.baseWage }
-    let totalSupplement = data.shifts.reduce(0.0) { $0 + $1.calc.supplement }
-    let totalWage = data.shifts.reduce(0.0) { $0 + $1.calc.total }
+    csvContent += csvTotalsRow(for: data.shifts).joined(separator: ";") + "\n"
+
+    // Save to temp file
+    let filename = Self.buildFilename(
+      range: range, format: .csv, locale: locale, userName: userName)
+    let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+    try csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
+
+    return tempURL
+  }
+
+  private nonisolated static var csvHeaders: [String] {
+    [
+      String(localized: .dataExportTableDate),
+      String(localized: .dataExportTableDay),
+      String(localized: .dataExportTableJob),
+      String(localized: .dataExportTableStart),
+      String(localized: .dataExportTableEnd),
+      String(localized: .dataExportTableHours),
+      String(localized: .dataExportCsvBasePay),
+      String(localized: .dataExportTableSupplement),
+      String(localized: .dataExportTableTotal),
+    ]
+  }
+
+  /// Totals row for the CSV export, aligned with the table columns.
+  private nonisolated static func csvTotalsRow(for shifts: [ExportedShift]) -> [String] {
+    let totalHours = shifts.reduce(0.0) { $0 + $1.calc.hours }
+    let totalBaseWage = shifts.reduce(0.0) { $0 + $1.calc.baseWage }
+    let totalSupplement = shifts.reduce(0.0) { $0 + $1.calc.supplement }
+    let totalWage = shifts.reduce(0.0) { $0 + $1.calc.total }
 
     let sumLabel = String(localized: .dataExportPdfSumLabel).replacingOccurrences(of: ":", with: "")
-    let totalsRow = [
+    return [
       sumLabel,
       "",
       "",
@@ -1089,14 +1128,6 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
       String(format: "%.2f", totalSupplement),
       String(format: "%.2f", totalWage),
     ]
-    csvContent += totalsRow.joined(separator: ";") + "\n"
-
-    // Save to temp file
-    let filename = Self.buildFilename(range: range, format: .csv, locale: locale, userName: userName)
-    let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-    try csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
-
-    return tempURL
   }
 
   /// Build filename for export
@@ -1246,7 +1277,9 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     path.stroke()
   }
 
-  private nonisolated static func fillPDFRect(_ rect: CGRect, color: UIColor, cornerRadius: CGFloat = 0) {
+  private nonisolated static func fillPDFRect(
+    _ rect: CGRect, color: UIColor, cornerRadius: CGFloat = 0
+  ) {
     color.setFill()
     UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius).fill()
   }

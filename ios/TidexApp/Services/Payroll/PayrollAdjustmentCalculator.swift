@@ -31,39 +31,41 @@ enum PayrollAdjustmentCalculator {
           adjustment.job_id.flatMap { jobId in jobs.first { $0.id == jobId } }
           ?? (adjustment.job_id == nil ? jobs.first(where: \.is_default) : nil)
         let resolvedHalfTaxMonth = job.map(\.half_tax_month) ?? halfTaxMonth
-        let grossContribution: Double
-        let netContribution: Double
-        let usesTaxEstimate: Bool
-
-        switch adjustment.tax_treatment {
-        case .grossTaxable:
-          grossContribution = adjustment.amount
-          netContribution = netAmount(
-            from: adjustment.amount,
-            taxEnabled: settings.enabled,
-            taxPercentage: settings.percentage,
-            halfTaxMonth: resolvedHalfTaxMonth,
-            payoutMonth: payoutMonth
-          )
-          usesTaxEstimate = settings.enabled
-
-        case .netManual:
-          grossContribution = adjustment.amount
-          netContribution = adjustment.amount
-          usesTaxEstimate = false
-
-        case .excludedFromTaxEstimate:
-          grossContribution = adjustment.amount
-          netContribution = adjustment.amount
-          usesTaxEstimate = false
-        }
+        let contribution = netContribution(
+          of: adjustment,
+          settings: settings,
+          halfTaxMonth: resolvedHalfTaxMonth,
+          payoutMonth: payoutMonth
+        )
 
         return PayrollAdjustmentTotals(
-          gross: partial.gross + grossContribution,
-          net: partial.net + netContribution,
-          taxEnabled: partial.taxEnabled || usesTaxEstimate
+          gross: partial.gross + adjustment.amount,
+          net: partial.net + contribution.net,
+          taxEnabled: partial.taxEnabled || contribution.usesTaxEstimate
         )
       }
+  }
+
+  private static func netContribution(
+    of adjustment: PayrollAdjustment,
+    settings: PayoutTaxSettings,
+    halfTaxMonth: Int?,
+    payoutMonth: Int
+  ) -> (net: Double, usesTaxEstimate: Bool) {
+    switch adjustment.tax_treatment {
+    case .grossTaxable:
+      let net = netAmount(
+        from: adjustment.amount,
+        taxEnabled: settings.enabled,
+        taxPercentage: settings.percentage,
+        halfTaxMonth: halfTaxMonth,
+        payoutMonth: payoutMonth
+      )
+      return (net, settings.enabled)
+
+    case .netManual, .excludedFromTaxEstimate:
+      return (adjustment.amount, false)
+    }
   }
 
   private static func netAmount(

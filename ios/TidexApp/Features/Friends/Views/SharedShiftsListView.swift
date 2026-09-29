@@ -75,61 +75,10 @@ struct SharedShiftsListView: View {
         } else if showListView {
           shiftListContent
         } else {
-          // Center the calendar vertically like in ShiftsView
-          VStack {  // swiftlint:disable:this closure_body_length
-            Spacer()
-            SharedShiftsCalendarView(
-              shifts: shifts,
-              jobs: jobs,
-              year: year,
-              month: month,
-              phase: phase,
-              currency: currency,
-              showEarnings: sharer.showEarnings,
-              friendFirstName: sharer.firstNameOnly,
-              highlightDates: highlightDates,
-              highlightShiftIds: highlightShiftIds,
-              isSuperimposing: isSuperimposing,
-              userHoursByDate: userHoursByDate,
-              userShiftsByDate: userShiftsByDate,
-              userEarningsByDate: userEarningsByDate,
-              onShiftTapped: { shift in
-                selectedShift = shift
-              },
-              onSwipeLeft: {
-                AppearanceTracker.shared.reset()
-                onNextMonth?()
-              },
-              onSwipeRight: {
-                AppearanceTracker.shared.reset()
-                onPreviousMonth?()
-              }
-            )
-            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-            Spacer()
-          }
-          // Offset for month picker overlay so content centers in available space
-          .padding(.bottom, MonthPickerLayout.totalBottomInset)
-          .animation(.spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
+          calendarContent
         }
 
-        // Screenshot bubble overlay
-        if screenshotFeedback.showsBubble {
-          VStack {
-            screenshotBubble
-              .onTapGesture {
-                dismissScreenshotBubble()
-              }
-              .transition(
-                .asymmetric(
-                  insertion: .scale.combined(with: .opacity),
-                  removal: .opacity
-                ))
-            Spacer()
-          }
-          .padding(.top, Spacing.md)
-        }
+        screenshotBubbleOverlay
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -172,6 +121,73 @@ struct SharedShiftsListView: View {
       Task {
         await reportScreenshot()
       }
+    }
+  }
+}
+
+extension SharedShiftsListView {
+  // MARK: - Calendar View
+
+  /// Centers the calendar vertically like in ShiftsView
+  private var calendarContent: some View {
+    VStack {
+      Spacer()
+      calendarView
+        .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+        .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+      Spacer()
+    }
+    // Offset for month picker overlay so content centers in available space
+    .padding(.bottom, MonthPickerLayout.totalBottomInset)
+    .animation(.spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
+  }
+
+  private var calendarView: some View {
+    SharedShiftsCalendarView(
+      shifts: shifts,
+      jobs: jobs,
+      year: year,
+      month: month,
+      phase: phase,
+      currency: currency,
+      showEarnings: sharer.showEarnings,
+      friendFirstName: sharer.firstNameOnly,
+      highlightDates: highlightDates,
+      highlightShiftIds: highlightShiftIds,
+      isSuperimposing: isSuperimposing,
+      userHoursByDate: userHoursByDate,
+      userShiftsByDate: userShiftsByDate,
+      userEarningsByDate: userEarningsByDate,
+      onShiftTapped: { shift in
+        selectedShift = shift
+      },
+      onSwipeLeft: {
+        AppearanceTracker.shared.reset()
+        onNextMonth?()
+      },
+      onSwipeRight: {
+        AppearanceTracker.shared.reset()
+        onPreviousMonth?()
+      }
+    )
+  }
+
+  @ViewBuilder
+  private var screenshotBubbleOverlay: some View {
+    if screenshotFeedback.showsBubble {
+      VStack {
+        screenshotBubble
+          .onTapGesture {
+            dismissScreenshotBubble()
+          }
+          .transition(
+            .asymmetric(
+              insertion: .scale.combined(with: .opacity),
+              removal: .opacity
+            ))
+        Spacer()
+      }
+      .padding(.top, Spacing.md)
     }
   }
 
@@ -322,7 +338,6 @@ struct SharedShiftsListView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding(.vertical, 60)
   }
-
 }
 
 #Preview {

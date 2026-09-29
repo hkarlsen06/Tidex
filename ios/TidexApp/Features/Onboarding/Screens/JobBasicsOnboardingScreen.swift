@@ -26,82 +26,8 @@ struct JobBasicsOnboardingScreen: View {
         .ignoresSafeArea()
 
       VStack(spacing: 0) {
-        GeometryReader { geometry in
-          ScrollView {
-            VStack(spacing: 0) {
-              if let onBack {
-                backButton(onBack)
-              }
-
-              Spacer()
-                .frame(height: headerTopSpacing)
-
-              VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text(.onboardingJobBasicsTitle)
-                  .font(.tidexScreenTitle)
-                  .foregroundColor(.tidexTextPrimary)
-                  .multilineTextAlignment(.leading)
-                  .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text(.onboardingJobBasicsSubtitle)
-                  .font(.tidexBody)
-                  .foregroundColor(.tidexTextSecondary)
-                  .multilineTextAlignment(.leading)
-                  .frame(maxWidth: .infinity, alignment: .leading)
-              }
-              .padding(.horizontal, Spacing.xl)
-              .adaptiveContentWidth()
-
-              Spacer(minLength: Spacing.xl)
-
-              VStack(alignment: .leading, spacing: Spacing.lg) {
-                jobNameField
-
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                  Text(.settingsPayAddJobColorLabel)
-                    .font(.tidexLabel)
-                    .foregroundColor(.tidexTextSecondary)
-
-                  WorkplaceColorCarousel(
-                    selectedHex: data.jobColor ?? OnboardingData.defaultJobColor
-                  ) { hex in
-                    data.jobColor = hex
-                  }
-                }
-              }
-              .padding(.horizontal, Spacing.lg)
-              .adaptiveContentWidth()
-
-              Spacer()
-                .frame(height: Spacing.md)
-            }
-            .frame(minHeight: geometry.size.height, alignment: .top)
-          }
-          .scrollDismissesKeyboard(.interactively)
-        }
-
-        VStack(spacing: 0) {
-          LinearGradient(
-            colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
-            startPoint: .top,
-            endPoint: .bottom
-          )
-          .frame(height: 24)
-
-          OnboardingButton(
-            title: String(localized: .commonContinue),
-            isEnabled: canContinue,
-            action: {
-              continueIfReady()
-            }
-          )
-          .padding(.horizontal, Spacing.lg)
-          .adaptiveContentWidth()
-
-          Spacer()
-            .frame(height: Spacing.xl)
-        }
-        .background(Color.tidexBackground)
+        scrollArea
+        continueBar
       }
     }
     .onAppear {
@@ -109,6 +35,95 @@ struct JobBasicsOnboardingScreen: View {
         data.jobColor = OnboardingData.defaultJobColor
       }
     }
+  }
+
+  private var scrollArea: some View {
+    GeometryReader { geometry in
+      ScrollView {
+        VStack(spacing: 0) {
+          if let onBack {
+            backButton(onBack)
+          }
+
+          Spacer()
+            .frame(height: headerTopSpacing)
+
+          header
+
+          Spacer(minLength: Spacing.xl)
+
+          form
+
+          Spacer()
+            .frame(height: Spacing.md)
+        }
+        .frame(minHeight: geometry.size.height, alignment: .top)
+      }
+      .scrollDismissesKeyboard(.interactively)
+    }
+  }
+
+  private var header: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      Text(.onboardingJobBasicsTitle)
+        .font(.tidexScreenTitle)
+        .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+      Text(.onboardingJobBasicsSubtitle)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextSecondary)
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .padding(.horizontal, Spacing.xl)
+    .adaptiveContentWidth()
+  }
+
+  private var form: some View {
+    VStack(alignment: .leading, spacing: Spacing.lg) {
+      jobNameField
+
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        Text(.settingsPayAddJobColorLabel)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+
+        WorkplaceColorCarousel(
+          selectedHex: data.jobColor ?? OnboardingData.defaultJobColor
+        ) { hex in
+          data.jobColor = hex
+        }
+      }
+    }
+    .padding(.horizontal, Spacing.lg)
+    .adaptiveContentWidth()
+  }
+
+  private var continueBar: some View {
+    VStack(spacing: 0) {
+      LinearGradient(
+        colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
+        startPoint: .top,
+        endPoint: .bottom
+      )
+      .frame(height: 24)
+
+      OnboardingButton(
+        title: String(localized: .commonContinue),
+        isEnabled: canContinue,
+        action: {
+          continueIfReady()
+        }
+      )
+      .padding(.horizontal, Spacing.lg)
+      .adaptiveContentWidth()
+
+      Spacer()
+        .frame(height: Spacing.xl)
+    }
+    .background(Color.tidexBackground)
   }
 
   private func backButton(_ onBack: @escaping () -> Void) -> some View {

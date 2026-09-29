@@ -1,7 +1,7 @@
 import Foundation
 import Observation
-import os.log
 import Supabase
+import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "SecuritySettings")
 
@@ -189,106 +189,6 @@ final class SecuritySettingsViewModel {
     }
   }
 
-  // MARK: - Passkey Management
-
-  /// Register a passkey for the current account.
-  func registerPasskey() async {
-    isRegisteringPasskey = true
-    errorMessage = nil
-
-    do {
-      let passkey = try await passkeyAuthService.register()
-      Haptics.play(.success)
-      passkeys.insert(passkey, at: 0)
-      await loadPasskeys()
-    } catch let error as PasskeyAuthError where error.isCancellation {
-      // User cancelled - do nothing
-    } catch let error as PasskeyAuthError where error.isPasskeyDisabled {
-      logger.error("Passkey registration failed because passkeys are disabled: \(error)")
-      errorMessage = String(localized: .securityPasskeysErrorsDisabled)
-    } catch {
-      logger.error("Failed to register passkey: \(error)")
-      errorMessage = String(localized: .securityPasskeysErrorsRegisterFailed)
-    }
-
-    isRegisteringPasskey = false
-  }
-
-  /// Delete a registered passkey.
-  func deletePasskey(_ passkey: PasskeyAuthService.Passkey) async {
-    isDeletingPasskey = true
-    errorMessage = nil
-
-    do {
-      try await passkeyAuthService.delete(passkeyId: passkey.id)
-      Haptics.play(.success)
-      passkeys.removeAll { $0.id == passkey.id }
-      showDeletePasskeyConfirmation = false
-      passkeyToDelete = nil
-    } catch {
-      logger.error("Failed to delete passkey: \(error)")
-      errorMessage = String(localized: .securityPasskeysErrorsDeleteFailed)
-    }
-
-    isDeletingPasskey = false
-  }
-
-  /// Prepare the rename dialog for a passkey.
-  func startRenamingPasskey(_ passkey: PasskeyAuthService.Passkey) {
-    guard !isOfflineLimited else { return }
-    passkeyToRename = passkey
-    passkeyNameDraft = passkey.displayName
-    showRenamePasskeyAlert = true
-  }
-
-  /// Cancel passkey renaming and clear the draft.
-  func cancelRenamingPasskey() {
-    showRenamePasskeyAlert = false
-    passkeyToRename = nil
-    passkeyNameDraft = ""
-  }
-
-  /// Rename the selected passkey.
-  func renameSelectedPasskey() async {
-    guard let passkey = passkeyToRename else { return }
-
-    let trimmedName = passkeyNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmedName.isEmpty else {
-      errorMessage = String(localized: .securityPasskeysErrorsNameRequired)
-      return
-    }
-
-    guard trimmedName.count <= 120 else {
-      errorMessage = String(localized: .securityPasskeysErrorsRenameFailed)
-      return
-    }
-
-    if trimmedName == passkey.displayName {
-      cancelRenamingPasskey()
-      return
-    }
-
-    isRenamingPasskey = true
-    errorMessage = nil
-
-    do {
-      let updatedPasskey = try await passkeyAuthService.update(
-        passkeyId: passkey.id,
-        friendlyName: trimmedName
-      )
-      if let index = passkeys.firstIndex(where: { $0.id == passkey.id }) {
-        passkeys[index] = updatedPasskey
-      }
-      Haptics.play(.success)
-      cancelRenamingPasskey()
-    } catch {
-      logger.error("Failed to rename passkey: \(error)")
-      errorMessage = String(localized: .securityPasskeysErrorsRenameFailed)
-    }
-
-    isRenamingPasskey = false
-  }
-
   // MARK: - Password Management
 
   /// Set or change password
@@ -431,7 +331,111 @@ final class SecuritySettingsViewModel {
 
     isConnectingProvider = false
   }
+}
 
+extension SecuritySettingsViewModel {
+  // MARK: - Passkey Management
+
+  /// Register a passkey for the current account.
+  func registerPasskey() async {
+    isRegisteringPasskey = true
+    errorMessage = nil
+
+    do {
+      let passkey = try await passkeyAuthService.register()
+      Haptics.play(.success)
+      passkeys.insert(passkey, at: 0)
+      await loadPasskeys()
+    } catch let error as PasskeyAuthError where error.isCancellation {
+      // User cancelled - do nothing
+    } catch let error as PasskeyAuthError where error.isPasskeyDisabled {
+      logger.error("Passkey registration failed because passkeys are disabled: \(error)")
+      errorMessage = String(localized: .securityPasskeysErrorsDisabled)
+    } catch {
+      logger.error("Failed to register passkey: \(error)")
+      errorMessage = String(localized: .securityPasskeysErrorsRegisterFailed)
+    }
+
+    isRegisteringPasskey = false
+  }
+
+  /// Delete a registered passkey.
+  func deletePasskey(_ passkey: PasskeyAuthService.Passkey) async {
+    isDeletingPasskey = true
+    errorMessage = nil
+
+    do {
+      try await passkeyAuthService.delete(passkeyId: passkey.id)
+      Haptics.play(.success)
+      passkeys.removeAll { $0.id == passkey.id }
+      showDeletePasskeyConfirmation = false
+      passkeyToDelete = nil
+    } catch {
+      logger.error("Failed to delete passkey: \(error)")
+      errorMessage = String(localized: .securityPasskeysErrorsDeleteFailed)
+    }
+
+    isDeletingPasskey = false
+  }
+
+  /// Prepare the rename dialog for a passkey.
+  func startRenamingPasskey(_ passkey: PasskeyAuthService.Passkey) {
+    guard !isOfflineLimited else { return }
+    passkeyToRename = passkey
+    passkeyNameDraft = passkey.displayName
+    showRenamePasskeyAlert = true
+  }
+
+  /// Cancel passkey renaming and clear the draft.
+  func cancelRenamingPasskey() {
+    showRenamePasskeyAlert = false
+    passkeyToRename = nil
+    passkeyNameDraft = ""
+  }
+
+  /// Rename the selected passkey.
+  func renameSelectedPasskey() async {
+    guard let passkey = passkeyToRename else { return }
+
+    let trimmedName = passkeyNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedName.isEmpty else {
+      errorMessage = String(localized: .securityPasskeysErrorsNameRequired)
+      return
+    }
+
+    guard trimmedName.count <= 120 else {
+      errorMessage = String(localized: .securityPasskeysErrorsRenameFailed)
+      return
+    }
+
+    if trimmedName == passkey.displayName {
+      cancelRenamingPasskey()
+      return
+    }
+
+    isRenamingPasskey = true
+    errorMessage = nil
+
+    do {
+      let updatedPasskey = try await passkeyAuthService.update(
+        passkeyId: passkey.id,
+        friendlyName: trimmedName
+      )
+      if let index = passkeys.firstIndex(where: { $0.id == passkey.id }) {
+        passkeys[index] = updatedPasskey
+      }
+      Haptics.play(.success)
+      cancelRenamingPasskey()
+    } catch {
+      logger.error("Failed to rename passkey: \(error)")
+      errorMessage = String(localized: .securityPasskeysErrorsRenameFailed)
+    }
+
+    isRenamingPasskey = false
+  }
+}
+
+extension SecuritySettingsViewModel {
   // MARK: - MFA Management
 
   /// Start MFA enrollment
@@ -561,24 +565,5 @@ final class SecuritySettingsViewModel {
   /// Clear messages
   func clearMessages() {
     errorMessage = nil
-  }
-}
-
-// MARK: - MFA Factor Model
-
-extension SecuritySettingsViewModel {
-  struct MFAFactor: Identifiable {
-    let id: String
-    let friendlyName: String?
-    let createdAt: Date
-
-    var displayName: String {
-      friendlyName ?? "Authenticator"
-    }
-
-    var formattedDate: String {
-      createdAt.formatted(
-        Date.FormatStyle(date: .abbreviated, time: .omitted).locale(.appLocale).calendar(.gregorian))
-    }
   }
 }

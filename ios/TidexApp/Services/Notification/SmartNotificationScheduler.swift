@@ -241,6 +241,53 @@ final class SmartNotificationScheduler {
     }
   }
 
+  // MARK: - Debug Testing
+
+  #if DEBUG
+    enum TestNotificationType {
+      case morning
+      case evening
+    }
+
+    /// Schedule a test notification that fires 5 seconds from now
+    func scheduleTestNotification(type: TestNotificationType) async -> Bool {
+      let now = Date()
+      let dateISO = now.toISODateString()
+
+      let content: UNMutableNotificationContent
+      let identifier: String
+
+      switch type {
+      case .morning:
+        content = buildMorningContent(date: now)
+        identifier = "smart-test-morning-\(Int(now.timeIntervalSince1970))"
+
+      case .evening:
+        content = buildEveningContent(for: now, dateISO: dateISO, fireDate: now)
+        identifier = "smart-test-evening-\(Int(now.timeIntervalSince1970))"
+      }
+
+      // Use time interval trigger for precise short delays
+      // (UNCalendarNotificationTrigger only has minute-level granularity)
+      let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+      let request = UNNotificationRequest(
+        identifier: identifier, content: content, trigger: trigger)
+
+      do {
+        try await UNUserNotificationCenter.current().add(request)
+        logger.debug("Scheduled test notification: \(identifier)")
+        return true
+      } catch {
+        logger.error("Failed to schedule test notification: \(error.localizedDescription)")
+        return false
+      }
+    }
+  #endif
+}
+
+// MARK: - Content and shift dates
+
+extension SmartNotificationScheduler {
   private func buildMorningContent(date: Date) -> UNMutableNotificationContent {
     let content = UNMutableNotificationContent()
     let weekday = localizedWeekdayName(for: date)
@@ -403,49 +450,6 @@ final class SmartNotificationScheduler {
 
     return months
   }
-
-  // MARK: - Debug Testing
-
-  #if DEBUG
-    enum TestNotificationType {
-      case morning
-      case evening
-    }
-
-    /// Schedule a test notification that fires 5 seconds from now
-    func scheduleTestNotification(type: TestNotificationType) async -> Bool {
-      let now = Date()
-      let dateISO = now.toISODateString()
-
-      let content: UNMutableNotificationContent
-      let identifier: String
-
-      switch type {
-      case .morning:
-        content = buildMorningContent(date: now)
-        identifier = "smart-test-morning-\(Int(now.timeIntervalSince1970))"
-
-      case .evening:
-        content = buildEveningContent(for: now, dateISO: dateISO, fireDate: now)
-        identifier = "smart-test-evening-\(Int(now.timeIntervalSince1970))"
-      }
-
-      // Use time interval trigger for precise short delays
-      // (UNCalendarNotificationTrigger only has minute-level granularity)
-      let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-      let request = UNNotificationRequest(
-        identifier: identifier, content: content, trigger: trigger)
-
-      do {
-        try await UNUserNotificationCenter.current().add(request)
-        logger.debug("Scheduled test notification: \(identifier)")
-        return true
-      } catch {
-        logger.error("Failed to schedule test notification: \(error.localizedDescription)")
-        return false
-      }
-    }
-  #endif
 }
 
 // MARK: - App Locale Helper

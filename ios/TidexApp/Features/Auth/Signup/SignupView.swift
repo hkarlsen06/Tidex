@@ -30,45 +30,7 @@ struct SignupView: View {
         Color.tidexBackground
           .ignoresSafeArea()
 
-        ScrollViewReader { scrollProxy in
-          ScrollView {
-            VStack(spacing: 0) {
-              Spacer(minLength: authTopSpacing)
-
-              VStack(spacing: authSectionSpacing) {
-                AuthHeroVisual(
-                  title: .signupTitle,
-                  logoSize: 132,
-                  currency: currency,
-                  onLogoTap: restartOnboarding
-                )
-                .padding(.bottom, heroControlsGap)
-                .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.00)
-
-                messageStack
-                  .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.035)
-
-                inputStepContent(scrollProxy: scrollProxy)
-                  .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.07)
-
-                footerView
-                  .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.105)
-              }
-              .frame(maxWidth: 420)
-              .padding(.horizontal, Spacing.xl)
-              .padding(.bottom, bottomPadding(for: geometry))
-              .frame(maxWidth: .infinity)
-
-              Color.clear
-                .frame(height: 0)
-                .id(ScrollTarget.bottom)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: geometry.size.height)
-          }
-          .scrollBounceBehavior(.basedOnSize)
-          .scrollDisabled(!viewModel.showEmailForm)
-        }
+        scrollContent(geometry: geometry)
       }
     }
     .loading(viewModel.isLoading)
@@ -79,6 +41,52 @@ struct SignupView: View {
     .onAppear {
       viewModel.onNavigateToLogin = onNavigateToLogin
       runEntranceAnimationIfNeeded()
+    }
+  }
+
+  private func scrollContent(geometry: GeometryProxy) -> some View {
+    ScrollViewReader { scrollProxy in
+      ScrollView {
+        VStack(spacing: 0) {
+          Spacer(minLength: authTopSpacing)
+
+          entranceColumn(scrollProxy: scrollProxy)
+            .frame(maxWidth: 420)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, bottomPadding(for: geometry))
+            .frame(maxWidth: .infinity)
+
+          Color.clear
+            .frame(height: 0)
+            .id(ScrollTarget.bottom)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: geometry.size.height)
+      }
+      .scrollBounceBehavior(.basedOnSize)
+      .scrollDisabled(!viewModel.showEmailForm)
+    }
+  }
+
+  private func entranceColumn(scrollProxy: ScrollViewProxy) -> some View {
+    VStack(spacing: authSectionSpacing) {
+      AuthHeroVisual(
+        title: .signupTitle,
+        logoSize: 132,
+        currency: currency,
+        onLogoTap: restartOnboarding
+      )
+      .padding(.bottom, heroControlsGap)
+      .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.00)
+
+      messageStack
+        .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.035)
+
+      inputStepContent(scrollProxy: scrollProxy)
+        .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.07)
+
+      footerView
+        .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.105)
     }
   }
 
@@ -255,98 +263,25 @@ struct SignupForm: View {
   var body: some View {
     VStack(spacing: Spacing.md) {
       HStack(spacing: Spacing.sm) {
-        VStack(spacing: 0) {
-          TextField(String(localized: .signupFirstNamePlaceholder), text: $viewModel.firstName)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
-            .textContentType(.givenName)
-            .textInputAutocapitalization(.words)
-            .autocorrectionDisabled()
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.msm)
-        }
-        .background(Color.tidexSurfacePrimary)
-        .overlay(
-          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-            .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+        nameField(
+          placeholder: String(localized: .signupFirstNamePlaceholder),
+          text: $viewModel.firstName,
+          contentType: .givenName
         )
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-
-        VStack(spacing: 0) {
-          TextField(String(localized: .signupLastNamePlaceholder), text: $viewModel.lastName)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
-            .textContentType(.familyName)
-            .textInputAutocapitalization(.words)
-            .autocorrectionDisabled()
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.msm)
-        }
-        .background(Color.tidexSurfacePrimary)
-        .overlay(
-          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-            .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      }
-
-      if let firstNameError = viewModel.fieldErrors.firstName {
-        Text(firstNameError)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexError)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Spacing.xxs)
-      }
-
-      if let lastNameError = viewModel.fieldErrors.lastName {
-        Text(lastNameError)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexError)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Spacing.xxs)
-      }
-
-      VStack(spacing: 0) {
-        NativeTextField(
-          placeholder: String(localized: .signupEmailPlaceholder),
-          text: $viewModel.emailOrPhone,
-          keyboardType: .emailAddress,
-          textContentType: .emailAddress
-        )
-
-        Divider()
-          .background(Color.tidexSeparator)
-
-        NativeSecureField(
-          placeholder: String(localized: .signupPasswordPlaceholder),
-          text: $viewModel.password,
-          onSubmit: {
-            Task { await viewModel.signUp() }
-          }
+        nameField(
+          placeholder: String(localized: .signupLastNamePlaceholder),
+          text: $viewModel.lastName,
+          contentType: .familyName
         )
       }
-      .background(Color.tidexSurfacePrimary)
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-      )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
-      if let emailError = viewModel.fieldErrors.emailOrPhone {
-        Text(emailError)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexError)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Spacing.xxs)
-      }
+      fieldError(viewModel.fieldErrors.firstName)
+      fieldError(viewModel.fieldErrors.lastName)
 
-      if let passwordError = viewModel.fieldErrors.password {
-        Text(passwordError)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexError)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Spacing.xxs)
-      }
+      credentialFields
+
+      fieldError(viewModel.fieldErrors.emailOrPhone)
+      fieldError(viewModel.fieldErrors.password)
 
       PrimaryButton(
         title: String(localized: .signupSubmitButton),
@@ -355,6 +290,68 @@ struct SignupForm: View {
         },
         isLoading: viewModel.isLoading
       )
+    }
+  }
+
+  private var credentialFields: some View {
+    VStack(spacing: 0) {
+      NativeTextField(
+        placeholder: String(localized: .signupEmailPlaceholder),
+        text: $viewModel.emailOrPhone,
+        keyboardType: .emailAddress,
+        textContentType: .emailAddress
+      )
+
+      Divider()
+        .background(Color.tidexSeparator)
+
+      NativeSecureField(
+        placeholder: String(localized: .signupPasswordPlaceholder),
+        text: $viewModel.password,
+        onSubmit: {
+          Task { await viewModel.signUp() }
+        }
+      )
+    }
+    .background(Color.tidexSurfacePrimary)
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+  }
+
+  private func nameField(
+    placeholder: String,
+    text: Binding<String>,
+    contentType: UITextContentType
+  ) -> some View {
+    VStack(spacing: 0) {
+      TextField(placeholder, text: text)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextPrimary)
+        .textContentType(contentType)
+        .textInputAutocapitalization(.words)
+        .autocorrectionDisabled()
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.msm)
+    }
+    .background(Color.tidexSurfacePrimary)
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+  }
+
+  @ViewBuilder
+  private func fieldError(_ message: String?) -> some View {
+    if let message {
+      Text(message)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexError)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xxs)
     }
   }
 }

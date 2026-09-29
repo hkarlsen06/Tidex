@@ -51,7 +51,6 @@ struct AddJobSheet: View {
   @State private var validationError: String?
   @State private var showSaveError = false
 
-  private let payrollDayOptions = [1, 10, 15, 20, 25, 31]
   init(
     initialCurrency: String,
     initialPayrollDay: Int = 15,
@@ -99,7 +98,7 @@ struct AddJobSheet: View {
       }
 
       if isSaving {
-        savingOverlay
+        AddJobSavingOverlay()
       }
     }
     .onAppear {
@@ -125,90 +124,31 @@ struct AddJobSheet: View {
     .interactiveDismissDisabled(isSaving)
   }
 
+}
+
+extension AddJobSheet {
   private var jobDetailsStep: some View {
-    ZStack {
-      Color.tidexBackground
-        .ignoresSafeArea()
-
-      VStack(spacing: 0) {
-        ScrollView {
-          VStack(spacing: 0) {
-            HStack {
-              Button(String(localized: .commonCancel)) {
-                dismiss()
-              }
-              .font(.tidexBody)
-              .foregroundColor(.tidexBlue)
-              .disabled(isSaving)
-              Spacer()
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.md)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: 24)
-
-            VStack(spacing: Spacing.xxxs) {
-              Image(systemName: "building.2")
-                .font(.tidexSubheadline)
-                .foregroundColor(.tidexBlue)
-              Text(.settingsPayAddJobTitle)
-                .font(.tidexScreenTitle)
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, Spacing.xl)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: 28)
-
-            VStack(spacing: Spacing.sm) {
-              jobNameCard
-              colorCard
-              payDetailsCard
-            }
-            .padding(.horizontal, Spacing.lg)
-            .adaptiveContentWidth()
-
-            if let validationError {
-              Text(validationError)
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexError)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.sm)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .adaptiveContentWidth()
-            }
-
-            Spacer()
-              .frame(height: 120)
-          }
+    AddJobStepPage(
+      icon: "building.2",
+      title: .settingsPayAddJobTitle,
+      continueTitle: String(localized: .commonContinue),
+      isContinueEnabled: !isSaving && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+      validationError: validationError,
+      onContinue: { Task { await goToWageSetup() } }
+    ) {
+      HStack {
+        Button(String(localized: .commonCancel)) {
+          dismiss()
         }
-        .scrollDismissesKeyboard(.interactively)
-
-        VStack(spacing: 0) {
-          LinearGradient(
-            colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
-            startPoint: .top,
-            endPoint: .bottom
-          )
-          .frame(height: 24)
-
-          OnboardingButton(
-            title: String(localized: .commonContinue),
-            isEnabled: !isSaving && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            action: {
-              Task { await goToWageSetup() }
-            }
-          )
-          .padding(.horizontal, Spacing.lg)
-          .padding(.bottom, Spacing.xl)
-          .adaptiveContentWidth()
-          .background(Color.tidexBackground)
-        }
+        .font(.tidexBody)
+        .foregroundColor(.tidexBlue)
+        .disabled(isSaving)
+        Spacer()
       }
+    } cards: {
+      jobNameCard
+      colorCard
+      payDetailsCard
     }
   }
 
@@ -244,13 +184,7 @@ struct AddJobSheet: View {
         colorSelectionRow(selectedColor: $existingJobColor)
       }
     }
-    .padding(Spacing.md)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .stroke(Color.tidexBorder, lineWidth: 1)
-    )
+    .addJobCardChrome()
   }
 
   private var jobNameCard: some View {
@@ -263,13 +197,7 @@ struct AddJobSheet: View {
         .textInputAutocapitalization(.words)
         .foregroundColor(.tidexTextPrimary)
     }
-    .padding(Spacing.md)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .stroke(Color.tidexBorder, lineWidth: 1)
-    )
+    .addJobCardChrome()
   }
 
   private var colorCard: some View {
@@ -280,131 +208,17 @@ struct AddJobSheet: View {
 
       colorSelectionRow(selectedColor: $selectedColor)
     }
-    .padding(Spacing.md)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .stroke(Color.tidexBorder, lineWidth: 1)
-    )
-  }
-
-  private func colorSelectionRow(selectedColor: Binding<Color>) -> some View {
-    WorkplaceColorCarousel(selectedHex: normalizedHex(from: selectedColor.wrappedValue)) { hex in
-      selectedColor.wrappedValue = colorFromHex(hex)
-    }
+    .addJobCardChrome()
   }
 
   private var payDetailsCard: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(.settingsPayAddJobPayrollDay)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
-
-        ZStack(alignment: .trailing) {
-          ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.xs) {
-              ForEach(payrollDayOptions, id: \.self) { day in
-                AddJobPaydayButton(
-                  day: day,
-                  isLast: day == 31,
-                  isSelected: payrollDay == day && !showingPaydayInput,
-                  action: {
-                    showingPaydayInput = false
-                    payrollDay = day
-                  }
-                )
-              }
-
-              if showingPaydayInput {
-                TextField("", text: $paydayInputText)
-                  .font(.tidexButton)
-                  .foregroundColor(.tidexBlue)
-                  .keyboardType(.numberPad)
-                  .multilineTextAlignment(.center)
-                  .focused($isPaydayInputFocused)
-                  .frame(width: 44)
-                  .frame(minHeight: 44)
-                  .background(Color.tidexBlue.opacity(0.15))
-                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-                  .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                      .stroke(Color.tidexBlue, lineWidth: 1)
-                  )
-                  .onChange(of: isPaydayInputFocused) { _, focused in
-                    if !focused {
-                      applyPaydayInput()
-                    }
-                  }
-                  .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                      Spacer()
-                      Button(String(localized: .commonDone)) {
-                        applyPaydayInput()
-                      }
-                      .fontWeight(.semibold)
-                    }
-                  }
-              } else {
-                Button(action: {
-                  paydayInputText = !payrollDayOptions.contains(payrollDay) ? "\(payrollDay)" : ""
-                  showingPaydayInput = true
-                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isPaydayInputFocused = true
-                  }
-                }) {
-                  HStack(spacing: Spacing.xxs) {
-                    Image(systemName: "pencil")
-                      .font(.tidexCaptionRegular)
-                    Text(.onboardingSettingsPaydayOther)
-                  }
-                  .font(!payrollDayOptions.contains(payrollDay) ? .tidexLabelStrong : .tidexLabel)
-                  .foregroundColor(
-                    !payrollDayOptions.contains(payrollDay) ? .white : .tidexTextSecondary
-                  )
-                  .frame(minWidth: 56, minHeight: 44)
-                  .padding(.horizontal, Spacing.xs)
-                  .background(
-                    !payrollDayOptions.contains(payrollDay)
-                      ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76)
-                  )
-                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-                }
-                .buttonStyle(.plain)
-              }
-            }
-            .padding(.horizontal, Spacing.micro)
-            .padding(.vertical, Spacing.xxs)
-            .padding(.trailing, Spacing.lg)
-          }
-
-          LinearGradient(
-            colors: [Color.tidexSurfaceSecondary.opacity(0), Color.tidexSurfaceSecondary],
-            startPoint: .leading,
-            endPoint: .trailing
-          )
-          .frame(width: 32)
-          .allowsHitTesting(false)
-        }
-
-        if !payrollDayOptions.contains(payrollDay), !showingPaydayInput {
-          Text(String(localized: .onboardingSettingsPaydayCustomValue(payrollDay)))
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexBlue)
-        }
-      }
-
-    }
-    .padding(Spacing.md)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .stroke(Color.tidexBorder, lineWidth: 1)
+    AddJobPayDetailsCard(
+      payrollDay: $payrollDay,
+      showingPaydayInput: $showingPaydayInput,
+      paydayInputText: $paydayInputText,
+      isPaydayInputFocused: $isPaydayInputFocused,
+      onApplyPaydayInput: applyPaydayInput
     )
-    .sensoryFeedback(.impact(weight: .light), trigger: showingPaydayInput) { _, new in new }
-    .sensoryFeedback(.selection, trigger: payrollDay)
   }
 
   private var wageStep: some View {
@@ -449,101 +263,39 @@ struct AddJobSheet: View {
   }
 
   private var existingJobSetupStep: some View {
-    ZStack {
-      Color.tidexBackground
-        .ignoresSafeArea()
-
-      VStack(spacing: 0) {
-        ScrollView {
-          VStack(spacing: 0) {
-            HStack {
-              Button {
-                backFromExistingJobSetup()
-              } label: {
-                HStack(spacing: Spacing.xxxs) {
-                  Image(systemName: "chevron.left")
-                    .font(.tidexSubheadline)
-                  Text(.commonBack)
-                }
-                .font(.tidexBody)
-                .foregroundColor(.tidexBlue)
-              }
-              .disabled(isSaving)
-
-              Spacer()
-
-              Button(String(localized: .commonCancel)) {
-                dismiss()
-              }
-              .font(.tidexBody)
-              .foregroundColor(.tidexBlue)
-              .disabled(isSaving)
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.md)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: 24)
-
-            VStack(spacing: Spacing.xxxs) {
-              Image(systemName: "pencil.and.list.clipboard")
-                .font(.tidexSubheadline)
-                .foregroundColor(.tidexBlue)
-              Text(.settingsPayAddJobOneLastThingTitle)
-                .font(.tidexScreenTitle)
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, Spacing.xl)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: 28)
-
-            VStack(spacing: Spacing.sm) {
-              existingJobSetupCard
-            }
-            .padding(.horizontal, Spacing.lg)
-            .adaptiveContentWidth()
-
-            if let validationError {
-              Text(validationError)
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexError)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.sm)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .adaptiveContentWidth()
-            }
-
-            Spacer()
-              .frame(height: 120)
+    AddJobStepPage(
+      icon: "pencil.and.list.clipboard",
+      title: .settingsPayAddJobOneLastThingTitle,
+      continueTitle: String(localized: .commonSave),
+      isContinueEnabled: !isSaving,
+      validationError: validationError,
+      onContinue: { Task { await submit() } }
+    ) {
+      HStack {
+        Button {
+          backFromExistingJobSetup()
+        } label: {
+          HStack(spacing: Spacing.xxxs) {
+            Image(systemName: "chevron.left")
+              .font(.tidexSubheadline)
+            Text(.commonBack)
           }
+          .font(.tidexBody)
+          .foregroundColor(.tidexBlue)
         }
-        .scrollDismissesKeyboard(.interactively)
+        .disabled(isSaving)
 
-        VStack(spacing: 0) {
-          LinearGradient(
-            colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
-            startPoint: .top,
-            endPoint: .bottom
-          )
-          .frame(height: 24)
+        Spacer()
 
-          OnboardingButton(
-            title: String(localized: .commonSave),
-            isEnabled: !isSaving,
-            action: {
-              Task { await submit() }
-            }
-          )
-          .padding(.horizontal, Spacing.lg)
-          .padding(.bottom, Spacing.xl)
-          .adaptiveContentWidth()
-          .background(Color.tidexBackground)
+        Button(String(localized: .commonCancel)) {
+          dismiss()
         }
+        .font(.tidexBody)
+        .foregroundColor(.tidexBlue)
+        .disabled(isSaving)
       }
+    } cards: {
+      existingJobSetupCard
     }
   }
 
@@ -569,24 +321,6 @@ struct AddJobSheet: View {
 
   private var dismissTitle: String {
     savedBasicJob == nil ? String(localized: .commonCancel) : setupDismissTitle
-  }
-
-  private var savingOverlay: some View {
-    ZStack {
-      Color.black.opacity(0.35)
-        .ignoresSafeArea()
-
-      VStack(spacing: Spacing.sm) {
-        ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-        Text(.commonLoading)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextOnBrand)
-      }
-      .padding(Spacing.md)
-      .background(Color.tidexSurfacePrimary.opacity(0.9))
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-    }
   }
 
   private func goToWageSetup() async {
@@ -648,10 +382,9 @@ struct AddJobSheet: View {
     isPaydayInputFocused = false
   }
 
-  private func submit() async {
-    guard !isSaving else { return }
-    validationError = nil
-
+  /// Checks the job names on both pages. When one is empty, this shows that page with an
+  /// error and returns nil.
+  private func validatedSetup() -> (name: String, existingJobSetup: ExistingJobSetupInput?)? {
     var existingJobSetupInput: ExistingJobSetupInput?
     if let savedBasicJob {
       existingJobSetupInput = ExistingJobSetupInput(
@@ -664,7 +397,7 @@ struct AddJobSheet: View {
       guard !trimmedExistingName.isEmpty else {
         step = .existingJobSetup
         validationError = String(localized: .settingsPayAddJobErrorCurrentName)
-        return
+        return nil
       }
       existingJobSetupInput = ExistingJobSetupInput(
         id: existingJobNeedingSetup.id,
@@ -677,33 +410,26 @@ struct AddJobSheet: View {
     guard !trimmedName.isEmpty else {
       step = .jobDetails
       validationError = String(localized: .settingsPayAddJobErrorName)
-      return
+      return nil
     }
+    return (trimmedName, existingJobSetupInput)
+  }
 
-    let snapshotInput = JobBaselineSnapshotInput(
-      hourlyWage: onboardingData.resolvedHourlyWage,
-      wageLevel: onboardingData.resolvedWageLevel,
-      tariffTypeId: onboardingData.resolvedTariffTypeId,
-      supplements: onboardingData.resolvedSupplements,
-      overtime: onboardingData.resolvedOvertime,
-      taxEnabled: onboardingData.taxEnabled,
-      taxPercentage: onboardingData.taxEnabled ? onboardingData.taxPercentage : nil,
-      breakEnabled: onboardingData.breakEnabled,
-      breakMethod: "proportional",
-      breakThresholdHours: 5.5,
-      breakDeductionMinutes: 30
-    )
+  private func submit() async {
+    guard !isSaving else { return }
+    validationError = nil
+    guard let setup = validatedSetup() else { return }
 
     isSaving = true
     let didSave = await onSave(
       AddJobSetupInput(
-        existingJobSetup: existingJobSetupInput,
-        name: trimmedName,
+        existingJobSetup: setup.existingJobSetup,
+        name: setup.name,
         color: normalizedHex(from: selectedColor),
         currency: resolvedCurrency,
         payrollDay: payrollDay,
         halfTaxMonth: nil,
-        baselineSnapshot: snapshotInput
+        baselineSnapshot: onboardingData.baselineSnapshotInput
       )
     )
     isSaving = false
@@ -723,58 +449,5 @@ struct AddJobSheet: View {
       return initialCurrency
     }
     return "kr"
-  }
-
-  private func normalizedHex(from color: Color) -> String? {
-    let uiColor = UIColor(color)
-    var red: CGFloat = 0
-    var green: CGFloat = 0
-    var blue: CGFloat = 0
-    var alpha: CGFloat = 0
-
-    guard uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
-      return nil
-    }
-
-    return String(
-      format: "#%02X%02X%02X",
-      Int(red * 255),
-      Int(green * 255),
-      Int(blue * 255)
-    )
-  }
-
-  private func colorFromHex(_ hex: String) -> Color {
-    var value = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-    if value.hasPrefix("#") {
-      value.removeFirst()
-    }
-    guard value.count == 6, let intValue = Int(value, radix: 16) else {
-      return Color.tidexBlue
-    }
-
-    let red = Double((intValue >> 16) & 0xFF) / 255.0
-    let green = Double((intValue >> 8) & 0xFF) / 255.0
-    let blue = Double(intValue & 0xFF) / 255.0
-    return Color(red: red, green: green, blue: blue)
-  }
-}
-
-private struct AddJobPaydayButton: View {
-  let day: Int
-  let isLast: Bool
-  let isSelected: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
-        .font(isSelected ? .tidexButton : .tidexBodyMedium)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-        .frame(minWidth: 56, minHeight: 44)
-        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-    }
-    .buttonStyle(.plain)
   }
 }

@@ -367,73 +367,48 @@ struct SupplementRuleEditorSheet: View {
         .foregroundColor(.tidexTextSecondary)
 
       HStack(spacing: Spacing.sm) {
-        // Fixed rate button
-        Button {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
-          withAnimation {
-            supplementType = .fixed
-            value = defaultValue(for: .fixed)
-          }
-        } label: {
-          VStack(spacing: Spacing.xxs) {
-            Text(.onboardingSupplementsFixedRate)
-              .font(supplementType == .fixed ? .tidexLabelStrong : .tidexLabel)
-              .foregroundColor(supplementType == .fixed ? .tidexTextPrimary : .tidexTextSecondary)
-
-            Text(hourRateSuffix)
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-          }
-          .frame(maxWidth: .infinity)
-          .frame(height: 64)
-          .background(
-            supplementType == .fixed
-              ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary
-          )
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-          .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-              .stroke(
-                supplementType == .fixed ? Color.tidexBrandPrimary : Color.tidexBorder,
-                lineWidth: supplementType == .fixed ? 2 : 1)
-          )
-        }
-        .buttonStyle(.plain)
-
-        // Percent button
-        Button {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
-          withAnimation {
-            supplementType = .percent
-            value = defaultValue(for: .percent)
-          }
-        } label: {
-          VStack(spacing: Spacing.xxs) {
-            Text(.onboardingSupplementsPercentRate)
-              .font(supplementType == .percent ? .tidexLabelStrong : .tidexLabel)
-              .foregroundColor(supplementType == .percent ? .tidexTextPrimary : .tidexTextSecondary)
-
-            Text("%")
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-          }
-          .frame(maxWidth: .infinity)
-          .frame(height: 64)
-          .background(
-            supplementType == .percent
-              ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary
-          )
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-          .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-              .stroke(
-                supplementType == .percent ? Color.tidexBrandPrimary : Color.tidexBorder,
-                lineWidth: supplementType == .percent ? 2 : 1)
-          )
-        }
-        .buttonStyle(.plain)
+        typeButton(.fixed, title: .onboardingSupplementsFixedRate, subtitle: hourRateSuffix)
+        typeButton(.percent, title: .onboardingSupplementsPercentRate, subtitle: "%")
       }
     }
+  }
+
+  private func typeButton(
+    _ type: CustomSupplementRuleWithId.SupplementType,
+    title: LocalizedStringResource,
+    subtitle: String
+  ) -> some View {
+    Button {
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      withAnimation {
+        supplementType = type
+        value = defaultValue(for: type)
+      }
+    } label: {
+      VStack(spacing: Spacing.xxs) {
+        Text(title)
+          .font(supplementType == type ? .tidexLabelStrong : .tidexLabel)
+          .foregroundColor(supplementType == type ? .tidexTextPrimary : .tidexTextSecondary)
+
+        Text(verbatim: subtitle)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+      }
+      .frame(maxWidth: .infinity)
+      .frame(height: 64)
+      .background(
+        supplementType == type
+          ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary
+      )
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(
+            supplementType == type ? Color.tidexBrandPrimary : Color.tidexBorder,
+            lineWidth: supplementType == type ? 2 : 1)
+      )
+    }
+    .buttonStyle(.plain)
   }
 
   // MARK: - Value Section
@@ -445,97 +420,15 @@ struct SupplementRuleEditorSheet: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      // Quick value buttons
-      HStack(spacing: Spacing.xs) {
-        ForEach(quickValues, id: \.self) { quickValue in
-          Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation {
-              value = quickValue
-            }
-          } label: {
-            Text(supplementType == .fixed ? "+\(Int(quickValue))" : "\(Int(quickValue))%")
-              .font(value == quickValue ? .tidexLabelStrong : .tidexLabel)
-              .foregroundColor(value == quickValue ? .white : .tidexTextSecondary)
-              .padding(.horizontal, Spacing.sm)
-              .padding(.vertical, Spacing.xs)
-              .background(
-                value == quickValue ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary
-              )
-              .clipShape(Capsule())
-              .overlay(
-                Capsule()
-                  .stroke(value == quickValue ? Color.clear : Color.tidexBorder, lineWidth: 1)
-              )
-          }
-          .buttonStyle(.plain)
-        }
-      }
+      quickValueButtons
 
       // Slider with value display
       VStack(spacing: Spacing.xs) {
         HStack {
           if showingValueInput {
-            // Editable input field
-            HStack(spacing: Spacing.xxs) {
-              TextField("", text: $valueInputText)
-                .font(.tidexLargeTitle)
-                .foregroundColor(.tidexBlue)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.leading)
-                .focused($isValueInputFocused)
-                .frame(width: 80)
-                .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, Spacing.micro)
-                .background(Color.tidexBlue.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
-                .overlay(
-                  RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-                    .stroke(Color.tidexBlue, lineWidth: 2)
-                )
-                .onChange(of: isValueInputFocused) { _, focused in
-                  if !focused {
-                    applyValueInput()
-                  }
-                }
-                .toolbar {
-                  ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(String(localized: .commonDone)) {
-                      applyValueInput()
-                    }
-                    .fontWeight(.semibold)
-                  }
-                }
-
-              Text(supplementType == .fixed ? hourRateSuffix : "%")
-                .font(.tidexLabel)
-                .foregroundColor(.tidexTextMuted)
-            }
+            valueInputField
           } else {
-            // Tappable display
-            Button {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
-              valueInputText = formatValueWithDecimals(value)
-              showingValueInput = true
-              DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                isValueInputFocused = true
-              }
-            } label: {
-              Text(formatValueWithDecimals(value))
-                .font(.tidexLargeTitle)
-                .foregroundColor(.tidexBlue)
-                .contentTransition(.numericText())
-                .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, Spacing.micro)
-                .background(Color.tidexBlue.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
-            }
-            .buttonStyle(.plain)
-
-            Text(supplementType == .fixed ? hourRateSuffix : "%")
-              .font(.tidexLabel)
-              .foregroundColor(.tidexTextMuted)
+            valueDisplayButton
           }
           Spacer()
         }
@@ -556,6 +449,108 @@ struct SupplementRuleEditorSheet: View {
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
+  }
+
+  private var quickValueButtons: some View {
+    HStack(spacing: Spacing.xs) {
+      ForEach(quickValues, id: \.self) { quickValue in
+        quickValueButton(quickValue)
+      }
+    }
+  }
+
+  private func quickValueButton(_ quickValue: Double) -> some View {
+    Button {
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      withAnimation {
+        value = quickValue
+      }
+    } label: {
+      Text(supplementType == .fixed ? "+\(Int(quickValue))" : "\(Int(quickValue))%")
+        .font(value == quickValue ? .tidexLabelStrong : .tidexLabel)
+        .foregroundColor(value == quickValue ? .white : .tidexTextSecondary)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(
+          value == quickValue ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary
+        )
+        .clipShape(Capsule())
+        .overlay(
+          Capsule()
+            .stroke(value == quickValue ? Color.clear : Color.tidexBorder, lineWidth: 1)
+        )
+    }
+    .buttonStyle(.plain)
+  }
+
+  /// Editable input field
+  private var valueInputField: some View {
+    HStack(spacing: Spacing.xxs) {
+      valueTextField
+
+      Text(supplementType == .fixed ? hourRateSuffix : "%")
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextMuted)
+    }
+  }
+
+  private var valueTextField: some View {
+    TextField("", text: $valueInputText)
+      .font(.tidexLargeTitle)
+      .foregroundColor(.tidexBlue)
+      .keyboardType(.decimalPad)
+      .multilineTextAlignment(.leading)
+      .focused($isValueInputFocused)
+      .frame(width: 80)
+      .padding(.horizontal, Spacing.xxs)
+      .padding(.vertical, Spacing.micro)
+      .background(Color.tidexBlue.opacity(0.15))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
+          .stroke(Color.tidexBlue, lineWidth: 2)
+      )
+      .onChange(of: isValueInputFocused) { _, focused in
+        if !focused {
+          applyValueInput()
+        }
+      }
+      .toolbar {
+        ToolbarItemGroup(placement: .keyboard) {
+          Spacer()
+          Button(String(localized: .commonDone)) {
+            applyValueInput()
+          }
+          .fontWeight(.semibold)
+        }
+      }
+  }
+
+  /// Tappable display
+  @ViewBuilder
+  private var valueDisplayButton: some View {
+    Button {
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      valueInputText = formatValueWithDecimals(value)
+      showingValueInput = true
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        isValueInputFocused = true
+      }
+    } label: {
+      Text(formatValueWithDecimals(value))
+        .font(.tidexLargeTitle)
+        .foregroundColor(.tidexBlue)
+        .contentTransition(.numericText())
+        .padding(.horizontal, Spacing.xxs)
+        .padding(.vertical, Spacing.micro)
+        .background(Color.tidexBlue.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
+    }
+    .buttonStyle(.plain)
+
+    Text(supplementType == .fixed ? hourRateSuffix : "%")
+      .font(.tidexLabel)
+      .foregroundColor(.tidexTextMuted)
   }
 
   private var quickValues: [Double] {

@@ -502,56 +502,90 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     let isToday = dayInfo.dateISO == metrics.todayISO
     let isHighlighted = isDateHighlighted(dayInfo: dayInfo, shiftsOnDay: shiftsOnDay)
 
-    // Show overlap indicator only when at least one shift interval intersects.
-    let friendHasShift = !shiftsOnDay.isEmpty
-    let userHasShift = dayInfo.dateISO.flatMap { userHoursByDate?[$0] } != nil
-    let userShiftsOnDay = dayInfo.dateISO.flatMap { userShiftsByDate?[$0] } ?? []
-    let showOverlap = shiftsOverlap(friendShifts: shiftsOnDay, userShifts: userShiftsOnDay)
-    let showOnlyUserIndicator = isSuperimposing && userHasShift && !friendHasShift
-    let showOnlyFriendIndicator = isSuperimposing && friendHasShift && !userHasShift
-    let showSingleUserIndicator = showOnlyUserIndicator || showOnlyFriendIndicator
-    let singleUserIndicatorColor: Color =
-      showOnlyFriendIndicator ? Self.friendIndicatorColor : Self.yourIndicatorColor
-    let showHiddenFriendMetrics = showOnlyFriendIndicator
+    let indicators = dayIndicators(dateISO: dayInfo.dateISO, friendShifts: shiftsOnDay)
 
     Group {
-      if showHiddenFriendMetrics {
-        CalendarDayCell(
-          dayInfo: dayInfo,
-          style: cellStyle(isToday: isToday, isHighlighted: isHighlighted, isSelected: isSelected),
-          content: .custom,
-          showOverlapIndicator: showOverlap,
-          showSingleUserIndicator: showSingleUserIndicator,
-          singleUserIndicatorColor: singleUserIndicatorColor
-        ) {
-          hiddenFriendMetricsPlaceholder
-        }
-      } else {
-        CalendarDayCell(
-          dayInfo: dayInfo,
-          style: cellStyle(isToday: isToday, isHighlighted: isHighlighted, isSelected: isSelected),
-          content: cellContent(
-            for: dayInfo,
-            dayJobTimeColors: dayJobTimeColors,
-            shouldColorJobMetrics: shouldColorJobMetrics,
-            metrics: metrics
-          ),
-          showOverlapIndicator: showOverlap,
-          showSingleUserIndicator: showSingleUserIndicator,
-          singleUserIndicatorColor: singleUserIndicatorColor
+      dayCell(
+        dayInfo: dayInfo,
+        style: cellStyle(isToday: isToday, isHighlighted: isHighlighted, isSelected: isSelected),
+        indicators: indicators,
+        content: cellContent(
+          for: dayInfo,
+          dayJobTimeColors: dayJobTimeColors,
+          shouldColorJobMetrics: shouldColorJobMetrics,
+          metrics: metrics
         )
-      }
+      )
     }
     // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(
       dayAccessibilityLabel(
-        dayInfo: dayInfo, friendShifts: shiftsOnDay, userShifts: userShiftsOnDay,
-        showOverlap: showOverlap, metrics: metrics)
+        dayInfo: dayInfo, friendShifts: shiftsOnDay, userShifts: indicators.userShifts,
+        showOverlap: indicators.showOverlap, metrics: metrics)
     )
     .accessibilityAddTraits(
       shiftsOnDay.isEmpty ? [] : isSelected ? [.isButton, .isSelected] : .isButton
     )
+  }
+
+  /// Overlap and single-user indicators for a day while superimposing.
+  private struct DayIndicators {
+    let userShifts: [ShiftRow]
+    let showOverlap: Bool
+    let showSingleUser: Bool
+    let singleUserColor: Color
+    let hidesFriendMetrics: Bool
+  }
+
+  private func dayIndicators(
+    dateISO: String?,
+    friendShifts: [ShiftWithComputations]
+  ) -> DayIndicators {
+    // Show overlap indicator only when at least one shift interval intersects.
+    let friendHasShift = !friendShifts.isEmpty
+    let userHasShift = dateISO.flatMap { userHoursByDate?[$0] } != nil
+    let userShifts = dateISO.flatMap { userShiftsByDate?[$0] } ?? []
+    let showOnlyUserIndicator = isSuperimposing && userHasShift && !friendHasShift
+    let showOnlyFriendIndicator = isSuperimposing && friendHasShift && !userHasShift
+    return DayIndicators(
+      userShifts: userShifts,
+      showOverlap: shiftsOverlap(friendShifts: friendShifts, userShifts: userShifts),
+      showSingleUser: showOnlyUserIndicator || showOnlyFriendIndicator,
+      singleUserColor: showOnlyFriendIndicator
+        ? Self.friendIndicatorColor : Self.yourIndicatorColor,
+      hidesFriendMetrics: showOnlyFriendIndicator
+    )
+  }
+
+  @ViewBuilder
+  private func dayCell(
+    dayInfo: CalendarDayInfo,
+    style: CalendarCellStyle,
+    indicators: DayIndicators,
+    content: @autoclosure () -> CalendarCellContent
+  ) -> some View {
+    if indicators.hidesFriendMetrics {
+      CalendarDayCell(
+        dayInfo: dayInfo,
+        style: style,
+        content: .custom,
+        showOverlapIndicator: indicators.showOverlap,
+        showSingleUserIndicator: indicators.showSingleUser,
+        singleUserIndicatorColor: indicators.singleUserColor
+      ) {
+        hiddenFriendMetricsPlaceholder
+      }
+    } else {
+      CalendarDayCell(
+        dayInfo: dayInfo,
+        style: style,
+        content: content(),
+        showOverlapIndicator: indicators.showOverlap,
+        showSingleUserIndicator: indicators.showSingleUser,
+        singleUserIndicatorColor: indicators.singleUserColor
+      )
+    }
   }
 
   /// Spoken label for a day cell: date, today, whose shifts it has, their times and earnings.
@@ -567,7 +601,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     }
     let showsMoney = showEarnings && viewMode == .money
     var parts: [String] = [
-      date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
+      date.formatted(
+        .dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
     ]
     if dateISO == metrics.todayISO {
       parts.append(String(localized: .commonToday))

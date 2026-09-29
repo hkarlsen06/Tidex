@@ -60,54 +60,7 @@ struct OnboardingView: View {
 
       VStack(spacing: 0) {
         // Page content - takes full height, skip button overlaid
-        TabView(selection: $currentPage) {
-          WelcomeScreen(currency: preAuthCurrency)
-            .tag(0)
-
-          PreAuthAddShiftSimulatorScreen(
-            initialCurrency: preAuthCurrency,
-            onCurrencyChanged: { currency in
-              preAuthCurrency = currency
-            },
-            onContinue: { fromTotals, toTotals, currency in
-              completeSimulatorAndAdvance(
-                fromTotals: fromTotals,
-                toTotals: toTotals,
-                currency: currency
-              )
-            },
-            onSkip: {
-              skipFromSimulator()
-            },
-            onBaselineReady: { baselineTotals, currency in
-              simulatorBaselineTotals = baselineTotals
-              preAuthCurrency = currency
-            },
-            isPreloaded: false
-          )
-          .tag(1)
-
-          HowItWorksScreen(
-            totalFrom: howItWorksFromTotals,
-            totalTo: howItWorksToTotals,
-            currency: preAuthCurrency,
-            isActive: currentPage == 2,
-            shouldShowConfetti: howItWorksShouldShowConfetti,
-            shouldAnimateTotalFromPrevious: howItWorksShouldAnimateFromPrevious,
-            totalCardSeed: howItWorksTotalCardSeed,
-            isExiting: isCompletingPreAuth,
-            showsTitle: false
-          )
-          .tag(2)
-
-        }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .motionAnimation(.pageTransition, value: currentPage, reduceMotion: reduceMotion)
-        .onChange(of: currentPage) { oldPage, newPage in
-          handlePageTransition(from: oldPage, to: newPage)
-          preloadUpcomingScreen(after: newPage)
-          recordFunnelStep(for: newPage)
-        }
+        pageTabs
 
         // Bottom controls area - constrained for iPad
         if !isSimulatorPage {
@@ -148,178 +101,6 @@ struct OnboardingView: View {
     default: name = "welcome"
     }
     OnboardingFunnelRecorder.shared.recordPreAuth(name)
-  }
-
-  private var preloadedSimulatorScreen: some View {
-    PreAuthAddShiftSimulatorScreen(
-      initialCurrency: preAuthCurrency,
-      onCurrencyChanged: { _ in },
-      onContinue: { _, _, _ in },
-      onSkip: {},
-      onBaselineReady: { _, _ in },
-      isPreloaded: true
-    )
-    .frame(width: 1, height: 1)
-    .clipped()
-    .opacity(0.001)
-    .allowsHitTesting(false)
-    .accessibilityHidden(true)
-  }
-
-  private var preloadedHowItWorksScreen: some View {
-    HowItWorksScreen(
-      totalFrom: howItWorksFromTotals ?? simulatorBaselineTotals ?? fallbackHowItWorksTotals,
-      totalTo: howItWorksToTotals ?? howItWorksFromTotals ?? simulatorBaselineTotals
-        ?? fallbackHowItWorksTotals,
-      currency: preAuthCurrency,
-      isActive: false,
-      shouldShowConfetti: false,
-      shouldAnimateTotalFromPrevious: false,
-      totalCardSeed: howItWorksTotalCardSeed,
-      showsTitle: false
-    )
-    .frame(width: 1, height: 1)
-    .clipped()
-    .opacity(0.001)
-    .allowsHitTesting(false)
-    .accessibilityHidden(true)
-  }
-
-  @ViewBuilder
-  private var topHeader: some View {
-    ZStack(alignment: .center) {
-      HStack(alignment: .center, spacing: Spacing.sm) {
-        if currentPage == 0 {
-          Image("MarketingAppIcon")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 54, height: 54)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .accessibilityLabel(Text("Tidex"))
-        } else if currentPage == howItWorksPage {
-          Text(.onboardingHowTitle)
-            .font(.tidexScreenTitle)
-            .foregroundColor(.tidexTextPrimary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.72)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-
-        Spacer(minLength: 0)
-
-        OnboardingCurrencyCapsuleSelector(
-          selectedCurrency: Binding(
-            get: { preAuthCurrency },
-            set: { selectedCurrency in
-              guard selectedCurrency != preAuthCurrency else { return }
-              preAuthCurrency = selectedCurrency
-              OnboardingCurrencyCarryoverStore.writePreferredCurrency(selectedCurrency)
-            }
-          )
-        )
-        .fixedSize(horizontal: true, vertical: false)
-      }
-    }
-    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-    .frame(maxWidth: .infinity)
-    .padding(.horizontal, Spacing.lg)
-    .padding(.top, Spacing.lg)
-    .padding(.bottom, currentPage == howItWorksPage ? Spacing.sm : Spacing.xl)
-    .background(Color.tidexBackground)
-  }
-
-  private var bottomControls: some View {
-    VStack(spacing: Spacing.sm) {
-      primaryBottomAction
-
-      PageIndicator(totalPages: totalPages, currentPage: currentPage)
-        .preAuthCompletionExitStep(
-          isExiting: isCompletingPreAuth && currentPage == howItWorksPage,
-          delay: 0.205
-        )
-        .padding(.top, Spacing.xxs)
-
-      if currentPage == 0 {
-        loginButton
-      }
-    }
-    .padding(.horizontal, Spacing.lg)
-    .adaptiveContentWidth()
-    .padding(.bottom, Spacing.xs)
-    .motionAnimation(.emphasis, value: currentPage, reduceMotion: reduceMotion)
-  }
-
-  @ViewBuilder
-  private var primaryBottomAction: some View {
-    if currentPage < totalPages - 1 {
-      if currentPage == 0 {
-        firstPageActionRow
-      } else {
-        OnboardingButton(
-          title: String(localized: .commonContinue),
-          action: advanceToNextPage
-        )
-      }
-    } else {
-      OnboardingButton(
-        title: String(localized: .onboardingHowTakeControl),
-        action: completeAndNavigateToSignup
-      )
-      .preAuthCompletionExitStep(
-        isExiting: isCompletingPreAuth && currentPage == howItWorksPage,
-        delay: 0.165
-      )
-    }
-  }
-
-  private var firstPageActionRow: some View {
-    GeometryReader { geometry in
-      let availableWidth = max(0, geometry.size.width - Spacing.sm)
-      let skipWidth = availableWidth / 5
-      let continueWidth = availableWidth - skipWidth
-
-      HStack(spacing: Spacing.sm) {
-        Button {
-          Haptics.play(.light)
-          completeAndNavigateToSignup()
-        } label: {
-          Image(systemName: "forward.end.fill")
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundColor(.tidexTextSecondary)
-            .frame(width: skipWidth)
-            .frame(height: 54)
-            .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
-        }
-        .buttonStyle(SnappyButtonStyle())
-        .accessibilityLabel(Text(.onboardingSkip))
-
-        OnboardingButton(
-          title: String(localized: .commonContinue),
-          action: advanceToNextPage
-        )
-        .frame(width: continueWidth)
-      }
-    }
-    .frame(height: 54)
-  }
-
-  /// Lets returning users go straight to login instead of through the intro.
-  private var loginButton: some View {
-    Button {
-      Haptics.play(.light)
-      onNavigateToLogin()
-    } label: {
-      Text(.onboardingGetstartedLogin)
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
-        .lineLimit(1)
-        .minimumScaleFactor(0.86)
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
   }
 
   private func completeSimulatorAndAdvance(
@@ -419,24 +200,233 @@ struct OnboardingView: View {
   }
 }
 
-private struct PreAuthCompletionExitStepModifier: ViewModifier {
-  let isExiting: Bool
-  let delay: TimeInterval
+extension OnboardingView {
+  /// Page content - takes full height, skip button overlaid
+  private var pageTabs: some View {
+    TabView(selection: $currentPage) {
+      WelcomeScreen(currency: preAuthCurrency)
+        .tag(0)
 
-  func body(content: Content) -> some View {
-    content
-      .opacity(isExiting ? 0 : 1)
-      .offset(y: isExiting ? -24 : 0)
-      .animation(
-        .easeInOut(duration: 0.18).delay(delay),
-        value: isExiting
+      simulatorScreen
+        .tag(1)
+
+      HowItWorksScreen(
+        totalFrom: howItWorksFromTotals,
+        totalTo: howItWorksToTotals,
+        currency: preAuthCurrency,
+        isActive: currentPage == 2,
+        shouldShowConfetti: howItWorksShouldShowConfetti,
+        shouldAnimateTotalFromPrevious: howItWorksShouldAnimateFromPrevious,
+        totalCardSeed: howItWorksTotalCardSeed,
+        isExiting: isCompletingPreAuth,
+        showsTitle: false
       )
-  }
-}
+      .tag(2)
 
-extension View {
-  fileprivate func preAuthCompletionExitStep(isExiting: Bool, delay: TimeInterval) -> some View {
-    modifier(PreAuthCompletionExitStepModifier(isExiting: isExiting, delay: delay))
+    }
+    .tabViewStyle(.page(indexDisplayMode: .never))
+    .motionAnimation(.pageTransition, value: currentPage, reduceMotion: reduceMotion)
+    .onChange(of: currentPage) { oldPage, newPage in
+      handlePageTransition(from: oldPage, to: newPage)
+      preloadUpcomingScreen(after: newPage)
+      recordFunnelStep(for: newPage)
+    }
+  }
+
+  private var simulatorScreen: some View {
+    PreAuthAddShiftSimulatorScreen(
+      initialCurrency: preAuthCurrency,
+      onCurrencyChanged: { currency in
+        preAuthCurrency = currency
+      },
+      onContinue: { fromTotals, toTotals, currency in
+        completeSimulatorAndAdvance(
+          fromTotals: fromTotals,
+          toTotals: toTotals,
+          currency: currency
+        )
+      },
+      onSkip: {
+        skipFromSimulator()
+      },
+      onBaselineReady: { baselineTotals, currency in
+        simulatorBaselineTotals = baselineTotals
+        preAuthCurrency = currency
+      },
+      isPreloaded: false
+    )
+  }
+
+  private var preloadedSimulatorScreen: some View {
+    PreAuthAddShiftSimulatorScreen(
+      initialCurrency: preAuthCurrency,
+      onCurrencyChanged: { _ in },
+      onContinue: { _, _, _ in },
+      onSkip: {},
+      onBaselineReady: { _, _ in },
+      isPreloaded: true
+    )
+    .frame(width: 1, height: 1)
+    .clipped()
+    .opacity(0.001)
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
+  }
+
+  private var preloadedHowItWorksScreen: some View {
+    HowItWorksScreen(
+      totalFrom: howItWorksFromTotals ?? simulatorBaselineTotals ?? fallbackHowItWorksTotals,
+      totalTo: howItWorksToTotals ?? howItWorksFromTotals ?? simulatorBaselineTotals
+        ?? fallbackHowItWorksTotals,
+      currency: preAuthCurrency,
+      isActive: false,
+      shouldShowConfetti: false,
+      shouldAnimateTotalFromPrevious: false,
+      totalCardSeed: howItWorksTotalCardSeed,
+      showsTitle: false
+    )
+    .frame(width: 1, height: 1)
+    .clipped()
+    .opacity(0.001)
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
+  }
+
+  @ViewBuilder
+  private var topHeader: some View {
+    ZStack(alignment: .center) {
+      HStack(alignment: .center, spacing: Spacing.sm) {
+        if currentPage == 0 {
+          Image("MarketingAppIcon")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 54, height: 54)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityLabel(Text("Tidex"))
+        } else if currentPage == howItWorksPage {
+          Text(.onboardingHowTitle)
+            .font(.tidexScreenTitle)
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        Spacer(minLength: 0)
+
+        OnboardingCurrencyCapsuleSelector(
+          selectedCurrency: Binding(
+            get: { preAuthCurrency },
+            set: { selectedCurrency in
+              guard selectedCurrency != preAuthCurrency else { return }
+              preAuthCurrency = selectedCurrency
+              OnboardingCurrencyCarryoverStore.writePreferredCurrency(selectedCurrency)
+            }
+          )
+        )
+        .fixedSize(horizontal: true, vertical: false)
+      }
+    }
+    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, Spacing.lg)
+    .padding(.top, Spacing.lg)
+    .padding(.bottom, currentPage == howItWorksPage ? Spacing.sm : Spacing.xl)
+    .background(Color.tidexBackground)
+  }
+
+  private var bottomControls: some View {
+    VStack(spacing: Spacing.sm) {
+      primaryBottomAction
+
+      PageIndicator(totalPages: totalPages, currentPage: currentPage)
+        .onboardingHowExitStep(
+          isExiting: isCompletingPreAuth && currentPage == howItWorksPage,
+          delay: 0.205
+        )
+        .padding(.top, Spacing.xxs)
+
+      if currentPage == 0 {
+        loginButton
+      }
+    }
+    .padding(.horizontal, Spacing.lg)
+    .adaptiveContentWidth()
+    .padding(.bottom, Spacing.xs)
+    .motionAnimation(.emphasis, value: currentPage, reduceMotion: reduceMotion)
+  }
+
+  @ViewBuilder
+  private var primaryBottomAction: some View {
+    if currentPage < totalPages - 1 {
+      if currentPage == 0 {
+        firstPageActionRow
+      } else {
+        OnboardingButton(
+          title: String(localized: .commonContinue),
+          action: advanceToNextPage
+        )
+      }
+    } else {
+      OnboardingButton(
+        title: String(localized: .onboardingHowTakeControl),
+        action: completeAndNavigateToSignup
+      )
+      .onboardingHowExitStep(
+        isExiting: isCompletingPreAuth && currentPage == howItWorksPage,
+        delay: 0.165
+      )
+    }
+  }
+
+  private var firstPageActionRow: some View {
+    GeometryReader { geometry in
+      let availableWidth = max(0, geometry.size.width - Spacing.sm)
+      let skipWidth = availableWidth / 5
+      let continueWidth = availableWidth - skipWidth
+
+      HStack(spacing: Spacing.sm) {
+        Button {
+          Haptics.play(.light)
+          completeAndNavigateToSignup()
+        } label: {
+          Image(systemName: "forward.end.fill")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(.tidexTextSecondary)
+            .frame(width: skipWidth)
+            .frame(height: 54)
+            .background(Color.tidexSurfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+        }
+        .buttonStyle(SnappyButtonStyle())
+        .accessibilityLabel(Text(.onboardingSkip))
+
+        OnboardingButton(
+          title: String(localized: .commonContinue),
+          action: advanceToNextPage
+        )
+        .frame(width: continueWidth)
+      }
+    }
+    .frame(height: 54)
+  }
+
+  /// Lets returning users go straight to login instead of through the intro.
+  private var loginButton: some View {
+    Button {
+      Haptics.play(.light)
+      onNavigateToLogin()
+    } label: {
+      Text(.onboardingGetstartedLogin)
+        .font(.tidexLabelStrong)
+        .foregroundColor(.tidexBlue)
+        .lineLimit(1)
+        .minimumScaleFactor(0.86)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
   }
 }
 

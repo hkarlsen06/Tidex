@@ -884,7 +884,7 @@ struct SharingRPCWagePeriod: Equatable, Sendable {
   let toMin: Double
   let baseRate: Double
   let supplementRate: Double
-  var isOvertime: Bool? = nil
+  var isOvertime: Bool?
 
   var durationMinutes: Double { toMin - fromMin }
   var durationHours: Double { durationMinutes / 60.0 }
@@ -1313,6 +1313,12 @@ enum SharingComputeCore {
     let overtimeMinutes: Double
   }
 
+  private struct SharingRateWindow {
+    let from: Int
+    let to: Int
+    let rate: Double
+  }
+
   private static func applyOvertime(
     to shifts: [SharingComputedShift],
     context: SharingPayrollContext,
@@ -1381,38 +1387,44 @@ enum SharingComputeCore {
     return shifts.map { shift in
       let pieces = piecesByShift[shift.id] ?? fallbackPieces[shift.id] ?? []
       guard !pieces.isEmpty else { return shift }
-
-      let sortedPieces = pieces.sorted {
-        if $0.start != $1.start {
-          return $0.start < $1.start
-        }
-        return $0.period.fromMin < $1.period.fromMin
-      }
-      let periods = mergeAdjacentSharingPeriods(sortedPieces.map(\.period))
-      let overtimeMinutes = sortedPieces.reduce(0.0) { $0 + $1.overtimeMinutes }
-      let computed = recomputeSharingComputed(
-        shift.computed,
-        periods: periods,
-        overtimeMinutes: overtimeMinutes
-      )
-      return SharingComputedShift(
-        id: shift.id,
-        userId: shift.userId,
-        jobId: shift.jobId,
-        jobName: shift.jobName,
-        jobColor: shift.jobColor,
-        shiftDate: shift.shiftDate,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        customPauseWindows: shift.customPauseWindows,
-        customSupplements: shift.customSupplements,
-        recurringId: shift.recurringId,
-        recurringAnchorWeekday: shift.recurringAnchorWeekday,
-        computed: computed,
-        taxEnabled: shift.taxEnabled,
-        taxPercentage: shift.taxPercentage
-      )
+      return replacingPeriods(of: shift, with: pieces)
     }
+  }
+
+  private static func replacingPeriods(
+    of shift: SharingComputedShift,
+    with pieces: [SharingOvertimePiece]
+  ) -> SharingComputedShift {
+    let sortedPieces = pieces.sorted {
+      if $0.start != $1.start {
+        return $0.start < $1.start
+      }
+      return $0.period.fromMin < $1.period.fromMin
+    }
+    let periods = mergeAdjacentSharingPeriods(sortedPieces.map(\.period))
+    let overtimeMinutes = sortedPieces.reduce(0.0) { $0 + $1.overtimeMinutes }
+    let computed = recomputeSharingComputed(
+      shift.computed,
+      periods: periods,
+      overtimeMinutes: overtimeMinutes
+    )
+    return SharingComputedShift(
+      id: shift.id,
+      userId: shift.userId,
+      jobId: shift.jobId,
+      jobName: shift.jobName,
+      jobColor: shift.jobColor,
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      customPauseWindows: shift.customPauseWindows,
+      customSupplements: shift.customSupplements,
+      recurringId: shift.recurringId,
+      recurringAnchorWeekday: shift.recurringAnchorWeekday,
+      computed: computed,
+      taxEnabled: shift.taxEnabled,
+      taxPercentage: shift.taxPercentage
+    )
   }
 
   private static func applyOvertime(
@@ -1994,7 +2006,7 @@ enum SharingComputeCore {
     guard let start = timeToMinutes(startTime), var end = timeToMinutes(endTime) else { return [] }
     if end <= start { end += 24 * 60 }
 
-    var windows: [(from: Int, to: Int, rate: Double)] = []
+    var windows: [SharingRateWindow] = []
     for rule in rules {
       guard let from = timeToMinutes(rule.from), let to = timeToMinutes(rule.to), from != to else {
         continue
@@ -2006,7 +2018,9 @@ enum SharingComputeCore {
         let windowTo = to + dayOffset * 24 * 60 + (to < from ? 24 * 60 : 0)
         guard windowTo > start, windowFrom < end else { continue }
         windows.append(
-          (windowFrom, windowTo, resolveSupplementRate(rule: rule, baseRate: baseRate)))
+          SharingRateWindow(
+            from: windowFrom, to: windowTo,
+            rate: resolveSupplementRate(rule: rule, baseRate: baseRate)))
       }
     }
     var points = Set([start, end])

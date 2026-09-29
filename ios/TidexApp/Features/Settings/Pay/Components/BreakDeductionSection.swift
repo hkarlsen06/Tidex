@@ -59,38 +59,7 @@ struct BreakDeductionSection: View {
   @ViewBuilder
   private var advancedMethodDisclosure: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Button {
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
-          isAdvancedExpanded.toggle()
-        }
-      } label: {
-        HStack(spacing: Spacing.xs) {
-          VStack(alignment: .leading, spacing: Spacing.micro) {
-            Text(.settingsPayEditorBreakAdvanced)
-              .font(.tidexLabel)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(methodTitle(for: method))
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextSecondary)
-          }
-
-          Spacer()
-
-          Image(systemName: "chevron.down")
-            .font(.tidexCaption)
-            .foregroundColor(.tidexTextMuted)
-            .rotationEffect(.degrees(isAdvancedExpanded ? 180 : 0))
-        }
-        .padding(Spacing.sm)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-            .fill(Color.tidexSurfaceSecondary)
-        )
-      }
-      .buttonStyle(.plain)
-      .accessibilityIdentifier("pay-settings.break-method")
-      .sensoryFeedback(.impact(weight: .light), trigger: isAdvancedExpanded)
+      advancedMethodToggle
 
       if isAdvancedExpanded {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -109,6 +78,42 @@ struct BreakDeductionSection: View {
         .transition(.opacity.combined(with: .move(edge: .top)))
       }
     }
+  }
+
+  private var advancedMethodToggle: some View {
+    Button {
+      withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
+        isAdvancedExpanded.toggle()
+      }
+    } label: {
+      HStack(spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
+          Text(.settingsPayEditorBreakAdvanced)
+            .font(.tidexLabel)
+            .foregroundColor(.tidexTextPrimary)
+
+          Text(methodTitle(for: method))
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextSecondary)
+        }
+
+        Spacer()
+
+        Image(systemName: "chevron.down")
+          .font(.tidexCaption)
+          .foregroundColor(.tidexTextMuted)
+          .rotationEffect(.degrees(isAdvancedExpanded ? 180 : 0))
+          .accessibilityHidden(true)
+      }
+      .padding(Spacing.sm)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+          .fill(Color.tidexSurfaceSecondary)
+      )
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("pay-settings.break-method")
+    .sensoryFeedback(.impact(weight: .light), trigger: isAdvancedExpanded)
   }
 
   @ViewBuilder

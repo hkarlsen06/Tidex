@@ -246,7 +246,7 @@ struct DashboardData: Equatable {  // swiftlint:disable:this explicit_acl explic
   // Total Card (Current Month)
   let currentMonthGross: Double  // All shifts (projected total) // swiftlint:disable:this explicit_acl
   let currentMonthNet: Double?  // All shifts net (projected) // swiftlint:disable:this explicit_acl
-  let currentMonthCompletedGross: Double  // Only completed shifts (earned to date) // swiftlint:disable:this explicit_acl line_length
+  let currentMonthCompletedGross: Double  // Only completed shifts (earned to date)  // swiftlint:disable:this explicit_acl line_length
   let currentMonthCompletedNet: Double?  // Only completed shifts net // swiftlint:disable:this explicit_acl
   let currentMonthShiftCount: Int  // Total shift count // swiftlint:disable:this explicit_acl
   let currentMonthCompletedCount: Int  // Completed shifts count // swiftlint:disable:this explicit_acl
@@ -260,7 +260,7 @@ struct DashboardData: Equatable {  // swiftlint:disable:this explicit_acl explic
   let featuredItem: DashboardFeaturedItem?  // swiftlint:disable:this explicit_acl
   let featuredShift: ShiftWithComputations?  // swiftlint:disable:this explicit_acl
   let isFeaturedItemToday: Bool  // swiftlint:disable:this explicit_acl
-  let featuredShiftIsBestShift: Bool  // true = showing best shift, false = showing next shift // swiftlint:disable:this explicit_acl line_length
+  let featuredShiftIsBestShift: Bool  // true = showing best shift, false = showing next shift  // swiftlint:disable:this explicit_acl line_length
 
   // Metadata
   let currentMonthName: String  // swiftlint:disable:this explicit_acl
@@ -342,9 +342,9 @@ struct PayrollCardJobBreakdown: Identifiable, Equatable {  // swiftlint:disable:
   let tax: Double?  // swiftlint:disable:this explicit_acl
   let taxEnabled: Bool  // swiftlint:disable:this explicit_acl
   let adjustments: [PayrollAdjustment]  // swiftlint:disable:this explicit_acl
-  var earningsPeriodStart: Date? = nil
+  var earningsPeriodStart: Date?
   var earningsPeriodEnd: Date?
-  var payoutTaxSettings: PayoutTaxSettings? = nil
+  var payoutTaxSettings: PayoutTaxSettings?
 }
 
 struct DashboardPayrollCardSnapshot: Equatable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
@@ -1207,7 +1207,8 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
 
     let taxEnabled = selectedPayoutJobs.contains(where: \.taxEnabled)  // swiftlint:disable:this explicit_type_interface
     let gross = selectedPayoutJobs.reduce(0) { $0 + $1.gross }  // swiftlint:disable:this explicit_type_interface
-    let net = selectedPayoutJobs.reduce(0) { $0 + ($1.net ?? $1.gross) }  // swiftlint:disable:this explicit_type_interface
+    // swiftlint:disable:next explicit_type_interface
+    let net = selectedPayoutJobs.reduce(0) { $0 + ($1.net ?? $1.gross) }
     let tax = taxEnabled ? gross - net : nil  // swiftlint:disable:this explicit_type_interface
 
     return [
@@ -1554,20 +1555,27 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
   private var displayedMonthShifts: [ShiftWithComputations] = []  // swiftlint:disable:this type_contents_order
   private var displayedMonthEvents: [EventRow] = []  // swiftlint:disable:this type_contents_order
   private var previousMonthShifts: [ShiftWithComputations] = []  // swiftlint:disable:this type_contents_order
-  @ObservationIgnored private var previousPayrollAdjustments: [PayrollAdjustment] = []  // swiftlint:disable:this type_contents_order
+  // swiftlint:disable:next type_contents_order
+  @ObservationIgnored private var previousPayrollAdjustments: [PayrollAdjustment] = []
   @ObservationIgnored private var payrollAdjustmentsByPayoutMonth:
     [PayrollReadMonth: [PayrollAdjustment]] = [:]  // swiftlint:disable:this type_contents_order
   @ObservationIgnored private var settings: UserSettings?  // swiftlint:disable:this type_contents_order
   @ObservationIgnored private var snapshots: [WageSnapshot] = []  // swiftlint:disable:this type_contents_order
-  @ObservationIgnored private var recurringShifts: [RecurringShiftRow] = []  // swiftlint:disable:this type_contents_order
-  @ObservationIgnored private var dashboardDependenciesLoaded = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  // swiftlint:disable:next type_contents_order
+  @ObservationIgnored private var recurringShifts: [RecurringShiftRow] = []
+  // swiftlint:disable:next explicit_type_interface type_contents_order
+  @ObservationIgnored private var dashboardDependenciesLoaded = false
   @ObservationIgnored private var cachedUserId: String?  // swiftlint:disable:this type_contents_order
-  @ObservationIgnored private var isActiveTabVisible = true  // swiftlint:disable:this explicit_type_interface type_contents_order
-  @ObservationIgnored private var localDataNeedsReload = false  // swiftlint:disable:this explicit_type_interface type_contents_order
-  @ObservationIgnored private var displayedMonthLoadPending = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  // swiftlint:disable:next explicit_type_interface type_contents_order
+  @ObservationIgnored private var isActiveTabVisible = true
+  // swiftlint:disable:next explicit_type_interface type_contents_order
+  @ObservationIgnored private var localDataNeedsReload = false
+  // swiftlint:disable:next explicit_type_interface type_contents_order
+  @ObservationIgnored private var displayedMonthLoadPending = false
 
   /// Subscription to SharedMonthContext changes
-  @ObservationIgnored private var monthContextCancellable: AnyCancellable?  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var monthContextCancellable: AnyCancellable?
+  // swiftlint:disable:previous type_contents_order
 
   /// Track the last observed month to detect changes
   @ObservationIgnored private var lastObservedYear: Int = 0  // swiftlint:disable:this type_contents_order
@@ -1576,7 +1584,8 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
   // MARK: - Month Cache
 
   /// Cache of computed shifts by month key (e.g., "2025-1")
-  @ObservationIgnored private var monthCache: [String: MonthCacheEntry] = [:]  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var monthCache: [String: MonthCacheEntry] = [:]
+  // swiftlint:disable:previous type_contents_order
 
   /// Maximum number of months to keep in cache (prevents unbounded memory growth)
   private static let maxCacheSize = 12  // swiftlint:disable:this explicit_type_interface
@@ -1589,7 +1598,8 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
   @ObservationIgnored private var monthCacheInvalidationTokens: [String: Int] = [:]
 
   /// Tracks initial-sync transitions so the first post-sync local reload remains a full reset.
-  @ObservationIgnored private var hasObservedInitialSyncCompletion = false  // swiftlint:disable:this explicit_type_interface
+  @ObservationIgnored private var hasObservedInitialSyncCompletion = false
+  // swiftlint:disable:previous explicit_type_interface
 
   /// Memory warning observer
   @ObservationIgnored private var memoryWarningObserver: NSObjectProtocol?

@@ -274,10 +274,12 @@ private struct TimelineEntryRow: View {
   @ViewBuilder
   private var changesText: some View {
     if !nonWageChanges.isEmpty {
-      Text(nonWageChanges.map { rtlAdjustedChangeDescription($0.description) }.joined(separator: " · "))
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+      Text(
+        nonWageChanges.map { rtlAdjustedChangeDescription($0.description) }.joined(separator: " · ")
+      )
+      .font(.tidexFootnote)
+      .foregroundColor(.tidexTextSecondary)
+      .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     }
   }
 
@@ -336,82 +338,63 @@ private struct DashedLineRect: View {
 
 // MARK: - Preview
 
+private func previewSnapshot(
+  id: String,
+  fromDate: String?,
+  hourlyWage: Double,
+  wageLevel: Int
+) -> WageSnapshot {
+  WageSnapshot(
+    id: id,
+    user_id: "test",
+    from_date: fromDate,
+    hourly_wage: hourlyWage,
+    wage_level: wageLevel,
+    tariff_type_id: nil,
+    supplements: SupplementRulesSnapshot(rules: []),
+    tax_enabled: nil,
+    tax_percentage: nil,
+    break_enabled: nil,
+    break_method: nil,
+    break_threshold_hours: nil,
+    break_deduction_minutes: nil,
+    created_at: nil
+  )
+}
+
+private let previewTimelineEntries: [WageTimelineEntry] = [
+  WageTimelineEntry(
+    id: "1",
+    snapshot: previewSnapshot(id: "1", fromDate: "2025-02-01", hourlyWage: 195.0, wageLevel: 2),
+    type: .future,
+    dateRange: "1. Feb 2025 -",
+    endDate: nil,
+    changes: []
+  ),
+  WageTimelineEntry(
+    id: "2",
+    snapshot: previewSnapshot(id: "2", fromDate: "2024-06-01", hourlyWage: 184.54, wageLevel: 1),
+    type: .current,
+    dateRange: "1. Jun 2024 - na",
+    endDate: nil,
+    changes: [
+      WageChange(description: "180,00 -> 184,54 kr/t", type: .wage)
+    ]
+  ),
+  WageTimelineEntry(
+    id: "3",
+    snapshot: previewSnapshot(id: "3", fromDate: nil, hourlyWage: 180.0, wageLevel: 1),
+    type: .past,
+    dateRange: "Standard (grunnlinje)",
+    endDate: nil,
+    changes: []
+  ),
+]
+
 #Preview {
   ScrollView {
     WageHistoryTimelineView(
-      entries: [
-        WageTimelineEntry(
-          id: "1",
-          snapshot: WageSnapshot(
-            id: "1",
-            user_id: "test",
-            from_date: "2025-02-01",
-            hourly_wage: 195.0,
-            wage_level: 2,
-            tariff_type_id: nil,
-            supplements: SupplementRulesSnapshot(rules: []),
-            tax_enabled: nil,
-            tax_percentage: nil,
-            break_enabled: nil,
-            break_method: nil,
-            break_threshold_hours: nil,
-            break_deduction_minutes: nil,
-            created_at: nil
-          ),
-          type: .future,
-          dateRange: "1. Feb 2025 -",
-          endDate: nil,
-          changes: []
-        ),
-        WageTimelineEntry(
-          id: "2",
-          snapshot: WageSnapshot(
-            id: "2",
-            user_id: "test",
-            from_date: "2024-06-01",
-            hourly_wage: 184.54,
-            wage_level: 1,
-            tariff_type_id: nil,
-            supplements: SupplementRulesSnapshot(rules: []),
-            tax_enabled: nil,
-            tax_percentage: nil,
-            break_enabled: nil,
-            break_method: nil,
-            break_threshold_hours: nil,
-            break_deduction_minutes: nil,
-            created_at: nil
-          ),
-          type: .current,
-          dateRange: "1. Jun 2024 - na",
-          endDate: nil,
-          changes: [
-            WageChange(description: "180,00 -> 184,54 kr/t", type: .wage)
-          ]
-        ),
-        WageTimelineEntry(
-          id: "3",
-          snapshot: WageSnapshot(
-            id: "3",
-            user_id: "test",
-            from_date: nil,
-            hourly_wage: 180.0,
-            wage_level: 1,
-            tariff_type_id: nil,
-            supplements: SupplementRulesSnapshot(rules: []),
-            tax_enabled: nil,
-            tax_percentage: nil,
-            break_enabled: nil,
-            break_method: nil,
-            break_threshold_hours: nil,
-            break_deduction_minutes: nil,
-            created_at: nil
-          ),
-          type: .past,
-          dateRange: "Standard (grunnlinje)",
-          endDate: nil,
-          changes: []
-        ),
-      ],
+      entries: previewTimelineEntries,
       currency: "kr",
       onAddNew: {},
       onEdit: { _ in }

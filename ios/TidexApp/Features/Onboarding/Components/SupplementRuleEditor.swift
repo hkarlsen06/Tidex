@@ -11,9 +11,6 @@ struct SupplementRuleEditor: View {
   @State private var editedRule: OnboardingSupplementRule
   @State private var currentStep: EditorStep = .days
   @State private var hasSelectedType: Bool = false
-  @State private var showingValueInput = false
-  @State private var valueInputText = ""
-  @FocusState private var isValueInputFocused: Bool
 
   private enum EditorStep: Int, Comparable {
     case days = 0
@@ -69,77 +66,14 @@ struct SupplementRuleEditor: View {
 
           ScrollView {
             if isEditing {
-              // Editing mode: normal top-to-bottom layout
-              VStack(spacing: Spacing.lg) {
-                daysSection
-                timeSection
-                typeSection
-                valueSection
-
-                Spacer()
-                  .frame(height: 80)
-              }
-              .padding(Spacing.lg)
+              editingLayout
             } else {
-              // Adding mode: content starts at bottom, pushes up as steps are added
-              VStack(spacing: 0) {
-                Spacer(minLength: 0)
-
-                VStack(spacing: Spacing.lg) {
-                  // Days selector - always visible
-                  daysSection
-
-                  // Time range (visible after days selected)
-                  if currentStep >= .time {
-                    timeSection
-                      .transition(.opacity.combined(with: .move(edge: .bottom)))
-                  }
-
-                  // Type toggle (visible after times set)
-                  if currentStep >= .type {
-                    typeSection
-                      .transition(.opacity.combined(with: .move(edge: .bottom)))
-                  }
-
-                  // Value input (visible after type selected)
-                  if currentStep >= .value {
-                    valueSection
-                      .transition(.opacity.combined(with: .move(edge: .bottom)))
-                  }
-                }
-                .padding(Spacing.lg)
-                .padding(.bottom, Spacing.bottomScrollMargin)
-              }
-              .frame(minHeight: geometry.size.height - 150)
-              .animation(.spring(response: 0.35, dampingFraction: 0.8), value: currentStep)
+              addingLayout(minHeight: geometry.size.height - 150)
             }
           }
           .defaultScrollAnchor(isEditing ? .top : .bottom)
 
-          // Save button at bottom
-          VStack {
-            Spacer()
-
-            OnboardingButton(
-              title: String(localized: primaryButtonTitle),
-              action: {
-                handlePrimaryActionTap()
-              }
-            )
-            .disabled(!canSave && !canAdvanceToNextStep)
-            .opacity((canSave || canAdvanceToNextStep) ? 1 : 0.5)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.xl)
-            .background(
-              LinearGradient(
-                colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
-                startPoint: .top,
-                endPoint: .bottom
-              )
-              .frame(height: 100)
-              .allowsHitTesting(false)
-            )
-          }
+          saveButton
         }
       }
       .navigationTitle(
@@ -155,6 +89,81 @@ struct SupplementRuleEditor: View {
           }
         }
       }
+    }
+  }
+
+  /// Editing mode: normal top-to-bottom layout
+  private var editingLayout: some View {
+    VStack(spacing: Spacing.lg) {
+      daysSection
+      timeSection
+      typeSection
+      valueSection
+
+      Spacer()
+        .frame(height: 80)
+    }
+    .padding(Spacing.lg)
+  }
+
+  /// Adding mode: content starts at bottom, pushes up as steps are added
+  private func addingLayout(minHeight: CGFloat) -> some View {
+    VStack(spacing: 0) {
+      Spacer(minLength: 0)
+
+      VStack(spacing: Spacing.lg) {
+        // Days selector - always visible
+        daysSection
+
+        // Time range (visible after days selected)
+        if currentStep >= .time {
+          timeSection
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+
+        // Type toggle (visible after times set)
+        if currentStep >= .type {
+          typeSection
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+
+        // Value input (visible after type selected)
+        if currentStep >= .value {
+          valueSection
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+      }
+      .padding(Spacing.lg)
+      .padding(.bottom, Spacing.bottomScrollMargin)
+    }
+    .frame(minHeight: minHeight)
+    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: currentStep)
+  }
+
+  /// Save button at bottom
+  private var saveButton: some View {
+    VStack {
+      Spacer()
+
+      OnboardingButton(
+        title: String(localized: primaryButtonTitle),
+        action: {
+          handlePrimaryActionTap()
+        }
+      )
+      .disabled(!canSave && !canAdvanceToNextStep)
+      .opacity((canSave || canAdvanceToNextStep) ? 1 : 0.5)
+      .padding(.horizontal, Spacing.lg)
+      .padding(.bottom, Spacing.xl)
+      .background(
+        LinearGradient(
+          colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
+          startPoint: .top,
+          endPoint: .bottom
+        )
+        .frame(height: 100)
+        .allowsHitTesting(false)
+      )
     }
   }
 
@@ -219,6 +228,63 @@ struct SupplementRuleEditor: View {
     }
   }
 
+  // MARK: - Value Section
+
+  private var valueSection: some View {
+    SupplementValueSection(
+      rule: $editedRule,
+      currency: currency,
+      hourRateSuffix: hourRateSuffix
+    )
+  }
+
+  // MARK: - Type Section
+
+  @ViewBuilder
+  private var typeSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      Text(.onboardingSupplementsTypeLabel)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextSecondary)
+
+      HStack(spacing: Spacing.sm) {
+        TypeButton(
+          title: String(localized: .onboardingSupplementsFixedRate),
+          subtitle: hourRateSuffix,
+          isSelected: hasSelectedType && editedRule.type == .fixed,
+          action: {
+            Haptics.play(.light)
+            withAnimation {
+              editedRule.type = .fixed
+              hasSelectedType = true
+              if currentStep == .type {
+                currentStep = .value
+              }
+            }
+          }
+        )
+
+        TypeButton(
+          title: String(localized: .onboardingSupplementsPercentRate),
+          subtitle: "%",
+          isSelected: hasSelectedType && editedRule.type == .percent,
+          action: {
+            Haptics.play(.light)
+            withAnimation {
+              editedRule.type = .percent
+              hasSelectedType = true
+              if currentStep == .type {
+                currentStep = .value
+              }
+            }
+          }
+        )
+      }
+    }
+  }
+}
+
+extension SupplementRuleEditor {
   // MARK: - Days Section
 
   @ViewBuilder
@@ -358,347 +424,6 @@ struct SupplementRuleEditor: View {
   private func formatSupplementTime(_ date: Date?) -> String {
     guard let date else { return "" }
     return FormatterCache.hourMinuteFormatter(timeZone: Date.localTimeZone).string(from: date)
-  }
-
-  // MARK: - Type Section
-
-  @ViewBuilder
-  private var typeSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(.onboardingSupplementsTypeLabel)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      HStack(spacing: Spacing.sm) {
-        TypeButton(
-          title: String(localized: .onboardingSupplementsFixedRate),
-          subtitle: hourRateSuffix,
-          isSelected: hasSelectedType && editedRule.type == .fixed,
-          action: {
-            Haptics.play(.light)
-            withAnimation {
-              editedRule.type = .fixed
-              hasSelectedType = true
-              if currentStep == .type {
-                currentStep = .value
-              }
-            }
-          }
-        )
-
-        TypeButton(
-          title: String(localized: .onboardingSupplementsPercentRate),
-          subtitle: "%",
-          isSelected: hasSelectedType && editedRule.type == .percent,
-          action: {
-            Haptics.play(.light)
-            withAnimation {
-              editedRule.type = .percent
-              hasSelectedType = true
-              if currentStep == .type {
-                currentStep = .value
-              }
-            }
-          }
-        )
-      }
-    }
-  }
-
-  // MARK: - Value Section
-
-  @ViewBuilder
-  private var valueSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(.onboardingSupplementsValueLabel)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      // Quick value buttons
-      HStack(spacing: Spacing.xs) {
-        ForEach(quickValues, id: \.self) { value in
-          QuickValueButton(
-            value: value,
-            type: editedRule.type,
-            isSelected: editedRule.value == value,
-            action: {
-              Haptics.play(.light)
-              withAnimation {
-                editedRule.value = value
-              }
-            }
-          )
-        }
-      }
-
-      // Slider for fine-tuning
-      VStack(spacing: Spacing.xs) {
-        HStack {
-          if showingValueInput {
-            // Editable input field
-            HStack(spacing: Spacing.xxs) {
-              TextField("", text: $valueInputText)
-                .font(.tidexLargeTitle)
-                .foregroundColor(.tidexBlue)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.leading)
-                .focused($isValueInputFocused)
-                .frame(width: 80)
-                .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, Spacing.micro)
-                .background(Color.tidexBlue.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
-                .overlay(
-                  RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-                    .stroke(Color.tidexBlue, lineWidth: 2)
-                )
-                .onChange(of: isValueInputFocused) { _, focused in
-                  if !focused {
-                    applyValueInput()
-                  }
-                }
-                .toolbar {
-                  ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(String(localized: .commonDone)) {
-                      applyValueInput()
-                    }
-                    .fontWeight(.semibold)
-                  }
-                }
-
-              Text(editedRule.type == .fixed ? hourRateSuffix : "%")
-                .font(.tidexLabel)
-                .foregroundColor(.tidexTextMuted)
-            }
-          } else {
-            // Tappable display
-            Button(action: {
-              Haptics.play(.light)
-              valueInputText = formatValueWithDecimals(editedRule.value)
-              showingValueInput = true
-              DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                isValueInputFocused = true
-              }
-            }) {
-              Text(formatValueWithDecimals(editedRule.value))
-                .font(.tidexLargeTitle)
-                .foregroundColor(.tidexBlue)
-                .contentTransition(.numericText())
-                .padding(.horizontal, Spacing.xxs)
-                .padding(.vertical, Spacing.micro)
-                .background(Color.tidexBlue.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
-            }
-            .buttonStyle(.plain)
-
-            Text(editedRule.type == .fixed ? hourRateSuffix : "%")
-              .font(.tidexLabel)
-              .foregroundColor(.tidexTextMuted)
-          }
-          Spacer()
-        }
-
-        Slider(
-          value: $editedRule.value,
-          in: valueRange,
-          step: 1,
-          onEditingChanged: { isEditing in
-            if isEditing {
-              Haptics.play(.light)
-            }
-          }
-        )
-        .tint(.tidexBlue)
-      }
-      .padding(Spacing.md)
-      .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    }
-  }
-
-  private func formatValueWithDecimals(_ value: Double) -> String {
-    value.formatted(.number.precision(.fractionLength(0...2)).locale(.appLocale))
-  }
-
-  private func applyValueInput() {
-    // Parse the input, handling both comma and period as decimal separator
-    let normalized = valueInputText.replacingOccurrences(of: ",", with: ".")
-    if let parsed = Double(normalized) {
-      // Clamp to valid range and round to 2 decimal places
-      let clamped = min(max(parsed, valueRange.lowerBound), valueRange.upperBound)
-      let rounded = (clamped * 100).rounded() / 100
-      editedRule.value = rounded
-    }
-    showingValueInput = false
-    isValueInputFocused = false
-  }
-
-  private var quickValues: [Double] {
-    switch editedRule.type {
-    case .fixed:
-      // Quick values based on currency tier
-      switch currencyConfig.wageRangeTier {
-      case .high:
-        // NOK, CZK, Ruble - higher nominal values
-        return [22, 45, 55, 110, 115]
-
-      case .medium:
-        // USD, EUR, GBP, etc. - lower nominal values
-        return [2, 5, 10, 15, 20]
-
-      case .low:
-        // INR, BRL, ZAR, etc. - mid-range nominal values
-        return [10, 25, 50, 75, 100]
-
-      case .veryLow:
-        // JPY, KRW - very high nominal values
-        return [100, 250, 500, 750, 1_000]  // swiftlint:disable:this no_magic_numbers
-
-      case .ultraLow:
-        // IDR, VND - five-digit nominal values
-        return [1_000, 2_500, 5_000, 7_500, 10_000]  // swiftlint:disable:this no_magic_numbers
-      }
-
-    case .percent:
-      return [25, 50, 100, 150]
-    }
-  }
-
-  private var valueRange: ClosedRange<Double> {
-    switch editedRule.type {
-    case .fixed:
-      // Value range based on currency tier
-      switch currencyConfig.wageRangeTier {
-      case .high:
-        return 1...200
-
-      case .medium:
-        return 1...50
-
-      case .low:
-        return 1...500
-
-      case .veryLow:
-        return 1...2_000  // swiftlint:disable:this no_magic_numbers
-
-      case .ultraLow:
-        return 1...20_000  // swiftlint:disable:this no_magic_numbers
-      }
-
-    case .percent:
-      return 1...200
-    }
-  }
-}
-
-// MARK: - Day Button
-
-private struct DayButton: View {
-  let day: Int
-  let isSelected: Bool
-  let action: () -> Void
-
-  private let dayLabels = ["M", "T", "O", "T", "F", "L", "S"]
-
-  var body: some View {
-    Button(action: action) {
-      Text(dayLabels[day - 1])
-        .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-        .frame(width: 40, height: 40)
-        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
-        .clipShape(Circle())
-        .overlay(
-          Circle()
-            .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
-        )
-        .contentShape(Rectangle())
-        .frame(minWidth: 44, minHeight: 44)
-    }
-    .buttonStyle(.plain)
-  }
-}
-
-// MARK: - Quick Select Button
-
-private struct QuickSelectButton: View {
-  let title: String
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: {
-      Haptics.play(.light)
-      action()
-    }) {
-      Text(title)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexBlue)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .background(Color.tidexBlue.opacity(0.08))
-        .clipShape(Capsule())
-    }
-    .buttonStyle(.plain)
-  }
-}
-
-// MARK: - Type Button
-
-private struct TypeButton: View {
-  let title: String
-  let subtitle: String
-  let isSelected: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      VStack(spacing: Spacing.xxs) {
-        Text(title)
-          .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-          .foregroundColor(isSelected ? .tidexTextPrimary : .tidexTextSecondary)
-
-        Text(subtitle)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-      }
-      .frame(maxWidth: .infinity)
-      .frame(height: 64)
-      .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(
-            isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
-      )
-    }
-    .buttonStyle(.plain)
-  }
-}
-
-// MARK: - Quick Value Button
-
-private struct QuickValueButton: View {
-  let value: Double
-  let type: OnboardingSupplementRule.SupplementType
-  let isSelected: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Text(type == .fixed ? "+\(Int(value))" : "\(Int(value))%")
-        .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
-        .clipShape(Capsule())
-        .overlay(
-          Capsule()
-            .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
-        )
-    }
-    .buttonStyle(.plain)
   }
 }
 

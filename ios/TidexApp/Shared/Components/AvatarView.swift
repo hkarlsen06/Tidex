@@ -45,7 +45,7 @@ struct AvatarView: View {
       ) { image in
         image
           .resizable()
-          .aspectRatio(contentMode: .fill)
+          .scaledToFill()
           .frame(width: size, height: size)
           .clipShape(shape)
       } placeholder: {

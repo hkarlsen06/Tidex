@@ -6,7 +6,6 @@ struct LoginView: View {
   @Bindable var viewModel: LoginViewModel
   let currency: String
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   private enum ScrollTarget {
     case bottom
@@ -35,56 +34,67 @@ struct LoginView: View {
         Color.tidexBackground
           .ignoresSafeArea()
 
-        ScrollViewReader { scrollProxy in
-          ScrollView {
-            VStack(spacing: 0) {
-              Spacer(minLength: authTopSpacing)
-
-              VStack(spacing: authSectionSpacing) {
-                AuthHeroVisual(
-                  title: .loginTitle,
-                  logoSize: 132,
-                  currency: currency,
-                  onLogoTap: restartOnboarding
-                )
-                .padding(.bottom, heroControlsGap)
-
-                messageStack
-
-                VStack(spacing: Spacing.lg) {
-                  switch viewModel.currentStep {
-                  case .input:
-                    inputStepContent(scrollProxy: scrollProxy)
-
-                  case .otp:
-                    PhoneOTPForm(viewModel: viewModel)
-                  }
-                }
-
-                if viewModel.currentStep == .input {
-                  footerView
-                }
-              }
-              .frame(maxWidth: 420)
-              .padding(.horizontal, Spacing.xl)
-              .padding(.bottom, bottomPadding(for: geometry))
-              .frame(maxWidth: .infinity)
-
-              Color.clear
-                .frame(height: 0)
-                .id(ScrollTarget.bottom)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: geometry.size.height)
-          }
-          .scrollBounceBehavior(.basedOnSize)
-        }
+        scrollContent(geometry: geometry)
       }
     }
     .loading(viewModel.isLoading)
     .onTapGesture {
       UIApplication.shared.sendAction(
         #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+  }
+
+  private func scrollContent(geometry: GeometryProxy) -> some View {
+    ScrollViewReader { scrollProxy in
+      ScrollView {
+        VStack(spacing: 0) {
+          Spacer(minLength: authTopSpacing)
+
+          entranceColumn(scrollProxy: scrollProxy)
+            .frame(maxWidth: 420)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, bottomPadding(for: geometry))
+            .frame(maxWidth: .infinity)
+
+          Color.clear
+            .frame(height: 0)
+            .id(ScrollTarget.bottom)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: geometry.size.height)
+      }
+      .scrollBounceBehavior(.basedOnSize)
+    }
+  }
+
+  private func entranceColumn(scrollProxy: ScrollViewProxy) -> some View {
+    VStack(spacing: authSectionSpacing) {
+      AuthHeroVisual(
+        title: .loginTitle,
+        logoSize: 132,
+        currency: currency,
+        onLogoTap: restartOnboarding
+      )
+      .padding(.bottom, heroControlsGap)
+
+      messageStack
+
+      VStack(spacing: Spacing.lg) {
+        switch viewModel.currentStep {
+        case .input:
+          inputStepContent(scrollProxy: scrollProxy)
+
+        case .otp:
+          PhoneOTPForm(viewModel: viewModel)
+        }
+      }
+
+      if viewModel.currentStep == .input {
+        LoginFooterLinks(
+          onCreateAccount: { onNavigateToSignup?() },
+          onForgotPassword: { onNavigateToResetPassword?() }
+        )
+      }
     }
   }
 
@@ -98,7 +108,11 @@ struct LoginView: View {
   private var messageStack: some View {
     VStack(spacing: Spacing.sm) {
       if let prompt = viewModel.accountCreationPromptMessage {
-        accountCreationPromptCard(message: prompt)
+        AccountCreationPromptCard(
+          message: prompt,
+          onDismiss: { viewModel.accountCreationPromptMessage = nil },
+          onCreateAccount: { onNavigateToSignup?() }
+        )
       }
 
       if let error = viewModel.errorMessage {
@@ -147,54 +161,10 @@ struct LoginView: View {
 
   private var emailFormSection: some View {
     VStack(spacing: Spacing.md) {
-      // Form fields in a grouped style
-      VStack(spacing: 0) {
-        // Email/Phone field
-        NativeTextField(
-          placeholder: String(localized: .loginEmailOrPhonePlaceholder),
-          text: $viewModel.emailOrPhone,
-          keyboardType: .emailAddress,
-          textContentType: .emailAddress
-        )
-        .accessibilityIdentifier("login.email-or-phone")
+      credentialFields
 
-        Divider()
-          .background(Color.tidexSeparator)
-
-        // Password field
-        NativeSecureField(
-          placeholder: viewModel.inputType == .phone && AuthService.isSMSAvailable
-            ? String(localized: .loginPasswordOptionalLabel)
-            : String(localized: .loginPasswordPlaceholder),
-          text: $viewModel.password,
-          onSubmit: {
-            Task { await viewModel.signIn() }
-          }
-        )
-      }
-      .background(Color.tidexSurfacePrimary)
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-      )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-
-      // Error messages
-      if let emailError = viewModel.fieldErrors.emailOrPhone {
-        Text(emailError)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexError)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Spacing.xxs)
-      }
-
-      if let passwordError = viewModel.fieldErrors.password {
-        Text(passwordError)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexError)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Spacing.xxs)
-      }
+      fieldError(viewModel.fieldErrors.emailOrPhone)
+      fieldError(viewModel.fieldErrors.password)
 
       // Phone hint - password is optional for OTP flow
       if viewModel.inputType == .phone, AuthService.isSMSAvailable {
@@ -215,50 +185,51 @@ struct LoginView: View {
     }
   }
 
-  // MARK: - Reveal Email Button
+  private var credentialFields: some View {
+    VStack(spacing: 0) {
+      // Email/Phone field
+      NativeTextField(
+        placeholder: String(localized: .loginEmailOrPhonePlaceholder),
+        text: $viewModel.emailOrPhone,
+        keyboardType: .emailAddress,
+        textContentType: .emailAddress
+      )
+      .accessibilityIdentifier("login.email-or-phone")
 
-  private func accountCreationPromptCard(message: String) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      HStack(alignment: .top, spacing: Spacing.sm) {
-        Image(systemName: "exclamationmark.triangle.fill")
-          .foregroundColor(.tidexError)
-          .font(.tidexBody)
+      Divider()
+        .background(Color.tidexSeparator)
 
-        Text(message)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
-          .multilineTextAlignment(.leading)
-
-        Spacer()
-
-        Button(action: {
-          viewModel.accountCreationPromptMessage = nil
-        }) {
-          Image(systemName: "xmark")
-            .foregroundColor(.tidexTextMuted)
-            .font(.tidexCaptionStrong)
-            .frame(minWidth: 44, minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(.commonDismiss))
-      }
-
-      PrimaryButton(
-        title: String(localized: .loginCreateAccount),
-        action: {
-          onNavigateToSignup?()
+      // Password field
+      NativeSecureField(
+        placeholder: viewModel.inputType == .phone && AuthService.isSMSAvailable
+          ? String(localized: .loginPasswordOptionalLabel)
+          : String(localized: .loginPasswordPlaceholder),
+        text: $viewModel.password,
+        onSubmit: {
+          Task { await viewModel.signIn() }
         }
       )
     }
-    .padding(Spacing.md)
-    .background(Color.tidexError.opacity(0.15))
+    .background(Color.tidexSurfacePrimary)
     .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.md)
-        .stroke(Color.tidexError.opacity(0.3), lineWidth: 1)
+      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
-    .cornerRadius(CornerRadius.md)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
+
+  @ViewBuilder
+  private func fieldError(_ message: String?) -> some View {
+    if let message {
+      Text(message)
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexError)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xxs)
+    }
+  }
+
+  // MARK: - Reveal Email Button
 
   private func revealEmailButton(scrollProxy: ScrollViewProxy) -> some View {
     Button {
@@ -331,274 +302,6 @@ struct LoginView: View {
     max(geometry.safeAreaInsets.bottom + Spacing.xs, Spacing.lg)
   }
 
-  private var footerView: some View {
-    let layout =
-      dynamicTypeSize.isAccessibilitySize
-      ? AnyLayout(VStackLayout(spacing: Spacing.xs))
-      : AnyLayout(HStackLayout(spacing: 0))
-
-    return layout {
-      footerLink(title: Text(.loginCreateAccount)) {
-        onNavigateToSignup?()
-      }
-      .accessibilityIdentifier("login.create-account")
-
-      if !dynamicTypeSize.isAccessibilitySize {
-        Rectangle()
-          .fill(Color.tidexSeparator)
-          .frame(width: 1, height: 18)
-      }
-
-      footerLink(title: Text(.loginForgotPassword)) {
-        onNavigateToResetPassword?()
-      }
-      .accessibilityIdentifier("login.forgot-password")
-    }
-    .frame(maxWidth: .infinity)
-  }
-
-  private func footerLink(title: Text, action: @escaping () -> Void) -> some View {
-    Button(action: action) {
-      title
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
-        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.86)
-        .multilineTextAlignment(.center)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? Spacing.xs : 0)
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-  }
-}
-
-// MARK: - Shared Auth Hero Visual
-
-struct AuthHeroVisual: View {
-  let title: LocalizedStringResource
-  let logoSize: CGFloat
-  let currency: String
-  var onLogoTap: (() -> Void)?
-
-  var body: some View {
-    VStack(spacing: Spacing.lg) {
-      logoSection
-      ghostedPaycheckPreview
-      Text(title)
-        .font(.tidexTitle)
-        .foregroundColor(.tidexTextPrimary)
-        .multilineTextAlignment(.center)
-        .accessibilityAddTraits(.isHeader)
-    }
-  }
-
-  @ViewBuilder
-  private var logoSection: some View {
-    let content = Image("TidexLogo")
-      .resizable()
-      .scaledToFit()
-      .frame(width: min(logoSize, Spacing.huge), height: min(logoSize, Spacing.huge))
-      .accessibilityLabel(Text(verbatim: "Tidex"))
-
-    if let onLogoTap {
-      content
-        .onTapGesture(perform: onLogoTap)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint(Text(.authRestartPreAuthOnboarding))
-    } else {
-      content
-        .accessibilityHidden(true)
-    }
-  }
-
-  private var ghostedAmountText: String {
-    let hourlyWage = OnboardingCurrencyResolver.defaultHourlyWage(for: currency)
-    let estimatedMonthlyHours = 162.0
-    let estimatedNet = hourlyWage * estimatedMonthlyHours * 0.8
-    return CurrencyConfig.format(estimatedNet, currency: currency)
-  }
-
-  @ViewBuilder
-  private var ghostedPaycheckPreview: some View {
-    let card = ZStack {
-      VStack(spacing: Spacing.xs) {
-        RoundedRectangle(cornerRadius: CornerRadius.xxs)
-          .fill(Color.tidexTextMuted.opacity(0.2))
-          .frame(width: 80, height: 8)
-
-        Spacer().frame(height: 4)
-
-        Text(ghostedAmountText)
-          .font(.tidexAmountLarge)
-          .foregroundStyle(Color.tidexTextPrimary)
-
-        Spacer().frame(height: 8)
-
-        HStack {
-          RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextMuted.opacity(0.2))
-            .frame(width: 80, height: 6)
-          Spacer()
-          RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextMuted.opacity(0.2))
-            .frame(width: 55, height: 6)
-        }
-
-        HStack {
-          RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextMuted.opacity(0.2))
-            .frame(width: 65, height: 6)
-          Spacer()
-          RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextMuted.opacity(0.2))
-            .frame(width: 50, height: 6)
-        }
-
-        HStack {
-          RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextMuted.opacity(0.2))
-            .frame(width: 90, height: 6)
-          Spacer()
-          RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextMuted.opacity(0.2))
-            .frame(width: 60, height: 6)
-        }
-      }
-      .padding(.horizontal, Spacing.lg)
-      .padding(.vertical, Spacing.mlg)
-      .frame(width: 280)
-      .background(heroCardBackground)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
-          .stroke(Color.tidexSeparator, lineWidth: 1)
-      )
-
-    }
-
-    if let onLogoTap {
-      card
-        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-        .onTapGesture(perform: onLogoTap)
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint(Text(.authRestartPreAuthOnboarding))
-    } else {
-      card.accessibilityHidden(true)
-    }
-  }
-
-  private var heroCardBackground: some View {
-    Color.tidexSurfacePrimary
-  }
-
-}
-
-// MARK: - Native Text Field
-
-/// A text field styled like native iOS grouped forms
-struct NativeTextField: View {
-  let placeholder: String
-  @Binding var text: String
-  var keyboardType: UIKeyboardType = .default
-  // swiftlint:disable:next explicit_acl
-  var textContentType: UITextContentType?
-  // swiftlint:disable:next explicit_acl
-  var onSubmit: (() -> Void)?
-
-  @FocusState private var isFocused: Bool
-
-  var body: some View {
-    TextField(placeholder, text: $text)
-      .font(.tidexBody)
-      .foregroundColor(.tidexTextPrimary)
-      .keyboardType(keyboardType)
-      .textContentType(textContentType)
-      .textInputAutocapitalization(.never)
-      .autocorrectionDisabled()
-      .focused($isFocused)
-      .padding(.horizontal, Spacing.contentHorizontal)
-      .padding(.vertical, Spacing.sm)
-      .onSubmit {
-        onSubmit?()
-      }
-  }
-}
-
-// MARK: - Native Secure Field
-
-/// A secure field styled like native iOS grouped forms
-struct NativeSecureField: View {
-  let placeholder: String
-  @Binding var text: String
-  // swiftlint:disable:next explicit_acl
-  var onSubmit: (() -> Void)?
-
-  @FocusState private var isFocused: Bool
-  @State private var isSecure: Bool = true
-
-  var body: some View {
-    HStack(spacing: Spacing.sm) {
-      if isSecure {
-        SecureField(placeholder, text: $text)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-          .textContentType(.password)
-          .focused($isFocused)
-          .onSubmit {
-            onSubmit?()
-          }
-      } else {
-        TextField(placeholder, text: $text)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-          .textContentType(.password)
-          .textInputAutocapitalization(.never)
-          .autocorrectionDisabled()
-          .focused($isFocused)
-          .onSubmit {
-            onSubmit?()
-          }
-      }
-
-      visibilityToggle
-    }
-    .padding(.horizontal, Spacing.contentHorizontal)
-    .padding(.vertical, Spacing.sm)
-  }
-
-  private var visibilityToggle: some View {
-    Button {
-      isSecure.toggle()
-    } label: {
-      Image(systemName: isSecure ? "eye" : "eye.slash")
-        .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextMuted)
-        .frame(minWidth: 44, minHeight: 44)  // swiftlint:disable:this no_magic_numbers
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel(isSecure ? Text(.authPasswordShow) : Text(.authPasswordHide))
-    // Let the 44pt target extend into the row padding without making the row taller
-    .padding(.vertical, -Spacing.sm)
-  }
-}
-
-// MARK: - Snappy Button Style
-
-/// Button style with immediate press feedback
-struct SnappyButtonStyle: ButtonStyle {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-      .opacity(configuration.isPressed ? 0.9 : 1.0)
-      .motionAnimation(.affordance, value: configuration.isPressed, reduceMotion: reduceMotion)
-  }
 }
 
 #Preview {

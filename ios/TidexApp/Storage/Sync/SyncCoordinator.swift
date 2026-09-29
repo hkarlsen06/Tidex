@@ -2634,6 +2634,33 @@ final class SyncCoordinator {
     return job.isDefault ? 2 : 0
   }
 
+  /// Columns of a partial job UPDATE, limited to the fields marked dirty.
+  private func jobUpdatePayload(
+    for job: LocalJob, dirtyFields: Set<JobField>
+  ) throws -> [String: AnyJSON] {
+    var update = PartialUpdatePayload(dirtyFields: dirtyFields)
+    update.set(.name, "name", .string(job.name))
+    update.set(.color, "color", job.color.jsonOrNull { .string($0) })
+    update.set(.currency, "currency", .string(job.currency))
+    update.set(.isDefault, "is_default", .bool(job.isDefault))
+    update.set(.sortOrder, "sort_order", .integer(job.sortOrder))
+    update.set(.payrollDay, "payroll_day", job.payrollDay.jsonOrNull { .integer($0) })
+    update.set(.halfTaxMonth, "half_tax_month", job.halfTaxMonth.jsonOrNull { .integer($0) })
+    try update.set(
+      .payPeriod, "pay_period",
+      try job.payPeriodJSON.flatMap { $0.data(using: .utf8) }.jsonOrNull {
+        try requireAnyJSON($0, table: .jobs, id: job.id, field: "pay_period")
+      })
+    update.set(.monthlyGoal, "monthly_goal", job.monthlyGoal.jsonOrNull { .integer($0) })
+    update.set(
+      .archivedAt, "archived_at",
+      job.archivedAt.jsonOrNull { .string(formatSupabaseTimestamp($0)) })
+    update.set(
+      .deletedAt, "deleted_at",
+      job.deletedAt.jsonOrNull { .string(formatSupabaseTimestamp($0)) })
+    return update.data
+  }
+
   private func pushJob(
     _ job: LocalJob,
     userId: String,
@@ -2657,70 +2684,7 @@ final class SyncCoordinator {
     }
 
     let baseline = SyncPushBaseline(job)
-    var updateData: [String: AnyJSON] = [:]
-
-    if dirtyFields.contains(.name) {
-      updateData["name"] = .string(job.name)
-    }
-    if dirtyFields.contains(.color) {
-      if let color = job.color {
-        updateData["color"] = .string(color)
-      } else {
-        updateData["color"] = .null
-      }
-    }
-    if dirtyFields.contains(.currency) {
-      updateData["currency"] = .string(job.currency)
-    }
-    if dirtyFields.contains(.isDefault) {
-      updateData["is_default"] = .bool(job.isDefault)
-    }
-    if dirtyFields.contains(.sortOrder) {
-      updateData["sort_order"] = .integer(job.sortOrder)
-    }
-    if dirtyFields.contains(.payrollDay) {
-      if let day = job.payrollDay {
-        updateData["payroll_day"] = .integer(day)
-      } else {
-        updateData["payroll_day"] = .null
-      }
-    }
-    if dirtyFields.contains(.halfTaxMonth) {
-      if let month = job.halfTaxMonth {
-        updateData["half_tax_month"] = .integer(month)
-      } else {
-        updateData["half_tax_month"] = .null
-      }
-    }
-    if dirtyFields.contains(.payPeriod) {
-      if let json = job.payPeriodJSON, let data = json.data(using: .utf8) {
-        let decoded = try requireAnyJSON(data, table: .jobs, id: jobId, field: "pay_period")
-        updateData["pay_period"] = decoded
-      } else {
-        updateData["pay_period"] = .null
-      }
-    }
-    if dirtyFields.contains(.monthlyGoal) {
-      if let goal = job.monthlyGoal {
-        updateData["monthly_goal"] = .integer(goal)
-      } else {
-        updateData["monthly_goal"] = .null
-      }
-    }
-    if dirtyFields.contains(.archivedAt) {
-      if let archivedAt = job.archivedAt {
-        updateData["archived_at"] = .string(formatSupabaseTimestamp(archivedAt))
-      } else {
-        updateData["archived_at"] = .null
-      }
-    }
-    if dirtyFields.contains(.deletedAt) {
-      if let deletedAt = job.deletedAt {
-        updateData["deleted_at"] = .string(formatSupabaseTimestamp(deletedAt))
-      } else {
-        updateData["deleted_at"] = .null
-      }
-    }
+    let updateData = try jobUpdatePayload(for: job, dirtyFields: dirtyFields)
 
     try requireNonEmptyUpdate(updateData, table: .jobs, id: jobId)
 
@@ -2871,24 +2835,17 @@ final class SyncCoordinator {
       "sort_order": .integer(job.sortOrder),
     ]
 
-    if let color = job.color {
-      insertData["color"] = .string(color)
-    }
-    if let payrollDay = job.payrollDay {
-      insertData["payroll_day"] = .integer(payrollDay)
-    }
-    if let halfTaxMonth = job.halfTaxMonth {
-      insertData["half_tax_month"] = .integer(halfTaxMonth)
-    }
-    if let payPeriodJSON = job.payPeriodJSON, let data = payPeriodJSON.data(using: .utf8) {
-      insertData["pay_period"] = try requireAnyJSON(data, table: .jobs, id: jobId, field: "pay_period")
-    }
-    if let monthlyGoal = job.monthlyGoal {
-      insertData["monthly_goal"] = .integer(monthlyGoal)
-    }
-    if let archivedAt = job.archivedAt {
-      insertData["archived_at"] = .string(formatSupabaseTimestamp(archivedAt))
-    }
+    let optionalColumns: [String: AnyJSON?] = [
+      "color": job.color.map { AnyJSON.string($0) },
+      "payroll_day": job.payrollDay.map { AnyJSON.integer($0) },
+      "half_tax_month": job.halfTaxMonth.map { AnyJSON.integer($0) },
+      "pay_period": try job.payPeriodJSON.flatMap { $0.data(using: .utf8) }.map {
+        try requireAnyJSON($0, table: .jobs, id: jobId, field: "pay_period")
+      },
+      "monthly_goal": job.monthlyGoal.map { AnyJSON.integer($0) },
+      "archived_at": job.archivedAt.map { AnyJSON.string(formatSupabaseTimestamp($0)) },
+    ]
+    insertData.merge(optionalColumns.compactMapValues { $0 }) { _, new in new }
 
     do {
       let returnedRows: [SyncJobRow] =
@@ -4472,6 +4429,37 @@ final class SyncCoordinator {
       table: .wageSnapshots, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
   }
 
+  /// Columns of a partial wage snapshot UPDATE, limited to the fields marked dirty.
+  private func wageSnapshotUpdatePayload(
+    for snapshot: LocalWageSnapshot, dirtyFields: Set<WageSnapshotField>
+  ) throws -> [String: AnyJSON] {
+    var update = PartialUpdatePayload(dirtyFields: dirtyFields)
+    update.set(.jobId, "job_id", snapshot.jobId.jsonOrNull { .string($0) })
+    update.set(.fromDate, "from_date", snapshot.fromDateString.jsonOrNull { .string($0) })
+    update.set(.hourlyWage, "hourly_wage", .double(snapshot.hourlyWage))
+    update.set(.wageLevel, "wage_level", snapshot.wageLevel.jsonOrNull { .integer($0) })
+    update.set(.tariffTypeId, "tariff_type_id", snapshot.tariffTypeId.jsonOrNull { .string($0) })
+    try update.set(
+      .supplements, "supplements",
+      try requireAnyJSON(
+        snapshot.supplements, table: .wageSnapshots, id: snapshot.id, field: "supplements"))
+    try update.set(
+      .overtime, "overtime",
+      try requireAnyJSON(
+        snapshot.overtime, table: .wageSnapshots, id: snapshot.id, field: "overtime"))
+    update.set(.taxEnabled, "tax_enabled", snapshot.taxEnabled.jsonOrNull { .bool($0) })
+    update.set(.taxPercentage, "tax_percentage", snapshot.taxPercentage.jsonOrNull { .double($0) })
+    update.set(.breakEnabled, "break_enabled", snapshot.breakEnabled.jsonOrNull { .bool($0) })
+    update.set(.breakMethod, "break_method", snapshot.breakMethod.jsonOrNull { .string($0) })
+    update.set(
+      .breakThresholdHours, "break_threshold_hours",
+      snapshot.breakThresholdHours.jsonOrNull { .double($0) })
+    update.set(
+      .breakDeductionMinutes, "break_deduction_minutes",
+      snapshot.breakDeductionMinutes.jsonOrNull { .integer($0) })
+    return update.data
+  }
+
   private func pushWageSnapshot(
     _ snapshot: LocalWageSnapshot,
     userId: String,
@@ -4496,99 +4484,7 @@ final class SyncCoordinator {
     }
 
     let baseline = SyncPushBaseline(snapshot)
-    // Build partial update
-    var updateData: [String: AnyJSON] = [:]
-    if dirtyFields.contains(.jobId) {
-      if let jobId = snapshot.jobId {
-        updateData["job_id"] = .string(jobId)
-      } else {
-        updateData["job_id"] = .null
-      }
-    }
-    if dirtyFields.contains(.fromDate) {
-      if let fromDateString = snapshot.fromDateString {
-        updateData["from_date"] = .string(fromDateString)
-      } else {
-        updateData["from_date"] = .null
-      }
-    }
-    if dirtyFields.contains(.hourlyWage) {
-      updateData["hourly_wage"] = .double(snapshot.hourlyWage)
-    }
-    if dirtyFields.contains(.wageLevel) {
-      if let level = snapshot.wageLevel {
-        updateData["wage_level"] = .integer(level)
-      } else {
-        updateData["wage_level"] = .null
-      }
-    }
-    if dirtyFields.contains(.tariffTypeId) {
-      if let tariffTypeId = snapshot.tariffTypeId {
-        updateData["tariff_type_id"] = .string(tariffTypeId)
-      } else {
-        updateData["tariff_type_id"] = .null
-      }
-    }
-    if dirtyFields.contains(.supplements) {
-      let decoded = try requireAnyJSON(
-        snapshot.supplements,
-        table: .wageSnapshots,
-        id: snapshotId,
-        field: "supplements"
-      )
-      updateData["supplements"] = decoded
-    }
-    if dirtyFields.contains(.overtime) {
-      let decoded = try requireAnyJSON(
-        snapshot.overtime,
-        table: .wageSnapshots,
-        id: snapshotId,
-        field: "overtime"
-      )
-      updateData["overtime"] = decoded
-    }
-    if dirtyFields.contains(.taxEnabled) {
-      if let enabled = snapshot.taxEnabled {
-        updateData["tax_enabled"] = .bool(enabled)
-      } else {
-        updateData["tax_enabled"] = .null
-      }
-    }
-    if dirtyFields.contains(.taxPercentage) {
-      if let percentage = snapshot.taxPercentage {
-        updateData["tax_percentage"] = .double(percentage)
-      } else {
-        updateData["tax_percentage"] = .null
-      }
-    }
-    if dirtyFields.contains(.breakEnabled) {
-      if let enabled = snapshot.breakEnabled {
-        updateData["break_enabled"] = .bool(enabled)
-      } else {
-        updateData["break_enabled"] = .null
-      }
-    }
-    if dirtyFields.contains(.breakMethod) {
-      if let method = snapshot.breakMethod {
-        updateData["break_method"] = .string(method)
-      } else {
-        updateData["break_method"] = .null
-      }
-    }
-    if dirtyFields.contains(.breakThresholdHours) {
-      if let hours = snapshot.breakThresholdHours {
-        updateData["break_threshold_hours"] = .double(hours)
-      } else {
-        updateData["break_threshold_hours"] = .null
-      }
-    }
-    if dirtyFields.contains(.breakDeductionMinutes) {
-      if let minutes = snapshot.breakDeductionMinutes {
-        updateData["break_deduction_minutes"] = .integer(minutes)
-      } else {
-        updateData["break_deduction_minutes"] = .null
-      }
-    }
+    let updateData = try wageSnapshotUpdatePayload(for: snapshot, dirtyFields: dirtyFields)
 
     try requireNonEmptyUpdate(updateData, table: .wageSnapshots, id: snapshotId)
 
@@ -4974,6 +4870,52 @@ final class SyncCoordinator {
       table: .userSettings, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
   }
 
+  /// Columns of a partial user settings UPDATE, limited to the fields marked dirty.
+  private func userSettingsUpdatePayload(
+    for settings: LocalUserSettings, userId: String, dirtyFields: Set<UserSettingsField>
+  ) throws -> [String: AnyJSON] {
+    var update = PartialUpdatePayload(dirtyFields: dirtyFields)
+    update.set(.monthlyGoal, "monthly_goal", settings.monthlyGoal.jsonOrNull { .integer($0) })
+    try update.set(
+      .monthlyGoalsByMonth, "monthly_goals_by_month",
+      try requireAnyJSON(
+        try requireEncode(
+          settings.monthlyGoalsByMonth,
+          typeName: "UserSettings.monthlyGoalsByMonth"
+        ),
+        table: .userSettings,
+        id: userId,
+        field: "monthly_goals_by_month"
+      ))
+    update.set(
+      .defaultShiftsView, "default_shifts_view",
+      settings.defaultShiftsView.jsonOrNull { .string($0) })
+    update.set(
+      .profilePictureUrl, "profile_picture_url",
+      settings.profilePictureUrl.jsonOrNull { .string($0) })
+    update.set(.payrollDay, "payroll_day", settings.payrollDay.jsonOrNull { .integer($0) })
+    update.set(.theme, "theme", .string(settings.theme))
+    update.set(
+      .calendarContentColorStyle, "calendar_content_color_style",
+      .string(settings.effectiveCalendarContentColorStyle))
+    update.set(
+      .showDashboardClockButtons, "show_dashboard_clock_buttons",
+      .bool(settings.effectiveShowDashboardClockButtons))
+    update.set(
+      .aiDataSharingEnabled, "ai_data_sharing_enabled",
+      .bool(settings.aiDataSharingEnabled ?? false))
+    update.set(
+      .wageyShowcaseSeen, "wagey_showcase_seen", .bool(settings.wageyShowcaseSeen ?? false))
+    update.set(.halfTaxMonth, "half_tax_month", settings.halfTaxMonth.jsonOrNull { .integer($0) })
+    update.set(.currency, "currency", settings.currency.jsonOrNull { .string($0) })
+    update.set(
+      .defaultStartupTab, "default_startup_tab", .string(settings.effectiveDefaultStartupTab))
+    update.set(
+      .lastActive, "last_active",
+      settings.lastActive.jsonOrNull { .string(formatSupabaseTimestamp($0)) })
+    return update.data
+  }
+
   private func pushUserSettingsRow(
     _ settings: LocalUserSettings,
     userId: String,
@@ -4992,90 +4934,8 @@ final class SyncCoordinator {
     }
 
     let baseline = SyncPushBaseline(settings)
-    // Build partial update
-    var updateData: [String: AnyJSON] = [:]
-    if dirtyFields.contains(.monthlyGoal) {
-      if let goal = settings.monthlyGoal {
-        updateData["monthly_goal"] = .integer(goal)
-      } else {
-        updateData["monthly_goal"] = .null
-      }
-    }
-    if dirtyFields.contains(.monthlyGoalsByMonth) {
-      let encoded = try requireEncode(
-        settings.monthlyGoalsByMonth,
-        typeName: "UserSettings.monthlyGoalsByMonth"
-      )
-      let decoded = try requireAnyJSON(
-        encoded,
-        table: .userSettings,
-        id: userId,
-        field: "monthly_goals_by_month"
-      )
-      updateData["monthly_goals_by_month"] = decoded
-    }
-    if dirtyFields.contains(.defaultShiftsView) {
-      if let view = settings.defaultShiftsView {
-        updateData["default_shifts_view"] = .string(view)
-      } else {
-        updateData["default_shifts_view"] = .null
-      }
-    }
-    if dirtyFields.contains(.profilePictureUrl) {
-      if let url = settings.profilePictureUrl {
-        updateData["profile_picture_url"] = .string(url)
-      } else {
-        updateData["profile_picture_url"] = .null
-      }
-    }
-    if dirtyFields.contains(.payrollDay) {
-      if let day = settings.payrollDay {
-        updateData["payroll_day"] = .integer(day)
-      } else {
-        updateData["payroll_day"] = .null
-      }
-    }
-    if dirtyFields.contains(.theme) {
-      updateData["theme"] = .string(settings.theme)
-    }
-    if dirtyFields.contains(.calendarContentColorStyle) {
-      updateData["calendar_content_color_style"] = .string(
-        settings.effectiveCalendarContentColorStyle)
-    }
-    if dirtyFields.contains(.showDashboardClockButtons) {
-      updateData["show_dashboard_clock_buttons"] = .bool(
-        settings.effectiveShowDashboardClockButtons)
-    }
-    if dirtyFields.contains(.aiDataSharingEnabled) {
-      updateData["ai_data_sharing_enabled"] = .bool(settings.aiDataSharingEnabled ?? false)
-    }
-    if dirtyFields.contains(.wageyShowcaseSeen) {
-      updateData["wagey_showcase_seen"] = .bool(settings.wageyShowcaseSeen ?? false)
-    }
-    if dirtyFields.contains(.halfTaxMonth) {
-      if let month = settings.halfTaxMonth {
-        updateData["half_tax_month"] = .integer(month)
-      } else {
-        updateData["half_tax_month"] = .null
-      }
-    }
-    if dirtyFields.contains(.currency) {
-      if let currency = settings.currency {
-        updateData["currency"] = .string(currency)
-      } else {
-        updateData["currency"] = .null
-      }
-    }
-    if dirtyFields.contains(.defaultStartupTab) {
-      updateData["default_startup_tab"] = .string(settings.effectiveDefaultStartupTab)
-    }
-    if dirtyFields.contains(.lastActive) {
-      if let lastActive = settings.lastActive {
-        updateData["last_active"] = .string(formatSupabaseTimestamp(lastActive))
-      } else {
-        updateData["last_active"] = .null
-      }
-    }
+    let updateData = try userSettingsUpdatePayload(
+      for: settings, userId: userId, dirtyFields: dirtyFields)
 
     // Note: Convert Int64 to Int for PostgrestFilterValue conformance
     let serverRevision = Int(settings.serverRevision)
@@ -5785,6 +5645,29 @@ final class SyncCoordinator {
   // MARK: - Shift Notification Helper
 
   /// Notify shared users about a shift change via RPC
+}
+
+// MARK: - Partial update payloads
+
+/// Collects the columns of a partial UPDATE payload for the fields marked dirty.
+private struct PartialUpdatePayload<Field: Hashable> {
+  let dirtyFields: Set<Field>
+  private(set) var data: [String: AnyJSON] = [:]
+
+  /// Sets `column` when `field` is dirty. The value is only computed for dirty fields.
+  mutating func set(
+    _ field: Field, _ column: String, _ value: @autoclosure () throws -> AnyJSON
+  ) rethrows {
+    guard dirtyFields.contains(field) else { return }
+    data[column] = try value()
+  }
+}
+
+extension Optional {
+  /// JSON value for a nullable column, `null` when the value is nil.
+  fileprivate func jsonOrNull(_ transform: (Wrapped) throws -> AnyJSON) rethrows -> AnyJSON {
+    try map(transform) ?? .null
+  }
 }
 
 // MARK: - Sync Errors

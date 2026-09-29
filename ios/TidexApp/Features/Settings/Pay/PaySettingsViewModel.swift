@@ -213,6 +213,11 @@ final class PaySettingsViewModel {
     requiresJobReselection = false
   }
 
+}
+
+// MARK: - Job Selection and Snapshot Editing
+
+extension PaySettingsViewModel {
   var shouldRequireJobReselectionSheet: Bool {
     requiresJobReselection && !activeJobs.isEmpty && selectedJobId == nil
   }
@@ -527,6 +532,19 @@ final class PaySettingsViewModel {
     NotificationCenter.default.postShiftsDidChange(context: .fullReload)
   }
 
+  private func hasDateConflict(_ input: WageSnapshotEditorInput, excludingId: String?) -> Bool {
+    guard let fromDate = input.fromDate else { return false }
+    return hasSnapshotOnDate(fromDate.toISODateString(), excludingId: excludingId)
+  }
+
+  /// Refresh the UI after a snapshot was created, updated or deleted.
+  private func finishSnapshotChange() {
+    refreshData()
+    notifyDashboardDataChanged()
+    Haptics.play(.success)
+    closeEditor()
+  }
+
   // MARK: - Snapshot CRUD
 
   /// Create a new wage snapshot
@@ -537,12 +555,9 @@ final class PaySettingsViewModel {
     }
 
     // Validate date uniqueness
-    if let fromDate = input.fromDate {
-      let isoDate = fromDate.toISODateString()
-      if hasSnapshotOnDate(isoDate, excludingId: nil) {
-        errorMessage = String(localized: .settingsPayErrorDateConflict)
-        return false
-      }
+    if hasDateConflict(input, excludingId: nil) {
+      errorMessage = String(localized: .settingsPayErrorDateConflict)
+      return false
     }
 
     do {
@@ -565,11 +580,7 @@ final class PaySettingsViewModel {
         breakDeductionMinutes: input.breakDeductionMinutes
       )
 
-      // Refresh UI
-      refreshData()
-      notifyDashboardDataChanged()
-      Haptics.play(.success)
-      closeEditor()
+      finishSnapshotChange()
 
       logger.info("Created new wage snapshot")
       return true
@@ -580,6 +591,31 @@ final class PaySettingsViewModel {
     }
   }
 
+  /// Saves the edited snapshot and returns false when it no longer exists.
+  private func persistSnapshotUpdate(id: String, input: WageSnapshotEditorInput) async throws
+    -> Bool
+  {
+    try await snapshotsRepository.updateSnapshot(
+      id: id,
+      jobId: selectedJobId,
+      fromDate: input.fromDate,
+      hourlyWage: input.hourlyWage,
+      wageLevel: input.wageLevel,
+      updateWageLevel: true,
+      tariffTypeId: input.tariffTypeId,
+      updateTariffTypeId: true,
+      supplements: input.supplements,
+      overtime: input.overtime,
+      taxEnabled: input.taxEnabled,
+      taxPercentage: input.taxPercentage,
+      updateTaxPercentage: true,
+      breakEnabled: input.breakEnabled,
+      breakMethod: input.breakMethod.rawValue,
+      breakThresholdHours: input.breakThresholdHours,
+      breakDeductionMinutes: input.breakDeductionMinutes
+    ) != nil
+  }
+
   /// Update an existing wage snapshot
   func updateSnapshot(id: String, input: WageSnapshotEditorInput) async -> Bool {
     guard currentLocalUserId() != nil else {
@@ -588,45 +624,20 @@ final class PaySettingsViewModel {
     }
 
     // Validate date uniqueness (excluding current snapshot)
-    if let fromDate = input.fromDate {
-      let isoDate = fromDate.toISODateString()
-      if hasSnapshotOnDate(isoDate, excludingId: id) {
-        errorMessage = String(localized: .settingsPayErrorDateConflict)
-        return false
-      }
+    if hasDateConflict(input, excludingId: id) {
+      errorMessage = String(localized: .settingsPayErrorDateConflict)
+      return false
     }
 
     do {
       guard
-        try await snapshotsRepository.updateSnapshot(
-          id: id,
-          jobId: selectedJobId,
-          fromDate: input.fromDate,
-          hourlyWage: input.hourlyWage,
-          wageLevel: input.wageLevel,
-          updateWageLevel: true,
-          tariffTypeId: input.tariffTypeId,
-          updateTariffTypeId: true,
-          supplements: input.supplements,
-          overtime: input.overtime,
-          taxEnabled: input.taxEnabled,
-          taxPercentage: input.taxPercentage,
-          updateTaxPercentage: true,
-          breakEnabled: input.breakEnabled,
-          breakMethod: input.breakMethod.rawValue,
-          breakThresholdHours: input.breakThresholdHours,
-          breakDeductionMinutes: input.breakDeductionMinutes
-        ) != nil
+        try await persistSnapshotUpdate(id: id, input: input)
       else {
         errorMessage = String(localized: .settingsPayErrorUpdateFailed)
         return false
       }
 
-      // Refresh UI
-      refreshData()
-      notifyDashboardDataChanged()
-      Haptics.play(.success)
-      closeEditor()
+      finishSnapshotChange()
 
       logger.info("Updated wage snapshot: \(id)")
       return true
@@ -663,11 +674,7 @@ final class PaySettingsViewModel {
     do {
       try await snapshotsRepository.deleteSnapshot(id: snapshot.id)
 
-      // Refresh UI
-      refreshData()
-      notifyDashboardDataChanged()
-      Haptics.play(.success)
-      closeEditor()
+      finishSnapshotChange()
 
       logger.info("Deleted wage snapshot: \(snapshot.id)")
     } catch {
@@ -818,120 +825,6 @@ final class PaySettingsViewModel {
   func clearError() {
     errorMessage = nil
     errorTitle = nil
-  }
-}
-
-// MARK: - Editor Input Model
-
-/// Input data for creating/updating a wage snapshot
-struct WageSnapshotEditorInput {
-  var fromDate: Date?
-  var hourlyWage: Double
-  var wageLevel: Int?
-  var supplements: SupplementRulesSnapshot
-  var overtime: OvertimeConfig
-  var taxEnabled: Bool
-  var taxPercentage: Double
-  var breakEnabled: Bool
-  var breakMethod: BreakMethod
-  var breakThresholdHours: Double
-  var breakDeductionMinutes: Int
-  /// Tariff type ID when using tariff rates (e.g., "hk_retail")
-  var tariffTypeId: String?
-
-  init(effectiveDate: Date, snapshots: [WageSnapshot]) {
-    self.init(
-      prefillFrom: SnapshotsService.snapshotForDate(
-        effectiveDate.toISODateString(), from: snapshots
-      ))
-    fromDate = effectiveDate
-  }
-
-  /// When a new change moves to another period, carry forward that period's
-  /// settings while retaining the fields the user has deliberately changed.
-  func rebasingUneditedSettings(from previous: WageSnapshot, onto next: WageSnapshot) -> Self {
-    let original = Self(from: previous)
-    let replacement = Self(from: next)
-    var result = self
-
-    if hourlyWage == original.hourlyWage, wageLevel == original.wageLevel,
-      tariffTypeId == original.tariffTypeId
-    {
-      result.hourlyWage = replacement.hourlyWage
-      result.wageLevel = replacement.wageLevel
-      result.tariffTypeId = replacement.tariffTypeId
-    }
-    if supplements == original.supplements {
-      result.supplements = replacement.supplements
-    }
-    if overtime == original.overtime {
-      result.overtime = replacement.overtime
-    }
-    if taxEnabled == original.taxEnabled, taxPercentage == original.taxPercentage {
-      result.taxEnabled = replacement.taxEnabled
-      result.taxPercentage = replacement.taxPercentage
-    }
-    if breakEnabled == original.breakEnabled, breakMethod == original.breakMethod,
-      breakThresholdHours == original.breakThresholdHours,
-      breakDeductionMinutes == original.breakDeductionMinutes
-    {
-      result.breakEnabled = replacement.breakEnabled
-      result.breakMethod = replacement.breakMethod
-      result.breakThresholdHours = replacement.breakThresholdHours
-      result.breakDeductionMinutes = replacement.breakDeductionMinutes
-    }
-    return result
-  }
-
-  /// Create input from an existing snapshot
-  init(from snapshot: WageSnapshot) {
-    if let fromDateString = snapshot.from_date {
-      self.fromDate = Date.fromISODateString(fromDateString)
-    } else {
-      self.fromDate = nil
-    }
-    self.hourlyWage = snapshot.hourly_wage
-    self.wageLevel = snapshot.wage_level
-    self.supplements = snapshot.supplements
-    self.overtime = snapshot.overtime
-    self.taxEnabled = snapshot.effectiveTaxEnabled
-    self.taxPercentage = snapshot.effectiveTaxPercentage
-    self.breakEnabled = snapshot.effectiveBreakEnabled && snapshot.breakMethod != .none
-    self.breakMethod = snapshot.breakMethod
-    self.breakThresholdHours = snapshot.effectiveBreakThresholdHours
-    self.breakDeductionMinutes = snapshot.effectiveBreakDeductionMinutes
-    self.tariffTypeId = snapshot.tariff_type_id
-  }
-
-  /// Create default input for new snapshot
-  init(prefillFrom snapshot: WageSnapshot? = nil) {
-    self.fromDate = Date()
-
-    if let snapshot {
-      self.hourlyWage = snapshot.hourly_wage
-      self.wageLevel = snapshot.wage_level
-      self.supplements = snapshot.supplements
-      self.overtime = snapshot.overtime
-      self.taxEnabled = snapshot.effectiveTaxEnabled
-      self.taxPercentage = snapshot.effectiveTaxPercentage
-      self.breakEnabled = snapshot.effectiveBreakEnabled && snapshot.breakMethod != .none
-      self.breakMethod = snapshot.breakMethod
-      self.breakThresholdHours = snapshot.effectiveBreakThresholdHours
-      self.breakDeductionMinutes = snapshot.effectiveBreakDeductionMinutes
-      self.tariffTypeId = snapshot.tariff_type_id
-    } else {
-      self.hourlyWage = 184.54
-      self.wageLevel = 1
-      self.supplements = SupplementRulesSnapshot(rules: PayrollCalculator.presetSupplementRules)
-      self.overtime = .disabled
-      self.taxEnabled = false
-      self.taxPercentage = 0
-      self.breakEnabled = true
-      self.breakMethod = .proportional
-      self.breakThresholdHours = 5.5
-      self.breakDeductionMinutes = 30
-      self.tariffTypeId = nil
-    }
   }
 }
 

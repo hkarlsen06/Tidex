@@ -255,7 +255,11 @@ final class NotificationService {
         "Failed to schedule quick reply failure notification: \(error.localizedDescription)")
     }
   }
+}
 
+// MARK: - Delivered notifications
+
+extension NotificationService {
   /// Remove delivered friend-chat notifications for a thread after the user opens it.
   func clearDeliveredFriendChatNotifications(for threadId: String) async {
     guard !threadId.isEmpty else { return }

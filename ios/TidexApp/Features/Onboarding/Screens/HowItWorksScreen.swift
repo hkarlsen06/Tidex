@@ -64,100 +64,21 @@ struct HowItWorksScreen: View {
 
     VStack(spacing: 0) {
       if showsTitle {
-        Text(.onboardingHowTitle)
-          .font(.tidexScreenTitle)
-          .foregroundColor(.tidexTextPrimary)
-          .multilineTextAlignment(.center)
-          .lineSpacing(2)
-          .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, Spacing.md)
-          .padding(.top, Spacing.md)
-          .padding(.bottom, Spacing.md)
-          .onboardingHowExitStep(isExiting: isExiting, delay: 0.00)
+        titleView
       }
 
       VStack(spacing: 0) {
-        // Steps as a progression timeline, not a list
-        // Centered as a unit with constrained width for iPad
-        VStack(alignment: .leading, spacing: 0) {
-          StepItem(
-            icon: "clock.badge.checkmark",
-            title: String(localized: .onboardingHowStep1Title),
-            description: String(localized: .onboardingHowStep1Desc),
-            index: 0,
-            isVisible: step1Visible,
-            progressState: .active,
-            showConnector: false,
-            isDimmedForFocus: shouldDimStep(at: 0),
-            titleFocusTrigger: step1TitleFocusTrigger
-          )
-          .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
-          .padding(.bottom, Spacing.xxl)
-
-          StepItem(
-            icon: "banknote",
-            title: String(localized: .onboardingHowStep2Title),
-            description: String(localized: .onboardingHowStep2Desc),
-            index: 0,
-            isVisible: step2Visible,
-            progressState: .upcoming,
-            showConnector: false,
-            isDimmedForFocus: shouldDimStep(at: 1),
-            titleFocusTrigger: step2TitleFocusTrigger
-          )
-          .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
-
-          OnboardingHowItWorksShiftPreviewCard(
-            shift: featuredShift,
-            isVisible: shiftPreviewVisible,
-            isDimmedForFocus: isStep2Dimmed
-          )
-
-          StepItem(
-            icon: "chart.line.uptrend.xyaxis",
-            title: String(localized: .onboardingHowStep3Title),
-            description: String(localized: .onboardingHowStep3Desc),
-            index: 0,
-            isVisible: step3Visible,
-            progressState: .future,
-            showConnector: false,
-            isDimmedForFocus: shouldDimStep(at: 2),
-            titleFocusTrigger: step3TitleFocusTrigger
-          )
-          .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
-        }
-        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-        .padding(.horizontal, Spacing.md)
-        .onboardingHowExitStep(isExiting: isExiting, delay: 0.045)
+        stepsTimeline(featuredShift: featuredShift, isStep2Dimmed: isStep2Dimmed)
 
         Spacer()
           .frame(height: 20)
 
-        OnboardingHowItWorksTotalCard(
-          fromTotals: totalFrom,
-          toTotals: totalTo
-        )
-        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-        .padding(.horizontal, Spacing.md)
-        .opacity(totalCardVisible ? (isStep3Dimmed ? 0.46 : 1.0) : 0)
-        .offset(y: totalCardVisible ? 0 : 16)
-        .animation(
-          .spring(response: 0.42, dampingFraction: 0.84),
-          value: totalCardVisible
-        )
-        .animation(.easeInOut(duration: 0.26), value: isStep3Dimmed)
-        .onboardingHowExitStep(isExiting: isExiting, delay: 0.085)
+        totalCard(isStep3Dimmed: isStep3Dimmed)
 
         Spacer()
           .frame(height: 20)
 
-        // Outcome whisper - centered under the steps
-        Text(.onboardingHowOutcome)
-          .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexBlue)
-          .opacity(outcomeVisible ? 0.6 : 0)
-          .offset(y: outcomeVisible ? 0 : 8)
-          .onboardingHowExitStep(isExiting: isExiting, delay: 0.125)
+        outcomeWhisper
       }
       .padding(.top, showsTitle ? 0 : Spacing.sm)
       .frame(
@@ -168,20 +89,7 @@ struct HowItWorksScreen: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .overlay {
-      GeometryReader { geometry in
-        // Extend confetti region so particles reach the continue CTA zone.
-        let confettiHeight =
-          geometry.size.height
-          + Spacing.buttonHeight
-          + Spacing.xl
-          + Spacing.md
-
-        ConfettiView(isActive: isConfettiActive, launchYRatio: 0.12) {
-          isConfettiActive = false
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: confettiHeight, alignment: .top)
-      }
+      confettiOverlay
     }
     .onAppear {
       guard isActive else { return }
@@ -202,48 +110,6 @@ struct HowItWorksScreen: View {
       triggerConfettiIfNeeded()
     }
     .userCurrency(currency)
-  }
-
-  private static func makeOnboardingFeaturedShift(currency: String) -> ShiftWithComputations {
-    let current = Date.currentYearMonth()
-    let day = min(12, Date.daysInMonth(year: current.year, month: current.month))
-    let dateISO =
-      Date.isoDateString(year: current.year, month: current.month, day: day)
-      ?? "\(current.year)-\(current.month)-\(day)"
-
-    let row = ShiftRow(
-      id: "onboarding-how-featured",
-      user_id: nil,
-      shift_date: dateISO,
-      start_time: "14:00",
-      end_time: "22:00",
-      custom_supplements: nil
-    )
-
-    let snapshot = WageSnapshot(
-      id: "onboarding-how-snapshot",
-      user_id: "onboarding-demo",
-      from_date: nil,
-      hourly_wage: OnboardingCurrencyResolver.defaultHourlyWage(for: currency),
-      wage_level: nil,
-      tariff_type_id: nil,
-      supplements: SupplementRulesSnapshot(rules: []),
-      tax_enabled: true,
-      tax_percentage: 20,
-      break_enabled: true,
-      break_method: BreakMethod.proportional.rawValue,
-      break_threshold_hours: 5.5,
-      break_deduction_minutes: 30,
-      created_at: nil
-    )
-
-    let computed = PayrollCalculator.computeShift(row, snapshot: snapshot)
-    return ShiftWithComputations(
-      shift: row,
-      computed: computed,
-      taxEnabled: snapshot.effectiveTaxEnabled,
-      taxPercentage: snapshot.effectiveTaxPercentage
-    )
   }
 
   private func triggerConfettiIfNeeded() {
@@ -360,6 +226,176 @@ struct HowItWorksScreen: View {
   }
 }
 
+extension HowItWorksScreen {
+  private var titleView: some View {
+    Text(.onboardingHowTitle)
+      .font(.tidexScreenTitle)
+      .foregroundColor(.tidexTextPrimary)
+      .multilineTextAlignment(.center)
+      .lineSpacing(2)
+      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+      .padding(.horizontal, Spacing.md)
+      .padding(.top, Spacing.md)
+      .padding(.bottom, Spacing.md)
+      .onboardingHowExitStep(isExiting: isExiting, delay: 0.00)
+  }
+
+  /// Steps as a progression timeline, not a list.
+  /// Centered as a unit with constrained width for iPad.
+  private func stepsTimeline(featuredShift: ShiftWithComputations, isStep2Dimmed: Bool)
+    -> some View
+  {
+    VStack(alignment: .leading, spacing: 0) {
+      firstStep
+        .padding(.bottom, Spacing.xxl)
+
+      secondStep
+
+      OnboardingHowItWorksShiftPreviewCard(
+        shift: featuredShift,
+        isVisible: shiftPreviewVisible,
+        isDimmedForFocus: isStep2Dimmed
+      )
+
+      thirdStep
+    }
+    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+    .padding(.horizontal, Spacing.md)
+    .onboardingHowExitStep(isExiting: isExiting, delay: 0.045)
+  }
+
+  private var firstStep: some View {
+    StepItem(
+      icon: "clock.badge.checkmark",
+      title: String(localized: .onboardingHowStep1Title),
+      description: String(localized: .onboardingHowStep1Desc),
+      index: 0,
+      isVisible: step1Visible,
+      progressState: .active,
+      showConnector: false,
+      isDimmedForFocus: shouldDimStep(at: 0),
+      titleFocusTrigger: step1TitleFocusTrigger
+    )
+    .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
+  }
+
+  private var secondStep: some View {
+    StepItem(
+      icon: "banknote",
+      title: String(localized: .onboardingHowStep2Title),
+      description: String(localized: .onboardingHowStep2Desc),
+      index: 0,
+      isVisible: step2Visible,
+      progressState: .upcoming,
+      showConnector: false,
+      isDimmedForFocus: shouldDimStep(at: 1),
+      titleFocusTrigger: step2TitleFocusTrigger
+    )
+    .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
+  }
+
+  private var thirdStep: some View {
+    StepItem(
+      icon: "chart.line.uptrend.xyaxis",
+      title: String(localized: .onboardingHowStep3Title),
+      description: String(localized: .onboardingHowStep3Desc),
+      index: 0,
+      isVisible: step3Visible,
+      progressState: .future,
+      showConnector: false,
+      isDimmedForFocus: shouldDimStep(at: 2),
+      titleFocusTrigger: step3TitleFocusTrigger
+    )
+    .frame(maxWidth: AdaptiveMaxWidth.content, alignment: .leading)
+  }
+
+  private func totalCard(isStep3Dimmed: Bool) -> some View {
+    OnboardingHowItWorksTotalCard(
+      fromTotals: totalFrom,
+      toTotals: totalTo
+    )
+    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+    .padding(.horizontal, Spacing.md)
+    .opacity(totalCardVisible ? (isStep3Dimmed ? 0.46 : 1.0) : 0)
+    .offset(y: totalCardVisible ? 0 : 16)
+    .animation(
+      .spring(response: 0.42, dampingFraction: 0.84),
+      value: totalCardVisible
+    )
+    .animation(.easeInOut(duration: 0.26), value: isStep3Dimmed)
+    .onboardingHowExitStep(isExiting: isExiting, delay: 0.085)
+  }
+
+  /// Outcome whisper - centered under the steps
+  private var outcomeWhisper: some View {
+    Text(.onboardingHowOutcome)
+      .font(.tidexFootnoteMedium)
+      .foregroundColor(.tidexBlue)
+      .opacity(outcomeVisible ? 0.6 : 0)
+      .offset(y: outcomeVisible ? 0 : 8)
+      .onboardingHowExitStep(isExiting: isExiting, delay: 0.125)
+  }
+
+  private var confettiOverlay: some View {
+    GeometryReader { geometry in
+      // Extend confetti region so particles reach the continue CTA zone.
+      let confettiHeight =
+        geometry.size.height
+        + Spacing.buttonHeight
+        + Spacing.xl
+        + Spacing.md
+
+      ConfettiView(isActive: isConfettiActive, launchYRatio: 0.12) {
+        isConfettiActive = false
+      }
+      .frame(maxWidth: .infinity)
+      .frame(height: confettiHeight, alignment: .top)
+    }
+  }
+
+  private static func makeOnboardingFeaturedShift(currency: String) -> ShiftWithComputations {
+    let current = Date.currentYearMonth()
+    let day = min(12, Date.daysInMonth(year: current.year, month: current.month))
+    let dateISO =
+      Date.isoDateString(year: current.year, month: current.month, day: day)
+      ?? "\(current.year)-\(current.month)-\(day)"
+
+    let row = ShiftRow(
+      id: "onboarding-how-featured",
+      user_id: nil,
+      shift_date: dateISO,
+      start_time: "14:00",
+      end_time: "22:00",
+      custom_supplements: nil
+    )
+
+    let snapshot = WageSnapshot(
+      id: "onboarding-how-snapshot",
+      user_id: "onboarding-demo",
+      from_date: nil,
+      hourly_wage: OnboardingCurrencyResolver.defaultHourlyWage(for: currency),
+      wage_level: nil,
+      tariff_type_id: nil,
+      supplements: SupplementRulesSnapshot(rules: []),
+      tax_enabled: true,
+      tax_percentage: 20,
+      break_enabled: true,
+      break_method: BreakMethod.proportional.rawValue,
+      break_threshold_hours: 5.5,
+      break_deduction_minutes: 30,
+      created_at: nil
+    )
+
+    let computed = PayrollCalculator.computeShift(row, snapshot: snapshot)
+    return ShiftWithComputations(
+      shift: row,
+      computed: computed,
+      taxEnabled: snapshot.effectiveTaxEnabled,
+      taxPercentage: snapshot.effectiveTaxPercentage
+    )
+  }
+}
+
 private struct OnboardingHowExitStepModifier: ViewModifier {
   let isExiting: Bool
   let delay: TimeInterval
@@ -376,103 +412,8 @@ private struct OnboardingHowExitStepModifier: ViewModifier {
 }
 
 extension View {
-  fileprivate func onboardingHowExitStep(isExiting: Bool, delay: TimeInterval) -> some View {
+  func onboardingHowExitStep(isExiting: Bool, delay: TimeInterval) -> some View {
     modifier(OnboardingHowExitStepModifier(isExiting: isExiting, delay: delay))
-  }
-}
-
-private struct OnboardingHowItWorksShiftPreviewCard: View {
-  let shift: ShiftWithComputations
-  let isVisible: Bool
-  let isDimmedForFocus: Bool
-
-  var body: some View {
-    FeaturedShiftCard(
-      shift: shift,
-      isToday: false,
-      isBestShift: true,
-      countdownText: nil,
-      progress: nil,
-      showIncreaseHighlight: true,
-      showFooter: false
-    )
-    .fixedSize(horizontal: false, vertical: true)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.top, Spacing.md)
-    .padding(.bottom, Spacing.xxl)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .opacity(isVisible ? (isDimmedForFocus ? 0.46 : 1.0) : 0)
-    .offset(y: isVisible ? 0 : 18)
-    .animation(
-      .spring(response: 0.4, dampingFraction: 0.82).delay(0.24),
-      value: isVisible
-    )
-    .animation(.easeInOut(duration: 0.26), value: isDimmedForFocus)
-  }
-}
-
-private struct OnboardingHowItWorksTotalCard: View {
-  let fromTotals: CalendarHeaderTotals?
-  let toTotals: CalendarHeaderTotals?
-
-  private let payrollDay = 15
-
-  var body: some View {
-    PayrollCard(
-      payrollDate: nextMonthPayrollDate,
-      label: String(localized: .dashboardNextPayout),
-      gross: displayedGross,
-      net: displayedNet,
-      tax: displayedTax,
-      taxEnabled: displayedNet != nil,
-      progress: nil
-    )
-  }
-
-  private var displayedTotals: CalendarHeaderTotals? {
-    toTotals ?? fromTotals
-  }
-
-  private var displayedNet: Double? {
-    guard displayedSecondary != nil else { return nil }
-    return displayedPrimary
-  }
-
-  private var displayedPrimary: Double {
-    displayedTotals?.primary ?? 0
-  }
-
-  private var displayedSecondary: Double? {
-    displayedTotals?.secondary
-  }
-
-  private var displayedGross: Double {
-    if let displayedSecondary {
-      return displayedSecondary
-    }
-    return displayedPrimary
-  }
-
-  private var displayedTax: Double? {
-    guard let net = displayedNet else { return nil }
-    return max(displayedGross - net, 0)
-  }
-
-  private var nextMonthPayrollDate: Date {
-    let calendar = Calendar.gregorianCurrent
-    let currentMonth = Date.currentYearMonth()
-    let currentMonthDate =
-      calendar.date(
-        from: DateComponents(year: currentMonth.year, month: currentMonth.month, day: 1))
-      ?? Date()
-    let nextMonthDate =
-      calendar.date(byAdding: .month, value: 1, to: currentMonthDate) ?? currentMonthDate
-    let components = calendar.dateComponents([.year, .month], from: nextMonthDate)
-    let year = components.year ?? currentMonth.year
-    let month = components.month ?? currentMonth.month
-    let clampedDay = min(payrollDay, Date.daysInMonth(year: year, month: month))
-    return calendar.date(from: DateComponents(year: year, month: month, day: clampedDay))
-      ?? nextMonthDate
   }
 }
 

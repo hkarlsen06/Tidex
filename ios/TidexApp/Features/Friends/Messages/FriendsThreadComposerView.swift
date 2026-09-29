@@ -161,75 +161,9 @@ struct FriendsThreadComposerHostedView: View {
     UIDevice.current.userInterfaceIdiom == .pad && orientationTracker.isLandscape
   }
 
-  private var composerText: String {
-    text.wrappedValue
-  }
-
-  private var composerTextBinding: Binding<String> {
-    Binding(
-      get: { composerText },
-      set: { newValue in
-        if text.wrappedValue != newValue {
-          text.wrappedValue = newValue
-        }
-        if configuration.draftText != newValue {
-          bridge.onDraftChanged?(newValue)
-        }
-      }
-    )
-  }
-
-  private var canSend: Bool {
-    let normalizedDraft = composerText.trimmingCharacters(in: .whitespacesAndNewlines)
-    return (!normalizedDraft.isEmpty || !configuration.stagedAttachments.isEmpty)
-      && !configuration.isThreadReadOnly
-      && !configuration.isDraftOverCharacterLimit
-      && !isSubmitting
-      && !attachmentController.isProcessingAttachment
-  }
-
-  private var shouldHidePlusButton: Bool {
-    guard configuration.mode == .normal else { return false }
-    guard !attachmentController.isDrawerOpen else { return false }
-    guard configuration.stagedAttachments.isEmpty else { return false }
-    guard isComposerFocused else { return false }
-
-    let draftLength = composerText.trimmingCharacters(in: .whitespacesAndNewlines).count
-    return draftLength >= attachmentCollapseCharacterThreshold
-      || composerText.contains("\n")
-  }
-
-  private var stagedImageCount: Int {
-    configuration.stagedAttachments.imageAttachments.count
-  }
-
-  private var hasShiftSnapshotAttachment: Bool {
-    configuration.stagedAttachments.hasShiftSnapshot
-  }
-
-  private var canAddMoreImages: Bool {
-    !hasShiftSnapshotAttachment
-      && stagedImageCount < FriendsComposerAttachmentLimits.maxImagesPerMessage
-  }
-
-  private var remainingImageSelectionCapacity: Int {
-    max(1, FriendsComposerAttachmentLimits.maxImagesPerMessage - stagedImageCount)
-  }
-
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      if configuration.mode == .reply,
-        let replyPreview = configuration.replyPreview
-      {
-        FriendsThreadComposerReplyBanner(
-          preview: replyPreview,
-          onCancel: bridge.cancelMode
-        )
-        .padding(.horizontal, Spacing.md)
-      } else if configuration.mode == .edit {
-        FriendsThreadComposerEditBanner(onCancel: bridge.cancelMode)
-          .padding(.horizontal, Spacing.md)
-      }
+      modeBanner
 
       if !configuration.stagedAttachments.isEmpty {
         FriendsThreadComposerAttachmentPreview(
@@ -240,72 +174,13 @@ struct FriendsThreadComposerHostedView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
-      if configuration.isThreadReadOnly {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "hand.raised.fill")
-            .foregroundColor(.tidexWarning)
+      readOnlyNotice
 
-          Text(.friendsChatBlockedReadOnly)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-
-          Spacer()
-        }
-        .padding(.horizontal, Spacing.md)
-      }
-
-      if shouldShowComposerMeta {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
-          if let sendErrorMessage = configuration.sendErrorMessage {
-            Text(sendErrorMessage)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
-          } else if let composerValidationMessage = configuration.composerValidationMessage {
-            Text(composerValidationMessage)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
-          }
-
-          Spacer(minLength: 0)
-
-          if configuration.shouldShowCharacterCount {
-            Text("\(configuration.draftCharacterCount)/\(configuration.draftCharacterLimit)")
-              .font(.tidexFootnote)
-              .foregroundColor(
-                configuration.isDraftOverCharacterLimit ? .tidexError : .tidexTextMuted
-              )
-              .monospacedDigit()
-          }
-        }
-        .padding(.horizontal, Spacing.md)
-      }
+      composerMeta
 
       composerField
 
-      if attachmentController.isDrawerOpen {
-        FriendsThreadComposerAttachmentDrawer(
-          selectedPhotoItems: $selectedPhotoItems,
-          remainingImageSelectionCapacity: remainingImageSelectionCapacity,
-          isProcessingAttachment: attachmentController.isProcessingAttachment,
-          showsShiftCalendarAction: configuration.canSendShiftSnapshots,
-          stagedAttachments: configuration.stagedAttachments,
-          canAddMoreImages: canAddMoreImages,
-          onOpenPhotoLibrary: {
-            guard canAddMoreImages else { return }
-            attachmentController.isShowingPhotoLibrary = true
-          },
-          onOpenCamera: {
-            guard canAddMoreImages else { return }
-            attachmentController.isShowingCamera = true
-          },
-          onOpenShiftCalendar: {
-            attachmentController.openShiftCalendar()
-          }
-        )
-        .padding(.horizontal, Spacing.md)
-        .padding(.bottom, Spacing.sm)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-      }
+      attachmentDrawer
     }
     .animation(
       .spring(response: 0.26, dampingFraction: 0.86), value: attachmentController.isDrawerOpen
@@ -365,6 +240,96 @@ struct FriendsThreadComposerHostedView: View {
     }
   }
 
+  @ViewBuilder
+  private var modeBanner: some View {
+    if configuration.mode == .reply,
+      let replyPreview = configuration.replyPreview
+    {
+      FriendsThreadComposerReplyBanner(
+        preview: replyPreview,
+        onCancel: bridge.cancelMode
+      )
+      .padding(.horizontal, Spacing.md)
+    } else if configuration.mode == .edit {
+      FriendsThreadComposerEditBanner(onCancel: bridge.cancelMode)
+        .padding(.horizontal, Spacing.md)
+    }
+  }
+
+  @ViewBuilder
+  private var readOnlyNotice: some View {
+    if configuration.isThreadReadOnly {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "hand.raised.fill")
+          .foregroundColor(.tidexWarning)
+
+        Text(.friendsChatBlockedReadOnly)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+
+        Spacer()
+      }
+      .padding(.horizontal, Spacing.md)
+    }
+  }
+
+  @ViewBuilder
+  private var composerMeta: some View {
+    if shouldShowComposerMeta {
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+        if let sendErrorMessage = configuration.sendErrorMessage {
+          Text(sendErrorMessage)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexError)
+        } else if let composerValidationMessage = configuration.composerValidationMessage {
+          Text(composerValidationMessage)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexError)
+        }
+
+        Spacer(minLength: 0)
+
+        if configuration.shouldShowCharacterCount {
+          Text("\(configuration.draftCharacterCount)/\(configuration.draftCharacterLimit)")
+            .font(.tidexFootnote)
+            .foregroundColor(
+              configuration.isDraftOverCharacterLimit ? .tidexError : .tidexTextMuted
+            )
+            .monospacedDigit()
+        }
+      }
+      .padding(.horizontal, Spacing.md)
+    }
+  }
+
+  @ViewBuilder
+  private var attachmentDrawer: some View {
+    if attachmentController.isDrawerOpen {
+      FriendsThreadComposerAttachmentDrawer(
+        selectedPhotoItems: $selectedPhotoItems,
+        remainingImageSelectionCapacity: remainingImageSelectionCapacity,
+        isProcessingAttachment: attachmentController.isProcessingAttachment,
+        showsShiftCalendarAction: configuration.canSendShiftSnapshots,
+        stagedAttachments: configuration.stagedAttachments,
+        canAddMoreImages: canAddMoreImages,
+        onOpenPhotoLibrary: {
+          guard canAddMoreImages else { return }
+          attachmentController.isShowingPhotoLibrary = true
+        },
+        onOpenCamera: {
+          guard canAddMoreImages else { return }
+          attachmentController.isShowingCamera = true
+        },
+        onOpenShiftCalendar: {
+          attachmentController.openShiftCalendar()
+        }
+      )
+      .padding(.horizontal, Spacing.md)
+      .padding(.bottom, Spacing.sm)
+      .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+  }
+
   private var composerField: some View {
     ChatComposerField(
       text: composerTextBinding,
@@ -412,6 +377,63 @@ struct FriendsThreadComposerHostedView: View {
     configuration.sendErrorMessage != nil
       || configuration.composerValidationMessage != nil
       || configuration.shouldShowCharacterCount
+  }
+}
+
+extension FriendsThreadComposerHostedView {
+  private var composerText: String {
+    text.wrappedValue
+  }
+
+  private var composerTextBinding: Binding<String> {
+    Binding(
+      get: { composerText },
+      set: { newValue in
+        if text.wrappedValue != newValue {
+          text.wrappedValue = newValue
+        }
+        if configuration.draftText != newValue {
+          bridge.onDraftChanged?(newValue)
+        }
+      }
+    )
+  }
+
+  private var canSend: Bool {
+    let normalizedDraft = composerText.trimmingCharacters(in: .whitespacesAndNewlines)
+    return (!normalizedDraft.isEmpty || !configuration.stagedAttachments.isEmpty)
+      && !configuration.isThreadReadOnly
+      && !configuration.isDraftOverCharacterLimit
+      && !isSubmitting
+      && !attachmentController.isProcessingAttachment
+  }
+
+  private var shouldHidePlusButton: Bool {
+    guard configuration.mode == .normal else { return false }
+    guard !attachmentController.isDrawerOpen else { return false }
+    guard configuration.stagedAttachments.isEmpty else { return false }
+    guard isComposerFocused else { return false }
+
+    let draftLength = composerText.trimmingCharacters(in: .whitespacesAndNewlines).count
+    return draftLength >= attachmentCollapseCharacterThreshold
+      || composerText.contains("\n")
+  }
+
+  private var stagedImageCount: Int {
+    configuration.stagedAttachments.imageAttachments.count
+  }
+
+  private var hasShiftSnapshotAttachment: Bool {
+    configuration.stagedAttachments.hasShiftSnapshot
+  }
+
+  private var canAddMoreImages: Bool {
+    !hasShiftSnapshotAttachment
+      && stagedImageCount < FriendsComposerAttachmentLimits.maxImagesPerMessage
+  }
+
+  private var remainingImageSelectionCapacity: Int {
+    max(1, FriendsComposerAttachmentLimits.maxImagesPerMessage - stagedImageCount)
   }
 
   private func sendMessage() {
@@ -617,51 +639,9 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      HStack(spacing: Spacing.sm) {
-        actionButton(
-          systemName: "photo.on.rectangle.angled",
-          isActive: hasImageAttachments,
-          isDisabled: !canAddMoreImages,
-          accessibilityLabel: String(localized: .friendsChatComposerPhotoLibrary),
-          action: onOpenPhotoLibrary
-        )
+      actionButtons
 
-        actionButton(
-          systemName: "camera",
-          isActive: false,
-          isDisabled: !canAddMoreImages,
-          accessibilityLabel: String(localized: .friendsChatComposerCamera),
-          action: onOpenCamera
-        )
-
-        if showsShiftCalendarAction {
-          actionButton(
-            systemName: "calendar",
-            isActive: hasShiftSnapshotAttachment,
-            isDisabled: !canStageShiftSnapshot,
-            accessibilityLabel: String(localized: .friendsChatComposerShiftCalendar),
-            action: onOpenShiftCalendar
-          )
-        }
-      }
-
-      PhotosPicker(
-        selection: $selectedPhotoItems,
-        maxSelectionCount: remainingImageSelectionCapacity,
-        matching: .images
-      ) {
-        EmptyView()
-      }
-      .photosPickerStyle(.compact)
-      .photosPickerAccessoryVisibility(.hidden, edges: .all)
-      .disabled(isProcessingAttachment || !canAddMoreImages)
-      .opacity(isProcessingAttachment || !canAddMoreImages ? 0.55 : 1)
-      .frame(maxWidth: .infinity)
-      .frame(height: Layout.previewHeight)
-      .overlay {
-        FriendsChatGestureTargetSurface(targetKind: .attachmentPhotoCarousel)
-          .allowsHitTesting(false)
-      }
+      photoCarousel
     }
     .padding(Spacing.md)
     .background(
@@ -672,6 +652,56 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
         .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
     )
+  }
+
+  private var actionButtons: some View {
+    HStack(spacing: Spacing.sm) {
+      actionButton(
+        systemName: "photo.on.rectangle.angled",
+        isActive: hasImageAttachments,
+        isDisabled: !canAddMoreImages,
+        accessibilityLabel: String(localized: .friendsChatComposerPhotoLibrary),
+        action: onOpenPhotoLibrary
+      )
+
+      actionButton(
+        systemName: "camera",
+        isActive: false,
+        isDisabled: !canAddMoreImages,
+        accessibilityLabel: String(localized: .friendsChatComposerCamera),
+        action: onOpenCamera
+      )
+
+      if showsShiftCalendarAction {
+        actionButton(
+          systemName: "calendar",
+          isActive: hasShiftSnapshotAttachment,
+          isDisabled: !canStageShiftSnapshot,
+          accessibilityLabel: String(localized: .friendsChatComposerShiftCalendar),
+          action: onOpenShiftCalendar
+        )
+      }
+    }
+  }
+
+  private var photoCarousel: some View {
+    PhotosPicker(
+      selection: $selectedPhotoItems,
+      maxSelectionCount: remainingImageSelectionCapacity,
+      matching: .images
+    ) {
+      EmptyView()
+    }
+    .photosPickerStyle(.compact)
+    .photosPickerAccessoryVisibility(.hidden, edges: .all)
+    .disabled(isProcessingAttachment || !canAddMoreImages)
+    .opacity(isProcessingAttachment || !canAddMoreImages ? 0.55 : 1)
+    .frame(maxWidth: .infinity)
+    .frame(height: Layout.previewHeight)
+    .overlay {
+      FriendsChatGestureTargetSurface(targetKind: .attachmentPhotoCarousel)
+        .allowsHitTesting(false)
+    }
   }
 
   private func actionButton(

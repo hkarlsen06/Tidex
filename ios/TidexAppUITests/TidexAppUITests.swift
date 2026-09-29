@@ -783,23 +783,7 @@ final class TidexAppUITests: XCTestCase {
     }
     jobPicker.tap()
     app.buttons["Jobs & Pay"].tap()
-    // Skip the Add sheet's own job chip, which stays in the hierarchy under this sheet.
-    let workplace = app.buttons.matching(
-      NSPredicate(format: "identifier != 'add-shift.job-picker'")
-    )
-    .containing(.staticText, identifier: "Nord").firstMatch
-    XCTAssertTrue(workplace.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    workplace.tap()
-    let edit = app.buttons["Edit job"]
-    XCTAssertTrue(edit.waitForExistence(timeout: defaultTimeout))
-    edit.tap()
-    let name = app.textFields["Job name"]
-    XCTAssertTrue(name.waitForExistence(timeout: defaultTimeout))
-    name.tap()
-    name.typeText(
-      String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4) + "Updated workplace")
-    app.buttons["Save"].tap()
-    XCTAssertTrue(edit.waitForExistence(timeout: defaultTimeout))
+    renameNordWorkplace(in: app, to: "Updated workplace")
 
     // The workplace detail sheet dismisses with the standard pull-down gesture.
     app.navigationBars.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
@@ -814,6 +798,28 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(jobPicker.label.contains("Updated workplace"), app.debugDescription)
     XCTAssertEqual(app.textFields["Start"].value as? String, "09:00")
     XCTAssertEqual(app.textFields["End"].value as? String, "17:00")
+  }
+
+  /// Opens the Nord workplace from the jobs list and renames it.
+  @MainActor
+  private func renameNordWorkplace(in app: XCUIApplication, to newName: String) {
+    // Skip the Add sheet's own job chip, which stays in the hierarchy under this sheet.
+    let workplace = app.buttons.matching(
+      NSPredicate(format: "identifier != 'add-shift.job-picker'")
+    )
+    .containing(.staticText, identifier: "Nord").firstMatch
+    XCTAssertTrue(workplace.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    workplace.tap()
+    let edit = app.buttons["Edit job"]
+    XCTAssertTrue(edit.waitForExistence(timeout: defaultTimeout))
+    edit.tap()
+    let name = app.textFields["Job name"]
+    XCTAssertTrue(name.waitForExistence(timeout: defaultTimeout))
+    name.tap()
+    name.typeText(
+      String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4) + newName)
+    app.buttons["Save"].tap()
+    XCTAssertTrue(edit.waitForExistence(timeout: defaultTimeout))
   }
 
   @MainActor
@@ -1039,7 +1045,14 @@ final class TidexAppUITests: XCTestCase {
       attachAppStoreScreenshot(app, name: "\(language)-\(screen)")
       app.terminate()
     }
+    captureTerminologyAppScreens(labels, localeArguments: localeArguments)
+  }
 
+  @MainActor
+  private func captureTerminologyAppScreens(
+    _ labels: TerminologyLabels, localeArguments: [String]
+  ) {
+    let language = labels.language
     let app = XCUIApplication()
     app.launchArguments = localeArguments + ["-defaultStartupTab", "home"]
     app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"

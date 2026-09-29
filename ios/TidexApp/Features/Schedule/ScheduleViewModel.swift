@@ -464,7 +464,8 @@ final class ShiftsViewModel: MonthNavigable {
         for offset in 0...daySpan {
           guard
             let startDate = Date.fromISODateString(event.start_date),
-            let coveredDate = Calendar.gregorianCurrent.date(byAdding: .day, value: offset, to: startDate)
+            let coveredDate = Calendar.gregorianCurrent.date(
+              byAdding: .day, value: offset, to: startDate)
           else {
             continue
           }
@@ -1010,23 +1011,7 @@ final class ShiftsViewModel: MonthNavigable {
       }
 
       let sortedTargetDates = copyTargetDates.sorted()
-
-      for targetDateISO in sortedTargetDates {
-        guard let targetDate = Date.fromISODateString(targetDateISO) else {
-          kScheduleLogger.error("Invalid target date: \(targetDateISO)")
-          continue
-        }
-
-        // Create a new shift with the same times at the target date
-        _ = try await shiftsRepository.createShift(
-          userId: userId,
-          jobId: sourceShift.shift.job_id,
-          shiftDate: targetDate,
-          startTime: sourceShift.startTime,
-          endTime: sourceShift.endTime,
-          customSupplements: sourceShift.shift.custom_supplements
-        )
-      }
+      try await createCopies(of: sourceShift, on: sortedTargetDates, userId: userId)
 
       kScheduleLogger.info(
         "Copied shift from \(sourceShift.shiftDate) to \(self.copyTargetDates.count) target dates")
@@ -1043,6 +1028,30 @@ final class ShiftsViewModel: MonthNavigable {
 
     } catch {
       kScheduleLogger.error("Failed to copy shift: \(error.localizedDescription)")
+    }
+  }
+
+  /// Create a shift with the same times and supplements on each target date.
+  private func createCopies(
+    of sourceShift: ShiftWithComputations,
+    on targetDatesISO: [String],
+    userId: String
+  ) async throws {
+    for targetDateISO in targetDatesISO {
+      guard let targetDate = Date.fromISODateString(targetDateISO) else {
+        kScheduleLogger.error("Invalid target date: \(targetDateISO)")
+        continue
+      }
+
+      // Create a new shift with the same times at the target date
+      _ = try await shiftsRepository.createShift(
+        userId: userId,
+        jobId: sourceShift.shift.job_id,
+        shiftDate: targetDate,
+        startTime: sourceShift.startTime,
+        endTime: sourceShift.endTime,
+        customSupplements: sourceShift.shift.custom_supplements
+      )
     }
   }
 
@@ -1370,91 +1379,15 @@ final class ShiftsViewModel: MonthNavigable {
       let resolvedNote = editResult.noteWasEdited ? editResult.note : currentShift?.note
 
       if editResult.isVirtualShiftConversion {
-        // Virtual shift conversion:
-        // 1. Add exclusion to the recurring shift for the original date
-        // 2. Create a new regular shift with the edited values
-        kScheduleLogger.info("🔄 Converting virtual shift to regular shift")
-
-        // Get user ID - use cached value or fall back to AppCoordinator
-        // This guards against race conditions if user signs out mid-operation
-        let userId = cachedUserId ?? AppCoordinator.shared.getCurrentUserId()
-        guard let recurringId = editResult.recurringId,
-          let userId
-        else {
-          kScheduleLogger.error("Missing recurringId or userId for virtual shift conversion")
-          throw ShiftSaveError.missingRecurringInfo
-        }
-
-        let recurringShift =
-          recurringShifts.first(where: { $0.id == recurringId })
-          ?? recurringShiftsRepository.getRecurringShift(id: recurringId)
-
-        if !hasTimeOrDateChanges, editResult.customSupplements == nil, editResult.noteWasEdited {
-          var updatedNotes = recurringShift?.date_specific_notes ?? [:]
-          if let resolvedNote {
-            updatedNotes[editResult.originalDate] = resolvedNote
-          } else {
-            updatedNotes.removeValue(forKey: editResult.originalDate)
-          }
-
-          _ = try await recurringShiftsRepository.updateDateSpecificNotes(
-            id: recurringId,
-            dateSpecificNotes: updatedNotes
-          )
-          kScheduleLogger.info("✅ Updated recurring note for \(editResult.originalDate)")
-        } else {
-          if var updatedNotes = recurringShift?.date_specific_notes {
-            updatedNotes.removeValue(forKey: editResult.originalDate)
-            _ = try await recurringShiftsRepository.updateDateSpecificNotes(
-              id: recurringId,
-              dateSpecificNotes: updatedNotes
-            )
-          }
-
-          // Step 1: Add exclusion for the original date
-          try await RecurringShiftsRepository.shared.addExclusion(
-            id: recurringId,
-            date: editResult.originalDate
-          )
-          kScheduleLogger.info("✅ Added exclusion for \(editResult.originalDate)")
-
-          let sourceJobId =
-            shifts.first(where: { $0.id == editResult.shiftId })?.shift.job_id
-            ?? recurringShifts.first(where: { $0.id == recurringId })?.job_id
-
-          // Step 2: Create a new regular shift with the edited values
-          _ = try await shiftsRepository.createShift(
-            userId: userId,
-            jobId: sourceJobId,
-            shiftDate: newDate,
-            startTime: editResult.startTime,
-            endTime: editResult.endTime,
-            note: resolvedNote,
-            customSupplements: editResult.customSupplements
-          )
-          kScheduleLogger.info("✅ Created new shift on \(editResult.shiftDate)")
-
-          if var updatedNotes = recurringShift?.date_specific_notes {
-            updatedNotes.removeValue(forKey: editResult.originalDate)
-            _ = try await recurringShiftsRepository.updateDateSpecificNotes(
-              id: recurringId,
-              dateSpecificNotes: updatedNotes
-            )
-          }
-        }
+        try await convertVirtualShift(
+          editResult,
+          newDate: newDate,
+          hasTimeOrDateChanges: hasTimeOrDateChanges,
+          resolvedNote: resolvedNote
+        )
 
       } else {
-        // Regular shift update - just update the existing shift
-        _ = try await shiftsRepository.updateShift(
-          id: editResult.shiftId,
-          shiftDate: newDate,
-          startTime: editResult.startTime,
-          endTime: editResult.endTime,
-          note: editResult.note,
-          noteWasEdited: editResult.noteWasEdited,
-          customSupplements: editResult.customSupplements
-        )
-        kScheduleLogger.info("✅ Updated shift \(editResult.shiftId)")
+        try await updateRegularShift(editResult, newDate: newDate)
       }
 
       // Reload to show the changes
@@ -1471,6 +1404,116 @@ final class ShiftsViewModel: MonthNavigable {
       kScheduleLogger.error("❌ Failed to update shift: \(error.localizedDescription)")
       throw error
     }
+  }
+
+  /// Regular shift update - just update the existing shift
+  private func updateRegularShift(_ editResult: ShiftEditResult, newDate: Date) async throws {
+    _ = try await shiftsRepository.updateShift(
+      id: editResult.shiftId,
+      shiftDate: newDate,
+      startTime: editResult.startTime,
+      endTime: editResult.endTime,
+      note: editResult.note,
+      noteWasEdited: editResult.noteWasEdited,
+      customSupplements: editResult.customSupplements
+    )
+    kScheduleLogger.info("✅ Updated shift \(editResult.shiftId)")
+  }
+
+  /// Convert a virtual (recurring) shift into a regular shift, or store only a per-date note.
+  private func convertVirtualShift(
+    _ editResult: ShiftEditResult,
+    newDate: Date,
+    hasTimeOrDateChanges: Bool,
+    resolvedNote: String?
+  ) async throws {
+    // Virtual shift conversion:
+    // 1. Add exclusion to the recurring shift for the original date
+    // 2. Create a new regular shift with the edited values
+    kScheduleLogger.info("🔄 Converting virtual shift to regular shift")
+
+    // Get user ID - use cached value or fall back to AppCoordinator
+    // This guards against race conditions if user signs out mid-operation
+    let userId = cachedUserId ?? AppCoordinator.shared.getCurrentUserId()
+    guard let recurringId = editResult.recurringId,
+      let userId
+    else {
+      kScheduleLogger.error("Missing recurringId or userId for virtual shift conversion")
+      throw ShiftSaveError.missingRecurringInfo
+    }
+
+    let recurringShift =
+      recurringShifts.first(where: { $0.id == recurringId })
+      ?? recurringShiftsRepository.getRecurringShift(id: recurringId)
+
+    if !hasTimeOrDateChanges, editResult.customSupplements == nil, editResult.noteWasEdited {
+      var updatedNotes = recurringShift?.date_specific_notes ?? [:]
+      if let resolvedNote {
+        updatedNotes[editResult.originalDate] = resolvedNote
+      } else {
+        updatedNotes.removeValue(forKey: editResult.originalDate)
+      }
+
+      _ = try await recurringShiftsRepository.updateDateSpecificNotes(
+        id: recurringId,
+        dateSpecificNotes: updatedNotes
+      )
+      kScheduleLogger.info("✅ Updated recurring note for \(editResult.originalDate)")
+    } else {
+      try await clearDateSpecificNote(
+        on: editResult.originalDate, recurringId: recurringId, recurringShift: recurringShift)
+
+      // Step 1: Add exclusion for the original date
+      try await RecurringShiftsRepository.shared.addExclusion(
+        id: recurringId,
+        date: editResult.originalDate
+      )
+      kScheduleLogger.info("✅ Added exclusion for \(editResult.originalDate)")
+
+      // Step 2: Create a new regular shift with the edited values
+      try await createRegularShift(
+        from: editResult, recurringId: recurringId, userId: userId,
+        newDate: newDate, note: resolvedNote)
+
+      try await clearDateSpecificNote(
+        on: editResult.originalDate, recurringId: recurringId, recurringShift: recurringShift)
+    }
+  }
+
+  private func createRegularShift(
+    from editResult: ShiftEditResult,
+    recurringId: String,
+    userId: String,
+    newDate: Date,
+    note: String?
+  ) async throws {
+    let sourceJobId =
+      shifts.first(where: { $0.id == editResult.shiftId })?.shift.job_id
+      ?? recurringShifts.first(where: { $0.id == recurringId })?.job_id
+
+    _ = try await shiftsRepository.createShift(
+      userId: userId,
+      jobId: sourceJobId,
+      shiftDate: newDate,
+      startTime: editResult.startTime,
+      endTime: editResult.endTime,
+      note: note,
+      customSupplements: editResult.customSupplements
+    )
+    kScheduleLogger.info("✅ Created new shift on \(editResult.shiftDate)")
+  }
+
+  private func clearDateSpecificNote(
+    on date: String,
+    recurringId: String,
+    recurringShift: RecurringShiftRow?
+  ) async throws {
+    guard var updatedNotes = recurringShift?.date_specific_notes else { return }
+    updatedNotes.removeValue(forKey: date)
+    _ = try await recurringShiftsRepository.updateDateSpecificNotes(
+      id: recurringId,
+      dateSpecificNotes: updatedNotes
+    )
   }
 
   func updateShiftPause(_ editResult: ShiftPauseEditResult) async {
@@ -2031,6 +2074,88 @@ final class ShiftsViewModel: MonthNavigable {
     monthlyPayrollReadService.invalidateSharedCache(for: userId ?? cachedUserId)
   }
 
+  private func resolveCachedUserId() async throws -> String {
+    // Get or cache user ID
+    if cachedUserId == nil {
+      guard let userId = try await getCurrentUserId() else {
+        throw ShiftsError.notAuthenticated
+      }
+      cachedUserId = userId
+    }
+
+    guard let userId = cachedUserId else {
+      throw ShiftsError.notAuthenticated
+    }
+    return userId
+  }
+
+  /// Load raw data for the full visible calendar range (so out-of-month days show data).
+  private func loadVisibleMonthWindow(
+    for userId: String,
+    year: Int,
+    month: Int
+  ) async -> PayrollRawWindowData {
+    let windowData = await monthlyPayrollReadService.loadRawWindow(
+      for: userId,
+      window: .visibleCalendarMonth(year: year, month: month)
+    )
+    kScheduleLogger.info("📋 Loaded shifts for \(year)-\(month): \(windowData.shifts.count)")
+    kScheduleLogger.info("📋 Loaded events for \(year)-\(month): \(windowData.events.count)")
+    return windowData
+  }
+
+  /// Compute payroll for the visible month, cache it, and commit it as the displayed month.
+  private func computeAndCommitMonth(
+    year: Int,
+    month: Int,
+    window: PayrollRawWindowData,
+    payrollSettings: UserSettings
+  ) async throws -> [ShiftWithComputations] {
+    let visibleRange = Date.visibleCalendarRange(year: year, month: month)
+    let rawShifts = window.shifts
+    let displayEvents = window.events
+    let recurringSnapshot = recurringShifts  // swiftlint:disable:this explicit_type_interface
+    let snapshotsSnapshot = snapshots  // swiftlint:disable:this explicit_type_interface
+    let activeJobsSnapshot = activeJobs  // swiftlint:disable:this explicit_type_interface
+    let computedShifts = try await Self.computeShiftsForMonthOffMain(
+      MonthComputationInput(
+        year: year,
+        month: month,
+        shifts: rawShifts,
+        recurringShifts: recurringSnapshot,
+        snapshots: snapshotsSnapshot,
+        settings: payrollSettings,
+        visibleRange: visibleRange,
+        jobs: activeJobsSnapshot
+      )
+    )
+    try Task.checkCancellation()
+
+    // Cache the computed results
+    let displayKey = "\(year)-\(month)"
+    monthCache[displayKey] = MonthCacheEntry(
+      year: year,
+      month: month,
+      shifts: computedShifts,
+      events: displayEvents,
+      visibleRange: visibleRange,
+      timestamp: Date()
+    )
+
+    // Evict old cache entries if over limit
+    evictCacheIfNeeded()
+
+    // ATOMIC UPDATE: Set shifts, events, and committed state together.
+    applyCommittedMonthSnapshot(
+      shifts: computedShifts,
+      events: displayEvents,
+      year: year,
+      month: month
+    )
+
+    return computedShifts
+  }
+
   /// Load shifts data from local repositories
   @discardableResult
   private func loadShiftsFromLocal() async -> Bool {
@@ -2038,38 +2163,18 @@ final class ShiftsViewModel: MonthNavigable {
     error = nil
 
     do {
-      // Get or cache user ID
-      if cachedUserId == nil {
-        guard let userId = try await getCurrentUserId() else {
-          throw ShiftsError.notAuthenticated
-        }
-        cachedUserId = userId
-      }
-
-      guard let userId = cachedUserId else {
-        throw ShiftsError.notAuthenticated
-      }
+      let userId = try await resolveCachedUserId()
 
       await loadScheduleDependencies(for: userId)
       kScheduleLogger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
       kScheduleLogger.info("📋 Loaded snapshots: \(self.snapshots.count)")
       kScheduleLogger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
 
-      // Calculate date range for displayed month (includes out-of-month padding days visible in calendar)
+      // The window covers the displayed month plus the out-of-month padding days shown in the calendar
       let displayYM = (year: displayYear, month: displayMonth)
-      let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
 
-      // Load raw data for the full visible calendar range (so out-of-month days show data)
-      let displayWindowData = await monthlyPayrollReadService.loadRawWindow(
-        for: userId,
-        window: .visibleCalendarMonth(year: displayYM.year, month: displayYM.month)
-      )
-      let displayShifts = displayWindowData.shifts
-      let displayEvents = displayWindowData.events
-      kScheduleLogger.info(
-        "📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
-      kScheduleLogger.info(
-        "📋 Loaded events for \(displayYM.year)-\(displayYM.month): \(displayEvents.count)")
+      let displayWindowData = await loadVisibleMonthWindow(
+        for: userId, year: displayYM.year, month: displayYM.month)
 
       // Check if we have settings to compute payroll
       guard let currentSettings = self.settings else {
@@ -2078,43 +2183,11 @@ final class ShiftsViewModel: MonthNavigable {
         return false
       }
 
-      let recurringSnapshot = recurringShifts  // swiftlint:disable:this explicit_type_interface
-      let snapshotsSnapshot = snapshots  // swiftlint:disable:this explicit_type_interface
-      let activeJobsSnapshot = activeJobs  // swiftlint:disable:this explicit_type_interface
-      let computedShifts = try await Self.computeShiftsForMonthOffMain(
-        MonthComputationInput(
-          year: displayYM.year,
-          month: displayYM.month,
-          shifts: displayShifts,
-          recurringShifts: recurringSnapshot,
-          snapshots: snapshotsSnapshot,
-          settings: currentSettings,
-          visibleRange: visibleRange,
-          jobs: activeJobsSnapshot
-        )
-      )
-      try Task.checkCancellation()
-
-      // Cache the computed results
-      let displayKey = "\(displayYM.year)-\(displayYM.month)"
-      monthCache[displayKey] = MonthCacheEntry(
+      let computedShifts = try await computeAndCommitMonth(
         year: displayYM.year,
         month: displayYM.month,
-        shifts: computedShifts,
-        events: displayEvents,
-        visibleRange: visibleRange,
-        timestamp: Date()
-      )
-
-      // Evict old cache entries if over limit
-      evictCacheIfNeeded()
-
-      // ATOMIC UPDATE: Set shifts, events, and committed state together.
-      applyCommittedMonthSnapshot(
-        shifts: computedShifts,
-        events: displayEvents,
-        year: displayYM.year,
-        month: displayYM.month
+        window: displayWindowData,
+        payrollSettings: currentSettings
       )
 
       self.isLoading = false
@@ -2318,7 +2391,10 @@ final class ShiftsViewModel: MonthNavigable {
 
     if !analysis.conflictingIds.isEmpty {
       kScheduleLogger.info(
-        "⚠️ Found \(analysis.conflictingIds.count) conflicting shifts on \(analysis.conflictDates.count) dates, \(analysis.excludedIds.count) excluded from totals"
+        """
+        ⚠️ Found \(analysis.conflictingIds.count) conflicting shifts on \(analysis.conflictDates.count) dates, \
+        \(analysis.excludedIds.count) excluded from totals
+        """
       )
     }
 

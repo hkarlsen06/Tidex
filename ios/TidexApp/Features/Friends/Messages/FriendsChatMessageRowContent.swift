@@ -338,7 +338,22 @@ struct FriendsChatMessageRowContent: View {
   @State private var rowFrame: CGRect = .zero
   @State private var payloadFrame: CGRect = .zero
 
-  var body: some View {
+  private struct PayloadLayout {
+    let isShowingAttachmentReactionTarget: Bool
+    let hasMessageText: Bool
+    let imageAttachments: [FriendMessageAttachment]
+    let shiftSnapshot: FriendShiftSnapshot?
+    let fallbackPreviewText: String?
+    let showsFallbackBubble: Bool
+    let showsReplyPreview: Bool
+    let payloadCount: Int
+    let usesStandalonePayloadGrouping: Bool
+    let imagePayloadStartIndex: Int
+    let bubblePayloadIndex: Int
+    let showsMetadataRow: Bool
+  }
+
+  private var payloadLayout: PayloadLayout {
     let menuAttachmentId: String? =
       messageFrame != nil
       ? FriendsThreadAttachmentReactionMenuTarget.attachmentId(for: message.id)
@@ -366,14 +381,40 @@ struct FriendsChatMessageRowContent: View {
     let showsBubblePayload: Bool = showsFallbackBubble || hasMessageText
     let payloadCount: Int =
       (showsReplyPreview ? 1 : 0) + imageAttachments.count + (showsBubblePayload ? 1 : 0)
-    let usesStandalonePayloadGrouping: Bool = showsReplyPreview || !imageAttachments.isEmpty
     let imagePayloadStartIndex: Int = showsReplyPreview ? 1 : 0
-    let bubblePayloadIndex: Int = imagePayloadStartIndex + imageAttachments.count
-    let showsMetadataRow: Bool =
-      !isShowingAttachmentReactionTarget && (inlineMetadataStatus != nil || message.editedAt != nil)
+    return PayloadLayout(
+      isShowingAttachmentReactionTarget: isShowingAttachmentReactionTarget,
+      hasMessageText: hasMessageText,
+      imageAttachments: imageAttachments,
+      shiftSnapshot: shiftSnapshot,
+      fallbackPreviewText: fallbackPreviewText,
+      showsFallbackBubble: showsFallbackBubble,
+      showsReplyPreview: showsReplyPreview,
+      payloadCount: payloadCount,
+      usesStandalonePayloadGrouping: showsReplyPreview || !imageAttachments.isEmpty,
+      imagePayloadStartIndex: imagePayloadStartIndex,
+      bubblePayloadIndex: imagePayloadStartIndex + imageAttachments.count,
+      showsMetadataRow: !isShowingAttachmentReactionTarget
+        && (inlineMetadataStatus != nil || message.editedAt != nil)
+    )
+  }
+
+  private func payloadGroupContext(
+    at index: Int,
+    layout: PayloadLayout
+  ) -> FriendsChatMessageGroupContext {
+    payloadGroupContext(
+      index: index,
+      count: layout.payloadCount,
+      usesStandalonePayloadGrouping: layout.usesStandalonePayloadGrouping
+    )
+  }
+
+  var body: some View {
+    let layout = payloadLayout
     let topPadding: CGFloat = groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
     let bottomPadding: CGFloat =
-      if showsMetadataRow {
+      if layout.showsMetadataRow {
         Spacing.xxxs
       } else if groupContext.joinsNext {
         Spacing.micro
@@ -394,176 +435,12 @@ struct FriendsChatMessageRowContent: View {
             }
 
             VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
-              if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
-                Text(senderFirstName)
-                  .font(.tidexCaptionRegular)
-                  .foregroundColor(.tidexTextMuted)
-                  .padding(.horizontal, CornerRadius.bubble)
-              }
+              senderLabel
 
-              VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
-                if showsReplyPreview, let quotedPreview {
-                  FriendsChatMessageReplyPreview(
-                    preview: quotedPreview,
-                    isCurrentUser: isCurrentUser,
-                    groupContext: payloadGroupContext(
-                      index: 0,
-                      count: payloadCount,
-                      usesStandalonePayloadGrouping: usesStandalonePayloadGrouping
-                    ),
-                    isHighlighted: false,
-                    maxWidth: resolvedMaximumTextBubbleWidth,
-                    onTap: onTapQuotedMessage
-                  )
-                }
+              payloadStack(layout)
 
-                ForEach(Array(imageAttachments.enumerated()), id: \.element.id) {
-                  index, attachment in
-                  if attachment.kind == .image {
-                    replySwipeContainer(id: "image-\(attachment.id)") {
-                      FriendsChatImageView(
-                        messageId: message.id,
-                        attachment: attachment,
-                        isCurrentUser: isCurrentUser,
-                        groupContext: payloadGroupContext(
-                          index: imagePayloadStartIndex + index,
-                          count: payloadCount,
-                          usesStandalonePayloadGrouping: usesStandalonePayloadGrouping
-                        ),
-                        canOpenAttachment: messageFrame == nil,
-                        canReact: message.canReact,
-                        isHighlighted: false,
-                        onOpenImageAttachment: onOpenImageAttachment,
-                        onShowReactionMenu: onShowReactionMenu,
-                        onReactionPressChanged: onImageReactionPressChanged,
-                        onPrepareReaction: onPrepareImageReaction
-                      )
-                    }
-                    .friendsChatMessageFrame(
-                      !hasMessageText && shiftSnapshot == nil && index == imageAttachments.count - 1
-                        ? messageFrame : nil
-                    )
-                    .overlay(alignment: reactionAlignment) {
-                      if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil {
-                        let reactionTarget:
-                          (
-                            reactions: [FriendMessageReaction],
-                            attachmentId: String?
-                          ) = imageReactionTarget(
-                            for: attachment,
-                            index: index,
-                            imageCount: imageAttachments.count,
-                            allowsMessageFallback: !isShowingAttachmentReactionTarget
-                          )
-                        reactionStrip(
-                          for: reactionTarget.reactions,
-                          attachmentId: reactionTarget.attachmentId
-                        )
-                      }
-                    }
-                  }
-                }
-
-                if let shiftSnapshot {
-                  replySwipeContainer(id: "shift-\(message.id)") {
-                    ChatShiftSnapshotCard(
-                      snapshot: shiftSnapshot,
-                      isCurrentUser: isCurrentUser,
-                      showsOwnerHeader: shiftSnapshot.ownerUserId != message.senderUserId,
-                      topInset: imageAttachments.isEmpty ? 0 : Spacing.xs,
-                      onTap: messageFrame == nil
-                        ? {
-                          onOpenShiftSnapshot(shiftSnapshot)
-                        } : nil
-                    )
-                  }
-                  .friendsChatMessageFrame(
-                    hasMessageText || !imageAttachments.isEmpty ? nil : messageFrame
-                  )
-                  .overlay(alignment: reactionAlignment) {
-                    if !hasMessageText, imageAttachments.isEmpty {
-                      reactionStrip(for: message.reactions)
-                    }
-                  }
-                  .highPriorityGesture(messageMenuDoubleTapGesture)
-                }
-
-                if showsFallbackBubble, let fallbackPreviewText {
-                  FriendsChatReactionAnchoredBubbleCard(
-                    isCurrentUser: isCurrentUser,
-                    groupContext: payloadGroupContext(
-                      index: bubblePayloadIndex,
-                      count: payloadCount,
-                      usesStandalonePayloadGrouping: usesStandalonePayloadGrouping
-                    ),
-                    minWidth: Self.minimumBubbleWidthForTimestamp,
-                    maxWidth: resolvedMaximumTextBubbleWidth,
-                    messageFrame: messageFrame,
-                    replySwipe: textBubbleReplySwipeConfiguration(id: "fallback-\(message.id)")
-                  ) {
-                    Text(fallbackPreviewText)
-                      .font(.tidexBody)
-                      .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-                      .multilineTextAlignment(.leading)
-                      .fixedSize(horizontal: false, vertical: true)
-                  } reaction: {
-                    reactionStrip(for: message.reactions)
-                  }
-                  .highPriorityGesture(messageMenuDoubleTapGesture)
-                }
-
-                if hasMessageText {
-                  FriendsChatReactionAnchoredBubbleCard(
-                    isCurrentUser: isCurrentUser,
-                    groupContext: payloadGroupContext(
-                      index: bubblePayloadIndex,
-                      count: payloadCount,
-                      usesStandalonePayloadGrouping: usesStandalonePayloadGrouping
-                    ),
-                    minWidth: Self.minimumBubbleWidthForTimestamp,
-                    maxWidth: resolvedMaximumTextBubbleWidth,
-                    messageFrame: messageFrame,
-                    replySwipe: textBubbleReplySwipeConfiguration(id: "text-\(message.id)")
-                  ) {
-                    FriendsChatLinkedMessageText(
-                      text: visibleMessageText,
-                      isCurrentUser: isCurrentUser
-                    )
-                  } reaction: {
-                    reactionStrip(for: message.reactions)
-                  }
-                  .highPriorityGesture(messageMenuDoubleTapGesture)
-                }
-              }
-
-              if showsMetadataRow {
-                HStack(spacing: Spacing.xxs) {
-                  if isCurrentUser {
-                    if let inlineMetadataStatus {
-                      statusView(inlineMetadataStatus)
-                    }
-
-                    if message.editedAt != nil {
-                      Text(.friendsChatEdited)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                    }
-
-                  } else {
-                    if message.editedAt != nil {
-                      Text(.friendsChatEdited)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                    }
-
-                    if let inlineMetadataStatus {
-                      statusView(inlineMetadataStatus)
-                    }
-                  }
-                }
-                .font(.tidexMicro)
-                .foregroundColor(.tidexTextMuted)
-                .fixedSize(horizontal: true, vertical: false)
+              if layout.showsMetadataRow {
+                metadataRow
               }
             }
           }
@@ -577,6 +454,206 @@ struct FriendsChatMessageRowContent: View {
           .fill(shouldHighlightWholeMessage ? Color.tidexBlue.opacity(0.12) : Color.clear)
       )
     }
+  }
+
+  @ViewBuilder
+  private var senderLabel: some View {
+    if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
+      Text(senderFirstName)
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+        .padding(.horizontal, CornerRadius.bubble)
+    }
+  }
+
+  private func payloadStack(_ layout: PayloadLayout) -> some View {
+    VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
+      if layout.showsReplyPreview, let quotedPreview {
+        FriendsChatMessageReplyPreview(
+          preview: quotedPreview,
+          isCurrentUser: isCurrentUser,
+          groupContext: payloadGroupContext(at: 0, layout: layout),
+          isHighlighted: false,
+          maxWidth: resolvedMaximumTextBubbleWidth,
+          onTap: onTapQuotedMessage
+        )
+      }
+
+      ForEach(Array(layout.imageAttachments.enumerated()), id: \.element.id) {
+        index, attachment in
+        imagePayload(attachment, index: index, layout: layout)
+      }
+
+      if let shiftSnapshot = layout.shiftSnapshot {
+        shiftSnapshotPayload(shiftSnapshot, layout: layout)
+      }
+
+      if layout.showsFallbackBubble, let fallbackPreviewText = layout.fallbackPreviewText {
+        fallbackBubblePayload(fallbackPreviewText, layout: layout)
+      }
+
+      if layout.hasMessageText {
+        textBubblePayload(layout)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func imagePayload(
+    _ attachment: FriendMessageAttachment,
+    index: Int,
+    layout: PayloadLayout
+  ) -> some View {
+    if attachment.kind == .image {
+      replySwipeContainer(id: "image-\(attachment.id)") {
+        FriendsChatImageView(
+          messageId: message.id,
+          attachment: attachment,
+          isCurrentUser: isCurrentUser,
+          groupContext: payloadGroupContext(
+            at: layout.imagePayloadStartIndex + index, layout: layout),
+          canOpenAttachment: messageFrame == nil,
+          canReact: message.canReact,
+          isHighlighted: false,
+          onOpenImageAttachment: onOpenImageAttachment,
+          onShowReactionMenu: onShowReactionMenu,
+          onReactionPressChanged: onImageReactionPressChanged,
+          onPrepareReaction: onPrepareImageReaction
+        )
+      }
+      .friendsChatMessageFrame(
+        !layout.hasMessageText && layout.shiftSnapshot == nil
+          && index == layout.imageAttachments.count - 1
+          ? messageFrame : nil
+      )
+      .overlay(alignment: reactionAlignment) {
+        imageReactionOverlay(attachment, index: index, layout: layout)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func imageReactionOverlay(
+    _ attachment: FriendMessageAttachment,
+    index: Int,
+    layout: PayloadLayout
+  ) -> some View {
+    if !layout.hasMessageText, !layout.showsFallbackBubble, layout.shiftSnapshot == nil {
+      let reactionTarget:
+        (
+          reactions: [FriendMessageReaction],
+          attachmentId: String?
+        ) = imageReactionTarget(
+          for: attachment,
+          index: index,
+          imageCount: layout.imageAttachments.count,
+          allowsMessageFallback: !layout.isShowingAttachmentReactionTarget
+        )
+      reactionStrip(
+        for: reactionTarget.reactions,
+        attachmentId: reactionTarget.attachmentId
+      )
+    }
+  }
+
+  private func shiftSnapshotPayload(
+    _ shiftSnapshot: FriendShiftSnapshot,
+    layout: PayloadLayout
+  ) -> some View {
+    replySwipeContainer(id: "shift-\(message.id)") {
+      ChatShiftSnapshotCard(
+        snapshot: shiftSnapshot,
+        isCurrentUser: isCurrentUser,
+        showsOwnerHeader: shiftSnapshot.ownerUserId != message.senderUserId,
+        topInset: layout.imageAttachments.isEmpty ? 0 : Spacing.xs,
+        onTap: messageFrame == nil
+          ? {
+            onOpenShiftSnapshot(shiftSnapshot)
+          } : nil
+      )
+    }
+    .friendsChatMessageFrame(
+      layout.hasMessageText || !layout.imageAttachments.isEmpty ? nil : messageFrame
+    )
+    .overlay(alignment: reactionAlignment) {
+      if !layout.hasMessageText, layout.imageAttachments.isEmpty {
+        reactionStrip(for: message.reactions)
+      }
+    }
+    .highPriorityGesture(messageMenuDoubleTapGesture)
+  }
+
+  private func fallbackBubblePayload(_ fallbackPreviewText: String, layout: PayloadLayout)
+    -> some View
+  {
+    FriendsChatReactionAnchoredBubbleCard(
+      isCurrentUser: isCurrentUser,
+      groupContext: payloadGroupContext(at: layout.bubblePayloadIndex, layout: layout),
+      minWidth: Self.minimumBubbleWidthForTimestamp,
+      maxWidth: resolvedMaximumTextBubbleWidth,
+      messageFrame: messageFrame,
+      replySwipe: textBubbleReplySwipeConfiguration(id: "fallback-\(message.id)")
+    ) {
+      Text(fallbackPreviewText)
+        .font(.tidexBody)
+        .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+        .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
+    } reaction: {
+      reactionStrip(for: message.reactions)
+    }
+    .highPriorityGesture(messageMenuDoubleTapGesture)
+  }
+
+  private func textBubblePayload(_ layout: PayloadLayout) -> some View {
+    FriendsChatReactionAnchoredBubbleCard(
+      isCurrentUser: isCurrentUser,
+      groupContext: payloadGroupContext(at: layout.bubblePayloadIndex, layout: layout),
+      minWidth: Self.minimumBubbleWidthForTimestamp,
+      maxWidth: resolvedMaximumTextBubbleWidth,
+      messageFrame: messageFrame,
+      replySwipe: textBubbleReplySwipeConfiguration(id: "text-\(message.id)")
+    ) {
+      FriendsChatLinkedMessageText(
+        text: visibleMessageText,
+        isCurrentUser: isCurrentUser
+      )
+    } reaction: {
+      reactionStrip(for: message.reactions)
+    }
+    .highPriorityGesture(messageMenuDoubleTapGesture)
+  }
+
+  private var metadataRow: some View {
+    HStack(spacing: Spacing.xxs) {
+      if isCurrentUser {
+        if let inlineMetadataStatus {
+          statusView(inlineMetadataStatus)
+        }
+
+        if message.editedAt != nil {
+          editedLabel
+        }
+
+      } else {
+        if message.editedAt != nil {
+          editedLabel
+        }
+
+        if let inlineMetadataStatus {
+          statusView(inlineMetadataStatus)
+        }
+      }
+    }
+    .font(.tidexMicro)
+    .foregroundColor(.tidexTextMuted)
+    .fixedSize(horizontal: true, vertical: false)
+  }
+
+  private var editedLabel: some View {
+    Text(.friendsChatEdited)
+      .lineLimit(1)
+      .fixedSize(horizontal: true, vertical: false)
   }
 
   private var shouldHighlightWholeMessage: Bool {

@@ -41,45 +41,8 @@ struct ConflictExclusion {
     for (date, shiftsOnDate) in shiftsByDate {
       guard shiftsOnDate.count >= 2 else { continue }
 
-      // Use union-find to group overlapping shifts into clusters
-      var parent: [String: String] = [:]
-      for shift in shiftsOnDate {
-        parent[shift.id] = shift.id
-      }
-
-      func find(_ id: String) -> String {
-        guard let currentParent = parent[id] else { return id }
-        if currentParent != id {
-          parent[id] = find(currentParent)
-        }
-        return parent[id] ?? id
-      }
-
-      func union(_ a: String, _ b: String) {
-        let rootA = find(a)
-        let rootB = find(b)
-        if rootA != rootB {
-          parent[rootA] = rootB
-        }
-      }
-
-      // Check all pairs for overlap and union them
-      for i in 0..<shiftsOnDate.count {
-        for j in (i + 1)..<shiftsOnDate.count where shiftsOverlap(shiftsOnDate[i], shiftsOnDate[j])
-        {
-          union(shiftsOnDate[i].id, shiftsOnDate[j].id)
-        }
-      }
-
-      // Group shifts by their cluster root
-      var clusters: [String: [ShiftWithComputations]] = [:]
-      for shift in shiftsOnDate {
-        let root = find(shift.id)
-        clusters[root, default: []].append(shift)
-      }
-
       // For each cluster with 2+ shifts, mark conflicts and exclusions
-      for (_, cluster) in clusters {
+      for cluster in overlapClusters(in: shiftsOnDate) {
         guard cluster.count >= 2 else { continue }
 
         conflictDates.insert(date)
@@ -111,6 +74,50 @@ struct ConflictExclusion {
       conflictingIds: conflictingIds,
       conflictDates: conflictDates
     )
+  }
+
+  /// Group overlapping shifts on one date into clusters using union-find.
+  private static func overlapClusters(in shiftsOnDate: [ShiftWithComputations])
+    -> [[ShiftWithComputations]]
+  {
+    // Use union-find to group overlapping shifts into clusters
+    var parent: [String: String] = [:]
+    for shift in shiftsOnDate {
+      parent[shift.id] = shift.id
+    }
+
+    func find(_ id: String) -> String {
+      guard let currentParent = parent[id] else { return id }
+      if currentParent != id {
+        parent[id] = find(currentParent)
+      }
+      return parent[id] ?? id
+    }
+
+    func union(_ first: String, _ second: String) {
+      let rootA = find(first)
+      let rootB = find(second)
+      if rootA != rootB {
+        parent[rootA] = rootB
+      }
+    }
+
+    // Check all pairs for overlap and union them
+    for first in 0..<shiftsOnDate.count {
+      for second in (first + 1)..<shiftsOnDate.count
+      where shiftsOverlap(shiftsOnDate[first], shiftsOnDate[second]) {
+        union(shiftsOnDate[first].id, shiftsOnDate[second].id)
+      }
+    }
+
+    // Group shifts by their cluster root
+    var clusters: [String: [ShiftWithComputations]] = [:]
+    for shift in shiftsOnDate {
+      let root = find(shift.id)
+      clusters[root, default: []].append(shift)
+    }
+
+    return Array(clusters.values)
   }
 
   /// Build a set of shift IDs that should be excluded from earnings totals.

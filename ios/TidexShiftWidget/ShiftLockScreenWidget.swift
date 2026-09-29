@@ -12,79 +12,85 @@ struct ShiftAccessoryCircularView: View {
       AccessoryWidgetBackground()
 
       if entry.hasShift {
-        if entry.layoutState == .countdown {
-          // Countdown: show days remaining
-          VStack(spacing: 0) {
-            Text("\(entry.daysRemaining)")
-              .font(.system(size: 24, weight: .bold, design: .rounded))
-              .minimumScaleFactor(0.8)
-
-            Text(.widgetDays)
-              .font(.system(size: 9, weight: .medium))
-              .textCase(.uppercase)
-          }
-        } else if entry.layoutState == .pastShift {
-          // Past shift from previous day: show days ago countup
-          let daysAgo = abs(entry.daysRemaining)
-          VStack(spacing: 0) {
-            Text("\(daysAgo)")
-              .font(.system(size: 24, weight: .bold, design: .rounded))
-              .minimumScaleFactor(0.8)
-
-            Text(.widgetAgo)
-              .font(.system(size: 9, weight: .medium))
-              .textCase(.uppercase)
-          }
-        } else if entry.shiftHasEnded {
-          // Shift ended today: show "Done" indicator with checkmark
-          VStack(spacing: 0) {
-            Image(systemName: "checkmark.circle.fill")
-              .font(.system(size: 20))
-
-            Text(.widgetDone)
-              .font(.system(size: 9, weight: .medium))
-              .textCase(.uppercase)
-          }
-        } else if let countdownTarget = entry.upcomingStartToday {
-          // Today's upcoming shift: show live countdown to shift start
-          VStack(spacing: 0) {
-            Text(countdownTarget, style: .timer)
-              .font(.system(size: 13, weight: .bold, design: .rounded))
-              .monospacedDigit()
-              .lineLimit(1)
-
-            Text(.widgetStart)
-              .font(.system(size: 9, weight: .medium))
-              .textCase(.uppercase)
-          }
-        } else if let shiftEnd = entry.activeShiftEnd {
-          // Shift in progress: show live countdown to end
-          VStack(spacing: 0) {
-            Text(shiftEnd, style: .timer)
-              .font(.system(size: 13, weight: .bold, design: .rounded))
-              .monospacedDigit()
-              .lineLimit(1)
-
-            Text(.widgetEnd)
-              .font(.system(size: 9, weight: .medium))
-              .textCase(.uppercase)
-          }
-        } else {
-          // Today/tomorrow: show start time
-          VStack(spacing: 0) {
-            Text(entry.startTime)
-              .font(.system(size: 18, weight: .bold, design: .rounded))
-              .monospacedDigit()
-
-            Text(.widgetStart)
-              .font(.system(size: 9, weight: .medium))
-              .textCase(.uppercase)
-          }
-        }
+        shiftContent
       } else {
         // No shift: show briefcase icon
         Image(systemName: "briefcase")
           .font(.system(size: 20))
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var shiftContent: some View {
+    if entry.layoutState == .countdown {
+      // Countdown: show days remaining
+      VStack(spacing: 0) {
+        Text("\(entry.daysRemaining)")
+          .font(.system(size: 24, weight: .bold, design: .rounded))
+          .minimumScaleFactor(0.8)
+
+        Text(.widgetDays)
+          .font(.system(size: 9, weight: .medium))
+          .textCase(.uppercase)
+      }
+    } else if entry.layoutState == .pastShift {
+      // Past shift from previous day: show days ago countup
+      let daysAgo = abs(entry.daysRemaining)
+      VStack(spacing: 0) {
+        Text("\(daysAgo)")
+          .font(.system(size: 24, weight: .bold, design: .rounded))
+          .minimumScaleFactor(0.8)
+
+        Text(.widgetAgo)
+          .font(.system(size: 9, weight: .medium))
+          .textCase(.uppercase)
+      }
+    } else if entry.shiftHasEnded {
+      // Shift ended today: show "Done" indicator with checkmark
+      VStack(spacing: 0) {
+        Image(systemName: "checkmark.circle.fill")
+          .font(.system(size: 20))
+          .accessibilityHidden(true)
+
+        Text(.widgetDone)
+          .font(.system(size: 9, weight: .medium))
+          .textCase(.uppercase)
+      }
+    } else if let countdownTarget = entry.upcomingStartToday {
+      // Today's upcoming shift: show live countdown to shift start
+      VStack(spacing: 0) {
+        Text(countdownTarget, style: .timer)
+          .font(.system(size: 13, weight: .bold, design: .rounded))
+          .monospacedDigit()
+          .lineLimit(1)
+
+        Text(.widgetStart)
+          .font(.system(size: 9, weight: .medium))
+          .textCase(.uppercase)
+      }
+    } else if let shiftEnd = entry.activeShiftEnd {
+      // Shift in progress: show live countdown to end
+      VStack(spacing: 0) {
+        Text(shiftEnd, style: .timer)
+          .font(.system(size: 13, weight: .bold, design: .rounded))
+          .monospacedDigit()
+          .lineLimit(1)
+
+        Text(.widgetEnd)
+          .font(.system(size: 9, weight: .medium))
+          .textCase(.uppercase)
+      }
+    } else {
+      // Today/tomorrow: show start time
+      VStack(spacing: 0) {
+        Text(entry.startTime)
+          .font(.system(size: 18, weight: .bold, design: .rounded))
+          .monospacedDigit()
+
+        Text(.widgetStart)
+          .font(.system(size: 9, weight: .medium))
+          .textCase(.uppercase)
       }
     }
   }

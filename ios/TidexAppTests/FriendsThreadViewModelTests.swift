@@ -1,6 +1,5 @@
-// swiftlint:disable file_length
-
 import SwiftData
+import UIKit
 import XCTest
 
 @testable import Tidex
@@ -2578,9 +2577,10 @@ final class FriendsThreadViewModelTests: XCTestCase {
     let draftStore = try makeDraftStore()
     let thread = makeThread()
     let route = makeRoute()
+    // Sending re-reads staged images from the image cache, which only stores decodable data.
     let imageDrafts: [FriendsComposerAttachmentDraft] = [
-      .image(ImageAttachment(id: "image-1", data: Data([0x00]), mediaType: "image/jpeg")),
-      .image(ImageAttachment(id: "image-2", data: Data([0x01]), mediaType: "image/jpeg")),
+      .image(ImageAttachment(id: "image-1", data: makeJPEGData(.red), mediaType: "image/jpeg")),
+      .image(ImageAttachment(id: "image-2", data: makeJPEGData(.blue), mediaType: "image/jpeg")),
     ]
 
     let mockService = MockFriendsMessagingService()
@@ -3548,7 +3548,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   }
 
   // V2 sync calls are built from the V1 mock data so existing tests keep exercising them.
-  // A non-empty page reports more history, like the tests written against V1 expect.
+  // A full page reports more history, like the V1 view model's `count == pageSize` check.
   func listThreadMessagesV2(threadId: String, limit: Int, before cursor: FriendMessageCursor?)
     async throws -> FriendThreadMessagesPage
   {
@@ -3556,7 +3556,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     return FriendThreadMessagesPage(
       messages: messages,
       nextCursor: Self.oldestCursor(in: messages),
-      hasMore: !messages.isEmpty
+      hasMore: messages.count >= limit
     )
   }
 
@@ -3672,7 +3672,14 @@ private enum FriendsThreadViewModelTestValues {
   static let attachmentPixelSize: Int = 200
 }
 
-// swiftlint:enable file_length
+@MainActor
+private func makeJPEGData(_ color: UIColor) -> Data {
+  UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1)).jpegData(withCompressionQuality: 1) {
+    context in
+    color.setFill()
+    context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+  }
+}
 
 /// Waits for work the view model finishes in the background, such as sending a message.
 @MainActor

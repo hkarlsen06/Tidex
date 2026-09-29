@@ -53,7 +53,8 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   private let jobsRepository: JobsRepository
   private let monthContext: SharedMonthContext
   private let syncCoordinator: SyncCoordinator
-  @ObservationIgnored private var cancellables = Set<AnyCancellable>()  // swiftlint:disable:this explicit_type_interface
+  // swiftlint:disable:next explicit_type_interface
+  @ObservationIgnored private var cancellables = Set<AnyCancellable>()
   @ObservationIgnored private var settings: UserSettings?
   @ObservationIgnored private var activeLoadTask: Task<Void, Never>?
   @ObservationIgnored private var loadGeneration: Int = 0

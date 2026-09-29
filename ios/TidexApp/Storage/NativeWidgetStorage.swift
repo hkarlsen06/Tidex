@@ -150,39 +150,54 @@ enum NativeWidgetStorage {
     await NativeWidgetStorageRefreshCoordinator.shared.invalidateAll()
   }
 
-  static func performRefresh(for userId: String, generation: Int) async {
-    logger.info("Updating widget storage for user \(userId.prefix(8))...")
+  private struct RefreshSource {
+    let settings: UserSettings?
+    let snapshots: [WageSnapshot]
+    let recurringPatterns: [RecurringShiftRow]
+    let jobs: [Job]
+  }
 
-    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+  private static func fetchRefreshSource(
+    storeActor: LocalStoreActor, userId: String
+  ) async -> RefreshSource {
     let settings = await storeActor.fetchUserSettings(userId: userId)
     let snapshots = await storeActor.fetchSnapshots(userId: userId)
     let recurringPatterns = await storeActor.fetchRecurringShifts(userId: userId)
     let jobs = await storeActor.fetchNonDeletedJobs(userId: userId)
+    return RefreshSource(
+      settings: settings, snapshots: snapshots, recurringPatterns: recurringPatterns, jobs: jobs)
+  }
 
-    guard
-      await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
-        for: userId,
-        generation: generation
-      )
-    else { return }
+  private static func computeShifts(
+    source: RefreshSource, shifts: [ShiftRow], now: Date, visibleRange: (start: Date, end: Date)
+  ) -> [ShiftWithComputations] {
+    let yearMonth = now.yearMonth()
+    return PayrollEngine.computeShiftsForMonth(
+      .init(
+        year: yearMonth.year,
+        month: yearMonth.month,
+        shifts: shifts,
+        recurring: source.recurringPatterns,
+        snapshots: source.snapshots,
+        settings: source.settings,
+        visibleRange: visibleRange,
+        jobs: source.jobs
+      ))
+  }
 
-    let currencySymbol = settings?.currency ?? defaultCurrencySymbol
+  static func performRefresh(for userId: String, generation: Int) async {
+    logger.info("Updating widget storage for user \(userId.prefix(8))...")
+
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    let source = await fetchRefreshSource(storeActor: storeActor, userId: userId)
+
+    guard await canApplyResults(for: userId, generation: generation) else { return }
+
+    let currencySymbol = source.settings?.currency ?? defaultCurrencySymbol
     storeCurrency(currencySymbol)
 
-    // Calculate date range: previous month through 90 days ahead
     let now = Date()
-    let calendar = Calendar.gregorianCurrent
-
-    // First day of previous month - use Calendar.date(byAdding:) for safe month arithmetic
-    // This correctly handles January -> December rollover without manual year/month math
-    let firstDayOfCurrentMonth =
-      calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
-    let firstDayOfPreviousMonth =
-      calendar.date(byAdding: .month, value: -1, to: firstDayOfCurrentMonth) ?? now
-    let startDate = firstDayOfPreviousMonth
-
-    // 90 days from now
-    let endDate = calendar.date(byAdding: .day, value: futureDaysWindow, to: now) ?? now
+    let (startDate, endDate) = refreshDateRange(now: now)
 
     let computationWindow = PayrollReadWindow(startDate: startDate, endDate: endDate)
       .expandedForOvertime
@@ -191,91 +206,90 @@ enum NativeWidgetStorage {
       startDate: computationWindow.startDate,
       endDate: computationWindow.endDate
     )
-    let yearMonth = now.yearMonth()
-    let allShifts = PayrollEngine.computeShiftsForMonth(
-      .init(
-        year: yearMonth.year,
-        month: yearMonth.month,
-        shifts: regularShifts,
-        recurring: recurringPatterns,
-        snapshots: snapshots,
-        settings: settings,
-        visibleRange: (start: startDate, end: endDate),
-        jobs: jobs
-      ))
+    let allShifts = computeShifts(
+      source: source, shifts: regularShifts, now: now, visibleRange: (startDate, endDate))
 
     if allShifts.isEmpty {
-      guard
-        await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
-          for: userId,
-          generation: generation
-        )
-      else { return }
-
-      logger.info("No shifts to store for widget")
-      clearWidgetStorage()
-      await MainActor.run {
-        ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
-          .checkAndStartLiveActivityIfNeeded()
-      }
+      await clearAfterEmptyRefresh(for: userId, generation: generation)
       return
     }
 
     let storedShifts = allShifts.map { shift in
-      storedShift(shift, jobs: jobs, fallbackCurrency: currencySymbol)
+      storedShift(shift, jobs: source.jobs, fallbackCurrency: currencySymbol)
     }
 
     // Write to App Group UserDefaults
-    guard
-      await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
-        for: userId,
-        generation: generation
-      )
-    else { return }
+    guard await canApplyResults(for: userId, generation: generation) else { return }
     writeShiftsToAppGroup(storedShifts)
 
     // Trigger widget reload
     reloadWidgetTimelines()
 
     // Re-check in-app Live Activity state after fresh shift data is written.
-    await MainActor.run {
-      ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
-        .checkAndStartLiveActivityIfNeeded()
-    }
+    await checkLiveActivityState()
 
     // Schedule shift reminder notifications for upcoming shifts
     // Pass shifts directly to avoid race condition with UserDefaults write
-    guard
-      await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
-        for: userId,
-        generation: generation
-      )
-    else { return }
-    Task { @MainActor in
-      await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId, shifts: storedShifts)
-      await EventReminderScheduler.shared.scheduleAllReminders(for: userId)
-      await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
-    }
+    guard await canApplyResults(for: userId, generation: generation) else { return }
+    scheduleReminders(for: userId, shifts: storedShifts)
 
     logger.info("Widget storage updated with \(storedShifts.count) shifts")
 
     // Reuse the complete work weeks already loaded for both monthly totals.
-    guard
-      await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
-        for: userId,
-        generation: generation
-      )
-    else { return }
+    guard await canApplyResults(for: userId, generation: generation) else { return }
     updateMonthlyTotalsStorage(
-      settings: settings,
-      snapshots: snapshots,
-      recurringPatterns: recurringPatterns,
+      source: source,
       currencySymbol: currencySymbol,
-      jobs: jobs,
       currentMonthShifts: regularShifts,
       previousMonthShifts: regularShifts,
       now: now
     )
+  }
+
+  private static func canApplyResults(for userId: String, generation: Int) async -> Bool {
+    await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
+      for: userId,
+      generation: generation
+    )
+  }
+
+  private static func checkLiveActivityState() async {
+    await MainActor.run {
+      ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
+        .checkAndStartLiveActivityIfNeeded()
+    }
+  }
+
+  private static func clearAfterEmptyRefresh(for userId: String, generation: Int) async {
+    guard await canApplyResults(for: userId, generation: generation) else { return }
+
+    logger.info("No shifts to store for widget")
+    clearWidgetStorage()
+    await checkLiveActivityState()
+  }
+
+  private static func scheduleReminders(for userId: String, shifts: [StoredShift]) {
+    Task { @MainActor in
+      await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId, shifts: shifts)
+      await EventReminderScheduler.shared.scheduleAllReminders(for: userId)
+      await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
+    }
+  }
+
+  /// Previous month through 90 days ahead.
+  private static func refreshDateRange(now: Date) -> (startDate: Date, endDate: Date) {
+    let calendar = Calendar.gregorianCurrent
+
+    // First day of previous month - use Calendar.date(byAdding:) for safe month arithmetic
+    // This correctly handles January -> December rollover without manual year/month math
+    let firstDayOfCurrentMonth =
+      calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+    let firstDayOfPreviousMonth =
+      calendar.date(byAdding: .month, value: -1, to: firstDayOfCurrentMonth) ?? now
+
+    // 90 days from now
+    let endDate = calendar.date(byAdding: .day, value: futureDaysWindow, to: now) ?? now
+    return (firstDayOfPreviousMonth, endDate)
   }
 
   /// Clear widget storage (e.g., on logout)
@@ -299,17 +313,75 @@ enum NativeWidgetStorage {
     logger.info("Widget storage cleared")
   }
 
+  // MARK: - Private Helpers
+
+  private static func sharedUserDefaults() -> UserDefaults? {
+    guard let userDefaults = WidgetAppGroup.sharedUserDefaults() else {
+      logger.error("App Group container not available: \(WidgetAppGroup.id)")
+      return nil
+    }
+    return userDefaults
+  }
+
+  private static func writeShiftsToAppGroup(_ shifts: [StoredShift]) {
+    guard let userDefaults = sharedUserDefaults() else {
+      logger.warning("Unable to access App Group UserDefaults")
+      return
+    }
+
+    do {
+      let encoder = JSONEncoder()
+      let data = try encoder.encode(shifts)
+      let jsonString = String(data: data, encoding: .utf8)
+      userDefaults.set(jsonString, forKey: WidgetAppGroup.shiftsKey)
+      logger.debug("Wrote \(shifts.count) shifts to App Group")
+    } catch {
+      logger.error("Failed to encode shifts for widget: \(error.localizedDescription)")
+    }
+  }
+
+  private static func storeCurrency(_ currency: String) {
+    guard let userDefaults = sharedUserDefaults() else {
+      logger.warning("Unable to access App Group UserDefaults for currency")
+      return
+    }
+    userDefaults.set(currency, forKey: WidgetAppGroup.currencyKey)
+    logger.debug("Stored user currency: \(currency)")
+  }
+
+  private static func reloadWidgetTimelines() {
+    WidgetCenter.shared.reloadAllTimelines()
+    logger.debug("Widget timelines reloaded")
+  }
+
+  /// Calculate weighted average supplement rate from wage periods
+  /// - Parameter periods: Array of wage periods
+  /// - Returns: Weighted average supplement rate
+  private static func calculateAverageSupplementRate(periods: [WagePeriod]) -> Double {
+    guard !periods.isEmpty else { return 0 }
+
+    var totalWeightedSupplement: Double = 0
+    var totalMinutes: Double = 0
+
+    for period in periods {
+      totalWeightedSupplement += period.supplementRate * period.durationMinutes
+      totalMinutes += period.durationMinutes
+    }
+
+    return totalMinutes > 0 ? totalWeightedSupplement / totalMinutes : 0
+  }
+}
+
+// MARK: - Monthly totals and friend widget storage
+
+extension NativeWidgetStorage {
   // MARK: - Monthly Totals Storage (TotalCard Widget)
 
   // Update widget storage with current month totals for the TotalCard widget.
   // Called automatically from updateWidgetStorage.
-  // swiftlint:disable:next function_parameter_count
   private static func updateMonthlyTotalsStorage(
-    settings: UserSettings?,
-    snapshots: [WageSnapshot],
-    recurringPatterns: [RecurringShiftRow],
+    source: RefreshSource,
     currencySymbol: String,
-    jobs: [Job],
     currentMonthShifts: [ShiftRow],
     previousMonthShifts: [ShiftRow],
     now: Date
@@ -329,10 +401,10 @@ enum NativeWidgetStorage {
         year: currentYear,
         month: currentMonth,
         shifts: currentMonthShifts,
-        recurring: recurringPatterns,
-        snapshots: snapshots,
-        settings: settings,
-        jobs: jobs
+        recurring: source.recurringPatterns,
+        snapshots: source.snapshots,
+        settings: source.settings,
+        jobs: source.jobs
       )
     )
 
@@ -341,15 +413,15 @@ enum NativeWidgetStorage {
         year: previousYM.year,
         month: previousYM.month,
         shifts: previousMonthShifts,
-        recurring: recurringPatterns,
-        snapshots: snapshots,
-        settings: settings,
-        jobs: jobs
+        recurring: source.recurringPatterns,
+        snapshots: source.snapshots,
+        settings: source.settings,
+        jobs: source.jobs
       )
     )
 
     // Get half-tax month from settings
-    let halfTaxMonth = settings?.half_tax_month
+    let halfTaxMonth = source.settings?.half_tax_month
 
     // Calculate totals using PayrollEngine (handles half-tax and conflict exclusion)
     let currentTotals = PayrollEngine.summarizeShiftTotals(
@@ -451,7 +523,8 @@ enum NativeWidgetStorage {
     }
 
     // Get currency
-    let currencySymbol = userDefaults.string(forKey: WidgetAppGroup.currencyKey) ?? defaultCurrencySymbol
+    let currencySymbol =
+      userDefaults.string(forKey: WidgetAppGroup.currencyKey) ?? defaultCurrencySymbol
 
     // Convert sharers to WidgetSharer format
     let widgetSharers = sharers.map { $0.toWidgetSharer() }
@@ -472,7 +545,9 @@ enum NativeWidgetStorage {
     reloadWidgetTimelines()
 
     let avatarURLs = Dictionary(
-      sharers.compactMap { sharer in sharer.avatarUrl.flatMap(URL.init(string:)).map { (sharer.id, $0) } },
+      sharers.compactMap { sharer in
+        sharer.avatarUrl.flatMap(URL.init(string:)).map { (sharer.id, $0) }
+      },
       uniquingKeysWith: { first, _ in first }
     )
     Task.detached(priority: .utility) {
@@ -561,63 +636,5 @@ enum NativeWidgetStorage {
     } catch {
       logger.error("Failed to encode friend shifts for widget: \(error.localizedDescription)")
     }
-  }
-
-  // MARK: - Private Helpers
-
-  private static func sharedUserDefaults() -> UserDefaults? {
-    guard let userDefaults = WidgetAppGroup.sharedUserDefaults() else {
-      logger.error("App Group container not available: \(WidgetAppGroup.id)")
-      return nil
-    }
-    return userDefaults
-  }
-
-  private static func writeShiftsToAppGroup(_ shifts: [StoredShift]) {
-    guard let userDefaults = sharedUserDefaults() else {
-      logger.warning("Unable to access App Group UserDefaults")
-      return
-    }
-
-    do {
-      let encoder = JSONEncoder()
-      let data = try encoder.encode(shifts)
-      let jsonString = String(data: data, encoding: .utf8)
-      userDefaults.set(jsonString, forKey: WidgetAppGroup.shiftsKey)
-      logger.debug("Wrote \(shifts.count) shifts to App Group")
-    } catch {
-      logger.error("Failed to encode shifts for widget: \(error.localizedDescription)")
-    }
-  }
-
-  private static func storeCurrency(_ currency: String) {
-    guard let userDefaults = sharedUserDefaults() else {
-      logger.warning("Unable to access App Group UserDefaults for currency")
-      return
-    }
-    userDefaults.set(currency, forKey: WidgetAppGroup.currencyKey)
-    logger.debug("Stored user currency: \(currency)")
-  }
-
-  private static func reloadWidgetTimelines() {
-    WidgetCenter.shared.reloadAllTimelines()
-    logger.debug("Widget timelines reloaded")
-  }
-
-  /// Calculate weighted average supplement rate from wage periods
-  /// - Parameter periods: Array of wage periods
-  /// - Returns: Weighted average supplement rate
-  private static func calculateAverageSupplementRate(periods: [WagePeriod]) -> Double {
-    guard !periods.isEmpty else { return 0 }
-
-    var totalWeightedSupplement: Double = 0
-    var totalMinutes: Double = 0
-
-    for period in periods {
-      totalWeightedSupplement += period.supplementRate * period.durationMinutes
-      totalMinutes += period.durationMinutes
-    }
-
-    return totalMinutes > 0 ? totalWeightedSupplement / totalMinutes : 0
   }
 }

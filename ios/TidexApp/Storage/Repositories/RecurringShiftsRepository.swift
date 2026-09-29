@@ -177,6 +177,9 @@ final class RecurringShiftsRepository {
     }
   }
 
+}
+
+extension RecurringShiftsRepository {
   // MARK: - Write Operations (Local with Dirty Tracking)
 
   /// Create a new recurring shift locally

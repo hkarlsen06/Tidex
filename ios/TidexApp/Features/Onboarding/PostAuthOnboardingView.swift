@@ -39,125 +39,11 @@ struct PostAuthOnboardingView: View {
         .ignoresSafeArea()
 
       // Current screen with transition
-      Group {
-        switch currentScreen {
-        case .loading:
-          // Brief loading state while restoring progress
-          Color.tidexBackground
-            .ignoresSafeArea()
-
-        case .purpose:
-          PurposeScreen(
-            onSelectPaySetup: {
-              navigateTo(.jobBasics)
-            },
-            onSelectFriendsOnly: {
-              startSaveAndNavigateToSuccess(completionMode: .friendOnlySkip)
-            }
-          )
-          .transition(screenTransition)
-
-        case .wage:
-          WageScreen(
-            data: onboardingData,
-            onContinue: {
-              navigateFromWage()
-            },
-            onBack: entryMode == .initial
-              ? {
-                navigateBack(to: .jobBasics)
-              } : nil
-          )
-          .transition(screenTransition)
-
-        case .supplements:
-          SupplementsScreen(
-            data: onboardingData,
-            onContinue: {
-              navigateTo(.settingsAccordion)
-            },
-            onBack: {
-              navigateBack(to: .wage)
-            }
-          )
-          .transition(screenTransition)
-
-        case .jobBasics:
-          JobBasicsOnboardingScreen(
-            data: onboardingData,
-            onContinue: {
-              navigateTo(.wage)
-            },
-            onBack: {
-              navigateBackFromJobBasics()
-            }
-          )
-          .transition(screenTransition)
-
-        case .settingsAccordion:
-          SettingsAccordionScreen(
-            data: onboardingData,
-            onContinue: {
-              navigateAfterSettings()
-            },
-            onBack: {
-              navigateBackFromSettings()
-            }
-          )
-          .transition(screenTransition)
-
-        case .success:
-          SuccessScreen(
-            completionMode: successCompletionMode,
-            saveStatus: saveManager.status,
-            errorMessage: saveManager.errorMessage,
-            onComplete: {
-              finishOnboarding()
-            },
-            onAddFirstShift: {
-              if OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft() {
-                OnboardingFunnelRecorder.shared.record("demo_shift_prefilled")
-              }
-              // MainTabView opens the Add screen when it appears, and the Add screen loads the draft.
-              AppCoordinator.shared.pendingDeepLink = .addShift(mode: nil, date: nil)
-              finishOnboarding()
-            },
-            onRetry: {
-              Task {
-                await saveManager.retry(userId: userId, data: onboardingData)
-              }
-            }
-          )
-          // Success keeps a softer exit to avoid the destination screen sliding out with it.
-          .transition(
-            .asymmetric(
-              insertion: reduceMotion
-                ? .opacity
-                : .move(edge: .trailing).combined(with: .opacity),
-              removal: .opacity
-            ))
-        }
-      }
+      currentScreenContent
     }
     .overlay(alignment: .topTrailing) {
       if shouldShowCloseButton {
-        Button {
-          closeOnboarding()
-        } label: {
-          Image(systemName: "xmark")
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextPrimary)
-            .frame(width: 36, height: 36)
-            .background(Color.tidexSurfaceSecondary)
-            .clipShape(Circle())
-            .overlay(
-              Circle()
-                .stroke(Color.tidexBorder, lineWidth: 1)
-            )
-        }
-        .padding(.top, 12)
-        .padding(.trailing, Spacing.lg)
-        .accessibilityLabel(String(localized: .commonCancel))
+        closeButton
       }
     }
     .motionAnimation(.navigationPush, value: currentScreen, reduceMotion: reduceMotion)
@@ -185,67 +71,21 @@ struct PostAuthOnboardingView: View {
     .onChange(of: scenePhase) { _, newPhase in
       // Save when app goes to background
       if newPhase == .inactive || newPhase == .background {
-        if currentScreen != .success, currentScreen != .loading {
-          saveProgress()
-        }
+        saveProgressIfEditing()
       }
     }
     // Save when key data changes within screens
-    .onChange(of: onboardingData.supplementRules.count) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.jobName) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.jobColor) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.wageType) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.customHourlyWage) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.selectedTariffLevel) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.breakEnabled) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.taxEnabled) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.taxPercentage) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.payrollDay) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
-    .onChange(of: onboardingData.currency) { _, _ in
-      if currentScreen != .success, currentScreen != .loading {
-        saveProgress()
-      }
-    }
+    .onChange(of: onboardingData.supplementRules.count) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.jobName) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.jobColor) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.wageType) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.customHourlyWage) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.selectedTariffLevel) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.breakEnabled) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.taxEnabled) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.taxPercentage) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.payrollDay) { _, _ in saveProgressIfEditing() }
+    .onChange(of: onboardingData.currency) { _, _ in saveProgressIfEditing() }
   }
 
   // MARK: - Initialization
@@ -278,6 +118,13 @@ struct PostAuthOnboardingView: View {
 
   private func saveProgress() {
     onboardingData.save(currentScreen: currentScreen.rawValue)
+  }
+
+  /// Saves progress unless the loading or success screen is showing.
+  private func saveProgressIfEditing() {
+    if currentScreen != .success, currentScreen != .loading {
+      saveProgress()
+    }
   }
 
   // MARK: - Navigation
@@ -378,6 +225,154 @@ struct PostAuthOnboardingView: View {
     OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
     OnboardingFirstShiftCarryoverStore.clear()
     onComplete()
+  }
+}
+
+extension PostAuthOnboardingView {
+  private var currentScreenContent: some View {
+    Group {
+      switch currentScreen {
+      case .loading:
+        // Brief loading state while restoring progress
+        Color.tidexBackground
+          .ignoresSafeArea()
+
+      case .purpose:
+        purposeScreen
+
+      case .wage:
+        wageScreen
+
+      case .supplements:
+        supplementsScreen
+
+      case .jobBasics:
+        jobBasicsScreen
+
+      case .settingsAccordion:
+        settingsScreen
+
+      case .success:
+        successScreen
+      }
+    }
+  }
+
+  private var purposeScreen: some View {
+    PurposeScreen(
+      onSelectPaySetup: {
+        navigateTo(.jobBasics)
+      },
+      onSelectFriendsOnly: {
+        startSaveAndNavigateToSuccess(completionMode: .friendOnlySkip)
+      }
+    )
+    .transition(screenTransition)
+  }
+
+  private var wageScreen: some View {
+    WageScreen(
+      data: onboardingData,
+      onContinue: {
+        navigateFromWage()
+      },
+      onBack: entryMode == .initial
+        ? {
+          navigateBack(to: .jobBasics)
+        } : nil
+    )
+    .transition(screenTransition)
+  }
+
+  private var supplementsScreen: some View {
+    SupplementsScreen(
+      data: onboardingData,
+      onContinue: {
+        navigateTo(.settingsAccordion)
+      },
+      onBack: {
+        navigateBack(to: .wage)
+      }
+    )
+    .transition(screenTransition)
+  }
+
+  private var jobBasicsScreen: some View {
+    JobBasicsOnboardingScreen(
+      data: onboardingData,
+      onContinue: {
+        navigateTo(.wage)
+      },
+      onBack: {
+        navigateBackFromJobBasics()
+      }
+    )
+    .transition(screenTransition)
+  }
+
+  private var settingsScreen: some View {
+    SettingsAccordionScreen(
+      data: onboardingData,
+      onContinue: {
+        navigateAfterSettings()
+      },
+      onBack: {
+        navigateBackFromSettings()
+      }
+    )
+    .transition(screenTransition)
+  }
+
+  private var successScreen: some View {
+    SuccessScreen(
+      completionMode: successCompletionMode,
+      saveStatus: saveManager.status,
+      errorMessage: saveManager.errorMessage,
+      onComplete: {
+        finishOnboarding()
+      },
+      onAddFirstShift: {
+        if OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft() {
+          OnboardingFunnelRecorder.shared.record("demo_shift_prefilled")
+        }
+        // MainTabView opens the Add screen when it appears, and the Add screen loads the draft.
+        AppCoordinator.shared.pendingDeepLink = .addShift(mode: nil, date: nil)
+        finishOnboarding()
+      },
+      onRetry: {
+        Task {
+          await saveManager.retry(userId: userId, data: onboardingData)
+        }
+      }
+    )
+    // Success keeps a softer exit to avoid the destination screen sliding out with it.
+    .transition(
+      .asymmetric(
+        insertion: reduceMotion
+          ? .opacity
+          : .move(edge: .trailing).combined(with: .opacity),
+        removal: .opacity
+      ))
+  }
+
+  private var closeButton: some View {
+    Button {
+      closeOnboarding()
+    } label: {
+      Image(systemName: "xmark")
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextPrimary)
+        .frame(width: 36, height: 36)
+        .background(Color.tidexSurfaceSecondary)
+        .clipShape(Circle())
+        .overlay(
+          Circle()
+            .stroke(Color.tidexBorder, lineWidth: 1)
+        )
+    }
+    .padding(.top, 12)
+    .padding(.trailing, Spacing.lg)
+    .accessibilityLabel(String(localized: .commonCancel))
   }
 }
 

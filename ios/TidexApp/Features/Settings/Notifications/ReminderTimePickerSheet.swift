@@ -44,44 +44,7 @@ struct ReminderTimePickerSheet: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: Spacing.md) {
-        // Picker section with description
-        VStack(spacing: Spacing.sm) {
-          // Description label
-          Text(descriptionText)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-            .multilineTextAlignment(.center)
-
-          // Dual wheel picker
-          HStack(spacing: 0) {
-            // Hours picker (0-48)
-            Picker("", selection: $hours) {
-              ForEach(0...48, id: \.self) { h in
-                Text("\(h) \(String(localized: .commonHoursShort))")
-                  .tag(h)
-              }
-            }
-            .pickerStyle(.wheel)
-            .frame(maxWidth: .infinity)
-            .clipped()
-
-            // Minutes picker (0-59)
-            Picker("", selection: $minutes) {
-              ForEach(0..<60, id: \.self) { m in
-                Text("\(m) min")
-                  .tag(m)
-              }
-            }
-            .pickerStyle(.wheel)
-            .frame(maxWidth: .infinity)
-            .clipped()
-          }
-          .frame(height: 180)
-          .padding(.vertical, Spacing.xs)
-          .background(Color.tidexSurfacePrimary)
-          .cornerRadius(CornerRadius.lg)
-        }
-        .padding(.horizontal)
+        pickerSection
 
         // Preview label
         previewLabel
@@ -102,21 +65,64 @@ struct ReminderTimePickerSheet: View {
           : String(localized: .notificationsTimePickerAddTitle)
       )
       .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            onCancel()
-          }
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button(String(localized: .commonSave)) {
-            onSave()
-          }
-          .disabled(!canSave)
-          .fontWeight(.semibold)
-        }
+      .toolbar { toolbarContent }
+    }
+  }
+
+  @ToolbarContentBuilder
+  private var toolbarContent: some ToolbarContent {
+    ToolbarItem(placement: .cancellationAction) {
+      Button(String(localized: .commonCancel)) {
+        onCancel()
       }
     }
+    ToolbarItem(placement: .confirmationAction) {
+      Button(String(localized: .commonSave)) {
+        onSave()
+      }
+      .disabled(!canSave)
+      .fontWeight(.semibold)
+    }
+  }
+
+  private var pickerSection: some View {
+    VStack(spacing: Spacing.sm) {
+      // Description label
+      Text(descriptionText)
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextSecondary)
+        .multilineTextAlignment(.center)
+
+      // Dual wheel picker
+      HStack(spacing: 0) {
+        // Hours picker (0-48)
+        Picker("", selection: $hours) {
+          ForEach(0...48, id: \.self) { hour in
+            Text("\(hour) \(String(localized: .commonHoursShort))")
+              .tag(hour)
+          }
+        }
+        .pickerStyle(.wheel)
+        .frame(maxWidth: .infinity)
+        .clipped()
+
+        // Minutes picker (0-59)
+        Picker("", selection: $minutes) {
+          ForEach(0..<60, id: \.self) { minute in
+            Text("\(minute) min")
+              .tag(minute)
+          }
+        }
+        .pickerStyle(.wheel)
+        .frame(maxWidth: .infinity)
+        .clipped()
+      }
+      .frame(height: 180)
+      .padding(.vertical, Spacing.xs)
+      .background(Color.tidexSurfacePrimary)
+      .cornerRadius(CornerRadius.lg)
+    }
+    .padding(.horizontal)
   }
 
   @ViewBuilder

@@ -158,44 +158,9 @@ final class SharingService {
     let endDate = SharingComputeCore.isoDateString(
       Calendar.gregorianCurrent.date(byAdding: .day, value: 30, to: now) ?? now)
 
-    let params: [String: AnyJSON] = [
-      "p_preview_start_date": .string(startDate),
-      "p_preview_end_date": .string(endDate),
-    ]
-
     do {
       _ = try await AuthSessionManager.shared.getSession()
-
-      let response: FriendsTabBootstrapRPCResponse =
-        try await supabase
-        .rpc("get_friends_tab_bootstrap", params: params)
-        .single()
-        .execute()
-        .value
-
-      let payloadBySharerId = Dictionary(
-        response.previewPayloads.map { ($0.sharerId, $0) },
-        uniquingKeysWith: { _, last in last }
-      )
-      let sharerIds = response.sharers.map(\.id)
-      let previews = await Self.computeShiftPreviewsOffMain(
-        uncachedIds: sharerIds,
-        payloadBySharerId: payloadBySharerId,
-        startDate: startDate,
-        endDate: endDate,
-        now: now
-      )
-
-      for preview in previews {
-        previewCache[preview.sharerId] = CachedPreview(preview: preview, cachedAt: now)
-      }
-
-      return FriendsTabBootstrapData(
-        sharers: response.sharers,
-        friends: response.friends,
-        blockedFriends: response.blockedFriends ?? [],
-        previews: previews
-      )
+      return try await loadFriendsTabBootstrap(startDate: startDate, endDate: endDate, now: now)
     } catch let error as SharingServiceError {
       throw error
     } catch let error as PostgrestError {
@@ -207,6 +172,48 @@ final class SharingService {
     } catch {
       throw SharingServiceError.networkError(underlying: error)
     }
+  }
+
+  private func loadFriendsTabBootstrap(
+    startDate: String,
+    endDate: String,
+    now: Date
+  ) async throws -> FriendsTabBootstrapData {
+    let params: [String: AnyJSON] = [
+      "p_preview_start_date": .string(startDate),
+      "p_preview_end_date": .string(endDate),
+    ]
+
+    let response: FriendsTabBootstrapRPCResponse =
+      try await supabase
+      .rpc("get_friends_tab_bootstrap", params: params)
+      .single()
+      .execute()
+      .value
+
+    let payloadBySharerId = Dictionary(
+      response.previewPayloads.map { ($0.sharerId, $0) },
+      uniquingKeysWith: { _, last in last }
+    )
+    let sharerIds = response.sharers.map(\.id)
+    let previews = await Self.computeShiftPreviewsOffMain(
+      uncachedIds: sharerIds,
+      payloadBySharerId: payloadBySharerId,
+      startDate: startDate,
+      endDate: endDate,
+      now: now
+    )
+
+    for preview in previews {
+      previewCache[preview.sharerId] = CachedPreview(preview: preview, cachedAt: now)
+    }
+
+    return FriendsTabBootstrapData(
+      sharers: response.sharers,
+      friends: response.friends,
+      blockedFriends: response.blockedFriends ?? [],
+      previews: previews
+    )
   }
 
   /// Fetch users who have shared their shifts with the current user.

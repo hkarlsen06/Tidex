@@ -5,116 +5,6 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "JobsRepository")
 
-struct JobBaselineSnapshotInput {
-  let hourlyWage: Double
-  let wageLevel: Int?
-  let tariffTypeId: String?
-  let supplements: SupplementRulesSnapshot
-  let overtime: OvertimeConfig
-  let taxEnabled: Bool?
-  let taxPercentage: Double?
-  let breakEnabled: Bool?
-  let breakMethod: String?
-  let breakThresholdHours: Double?
-  let breakDeductionMinutes: Int?
-}
-
-enum JobsRepositoryError: LocalizedError {
-  case jobNameEmpty
-  case jobNotFound
-  case jobDeleted
-  case cannotChangeTariffJobCurrency
-  case cannotArchiveLastActiveJob
-  case cannotArchiveDefaultJob
-  case cannotDeleteUnarchivedJob
-  case cannotDeleteDefaultJob
-  case cannotDeleteJobWithHistory
-  case deletionSyncRequired
-  case deletionChanged
-  case deletionRefreshFailed
-  case cannotSetArchivedOrDeletedDefault
-
-  var errorDescription: String? {
-    switch self {
-    case .jobNameEmpty:
-      return String(localized: .settingsPayErrorJobNameEmpty)
-
-    case .jobNotFound:
-      return String(localized: .settingsPayErrorJobNotFound)
-
-    case .jobDeleted:
-      return String(localized: .settingsPayErrorJobDeleted)
-
-    case .cannotChangeTariffJobCurrency:
-      return String(localized: .settingsPayErrorTariffCurrencyLocked)
-
-    case .cannotArchiveLastActiveJob:
-      return String(localized: .settingsPayErrorCannotArchiveLastActiveJob)
-
-    case .cannotArchiveDefaultJob:
-      return String(localized: .settingsPayErrorCannotArchiveDefaultJob)
-
-    case .cannotDeleteUnarchivedJob:
-      return String(localized: .settingsPayErrorArchiveBeforeDeleting)
-
-    case .cannotDeleteDefaultJob:
-      return String(localized: .settingsPayErrorCannotDeleteDefaultJob)
-
-    case .cannotDeleteJobWithHistory:
-      return String(localized: .settingsPayErrorCannotDeleteWorkplaceWithHistoryMessage)
-
-    case .deletionSyncRequired:
-      return String(localized: .settingsPayErrorDeletionSyncRequired)
-
-    case .deletionChanged:
-      return String(localized: .settingsPayErrorDeletionChanged)
-
-    case .deletionRefreshFailed:
-      return String(localized: .settingsPayErrorDeletionRefreshFailed)
-
-    case .cannotSetArchivedOrDeletedDefault:
-      return String(localized: .settingsPayErrorCannotSetInactiveDefault)
-    }
-  }
-
-  var alertTitle: String? {
-    switch self {
-    case .cannotDeleteJobWithHistory:
-      return String(localized: .settingsPayErrorCannotDeleteWorkplaceWithHistoryTitle)
-
-    default:
-      return nil
-    }
-  }
-}
-
-struct JobDeletionDependencyCounts: Equatable {
-  let userShifts: Int
-  let recurringShifts: Int
-  let payrollAdjustments: Int
-
-  var total: Int {
-    userShifts + recurringShifts + payrollAdjustments
-  }
-}
-
-enum JobDeletionPolicy {
-  static func shouldBlockDeletion(dependencyCounts: JobDeletionDependencyCounts) -> Bool {
-    dependencyCounts.total > 0
-  }
-
-  static func shouldCountBlockingDependency(
-    syncStatusRaw: String,
-    serverRevision: Int64,
-    serverDeletedAt: Date?
-  ) -> Bool {
-    guard serverDeletedAt == nil else {
-      return false
-    }
-    return syncStatusRaw != SyncStatus.pendingDelete.rawValue || serverRevision > 0
-  }
-}
-
 @MainActor
 final class JobsRepository {
   static let shared = JobsRepository()
@@ -296,6 +186,11 @@ final class JobsRepository {
     }
   }
 
+}
+
+// MARK: - Creating and updating jobs
+
+extension JobsRepository {
   // swiftlint:disable:next function_parameter_count
   func createJob(
     userId: String,
@@ -334,6 +229,27 @@ final class JobsRepository {
     return createdJob
   }
 
+  private func createBaselineSnapshot(
+    _ input: JobBaselineSnapshotInput, userId: String, jobId: String
+  ) async throws {
+    _ = try await snapshotsRepository.createSnapshot(
+      userId: userId,
+      jobId: jobId,
+      fromDate: nil,
+      hourlyWage: input.hourlyWage,
+      wageLevel: input.wageLevel,
+      tariffTypeId: input.tariffTypeId,
+      supplements: input.supplements,
+      overtime: input.overtime,
+      taxEnabled: input.taxEnabled,
+      taxPercentage: input.taxPercentage,
+      breakEnabled: input.breakEnabled,
+      breakMethod: input.breakMethod,
+      breakThresholdHours: input.breakThresholdHours,
+      breakDeductionMinutes: input.breakDeductionMinutes
+    )
+  }
+
   // swiftlint:disable:next function_parameter_count
   func createJobWithBaselineSnapshot(
     userId: String,
@@ -370,22 +286,7 @@ final class JobsRepository {
     )
 
     do {
-      _ = try await snapshotsRepository.createSnapshot(
-        userId: userId,
-        jobId: createdJob.id,
-        fromDate: nil,
-        hourlyWage: baselineSnapshot.hourlyWage,
-        wageLevel: baselineSnapshot.wageLevel,
-        tariffTypeId: baselineSnapshot.tariffTypeId,
-        supplements: baselineSnapshot.supplements,
-        overtime: baselineSnapshot.overtime,
-        taxEnabled: baselineSnapshot.taxEnabled,
-        taxPercentage: baselineSnapshot.taxPercentage,
-        breakEnabled: baselineSnapshot.breakEnabled,
-        breakMethod: baselineSnapshot.breakMethod,
-        breakThresholdHours: baselineSnapshot.breakThresholdHours,
-        breakDeductionMinutes: baselineSnapshot.breakDeductionMinutes
-      )
+      try await createBaselineSnapshot(baselineSnapshot, userId: userId, jobId: createdJob.id)
 
       triggerSync(userId: userId)
       logger.info("Created local job with baseline snapshot: \(createdJob.id)")
@@ -508,6 +409,36 @@ final class JobsRepository {
     }
   }
 
+  private func existingLiveJob(id jobId: String, userId: String) throws -> Job {
+    guard let existingJob = getJob(id: jobId), existingJob.user_id == userId else {
+      throw JobsRepositoryError.jobNotFound
+    }
+    guard existingJob.deleted_at == nil else {
+      throw JobsRepositoryError.jobDeleted
+    }
+    return existingJob
+  }
+
+  private func applyPaySetupCurrency(
+    _ currency: String, replacing currentCurrency: String, userId: String, jobId: String,
+    requiresTariffCurrency: Bool
+  ) async throws {
+    guard currentCurrency != currency else { return }
+    if requiresTariffCurrency {
+      _ = try await updateJobCurrencyDuringPaySetup(
+        userId: userId,
+        jobId: jobId,
+        currency: currency
+      )
+    } else {
+      _ = try await updateJobCurrency(
+        userId: userId,
+        jobId: jobId,
+        currency: currency
+      )
+    }
+  }
+
   // swiftlint:disable:next function_parameter_count
   func completePaySetup(
     userId: String,
@@ -518,12 +449,7 @@ final class JobsRepository {
     monthlyGoal: Int?,
     baselineSnapshot: JobBaselineSnapshotInput
   ) async throws -> Job {
-    guard let existingJob = getJob(id: jobId), existingJob.user_id == userId else {
-      throw JobsRepositoryError.jobNotFound
-    }
-    guard existingJob.deleted_at == nil else {
-      throw JobsRepositoryError.jobDeleted
-    }
+    let existingJob = try existingLiveJob(id: jobId, userId: userId)
 
     let existingBaseline = snapshotsRepository.getBaselineSnapshot(for: userId, jobId: jobId)
     let requiresTariffCurrency =
@@ -532,21 +458,9 @@ final class JobsRepository {
     let resolvedCurrency =
       requiresTariffCurrency ? "kr" : currency
 
-    if existingJob.currency != resolvedCurrency {
-      if requiresTariffCurrency {
-        _ = try await updateJobCurrencyDuringPaySetup(
-          userId: userId,
-          jobId: jobId,
-          currency: resolvedCurrency
-        )
-      } else {
-        _ = try await updateJobCurrency(
-          userId: userId,
-          jobId: jobId,
-          currency: resolvedCurrency
-        )
-      }
-    }
+    try await applyPaySetupCurrency(
+      resolvedCurrency, replacing: existingJob.currency, userId: userId, jobId: jobId,
+      requiresTariffCurrency: requiresTariffCurrency)
 
     _ = try await updateJobPaySettings(
       userId: userId,
@@ -582,6 +496,11 @@ final class JobsRepository {
     return getJob(id: jobId) ?? existingJob
   }
 
+}
+
+// MARK: - Archiving, deleting and ordering jobs
+
+extension JobsRepository {
   func setDefaultJob(userId: String, jobId: String) async throws {
     guard let target = getActiveJobs(for: userId).first(where: { $0.id == jobId }) else {
       throw JobsRepositoryError.cannotSetArchivedOrDeletedDefault

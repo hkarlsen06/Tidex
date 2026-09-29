@@ -969,7 +969,8 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
         }
         return !calendar.isDateInWeekend(date)
       }.count
-      fullTimeHoursPerMonth[month] = Double(weekdayCount) * fullTimeHoursPerWeek / 5  // swiftlint:disable:this no_magic_numbers
+      // swiftlint:disable:next no_magic_numbers
+      fullTimeHoursPerMonth[month] = Double(weekdayCount) * fullTimeHoursPerWeek / 5
     }
 
     // Build monthly data

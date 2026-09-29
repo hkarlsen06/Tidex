@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 // MARK: - Pay Settings View
 
@@ -50,49 +49,7 @@ struct PaySettingsView: View {
       }
     }
     .sheet(isPresented: $viewModel.showingEditor) {
-      WageSnapshotEditorSheet(
-        mode: viewModel.editorMode,
-        snapshot: viewModel.selectedSnapshot,
-        snapshots: viewModel.snapshots,
-        initialDate: viewModel.reviewDate,
-        userCurrency: viewModel.userCurrency,
-        saveError: viewModel.errorMessage,
-        initialSection: viewModel.editorSection,
-        onSave: { input in
-          if viewModel.editorMode == .create {
-            return await viewModel.createSnapshot(input: input)
-          }
-          if let snapshot = viewModel.selectedSnapshot {
-            return await viewModel.updateSnapshot(id: snapshot.id, input: input)
-          }
-          return false
-        },
-        onDelete: { snapshot in
-          viewModel.requestDelete(snapshot: snapshot)
-        },
-        onCancel: {
-          viewModel.closeEditor()
-        }
-      )
-      .confirmationDialog(
-        String(localized: .settingsPayDeleteConfirmTitle),
-        isPresented: $viewModel.showingDeleteConfirmation,
-        titleVisibility: .visible
-      ) {
-        Button(role: .destructive) {
-          Task { await viewModel.confirmDelete() }
-        } label: {
-          Text(.commonDelete)
-        }
-
-        Button(role: .cancel) {
-          viewModel.cancelDelete()
-        } label: {
-          Text(.commonCancel)
-        }
-      } message: {
-        Text(deleteConfirmationMessage)
-      }
+      editorSheetContent
     }
     .sheet(item: $paySetupJob) { job in
       JobPaySetupSheet(
@@ -118,8 +75,11 @@ struct PaySettingsView: View {
         set: { _ in }
       )
     ) {
-      requiredJobReselectionSheet
-        .interactiveDismissDisabled(true)
+      RequiredJobReselectionSheet(
+        jobs: viewModel.activeJobs,
+        onSelect: { viewModel.resolveRequiredJobSelection($0) }
+      )
+      .interactiveDismissDisabled(true)
     }
     .confirmationDialog(
       String(localized: .settingsPayJobActionsArchiveConfirmTitle),
@@ -161,46 +121,53 @@ struct PaySettingsView: View {
     }
   }
 
+}
+
+extension PaySettingsView {
   @ViewBuilder
-  private var requiredJobReselectionSheet: some View {
-    NavigationStack {
-      List {
-        Group {
-          Section {
-            Text(.settingsPayChooseJobUnavailable)
-              .foregroundStyle(Color.tidexTextSecondary)
-            ForEach(viewModel.activeJobs) { job in
-              Button {
-                viewModel.resolveRequiredJobSelection(job.id)
-              } label: {
-                WorkplaceNameText(
-                  name: job.name,
-                  colorHex: job.color,
-                  fallbackBadgeColor: .tidexBlue
-                )
-              }
-              .buttonStyle(.plain)
-            }
-          } header: {
-            HStack(spacing: Spacing.xxxs) {
-              Image(systemName: "building.2")
-                .font(.tidexCaptionRegular)
-                .foregroundColor(.tidexBlue)
-              Text(.settingsPayChooseJobTitle)
-            }
-            .textCase(nil)
-          }
+  private var editorSheetContent: some View {
+    WageSnapshotEditorSheet(
+      mode: viewModel.editorMode,
+      snapshot: viewModel.selectedSnapshot,
+      snapshots: viewModel.snapshots,
+      initialDate: viewModel.reviewDate,
+      userCurrency: viewModel.userCurrency,
+      saveError: viewModel.errorMessage,
+      initialSection: viewModel.editorSection,
+      onSave: { input in
+        if viewModel.editorMode == .create {
+          return await viewModel.createSnapshot(input: input)
         }
-        .listRowBackground(Color.tidexSurfacePrimary)
-      }
-      .tidexListBackground()
-      .navigationTitle(String(localized: .settingsMenuPayLabel))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) { dismiss() }
+        if let snapshot = viewModel.selectedSnapshot {
+          return await viewModel.updateSnapshot(id: snapshot.id, input: input)
         }
+        return false
+      },
+      onDelete: { snapshot in
+        viewModel.requestDelete(snapshot: snapshot)
+      },
+      onCancel: {
+        viewModel.closeEditor()
       }
+    )
+    .confirmationDialog(
+      String(localized: .settingsPayDeleteConfirmTitle),
+      isPresented: $viewModel.showingDeleteConfirmation,
+      titleVisibility: .visible
+    ) {
+      Button(role: .destructive) {
+        Task { await viewModel.confirmDelete() }
+      } label: {
+        Text(.commonDelete)
+      }
+
+      Button(role: .cancel) {
+        viewModel.cancelDelete()
+      } label: {
+        Text(.commonCancel)
+      }
+    } message: {
+      Text(deleteConfirmationMessage)
     }
   }
 
@@ -225,7 +192,12 @@ struct PaySettingsView: View {
     ScrollView {
       VStack(spacing: Spacing.lg) {
         if viewModel.shouldShowWorkplaceHeader {
-          jobHeader
+          PaySettingsJobHeader(
+            name: viewModel.selectedJobName,
+            colorHex: viewModel.selectedJob?.color,
+            isDefault: viewModel.isSelectedJobDefault,
+            isConfigured: viewModel.isSelectedJobConfigured
+          )
         }
 
         if viewModel.isSelectedJobConfigured {
@@ -237,24 +209,7 @@ struct PaySettingsView: View {
             reviewCard
           }
 
-          GlobalPaySettingsCard(
-            jobId: viewModel.selectedJobId,
-            currency: viewModel.userCurrency,
-            payrollDay: viewModel.selectedJobPayrollDay,
-            halfTaxMonth: viewModel.selectedJobHalfTaxMonth,
-            canChangeCurrency: viewModel.canChangeCurrency,
-            onUpdatePayrollDay: { viewModel.updatePayrollDay($0) },
-            onUpdateHalfTaxMonth: { value in
-              await viewModel.updateHalfTaxMonth(value)
-            },
-            onUpdateCurrency: { value in
-              await viewModel.updateCurrency(value)
-            },
-            payPeriod: viewModel.selectedJobPayPeriod,
-            onUpdatePayPeriod: { value in
-              await viewModel.updatePayPeriod(value)
-            }
-          )
+          globalPaySettingsCard
         } else {
           finishPaySetupPanel
         }
@@ -268,9 +223,27 @@ struct PaySettingsView: View {
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.lg)
     }
-    .refreshable {
-      await viewModel.loadData()
-    }
+  }
+
+  private var globalPaySettingsCard: some View {
+    GlobalPaySettingsCard(
+      jobId: viewModel.selectedJobId,
+      currency: viewModel.userCurrency,
+      payrollDay: viewModel.selectedJobPayrollDay,
+      halfTaxMonth: viewModel.selectedJobHalfTaxMonth,
+      canChangeCurrency: viewModel.canChangeCurrency,
+      onUpdatePayrollDay: { viewModel.updatePayrollDay($0) },
+      onUpdateHalfTaxMonth: { value in
+        await viewModel.updateHalfTaxMonth(value)
+      },
+      onUpdateCurrency: { value in
+        await viewModel.updateCurrency(value)
+      },
+      payPeriod: viewModel.selectedJobPayPeriod,
+      onUpdatePayPeriod: { value in
+        await viewModel.updatePayPeriod(value)
+      }
+    )
   }
 
   private var reviewCard: some View {
@@ -336,53 +309,65 @@ struct PaySettingsView: View {
         title: .settingsPayJobActionsTitle,
         footer: viewModel.selectedJobManagementHint.map { Text($0) }
       ) {
-        Button {
-          showingEditJobSheet = true
-        } label: {
-          jobActionRow(
-            icon: "pencil",
-            title: String(localized: .settingsPayEditJobTitle),
-            tint: .tidexBlue
-          )
-        }
-        .buttonStyle(.plain)
+        editJobButton
 
         jobActionDivider
 
         if !viewModel.isSelectedJobDefault {
-          Button {
-            Task {
-              await viewModel.setSelectedJobAsDefault()
-            }
-          } label: {
-            jobActionRow(
-              icon: "checkmark.circle",
-              title: String(localized: .settingsPayJobActionsSetDefault),
-              tint: .tidexBlue,
-              isEnabled: viewModel.canSetSelectedJobAsDefault
-                && !viewModel.isProcessingJobAction
-            )
-          }
-          .buttonStyle(.plain)
-          .disabled(!viewModel.canSetSelectedJobAsDefault || viewModel.isProcessingJobAction)
+          setDefaultButton
 
           jobActionDivider
         }
 
-        Button {
-          showingArchiveConfirmation = true
-        } label: {
-          jobActionRow(
-            icon: "archivebox",
-            title: String(localized: .settingsPayJobActionsArchive),
-            tint: .tidexTextPrimary,
-            isEnabled: viewModel.canArchiveSelectedJob && !viewModel.isProcessingJobAction
-          )
-        }
-        .buttonStyle(.plain)
-        .disabled(!viewModel.canArchiveSelectedJob || viewModel.isProcessingJobAction)
+        archiveJobButton
       }
     }
+  }
+
+  private var editJobButton: some View {
+    Button {
+      showingEditJobSheet = true
+    } label: {
+      jobActionRow(
+        icon: "pencil",
+        title: String(localized: .settingsPayEditJobTitle),
+        tint: .tidexBlue
+      )
+    }
+    .buttonStyle(.plain)
+  }
+
+  private var setDefaultButton: some View {
+    Button {
+      Task {
+        await viewModel.setSelectedJobAsDefault()
+      }
+    } label: {
+      jobActionRow(
+        icon: "checkmark.circle",
+        title: String(localized: .settingsPayJobActionsSetDefault),
+        tint: .tidexBlue,
+        isEnabled: viewModel.canSetSelectedJobAsDefault
+          && !viewModel.isProcessingJobAction
+      )
+    }
+    .buttonStyle(.plain)
+    .disabled(!viewModel.canSetSelectedJobAsDefault || viewModel.isProcessingJobAction)
+  }
+
+  private var archiveJobButton: some View {
+    Button {
+      showingArchiveConfirmation = true
+    } label: {
+      jobActionRow(
+        icon: "archivebox",
+        title: String(localized: .settingsPayJobActionsArchive),
+        tint: .tidexTextPrimary,
+        isEnabled: viewModel.canArchiveSelectedJob && !viewModel.isProcessingJobAction
+      )
+    }
+    .buttonStyle(.plain)
+    .disabled(!viewModel.canArchiveSelectedJob || viewModel.isProcessingJobAction)
   }
 
   /// Starts under the row titles, past the icon column.
@@ -416,46 +401,6 @@ struct PaySettingsView: View {
     .opacity(isEnabled ? 1 : 0.45)
   }
 
-  // MARK: - Job Header
-
-  @ViewBuilder
-  private var jobHeader: some View {
-    if let selectedJobName = viewModel.selectedJobName {
-      VStack(alignment: .leading, spacing: Spacing.xs) {
-        WorkplaceNameText(
-          name: selectedJobName,
-          colorHex: viewModel.selectedJob?.color,
-          font: .tidexScreenTitle,
-          fallbackBadgeColor: .tidexBlue,
-          lineLimit: 2,
-          maxTextAlignment: .leading,
-          badgeCornerRadius: CornerRadius.md,
-          badgeHorizontalPadding: Spacing.sm
-        )
-        .multilineTextAlignment(.leading)
-
-        if viewModel.isSelectedJobDefault {
-          Label {
-            Text(.settingsPayJobActionsStandardStatus)
-          } icon: {
-            Image(systemName: "checkmark.circle.fill")
-          }
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexBlue)
-        } else if !viewModel.isSelectedJobConfigured {
-          Label {
-            Text(.settingsPaySetupRequiredBadge)
-          } icon: {
-            Image(systemName: "exclamationmark.circle.fill")
-          }
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexWarning)
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-  }
-
   // MARK: - Delete Confirmation Message
 
   private var deleteConfirmationMessage: String {
@@ -465,155 +410,6 @@ struct PaySettingsView: View {
       ? String(localized: .settingsPayDeleteConfirmation)
       : String(localized: .settingsPayDeleteConfirmationWithShifts(Int(count)))
     return confirmation + "\n\n" + String(localized: .settingsPayDeleteImpact)
-  }
-}
-
-struct PaySettingsSheet: View {
-  let jobId: String?
-  let workDate: Date
-  var initiallyExpandPayReview = false
-  @Environment(\.dismiss) private var dismiss
-
-  var body: some View {
-    NavigationStack {
-      PaySettingsView(
-        initialJobId: jobId, initialDate: workDate,
-        initiallyExpandPayReview: initiallyExpandPayReview
-      )
-      .toolbar {
-        ToolbarItem(placement: .confirmationAction) {
-          Button(String(localized: .commonDone)) { dismiss() }
-        }
-      }
-    }
-    .presentationDetents([.large])
-  }
-}
-
-private struct EditWorkplaceSheet: View {
-  @Environment(\.dismiss) private var dismiss
-
-  let onSave: (String, String?) async -> Bool
-
-  @State private var name: String
-  @State private var selectedColor: Color
-  @State private var isSaving = false
-  @State private var saveError: String?
-
-  init(
-    initialName: String,
-    initialColorHex: String?,
-    onSave: @escaping (String, String?) async -> Bool
-  ) {
-    self.onSave = onSave
-    _name = State(initialValue: initialName)
-    _selectedColor = State(
-      initialValue: Self.colorFromHex(initialColorHex)
-        ?? Color(red: 59 / 255, green: 130 / 255, blue: 246 / 255)
-    )
-  }
-
-  var body: some View {
-    NavigationStack {
-      Form {
-        Group {
-          Section {
-            TextField(String(localized: .settingsPayAddJobName), text: $name)
-              .textInputAutocapitalization(.words)
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-              Text(.settingsPayAddJobColorLabel)
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexTextSecondary)
-
-              WorkplaceColorCarousel(selectedHex: Self.normalizedHex(from: selectedColor)) { hex in
-                selectedColor = Self.colorFromHex(hex) ?? .tidexBlue
-              }
-            }
-          }
-
-          if let saveError {
-            Section {
-              Text(saveError)
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexError)
-            }
-          }
-        }
-        .listRowBackground(Color.tidexSurfacePrimary)
-      }
-      .tidexListBackground()
-      .navigationTitle(String(localized: .settingsPayEditJobTitle))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            dismiss()
-          }
-          .disabled(isSaving)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button(String(localized: .commonSave)) {
-            Task {
-              await save()
-            }
-          }
-          .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }
-      }
-    }
-  }
-
-  private func save() async {
-    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmedName.isEmpty else {
-      saveError = String(localized: .settingsPayAddJobErrorName)
-      return
-    }
-
-    isSaving = true
-    let didSave = await onSave(trimmedName, Self.normalizedHex(from: selectedColor))
-    isSaving = false
-
-    if didSave {
-      dismiss()
-    } else {
-      saveError = String(localized: .settingsPayErrorSaveFailed)
-    }
-  }
-
-  private static func normalizedHex(from color: Color) -> String? {
-    let uiColor = UIColor(color)
-    var red: CGFloat = 0
-    var green: CGFloat = 0
-    var blue: CGFloat = 0
-    var alpha: CGFloat = 0
-
-    guard uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
-      return nil
-    }
-
-    return String(
-      format: "#%02X%02X%02X",
-      Int(red * 255),
-      Int(green * 255),
-      Int(blue * 255)
-    )
-  }
-
-  private static func colorFromHex(_ hex: String?) -> Color? {
-    guard var hex else { return nil }
-    hex = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-    if hex.hasPrefix("#") {
-      hex.removeFirst()
-    }
-    guard hex.count == 6, let int = Int(hex, radix: 16) else {
-      return nil
-    }
-    let red = Double((int >> 16) & 0xFF) / 255.0
-    let green = Double((int >> 8) & 0xFF) / 255.0
-    let blue = Double(int & 0xFF) / 255.0
-    return Color(red: red, green: green, blue: blue)
   }
 }
 

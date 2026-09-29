@@ -173,84 +173,93 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: Spacing.mlg) {
-          // Info header
-          infoHeader
+      scrollContent
+        .background(Color.tidexBackground)
+        .navigationTitle(String(localized: .supplementsEditTitle))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbarContent }
+        .sheet(isPresented: $showingRuleEditor) { ruleEditorSheet }
+        .alert(
+          String(localized: .supplementsDeleteRuleTitle),
+          isPresented: .init(
+            get: { ruleToDelete != nil },
+            set: { if !$0 { ruleToDelete = nil } }
+          )
+        ) {
+          Button(String(localized: .commonCancel), role: .cancel) {
+            ruleToDelete = nil
+          }
+          Button(String(localized: .supplementsDeleteRule), role: .destructive) {
+            if let rule = ruleToDelete {
+              deleteRule(rule)
+            }
+            ruleToDelete = nil
+          }
+        } message: {
+          Text(.supplementsDeleteRuleMessage)
+        }
+        .onAppear {
+          initializeRules()
+        }
+    }
+  }
 
-          // Rules list
-          if rules.isEmpty {
-            emptyState
-          } else {
-            rulesList
-          }
+  private var scrollContent: some View {
+    ScrollView {
+      VStack(spacing: Spacing.mlg) {
+        // Info header
+        infoHeader
 
-          // Add rule button
-          addRuleButton
+        // Rules list
+        if rules.isEmpty {
+          emptyState
+        } else {
+          rulesList
+        }
 
-          // Reset to standard button (only if originally had custom supplements)
-          if hadCustomSupplements {
-            resetButton
-          }
+        // Add rule button
+        addRuleButton
 
-          Spacer()
-            .frame(height: 100)
+        // Reset to standard button (only if originally had custom supplements)
+        if hadCustomSupplements {
+          resetButton
         }
-        .padding(Spacing.mlg)
+
+        Spacer()
+          .frame(height: 100)
       }
-      .background(Color.tidexBackground)
-      .navigationTitle(String(localized: .supplementsEditTitle))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            onCancel()
-          }
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button(String(localized: .commonSave)) {
-            saveChanges()
-          }
-          .fontWeight(.semibold)
-          .disabled(!hasChanges)
-        }
-      }
-      .sheet(isPresented: $showingRuleEditor) {
-        SupplementRuleEditorSheet(
-          rule: editingRule,
-          currency: currency,
-          onSave: { updatedRule in
-            handleRuleSaved(updatedRule)
-            showingRuleEditor = false
-          },
-          onCancel: {
-            showingRuleEditor = false
-          }
-        )
-      }
-      .alert(
-        String(localized: .supplementsDeleteRuleTitle),
-        isPresented: .init(
-          get: { ruleToDelete != nil },
-          set: { if !$0 { ruleToDelete = nil } }
-        )
-      ) {
-        Button(String(localized: .commonCancel), role: .cancel) {
-          ruleToDelete = nil
-        }
-        Button(String(localized: .supplementsDeleteRule), role: .destructive) {
-          if let rule = ruleToDelete {
-            deleteRule(rule)
-          }
-          ruleToDelete = nil
-        }
-      } message: {
-        Text(.supplementsDeleteRuleMessage)
-      }
-      .onAppear {
-        initializeRules()
+      .padding(Spacing.mlg)
+    }
+  }
+
+  @ToolbarContentBuilder
+  private var toolbarContent: some ToolbarContent {
+    ToolbarItem(placement: .cancellationAction) {
+      Button(String(localized: .commonCancel)) {
+        onCancel()
       }
     }
+    ToolbarItem(placement: .confirmationAction) {
+      Button(String(localized: .commonSave)) {
+        saveChanges()
+      }
+      .fontWeight(.semibold)
+      .disabled(!hasChanges)
+    }
+  }
+
+  private var ruleEditorSheet: some View {
+    SupplementRuleEditorSheet(
+      rule: editingRule,
+      currency: currency,
+      onSave: { updatedRule in
+        handleRuleSaved(updatedRule)
+        showingRuleEditor = false
+      },
+      onCancel: {
+        showingRuleEditor = false
+      }
+    )
   }
 
   // MARK: - Initialization

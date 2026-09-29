@@ -156,72 +156,40 @@ struct EventDetailsSheet: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: Spacing.lg) {
-          if isEditing {
-            editorContent
-          } else {
-            detailsContent
-          }
-
-          if let errorMessage {
-            errorBanner(message: errorMessage)
-          }
-
-          if !isEditing, onUpdate != nil {
-            DetailSheetActionButton(
-              title: String(localized: .shiftsActionsEdit),
-              systemImage: "pencil",
-              style: .primary
-            ) {
-              beginEditing()
-            }
-          }
+      navigationContent
+        .onChange(of: eventStartDate) { _, newValue in
+          handleStartDateChanged(newValue)
         }
-        .padding(Spacing.mlg)
-      }
+        .onChange(of: eventDate) { _, newValue in
+          handleEventDateChanged(newValue)
+        }
+        .onChange(of: reminderTimes) { _, _ in
+          scheduleInlineReminderSaveIfNeeded()
+        }
+        .onChange(of: reminderAnchorTime) { _, _ in
+          scheduleInlineReminderSaveIfNeeded()
+        }
+        .confirmationDialog(
+          String(localized: .calendarSubscriptionDetailConfirmationTitle),
+          isPresented: $showingCalendarSubscriptionConfirmation,
+          titleVisibility: .visible
+        ) {
+          Button(String(localized: .commonContinue)) {
+            onShowInCalendarRequested?()
+          }
+          Button(String(localized: .commonCancel), role: .cancel) {}
+        } message: {
+          Text(.calendarSubscriptionDetailConfirmationMessage)
+        }
+    }
+  }
+
+  private var navigationContent: some View {
+    scrollContent
       .background(Color.tidexBackground)
       .navigationTitle(String(localized: .addShiftEventNoteTitle))
       .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          if isEditing {
-            Button(String(localized: .commonCancel)) {
-              resetDraft()
-              withAnimation(.easeInOut(duration: 0.2)) {
-                isEditing = false
-              }
-            }
-            .foregroundColor(.tidexTextSecondary)
-          } else if let onDelete {
-            Button(role: .destructive) {
-              onDelete()
-            } label: {
-              Image(systemName: "trash")
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexError)
-            }
-            .accessibilityLabel(Text(.eventsDeleteButton))
-          }
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-          if isEditing {
-            Button(String(localized: .commonSave)) {
-              triggerSave()
-            }
-            .font(.tidexButton)
-            .foregroundColor(canSave ? .tidexBlue : .tidexTextMuted)
-            .disabled(!canSave || isSaving)
-          } else {
-            Button(String(localized: .commonDone)) {
-              dismiss()
-            }
-            .font(.tidexButton)
-            .foregroundColor(.tidexBlue)
-          }
-        }
-      }
+      .toolbar { toolbarContent }
       .onAppear {
         resetDraft()
         isEditing = startInEditMode
@@ -237,55 +205,110 @@ struct EventDetailsSheet: View {
         }
       }
       .onChange(of: isAllDay) { _, newValue in
-        if newValue {
-          eventStartDate = eventDate
-          if eventEndDate < eventStartDate {
-            eventEndDate = eventStartDate
-          }
-          editedStartTime = nil
-          editedEndTime = nil
-          if !reminderTimes.isEmpty, reminderAnchorTime == nil {
-            reminderAnchorTime = EventSheetFormatter.date(from: "09:00")
-          }
+        handleAllDayChanged(newValue)
+      }
+  }
+
+  private var scrollContent: some View {
+    ScrollView {
+      VStack(spacing: Spacing.lg) {
+        if isEditing {
+          editorContent
         } else {
-          eventDate = eventStartDate
-          eventEndDate = eventStartDate
-          reminderAnchorTime = nil
+          detailsContent
+        }
+
+        if let errorMessage {
+          errorBanner(message: errorMessage)
+        }
+
+        if !isEditing, onUpdate != nil {
+          DetailSheetActionButton(
+            title: String(localized: .shiftsActionsEdit),
+            systemImage: "pencil",
+            style: .primary
+          ) {
+            beginEditing()
+          }
         }
       }
-      .onChange(of: eventStartDate) { _, newValue in
-        if isAllDay, eventEndDate < newValue {
-          eventEndDate = newValue
+      .padding(Spacing.mlg)
+    }
+  }
+
+  @ToolbarContentBuilder
+  private var toolbarContent: some ToolbarContent {
+    ToolbarItem(placement: .topBarLeading) {
+      if isEditing {
+        Button(String(localized: .commonCancel)) {
+          resetDraft()
+          withAnimation(.easeInOut(duration: 0.2)) {
+            isEditing = false
+          }
         }
-        if !isAllDay {
-          eventDate = newValue
-          eventEndDate = newValue
+        .foregroundColor(.tidexTextSecondary)
+      } else if let onDelete {
+        Button(role: .destructive) {
+          onDelete()
+        } label: {
+          Image(systemName: "trash")
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexError)
         }
+        .accessibilityLabel(Text(.eventsDeleteButton))
       }
-      .onChange(of: eventDate) { _, newValue in
-        if !isAllDay {
-          eventStartDate = newValue
-          eventEndDate = newValue
+    }
+
+    ToolbarItem(placement: .topBarTrailing) {
+      if isEditing {
+        Button(String(localized: .commonSave)) {
+          triggerSave()
         }
-      }
-      .onChange(of: reminderTimes) { _, _ in
-        scheduleInlineReminderSaveIfNeeded()
-      }
-      .onChange(of: reminderAnchorTime) { _, _ in
-        scheduleInlineReminderSaveIfNeeded()
-      }
-      .confirmationDialog(
-        String(localized: .calendarSubscriptionDetailConfirmationTitle),
-        isPresented: $showingCalendarSubscriptionConfirmation,
-        titleVisibility: .visible
-      ) {
-        Button(String(localized: .commonContinue)) {
-          onShowInCalendarRequested?()
+        .font(.tidexButton)
+        .foregroundColor(canSave ? .tidexBlue : .tidexTextMuted)
+        .disabled(!canSave || isSaving)
+      } else {
+        Button(String(localized: .commonDone)) {
+          dismiss()
         }
-        Button(String(localized: .commonCancel), role: .cancel) {}
-      } message: {
-        Text(.calendarSubscriptionDetailConfirmationMessage)
+        .font(.tidexButton)
+        .foregroundColor(.tidexBlue)
       }
+    }
+  }
+
+  private func handleStartDateChanged(_ newValue: Date) {
+    if isAllDay, eventEndDate < newValue {
+      eventEndDate = newValue
+    }
+    if !isAllDay {
+      eventDate = newValue
+      eventEndDate = newValue
+    }
+  }
+
+  private func handleEventDateChanged(_ newValue: Date) {
+    if !isAllDay {
+      eventStartDate = newValue
+      eventEndDate = newValue
+    }
+  }
+
+  private func handleAllDayChanged(_ newValue: Bool) {
+    if newValue {
+      eventStartDate = eventDate
+      if eventEndDate < eventStartDate {
+        eventEndDate = eventStartDate
+      }
+      editedStartTime = nil
+      editedEndTime = nil
+      if !reminderTimes.isEmpty, reminderAnchorTime == nil {
+        reminderAnchorTime = EventSheetFormatter.date(from: "09:00")
+      }
+    } else {
+      eventDate = eventStartDate
+      eventEndDate = eventStartDate
+      reminderAnchorTime = nil
     }
   }
 
@@ -541,7 +564,8 @@ struct EventDetailsSheet: View {
 
   private var editorRangeSummaryText: String {
     if Calendar.gregorianCurrent.isDate(eventStartDate, inSameDayAs: eventEndDate) {
-      return eventStartDate.formatted(.dateTime.weekday(.wide).day().month(.wide).calendar(.gregorian))
+      return eventStartDate.formatted(
+        .dateTime.weekday(.wide).day().month(.wide).calendar(.gregorian))
     }
 
     let format = Date.FormatStyle.dateTime.day().month(.abbreviated).calendar(.gregorian)

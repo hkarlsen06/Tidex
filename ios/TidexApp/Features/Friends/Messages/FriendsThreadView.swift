@@ -443,13 +443,16 @@ struct FriendsThreadView: View {
       }
 
       Button(String(localized: .paywallPrivacyPolicy)) {
-        if let url = URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy") {
+        if let url = URL(
+          string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
+        {
           openURL(url, prefersInApp: true)
         }
       }
 
       Button(String(localized: .paywallTermsOfUse)) {
-        if let url = URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms") {
+        if let url = URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms")
+        {
           openURL(url, prefersInApp: true)
         }
       }
@@ -674,93 +677,104 @@ struct FriendsThreadView: View {
       )
       .id(exyteMessage.id)
     } else if let rowProjection = projection.rowProjectionsByPresentedMessageID[exyteMessage.id] {
-      let message = rowProjection.message
-      let isHighlighted = FriendsThreadExyteHighlightRedrawResolver.isHighlighted(exyteMessage)
-      let attachmentHighlightTarget =
-        activeAttachmentReactionTarget?.isValid(for: message.id) == true
-        ? activeAttachmentReactionTarget
-        : pendingAttachmentReactionTarget
-      let highlightedAttachmentId: String? =
-        if attachmentHighlightTarget?.isValid(for: message.id) == true {
-          attachmentHighlightTarget?.attachmentId
-        } else {
-          nil
-        }
-
-      FriendsChatMessageRowContent(
-        message: message,
-        quotedPreview: viewModel.quotedMessage(for: message).map(replyPreviewModel(for:)),
-        isCurrentUser: rowProjection.isCurrentUser,
-        groupContext: rowProjection.groupContext,
-        counterpartAvatarUrl: counterpartAvatarUrl,
-        counterpartAvatarInitials: FriendsChatMessageGrouping.initials(
-          from: counterpartDisplayName),
-        isHighlighted: isHighlighted,
-        highlightedAttachmentId: highlightedAttachmentId,
-        visibleMessageText: FriendsThreadExyteHighlightRedrawResolver.visibleText(
-          for: exyteMessage
-        ),
-        senderFirstName: firstName(
-          from: rowProjection.isCurrentUser ? currentUserDisplayName : counterpartDisplayName
-        ),
-        separatorDate: nil,
-        showsSenderLabel: false,
-        showsTimestamp: rowProjection.shouldShowTimestamp,
-        messageStatus: rowProjection.messageStatus,
-        stackingOrder: Double(projection.messages.count - rowProjection.index),
-        onRetry: {
-          Task {
-            await viewModel.retryMessage(messageId: message.id)
-          }
-        },
-        onShowReactionMenu: { attachmentId in
-          showReactionMenu(
-            for: message,
-            attachmentId: attachmentId,
-            showContextMenu: showContextMenu
-          )
-        },
-        onTapQuotedMessage: {
-          handleQuotedMessageTap(for: message)
-        },
-        onOpenImageAttachment: { attachment in
-          selectedImageGallery = SelectedImageGallery(attachmentID: attachment.id)
-        },
-        onImageReactionPressChanged: { attachment, isPressing in
-          if isPressing {
-            activeAttachmentReactionTarget = PendingAttachmentReactionTarget(
-              messageId: message.id,
-              attachmentId: attachment.id,
-              createdAt: .now
-            )
-          } else if pendingAttachmentReactionTarget?.attachmentId != attachment.id {
-            activeAttachmentReactionTarget = nil
-          }
-        },
-        onPrepareImageReaction: { attachment in
-          let target = PendingAttachmentReactionTarget(
-            messageId: message.id,
-            attachmentId: attachment.id,
-            createdAt: .now
-          )
-          activeAttachmentReactionTarget = target
-          pendingAttachmentReactionTarget = target
-        },
-        onOpenShiftSnapshot: { snapshot in
-          openShiftSnapshot(snapshot)
-        },
-        onReplySwipe: canReply(to: message)
-          ? {
-            viewModel.setReplyTarget(message)
-          }
-          : nil,
-        timestampRevealOffset: $timestampRevealOffset,
-        messageFrame: messageFrame
+      messageRow(
+        for: exyteMessage,
+        rowProjection: rowProjection,
+        messageCount: projection.messages.count,
+        messageFrame: messageFrame,
+        showContextMenu: showContextMenu
       )
-      .id(exyteMessage.id)
     } else {
       EmptyView()
     }
+  }
+
+  private func messageRow(
+    for exyteMessage: ExyteChat.Message,
+    rowProjection: FriendsThreadMessageRowProjection,
+    messageCount: Int,
+    messageFrame: Binding<CGRect>?,
+    showContextMenu: @escaping () -> Void
+  ) -> some View {
+    let message = rowProjection.message
+    let senderName = rowProjection.isCurrentUser ? currentUserDisplayName : counterpartDisplayName
+
+    return FriendsChatMessageRowContent(
+      message: message,
+      quotedPreview: viewModel.quotedMessage(for: message).map(replyPreviewModel(for:)),
+      isCurrentUser: rowProjection.isCurrentUser,
+      groupContext: rowProjection.groupContext,
+      counterpartAvatarUrl: counterpartAvatarUrl,
+      counterpartAvatarInitials: FriendsChatMessageGrouping.initials(
+        from: counterpartDisplayName),
+      isHighlighted: FriendsThreadExyteHighlightRedrawResolver.isHighlighted(exyteMessage),
+      highlightedAttachmentId: highlightedAttachmentId(for: message),
+      visibleMessageText: FriendsThreadExyteHighlightRedrawResolver.visibleText(
+        for: exyteMessage
+      ),
+      senderFirstName: firstName(from: senderName),
+      separatorDate: nil,
+      showsSenderLabel: false,
+      showsTimestamp: rowProjection.shouldShowTimestamp,
+      messageStatus: rowProjection.messageStatus,
+      stackingOrder: Double(messageCount - rowProjection.index),
+      onRetry: { retry(message) },
+      onShowReactionMenu: {
+        showReactionMenu(for: message, attachmentId: $0, showContextMenu: showContextMenu)
+      },
+      onTapQuotedMessage: { handleQuotedMessageTap(for: message) },
+      onOpenImageAttachment: { selectedImageGallery = SelectedImageGallery(attachmentID: $0.id) },
+      onImageReactionPressChanged: {
+        handleImageReactionPressChanged(message: message, attachment: $0, isPressing: $1)
+      },
+      onPrepareImageReaction: { prepareImageReaction(message: message, attachment: $0) },
+      onOpenShiftSnapshot: { openShiftSnapshot($0) },
+      onReplySwipe: canReply(to: message) ? { viewModel.setReplyTarget(message) } : nil,
+      timestampRevealOffset: $timestampRevealOffset,
+      messageFrame: messageFrame
+    )
+    .id(exyteMessage.id)
+  }
+
+  private func retry(_ message: FriendMessage) {
+    Task {
+      await viewModel.retryMessage(messageId: message.id)
+    }
+  }
+
+  private func highlightedAttachmentId(for message: FriendMessage) -> String? {
+    let attachmentHighlightTarget =
+      activeAttachmentReactionTarget?.isValid(for: message.id) == true
+      ? activeAttachmentReactionTarget
+      : pendingAttachmentReactionTarget
+    guard attachmentHighlightTarget?.isValid(for: message.id) == true else { return nil }
+    return attachmentHighlightTarget?.attachmentId
+  }
+
+  private func handleImageReactionPressChanged(
+    message: FriendMessage,
+    attachment: FriendMessageAttachment,
+    isPressing: Bool
+  ) {
+    if isPressing {
+      activeAttachmentReactionTarget = PendingAttachmentReactionTarget(
+        messageId: message.id,
+        attachmentId: attachment.id,
+        createdAt: .now
+      )
+    } else if pendingAttachmentReactionTarget?.attachmentId != attachment.id {
+      activeAttachmentReactionTarget = nil
+    }
+  }
+
+  private func prepareImageReaction(message: FriendMessage, attachment: FriendMessageAttachment) {
+    let target = PendingAttachmentReactionTarget(
+      messageId: message.id,
+      attachmentId: attachment.id,
+      createdAt: .now
+    )
+    activeAttachmentReactionTarget = target
+    pendingAttachmentReactionTarget = target
   }
 
   private func canReply(to message: FriendMessage) -> Bool {

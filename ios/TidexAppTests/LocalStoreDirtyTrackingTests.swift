@@ -1650,8 +1650,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(syncedSnapshot, serverSnapshot)
   }
 
-  internal func
-    testResolveStoredUserSettingsConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
+  internal func testResolveStoredUserSettingsConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
     async throws
   {
     let store = try makeStoreActor()

@@ -67,6 +67,8 @@ final class ProfileSettingsViewModel {
   private var originalDisplayName: String = ""
   /// Original username (for detecting changes)
   private var originalUsername: String = ""
+  private let storageBucket = "profile-pictures"
+
   // MARK: - Initialization
 
   init(
@@ -322,6 +324,9 @@ final class ProfileSettingsViewModel {
     errorMessage = message
   }
 
+}
+
+extension ProfileSettingsViewModel {
   // MARK: - Email Change
 
   /// Whether the user can change their email (has password auth)
@@ -383,15 +388,6 @@ final class ProfileSettingsViewModel {
 
   // MARK: - Avatar Upload
 
-  private let storageBucket = "profile-pictures"
-  nonisolated private static let avatarCompressionQuality: CGFloat = 0.8
-
-  private struct PreparedAvatarUpload: Sendable {
-    let data: Data
-    let contentType: String
-    let fileExtension: String
-  }
-
   /// Extract storage path from a public URL
   /// e.g. "https://xxx.supabase.co/storage/v1/object/public/profile-pictures/user-id/file.jpg"
   /// returns "user-id/file.jpg"
@@ -413,121 +409,31 @@ final class ProfileSettingsViewModel {
     }
   }
 
-  /// Convert image data to WebP format for smaller file sizes
-  /// - Parameter imageData: Source image data (JPEG, PNG, etc.)
-  /// - Returns: WebP data or nil if conversion fails
-  private nonisolated static func convertToWebP(
-    _ imageData: Data,
-    quality: CGFloat = avatarCompressionQuality
-  ) -> Data? {
-    guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
-      let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
-    else {
-      return nil
-    }
+  /// Uploads the encoded avatar under a unique name and returns its public URL.
+  private func uploadAvatarFile(
+    _ preparedUpload: ProfileAvatarEncoder.PreparedUpload,
+    userId: String
+  ) async throws -> String {
+    let filename = "\(userId)/\(UUID().uuidString).\(preparedUpload.fileExtension)"
 
-    // Check if WebP encoding is supported
-    let supportedTypes = CGImageDestinationCopyTypeIdentifiers() as? [String] ?? []
-    let webpSupported = supportedTypes.contains(UTType.webP.identifier)
-
-    if !webpSupported {
-      return nil
-    }
-
-    let webpData = NSMutableData()
-    let webpUTType = UTType.webP.identifier as CFString
-
-    guard
-      let destination = CGImageDestinationCreateWithData(
-        webpData,
-        webpUTType,
-        1,
-        nil
-      )
-    else {
-      return nil
-    }
-
-    let options: [CFString: Any] = [
-      kCGImageDestinationLossyCompressionQuality: quality
-    ]
-
-    CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
-
-    guard CGImageDestinationFinalize(destination) else {
-      return nil
-    }
-
-    return webpData as Data
-  }
-
-  /// Convert image data to HEIC format (fallback when WebP unavailable)
-  /// HEIC offers ~50% smaller files than JPEG with similar quality
-  private nonisolated static func convertToHEIC(
-    _ imageData: Data,
-    quality: CGFloat = avatarCompressionQuality
-  ) -> Data? {
-    guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
-      let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
-    else {
-      return nil
-    }
-
-    let heicData = NSMutableData()
-    let heicUTType = UTType.heic.identifier as CFString
-
-    guard
-      let destination = CGImageDestinationCreateWithData(
-        heicData,
-        heicUTType,
-        1,
-        nil
-      )
-    else {
-      return nil
-    }
-
-    let options: [CFString: Any] = [
-      kCGImageDestinationLossyCompressionQuality: quality
-    ]
-
-    CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
-
-    guard CGImageDestinationFinalize(destination) else {
-      return nil
-    }
-
-    return heicData as Data
-  }
-
-  /// Prepare image bytes for upload off the main actor.
-  /// Keeps UI responsive while running expensive image encoding.
-  private nonisolated static func prepareAvatarUpload(_ imageData: Data) async
-    -> PreparedAvatarUpload
-  {
-    await Task.detached(priority: .userInitiated) {
-      if let webpData = convertToWebP(imageData, quality: avatarCompressionQuality) {
-        return PreparedAvatarUpload(
-          data: webpData,
-          contentType: "image/webp",
-          fileExtension: "webp"
+    // Upload directly to Supabase Storage
+    try await supabase.storage
+      .from(storageBucket)
+      .upload(
+        filename,
+        data: preparedUpload.data,
+        options: FileOptions(
+          cacheControl: "3600",
+          contentType: preparedUpload.contentType,
+          upsert: true
         )
-      }
-      if let heicData = convertToHEIC(imageData, quality: avatarCompressionQuality) {
-        // HEIC fallback - ~50% smaller than JPEG, supported since iOS 11
-        return PreparedAvatarUpload(
-          data: heicData,
-          contentType: "image/heic",
-          fileExtension: "heic"
-        )
-      }
-      // Final fallback to JPEG
-      return PreparedAvatarUpload(
-        data: imageData,
-        contentType: "image/jpeg",
-        fileExtension: "jpg"
       )
-    }.value
+
+    // Get the public URL
+    return try supabase.storage
+      .from(storageBucket)
+      .getPublicURL(path: filename)
+      .absoluteString
   }
 
   /// Upload a new profile picture directly to Supabase Storage
@@ -545,29 +451,9 @@ final class ProfileSettingsViewModel {
     do {
       // Convert to modern format for smaller file size off-main.
       // Priority: WebP > HEIC > JPEG.
-      let preparedUpload = await Self.prepareAvatarUpload(imageData)
+      let preparedUpload = await ProfileAvatarEncoder.prepareUpload(imageData)
 
-      // Generate unique filename
-      let filename = "\(currentUserId)/\(UUID().uuidString).\(preparedUpload.fileExtension)"
-
-      // Upload directly to Supabase Storage
-      try await supabase.storage
-        .from(storageBucket)
-        .upload(
-          filename,
-          data: preparedUpload.data,
-          options: FileOptions(
-            cacheControl: "3600",
-            contentType: preparedUpload.contentType,
-            upsert: true
-          )
-        )
-
-      // Get the public URL
-      let publicUrl = try supabase.storage
-        .from(storageBucket)
-        .getPublicURL(path: filename)
-        .absoluteString
+      let publicUrl = try await uploadAvatarFile(preparedUpload, userId: currentUserId)
 
       try await Self.commitAvatarChange(from: previousUrl, to: publicUrl) {
         try await self.settingsRepository.updateSettings(
@@ -622,27 +508,9 @@ final class ProfileSettingsViewModel {
     }
   }
 
-  /// Keep the saved avatar usable until persistence succeeds. A thrown save
-  /// may leave pending model changes, so preserve both files in that case.
-  static func commitAvatarChange(
-    from previousURL: String?,
-    to newURL: String?,
-    persist: () async throws -> Bool,
-    removeStoredAvatar: (String) async -> Void
-  ) async throws {
-    guard try await persist() else {
-      // Missing settings means no model was changed, so the new file is orphaned.
-      if let newURL, newURL != previousURL {
-        await removeStoredAvatar(newURL)
-      }
-      throw LocalStoreWriteError.notFound
-    }
+}
 
-    if let previousURL, previousURL != newURL {
-      await removeStoredAvatar(previousURL)
-    }
-  }
-
+extension ProfileSettingsViewModel {
   // MARK: - Account Deletion
 
   /// Expected confirmation text for account deletion
@@ -694,67 +562,5 @@ final class ProfileSettingsViewModel {
       Haptics.play(.error)
       isDeletingAccount = false
     }
-  }
-
-  // MARK: - Helpers
-
-  private static func normalizeUsername(_ username: String) -> String {
-    sanitizeUsernameInput(username.trimmingCharacters(in: .whitespacesAndNewlines))
-  }
-
-  private static func sanitizeUsernameInput(_ username: String) -> String {
-    username
-      .lowercased()
-      .filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_") }
-  }
-
-  private static func isValidUsername(_ username: String) -> Bool {
-    guard (3...20).contains(username.count) else { return false }
-    guard username.range(of: "^[a-z0-9_]+$", options: .regularExpression) != nil else {
-      return false
-    }
-    return username.range(of: "[a-z]", options: .regularExpression) != nil
-  }
-
-  private static func isUsernameTaken(_ error: PostgrestError) -> Bool {
-    if error.code == "23505" {
-      return true
-    }
-
-    let message = "\(error.message) \(error.localizedDescription)".lowercased()
-    return message.contains("duplicate") || message.contains("unique")
-  }
-
-  private static func isUsernameCheckConstraintViolation(_ error: PostgrestError) -> Bool {
-    guard error.code == "23514" else { return false }
-
-    let message = "\(error.message) \(error.localizedDescription)".lowercased()
-    return message.contains("profiles_username_format")
-      || message.contains("check constraint")
-      || message.contains("violates check")
-  }
-
-  private static func isUsernameSafetyFilterViolation(_ error: PostgrestError) -> Bool {
-    let message = "\(error.message) \(error.localizedDescription)".lowercased()
-    return message.contains("profiles_username_safety_filter")
-      || message.contains("safety filter")
-      || message.contains("objectionable")
-  }
-
-  /// Get initials from display name or email
-  var initials: String {
-    let name = displayName.isEmpty ? email : displayName
-    return
-      name
-      .split(separator: " ")
-      .compactMap(\.first)
-      .prefix(2)
-      .map { String($0).uppercased() }
-      .joined()
-  }
-
-  /// Clear messages
-  func clearMessages() {
-    errorMessage = nil
   }
 }

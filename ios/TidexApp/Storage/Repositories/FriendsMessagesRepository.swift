@@ -1,6 +1,6 @@
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessagesRepository")
 
@@ -234,6 +234,11 @@ final class FriendsMessagesRepository {
     }
   }
 
+}
+
+// MARK: - Writes
+
+extension FriendsMessagesRepository {
   func saveThreads(_ threads: [FriendThread], for viewerUserId: String) async {
     do {
       try await storeActor.saveThreadSummaries(threads, for: viewerUserId)

@@ -686,43 +686,16 @@ internal final class FriendsThreadViewModel {
 
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     let composerAttachments = stagedComposerAttachments
-    guard !normalizedContent.isEmpty || !composerAttachments.isEmpty else { return false }
-    guard !isMessageBodyTooLong(normalizedContent) else { return false }
-    guard !UserGeneratedContentFilter.containsBlockedText(normalizedContent) else {
-      sendErrorMessage = messageBlockedBySafetyFilterMessage
-      composerValidationMessage = messageBlockedBySafetyFilterMessage
-      return false
-    }
-    guard canSendShiftSnapshotAttachments(composerAttachments) else {
-      sendErrorMessage = shiftSnapshotSendUnavailableMessage
+    guard canSendOutgoing(content: normalizedContent, attachments: composerAttachments) else {
       return false
     }
 
-    let previousReplyTarget = draftReplyTarget
     let composerSnapshot = currentComposerSnapshot()
+    let replyTarget = draftReplyTarget
     sendErrorMessage = nil
 
-    let clientId = UUID().uuidString.lowercased()
-    let optimisticAttachments = composerAttachments.imageAttachments.enumerated().map {
-      makeOptimisticAttachment(from: $0.element, index: $0.offset)
-    }
-    let optimisticMessage = FriendMessage(
-      id: "local-\(clientId)",
-      threadId: route.threadId,
-      senderUserId: viewerUserId,
-      messageType: .user,
-      body: normalizedContent.isEmpty ? nil : normalizedContent,
-      clientId: clientId,
-      replyToMessageId: previousReplyTarget?.id,
-      createdAt: Date(),
-      editedAt: nil,
-      deletedAt: nil,
-      metadataData: composerAttachments.metadataData,
-      attachments: optimisticAttachments,
-      reactions: [],
-      sendState: .sending,
-      failureMessage: nil
-    )
+    let optimisticMessage = makeOptimisticMessage(
+      content: normalizedContent, attachments: composerAttachments, replyTarget: replyTarget)
     draft = ""
     composerState = .normal
     stagedComposerAttachments = []
@@ -738,44 +711,100 @@ internal final class FriendsThreadViewModel {
     )
 
     if let earlyResult = await sendTask.peekResult() {
-      switch earlyResult {
-      case .success(let sentMessage):
-        await repository.saveConfirmedMessage(
-          sentMessage,
-          replacingLocalMessageId: optimisticMessage.id,
-          in: route.threadId,
-          for: viewerUserId
-        )
-        loadFromCache()
-        return true
-
-      case .failure(let error):
-        if isConnectivityError(error) {
-          await repository.updateMessageSendState(
-            messageId: optimisticMessage.id,
-            viewerUserId: viewerUserId,
-            sendState: .sending,
-            failureMessage: waitingForNetworkMessage
-          )
-          sendErrorMessage = nil
-        } else {
-          await repository.deleteMessage(id: optimisticMessage.id, viewerUserId: viewerUserId)
-          await restoreComposerSnapshot(composerSnapshot, requestFocus: true)
-          if isSafetyFilterError(error) {
-            sendErrorMessage = messageBlockedBySafetyFilterMessage
-          } else {
-            sendErrorMessage = isMessageBodyTooLongError(error) ? nil : sendMessageFailedMessage
-          }
-        }
-        loadFromCache()
-        kThreadLogger.error("Failed to send thread message: \(error.localizedDescription)")
-        return isConnectivityError(error)
-      }
+      return await handleEarlySendResult(
+        earlyResult, optimisticMessage: optimisticMessage, composerSnapshot: composerSnapshot)
     }
 
     loadFromCache()
     sendMessageInBackground(optimisticMessage, sendTask: sendTask)
     return true
+  }
+
+  /// Checks the outgoing content and attachments. Sets the error messages when it rejects a send.
+  private func canSendOutgoing(
+    content normalizedContent: String,
+    attachments composerAttachments: [FriendsComposerAttachmentDraft]
+  ) -> Bool {
+    guard !normalizedContent.isEmpty || !composerAttachments.isEmpty else { return false }
+    guard !isMessageBodyTooLong(normalizedContent) else { return false }
+    guard !UserGeneratedContentFilter.containsBlockedText(normalizedContent) else {
+      sendErrorMessage = messageBlockedBySafetyFilterMessage
+      composerValidationMessage = messageBlockedBySafetyFilterMessage
+      return false
+    }
+    guard canSendShiftSnapshotAttachments(composerAttachments) else {
+      sendErrorMessage = shiftSnapshotSendUnavailableMessage
+      return false
+    }
+    return true
+  }
+
+  private func makeOptimisticMessage(
+    content normalizedContent: String,
+    attachments composerAttachments: [FriendsComposerAttachmentDraft],
+    replyTarget: FriendMessage?
+  ) -> FriendMessage {
+    let clientId = UUID().uuidString.lowercased()
+    let optimisticAttachments = composerAttachments.imageAttachments.enumerated().map {
+      makeOptimisticAttachment(from: $0.element, index: $0.offset)
+    }
+    return FriendMessage(
+      id: "local-\(clientId)",
+      threadId: route.threadId,
+      senderUserId: viewerUserId,
+      messageType: .user,
+      body: normalizedContent.isEmpty ? nil : normalizedContent,
+      clientId: clientId,
+      replyToMessageId: replyTarget?.id,
+      createdAt: Date(),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: composerAttachments.metadataData,
+      attachments: optimisticAttachments,
+      reactions: [],
+      sendState: .sending,
+      failureMessage: nil
+    )
+  }
+
+  private func handleEarlySendResult(
+    _ earlyResult: Result<FriendMessage, Error>,
+    optimisticMessage: FriendMessage,
+    composerSnapshot: ComposerSnapshot
+  ) async -> Bool {
+    switch earlyResult {
+    case .success(let sentMessage):
+      await repository.saveConfirmedMessage(
+        sentMessage,
+        replacingLocalMessageId: optimisticMessage.id,
+        in: route.threadId,
+        for: viewerUserId
+      )
+      loadFromCache()
+      return true
+
+    case .failure(let error):
+      if isConnectivityError(error) {
+        await repository.updateMessageSendState(
+          messageId: optimisticMessage.id,
+          viewerUserId: viewerUserId,
+          sendState: .sending,
+          failureMessage: waitingForNetworkMessage
+        )
+        sendErrorMessage = nil
+      } else {
+        await repository.deleteMessage(id: optimisticMessage.id, viewerUserId: viewerUserId)
+        await restoreComposerSnapshot(composerSnapshot, requestFocus: true)
+        if isSafetyFilterError(error) {
+          sendErrorMessage = messageBlockedBySafetyFilterMessage
+        } else {
+          sendErrorMessage = isMessageBodyTooLongError(error) ? nil : sendMessageFailedMessage
+        }
+      }
+      loadFromCache()
+      kThreadLogger.error("Failed to send thread message: \(error.localizedDescription)")
+      return isConnectivityError(error)
+    }
   }
 
   func deleteMessage(messageId: String) async {

@@ -1,68 +1,68 @@
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let composerDraftLogger = Logger(
   subsystem: "com.tidex.app",
   category: "FriendsComposerDraftStore"
 )
 
+private struct PersistedImageAttachmentDraft: Codable {
+  let id: String
+  let mediaType: String
+  let relativePath: String
+}
+
+private enum PersistedAttachmentDraft: Codable {
+  case image(PersistedImageAttachmentDraft)
+  case shiftSnapshot(ComposerShiftSnapshotDraft)
+
+  private enum CodingKeys: String, CodingKey {
+    case type
+    case image
+    case shiftSnapshot = "shift_snapshot"
+  }
+
+  private enum DraftType: String, Codable {
+    case image
+    case shiftSnapshot = "shift_snapshot"
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let type = try container.decode(DraftType.self, forKey: .type)
+
+    switch type {
+    case .image:
+      self = .image(try container.decode(PersistedImageAttachmentDraft.self, forKey: .image))
+
+    case .shiftSnapshot:
+      self = .shiftSnapshot(
+        try container.decode(ComposerShiftSnapshotDraft.self, forKey: .shiftSnapshot)
+      )
+    }
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+
+    switch self {
+    case .image(let imageDraft):
+      try container.encode(DraftType.image, forKey: .type)
+      try container.encode(imageDraft, forKey: .image)
+
+    case .shiftSnapshot(let draft):
+      try container.encode(DraftType.shiftSnapshot, forKey: .type)
+      try container.encode(draft, forKey: .shiftSnapshot)
+    }
+  }
+}
+
 @MainActor
 final class FriendsComposerDraftStore {
   private enum Storage {
     static let appGroupId = "group.no.tidex.app"
     static let directoryName = "FriendsComposerDraftAttachments"
-  }
-
-  private struct PersistedImageAttachmentDraft: Codable {
-    let id: String
-    let mediaType: String
-    let relativePath: String
-  }
-
-  private enum PersistedAttachmentDraft: Codable {
-    case image(PersistedImageAttachmentDraft)
-    case shiftSnapshot(ComposerShiftSnapshotDraft)
-
-    private enum CodingKeys: String, CodingKey {
-      case type
-      case image
-      case shiftSnapshot = "shift_snapshot"
-    }
-
-    private enum DraftType: String, Codable {
-      case image
-      case shiftSnapshot = "shift_snapshot"
-    }
-
-    init(from decoder: Decoder) throws {
-      let container = try decoder.container(keyedBy: CodingKeys.self)
-      let type = try container.decode(DraftType.self, forKey: .type)
-
-      switch type {
-      case .image:
-        self = .image(try container.decode(PersistedImageAttachmentDraft.self, forKey: .image))
-
-      case .shiftSnapshot:
-        self = .shiftSnapshot(
-          try container.decode(ComposerShiftSnapshotDraft.self, forKey: .shiftSnapshot)
-        )
-      }
-    }
-
-    func encode(to encoder: Encoder) throws {
-      var container = encoder.container(keyedBy: CodingKeys.self)
-
-      switch self {
-      case .image(let imageDraft):
-        try container.encode(DraftType.image, forKey: .type)
-        try container.encode(imageDraft, forKey: .image)
-
-      case .shiftSnapshot(let draft):
-        try container.encode(DraftType.shiftSnapshot, forKey: .type)
-        try container.encode(draft, forKey: .shiftSnapshot)
-      }
-    }
   }
 
   struct Draft: Equatable {
@@ -325,6 +325,11 @@ final class FriendsComposerDraftStore {
     }
   }
 
+}
+
+// MARK: - Attachment persistence
+
+extension FriendsComposerDraftStore {
   private struct DecodedAttachmentDrafts {
     let attachments: [FriendsComposerAttachmentDraft]
     let shouldMigrateLegacyInlineImages: Bool

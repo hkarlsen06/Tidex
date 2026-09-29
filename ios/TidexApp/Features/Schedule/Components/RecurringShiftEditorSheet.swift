@@ -88,7 +88,9 @@ struct RecurringShiftEditorSheet: View {
 
   /// Navigate to previous month
   private func goToPreviousMonth() {
-    guard let newMonth = Calendar.gregorianCurrent.date(byAdding: .month, value: -1, to: displayMonth) else {
+    guard
+      let newMonth = Calendar.gregorianCurrent.date(byAdding: .month, value: -1, to: displayMonth)
+    else {
       return
     }
     navigationDirection = .previous
@@ -97,7 +99,9 @@ struct RecurringShiftEditorSheet: View {
 
   /// Navigate to next month
   private func goToNextMonth() {
-    guard let newMonth = Calendar.gregorianCurrent.date(byAdding: .month, value: 1, to: displayMonth) else {
+    guard
+      let newMonth = Calendar.gregorianCurrent.date(byAdding: .month, value: 1, to: displayMonth)
+    else {
       return
     }
     navigationDirection = .next
@@ -127,68 +131,13 @@ struct RecurringShiftEditorSheet: View {
   var body: some View {
     NavigationStack {
       GeometryReader { geometry in
-        let availableHeight = geometry.size.height - (MonthPickerLayout.totalBottomInset)
-
-        ScrollView {
-          VStack(alignment: .leading, spacing: Spacing.xl) {
-            section(.shiftsTimeSection) {
-              TimeRangePicker(
-                startTime: $editedStartTime,
-                endTime: $editedEndTime,
-                focusedFieldBinding: $focusedTimeField
-              )
-            }
-
-            daysSection
-
-            DurationPicker(endCondition: $editedEndCondition)
-
-            // Exclusions can only be restored here, so the section is hidden for shifts without any.
-            if !recurringShift.effectiveExclusions.isEmpty {
-              exclusionsSection
-            }
-
-            if onDelete != nil {
-              deleteButton
-            }
-          }
-          .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, Spacing.md)
-          .padding(.top, Spacing.md)
-          .padding(.bottom, Spacing.bottomScrollMargin)  // Clears the month picker
-          .frame(maxWidth: .infinity)
-          .frame(minHeight: availableHeight, alignment: .top)
-        }
-        .monthSwipeGesture(
-          onSwipeLeft: goToNextMonth,
-          onSwipeRight: goToPreviousMonth,
-          isEnabled: true
-        )
-        .scrollDismissesKeyboard(.interactively)
-        .contentMargins(
-          .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
+        scrollContent(
+          availableHeight: geometry.size.height - (MonthPickerLayout.totalBottomInset))
       }
       .background(Color.tidexBackground)
       .navigationTitle(String(localized: .recurringEditTitle))
       .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          Button(String(localized: .commonCancel)) {
-            dismiss()
-          }
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextSecondary)
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-          Button(String(localized: .commonSave)) {
-            saveChanges()
-          }
-          .font(.tidexButton)
-          .foregroundColor(.tidexBlue)
-          .disabled(isSaving || !hasChanges || !canSave)
-          .opacity(isSaving || !hasChanges || !canSave ? 0.5 : 1)
-        }
-      }
+      .toolbar { toolbarContent }
     }
     .onAppear {
       initializeEditState()
@@ -204,6 +153,67 @@ struct RecurringShiftEditorSheet: View {
       }
     } message: {
       Text(.recurringDeleteConfirmMessage)
+    }
+  }
+
+  private func scrollContent(availableHeight: CGFloat) -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: Spacing.xl) {
+        section(.shiftsTimeSection) {
+          TimeRangePicker(
+            startTime: $editedStartTime,
+            endTime: $editedEndTime,
+            focusedFieldBinding: $focusedTimeField
+          )
+        }
+
+        daysSection
+
+        DurationPicker(endCondition: $editedEndCondition)
+
+        // Exclusions can only be restored here, so the section is hidden for shifts without any.
+        if !recurringShift.effectiveExclusions.isEmpty {
+          exclusionsSection
+        }
+
+        if onDelete != nil {
+          deleteButton
+        }
+      }
+      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+      .padding(.horizontal, Spacing.md)
+      .padding(.top, Spacing.md)
+      .padding(.bottom, Spacing.bottomScrollMargin)  // Clears the month picker
+      .frame(maxWidth: .infinity)
+      .frame(minHeight: availableHeight, alignment: .top)
+    }
+    .monthSwipeGesture(
+      onSwipeLeft: goToNextMonth,
+      onSwipeRight: goToPreviousMonth,
+      isEnabled: true
+    )
+    .scrollDismissesKeyboard(.interactively)
+    .contentMargins(
+      .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
+  }
+
+  @ToolbarContentBuilder
+  private var toolbarContent: some ToolbarContent {
+    ToolbarItem(placement: .topBarLeading) {
+      Button(String(localized: .commonCancel)) {
+        dismiss()
+      }
+      .font(.tidexBodyMedium)
+      .foregroundColor(.tidexTextSecondary)
+    }
+    ToolbarItem(placement: .topBarTrailing) {
+      Button(String(localized: .commonSave)) {
+        saveChanges()
+      }
+      .font(.tidexButton)
+      .foregroundColor(.tidexBlue)
+      .disabled(isSaving || !hasChanges || !canSave)
+      .opacity(isSaving || !hasChanges || !canSave ? 0.5 : 1)
     }
   }
 
@@ -377,7 +387,8 @@ struct RecurringShiftEditorSheet: View {
       recurringId: recurringShift.id,
       startTime: ShiftTimeFieldFormat.storedTime(
         from: startTime, original: recurringShift.cleanStartTime),
-      endTime: ShiftTimeFieldFormat.storedTime(from: endTime, original: recurringShift.cleanEndTime),
+      endTime: ShiftTimeFieldFormat.storedTime(
+        from: endTime, original: recurringShift.cleanEndTime),
       repeatIntervalWeeks: editedRepeatInterval,
       selectedDays: editedSelectedDays,
       endCondition: editedEndCondition,

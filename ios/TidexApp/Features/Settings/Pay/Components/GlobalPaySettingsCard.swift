@@ -186,53 +186,61 @@ private struct CurrencyPickerSheet: View {
 
   var body: some View {
     NavigationStack {
-      ZStack {
-        Color.tidexBackground
-          .ignoresSafeArea()
-
-        ScrollView {
-          LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
-            ForEach(CurrencyConfig.groups) { group in
-              Section {
-                ForEach(group.options) { option in
-                  CurrencyRow(
-                    option: option,
-                    isSelected: selectedCurrency == option.value,
-                    action: {
-                      selectedCurrency = option.value
-                      onSelect(option.value)
-                      isPresented = false
-                    }
-                  )
-                }
-              } header: {
-                HStack {
-                  Text(group.localizedLabel)
-                    .font(.tidexFootnoteStrong)
-                    .foregroundColor(.tidexTextMuted)
-                    .textCase(.uppercase)
-                  Spacer()
-                }
-                .padding(.horizontal, Spacing.mlg)
-                .padding(.vertical, Spacing.xs)
-                .background(Color.tidexBackground)
-              }
+      currencyList
+        .navigationTitle(String(localized: .settingsPayGlobalCurrencyTitle))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button(String(localized: .commonCancel)) {
+              isPresented = false
             }
           }
-          .padding(.top, Spacing.xs)
         }
-      }
-      .navigationTitle(String(localized: .settingsPayGlobalCurrencyTitle))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            isPresented = false
-          }
-        }
-      }
     }
     .sensoryFeedback(.selection, trigger: selectedCurrency)
+  }
+
+  private var currencyList: some View {
+    ZStack {
+      Color.tidexBackground
+        .ignoresSafeArea()
+
+      ScrollView {
+        LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+          ForEach(CurrencyConfig.groups) { group in
+            currencySection(for: group)
+          }
+        }
+        .padding(.top, Spacing.xs)
+      }
+    }
+  }
+
+  private func currencySection(for group: CurrencyGroup) -> some View {
+    Section {
+      ForEach(group.options) { option in
+        CurrencyRow(
+          option: option,
+          isSelected: selectedCurrency == option.value,
+          action: {
+            selectedCurrency = option.value
+            onSelect(option.value)
+            isPresented = false
+          }
+        )
+      }
+    } header: {
+      HStack {
+        Text(group.localizedLabel)
+          .font(.tidexFootnoteStrong)
+          .foregroundColor(.tidexTextMuted)
+          .textCase(.uppercase)
+        Spacer()
+      }
+      .padding(.horizontal, Spacing.mlg)
+      .padding(.vertical, Spacing.xs)
+      .background(Color.tidexBackground)
+    }
   }
 }
 

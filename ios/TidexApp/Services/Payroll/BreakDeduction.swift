@@ -36,66 +36,19 @@ struct BreakDeduction {
 
     if totalMinutes > 0, toDeduct > 0, method != .none {
       // For end_of_shift and base_only, use rounded minutes like Next.js
-      var remaining = (toDeduct * 60).rounded()
+      let remaining = (toDeduct * 60).rounded()
 
       switch method {
       case .endOfShift:
-        // Subtract from tail (last periods first)
-        for i in stride(from: adjusted.count - 1, through: 0, by: -1) {
-          guard remaining > 0 else { break }
-          let span = adjusted[i].durationMinutes
-          let cut = min(span, remaining)
-
-          adjusted[i] = WagePeriod(
-            fromMin: adjusted[i].fromMin,
-            toMin: adjusted[i].toMin - cut,
-            baseRate: adjusted[i].baseRate,
-            supplementRate: adjusted[i].supplementRate
-          )
-          remaining -= cut
-        }
+        adjusted = deductFromEnd(adjusted, minutes: remaining)
         notes.append("Deducted at end of shift")
 
       case .proportional:
-        // Deduct exact proportional fractions (NOT rounded to minutes)
-        // This matches Next.js lib/payroll/breaks.ts exactly
-        var newPeriods: [WagePeriod] = []
-
-        for period in adjusted {
-          let span = period.durationMinutes
-          let proportion = span / totalMinutes
-          let cutMinutes = proportion * toDeduct * 60  // Exact, no rounding
-
-          newPeriods.append(
-            WagePeriod(
-              fromMin: period.fromMin,
-              toMin: period.toMin - cutMinutes,
-              baseRate: period.baseRate,
-              supplementRate: period.supplementRate
-            ))
-        }
-        adjusted = newPeriods
+        adjusted = deductProportionally(adjusted, totalMinutes: totalMinutes, toDeduct: toDeduct)
         notes.append("Deducted proportionally across periods")
 
       case .baseOnly:
-        // Prefer periods with lowest supplement rate
-        // Get sorted indices by supplement rate
-        let sortedIndices = adjusted.indices
-          .sorted { adjusted[$0].supplementRate < adjusted[$1].supplementRate }
-
-        for idx in sortedIndices {
-          guard remaining > 0 else { break }
-          let span = adjusted[idx].durationMinutes
-          let cut = min(span, remaining)
-
-          adjusted[idx] = WagePeriod(
-            fromMin: adjusted[idx].fromMin,
-            toMin: adjusted[idx].toMin - cut,
-            baseRate: adjusted[idx].baseRate,
-            supplementRate: adjusted[idx].supplementRate
-          )
-          remaining -= cut
-        }
+        adjusted = deductFromLowestSupplement(adjusted, minutes: remaining)
         notes.append("Deducted from base/lowest supplement periods first")
 
       case .none:
@@ -118,5 +71,77 @@ struct BreakDeduction {
         notes: notes
       )
     )
+  }
+
+  /// Subtract from tail (last periods first)
+  private static func deductFromEnd(_ periods: [WagePeriod], minutes: Double) -> [WagePeriod] {
+    var adjusted = periods
+    var remaining = minutes
+    for index in stride(from: adjusted.count - 1, through: 0, by: -1) {
+      guard remaining > 0 else { break }
+      let span = adjusted[index].durationMinutes
+      let cut = min(span, remaining)
+
+      adjusted[index] = WagePeriod(
+        fromMin: adjusted[index].fromMin,
+        toMin: adjusted[index].toMin - cut,
+        baseRate: adjusted[index].baseRate,
+        supplementRate: adjusted[index].supplementRate
+      )
+      remaining -= cut
+    }
+    return adjusted
+  }
+
+  /// Deduct exact proportional fractions (NOT rounded to minutes)
+  /// This matches Next.js lib/payroll/breaks.ts exactly
+  private static func deductProportionally(
+    _ periods: [WagePeriod],
+    totalMinutes: Double,
+    toDeduct: Double
+  ) -> [WagePeriod] {
+    var newPeriods: [WagePeriod] = []
+
+    for period in periods {
+      let span = period.durationMinutes
+      let proportion = span / totalMinutes
+      let cutMinutes = proportion * toDeduct * 60  // Exact, no rounding
+
+      newPeriods.append(
+        WagePeriod(
+          fromMin: period.fromMin,
+          toMin: period.toMin - cutMinutes,
+          baseRate: period.baseRate,
+          supplementRate: period.supplementRate
+        ))
+    }
+    return newPeriods
+  }
+
+  /// Prefer periods with lowest supplement rate
+  private static func deductFromLowestSupplement(
+    _ periods: [WagePeriod],
+    minutes: Double
+  ) -> [WagePeriod] {
+    var adjusted = periods
+    var remaining = minutes
+    // Get sorted indices by supplement rate
+    let sortedIndices = adjusted.indices
+      .sorted { adjusted[$0].supplementRate < adjusted[$1].supplementRate }
+
+    for idx in sortedIndices {
+      guard remaining > 0 else { break }
+      let span = adjusted[idx].durationMinutes
+      let cut = min(span, remaining)
+
+      adjusted[idx] = WagePeriod(
+        fromMin: adjusted[idx].fromMin,
+        toMin: adjusted[idx].toMin - cut,
+        baseRate: adjusted[idx].baseRate,
+        supplementRate: adjusted[idx].supplementRate
+      )
+      remaining -= cut
+    }
+    return adjusted
   }
 }

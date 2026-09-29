@@ -143,171 +143,217 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
   var body: some View {
     NavigationStack {
-      ZStack {
-        Color.tidexBackground
-          .ignoresSafeArea()
-
-        ScrollViewReader { proxy in
-          ScrollView {
-            VStack(spacing: Spacing.lg) {
-              // Date section (or baseline indicator)
-              dateSection
-
-              Divider()
-                .padding(.horizontal)
-
-              // Wage source selector
-              WageSourceSelector(
-                usePreset: Binding(
-                  get: { usePreset },
-                  set: {
-                    guard usePreset != $0 else { return }
-                    usePreset = $0
-                    usesSavedTariffRates = false
-                  }
-                ),
-                wageLevel: Binding(
-                  get: { wageLevel },
-                  set: {
-                    guard wageLevel != $0 else { return }
-                    wageLevel = $0
-                    usesSavedTariffRates = false
-                  }
-                ),
-                customWage: $customWage,
-                currency: currency,
-                showTariffOption: showTariffOption,
-                tariffVersion: tariffVersion,
-                savedTariffRate: usesSavedTariffRates ? customWage : nil,
-                selectorFooterContent: showTariffOption && usePreset
-                  ? AnyView(tariffVersionIndicator)
-                  : nil
-              )
-              .padding(.horizontal)
-              .id(WageSnapshotEditorSection.wage)
-
-              Divider()
-                .padding(.horizontal)
-
-              // Supplements section
-              supplementsSection
-                .id(WageSnapshotEditorSection.supplements)
-
-              Divider()
-                .padding(.horizontal)
-
-              // Overtime section
-              overtimeSection
-                .id(WageSnapshotEditorSection.overtime)
-
-              Divider()
-                .padding(.horizontal)
-
-              // Tax deduction section
-              TaxDeductionSection(
-                enabled: $taxEnabled,
-                percentage: $taxPercentage
-              )
-              .padding(.horizontal)
-              .id(WageSnapshotEditorSection.tax)
-
-              Divider()
-                .padding(.horizontal)
-
-              // Break deduction section
-              BreakDeductionSection(
-                enabled: $breakEnabled,
-                method: $breakMethod,
-                thresholdHours: $breakThresholdHours,
-                deductionMinutes: $breakDeductionMinutes
-              )
-              .padding(.horizontal)
-              .id(WageSnapshotEditorSection.breaks)
-
-              if mode == .edit, !isBaseline {
-                Divider()
-                  .padding(.horizontal, Spacing.md)
-                deleteButton
-                  .padding(.horizontal, Spacing.md)
-              }
-
-              // Error message
-              if let error = errorMessage ?? saveError {
-                errorBanner(error)
-                  .padding(.horizontal)
-              }
-            }
-            .padding(.vertical, Spacing.lg)
-          }
-          .scrollDismissesKeyboard(.interactively)
-          .onAppear {
-            if let initialSection {
-              proxy.scrollTo(initialSection, anchor: .top)
-            }
-          }
-        }
-      }
-      .navigationTitle(
-        mode == .create
-          ? String(localized: .settingsPayEditorCreateTitle)
-          : String(localized: .settingsPayEditorEditTitle)
-      )
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            onCancel()
-          }
-          .disabled(isSaving)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button(String(localized: .commonSave)) {
-            Task { await save() }
-          }
-          .disabled(!canSave || isSaving)
-          .fontWeight(.semibold)
-        }
-      }
-      .sheet(isPresented: $showingSupplementEditor) {
-        SupplementRuleEditor(
-          rule: editingSupplementRule,
-          currency: currency,
-          onSave: { rule in
-            if let editingRule = editingSupplementRule {
-              // Update existing rule
-              if let index = supplements.firstIndex(where: { $0.id == editingRule.id }) {
-                supplements[index] = rule
-              }
-            } else {
-              // Add new rule
-              supplements.append(rule)
-            }
-            showingSupplementEditor = false
-            editingSupplementRule = nil
-          },
-          onCancel: {
-            showingSupplementEditor = false
-            editingSupplementRule = nil
-          }
+      editorContent
+        .navigationTitle(
+          mode == .create
+            ? String(localized: .settingsPayEditorCreateTitle)
+            : String(localized: .settingsPayEditorEditTitle)
         )
-      }
-      .interactiveDismissDisabled(isSaving)
-      .task {
-        await loadTariffVersion()
-      }
-      .task(id: tariffLookupID) {
-        await loadTariffVersionForDate(fromDate)
-      }
-      .onChange(of: fromDate) { _, newDate in
-        rebaseInheritedSettings(for: newDate)
-      }
-      .onChange(of: overtimeEnabled) { _, enabled in
-        if enabled, overtimeRules.isEmpty {
-          overtimeThresholdHours = OvertimeConfig.defaultWeeklyThresholdHours
-          overtimeRules = OvertimeConfig.seededDefaults.rules.map { OvertimeRuleDraft($0) }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbarContent }
+        .sheet(isPresented: $showingSupplementEditor) {
+          supplementEditorSheet
+        }
+        .interactiveDismissDisabled(isSaving)
+        .task {
+          await loadTariffVersion()
+        }
+        .task(id: tariffLookupID) {
+          await loadTariffVersionForDate(fromDate)
+        }
+        .onChange(of: fromDate) { _, newDate in
+          rebaseInheritedSettings(for: newDate)
+        }
+        .onChange(of: overtimeEnabled) { _, enabled in
+          if enabled, overtimeRules.isEmpty {
+            overtimeThresholdHours = OvertimeConfig.defaultWeeklyThresholdHours
+            overtimeRules = OvertimeConfig.seededDefaults.rules.map { OvertimeRuleDraft($0) }
+          }
+        }
+    }
+  }
+
+  private var editorContent: some View {
+    ZStack {
+      Color.tidexBackground
+        .ignoresSafeArea()
+
+      ScrollViewReader { proxy in
+        ScrollView {
+          editorSections
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .onAppear {
+          if let initialSection {
+            proxy.scrollTo(initialSection, anchor: .top)
+          }
         }
       }
     }
+  }
+
+  private var editorSections: some View {
+    VStack(spacing: Spacing.lg) {
+      // Date section (or baseline indicator)
+      dateSection
+
+      Divider()
+        .padding(.horizontal)
+
+      // Wage source selector
+      wageSourceSelector
+        .padding(.horizontal)
+        .id(WageSnapshotEditorSection.wage)
+
+      Divider()
+        .padding(.horizontal)
+
+      // Supplements section
+      supplementsSection
+
+      Divider()
+        .padding(.horizontal)
+
+      // Overtime section
+      OvertimeEditorSection(
+        enabled: $overtimeEnabled,
+        thresholdHours: $overtimeThresholdHours,
+        rules: $overtimeRules
+      )
+      .id(WageSnapshotEditorSection.overtime)
+
+      Divider()
+        .padding(.horizontal)
+
+      deductionSections
+
+      if mode == .edit, !isBaseline {
+        Divider()
+          .padding(.horizontal, Spacing.md)
+        deleteButton
+          .padding(.horizontal, Spacing.md)
+      }
+
+      // Error message
+      if let error = errorMessage ?? saveError {
+        errorBanner(error)
+          .padding(.horizontal)
+      }
+    }
+    .padding(.vertical, Spacing.lg)
+  }
+
+  private var supplementsSection: some View {
+    SupplementsEditorSection(
+      usePreset: usePreset,
+      presetRules: resolvedSupplements.rules,
+      supplements: $supplements,
+      currency: currency,
+      onAdd: {
+        editingSupplementRule = nil
+        showingSupplementEditor = true
+      },
+      onEdit: { rule in
+        editingSupplementRule = rule
+        showingSupplementEditor = true
+      }
+    )
+    .id(WageSnapshotEditorSection.supplements)
+  }
+
+  private var deductionSections: some View {
+    Group {
+      // Tax deduction section
+      TaxDeductionSection(
+        enabled: $taxEnabled,
+        percentage: $taxPercentage
+      )
+      .padding(.horizontal)
+      .id(WageSnapshotEditorSection.tax)
+
+      Divider()
+        .padding(.horizontal)
+
+      // Break deduction section
+      BreakDeductionSection(
+        enabled: $breakEnabled,
+        method: $breakMethod,
+        thresholdHours: $breakThresholdHours,
+        deductionMinutes: $breakDeductionMinutes
+      )
+      .padding(.horizontal)
+      .id(WageSnapshotEditorSection.breaks)
+    }
+  }
+
+  private var wageSourceSelector: some View {
+    WageSourceSelector(
+      usePreset: Binding(
+        get: { usePreset },
+        set: {
+          guard usePreset != $0 else { return }
+          usePreset = $0
+          usesSavedTariffRates = false
+        }
+      ),
+      wageLevel: Binding(
+        get: { wageLevel },
+        set: {
+          guard wageLevel != $0 else { return }
+          wageLevel = $0
+          usesSavedTariffRates = false
+        }
+      ),
+      customWage: $customWage,
+      currency: currency,
+      showTariffOption: showTariffOption,
+      tariffVersion: tariffVersion,
+      savedTariffRate: usesSavedTariffRates ? customWage : nil,
+      selectorFooterContent: showTariffOption && usePreset
+        ? AnyView(tariffVersionIndicator)
+        : nil
+    )
+  }
+
+  @ToolbarContentBuilder
+  private var toolbarContent: some ToolbarContent {
+    ToolbarItem(placement: .cancellationAction) {
+      Button(String(localized: .commonCancel)) {
+        onCancel()
+      }
+      .disabled(isSaving)
+    }
+    ToolbarItem(placement: .confirmationAction) {
+      Button(String(localized: .commonSave)) {
+        Task { await save() }
+      }
+      .disabled(!canSave || isSaving)
+      .fontWeight(.semibold)
+    }
+  }
+
+  private var supplementEditorSheet: some View {
+    SupplementRuleEditor(
+      rule: editingSupplementRule,
+      currency: currency,
+      onSave: { rule in
+        if let editingRule = editingSupplementRule {
+          // Update existing rule
+          if let index = supplements.firstIndex(where: { $0.id == editingRule.id }) {
+            supplements[index] = rule
+          }
+        } else {
+          // Add new rule
+          supplements.append(rule)
+        }
+        showingSupplementEditor = false
+        editingSupplementRule = nil
+      },
+      onCancel: {
+        showingSupplementEditor = false
+        editingSupplementRule = nil
+      }
+    )
   }
 
   // MARK: - Tariff Version Loading
@@ -421,37 +467,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     VStack(alignment: .leading, spacing: Spacing.xxs) {
       // Tariff type picker - always show when tariff types are loaded
       if !tariffTypes.isEmpty {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(.settingsPayEditorTariffTypeLabel)
-            .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
-
-          Picker(
-            "",
-            selection: Binding(
-              get: { tariffTypeId ?? "" },
-              set: { newValue in
-                guard newValue != tariffTypeId else { return }
-                tariffTypeId = newValue
-                tariffTypeName = tariffTypes.first { $0.id == newValue }?.display_name
-                wageLevel = 1
-                usesSavedTariffRates = false
-                shouldApplyTariffOvertime = true
-              }
-            )
-          ) {
-            ForEach(tariffTypes) { type in
-              Text(type.display_name)
-                .tag(type.id)
-            }
-          }
-          .pickerStyle(.menu)
-          .tint(.tidexBrandPrimary)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.xs)
-          .background(Color.tidexSurfaceSecondary)
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
-        }
+        tariffTypePicker
       }
 
       // Tariff version info (effective date)
@@ -482,24 +498,63 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         }
       }
 
-      if usesSavedTariffRates {
-        Text(.settingsPayEditorSavedTariff)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-        Button(String(localized: .settingsPayEditorRefreshTariff)) {
-          usesSavedTariffRates = false
-          applyTariffOvertimeDefaultIfNeeded(force: true)
-        }
-        .disabled(isLoadingTariff || tariffVersion?.rate(forLevel: wageLevel) == nil)
-      } else if !isLoadingTariff, tariffVersion?.rate(forLevel: wageLevel) == nil {
-        Text(.settingsPayEditorTariffUnavailable)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexWarning)
-        Button(String(localized: .commonRetry)) {
-          Task {
-            await loadTariffVersion()
-            await loadTariffVersionForDate(fromDate)
+      tariffRatesStatus
+    }
+  }
+
+  private var tariffTypePicker: some View {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
+      Text(.settingsPayEditorTariffTypeLabel)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextSecondary)
+
+      Picker(
+        "",
+        selection: Binding(
+          get: { tariffTypeId ?? "" },
+          set: { newValue in
+            guard newValue != tariffTypeId else { return }
+            tariffTypeId = newValue
+            tariffTypeName = tariffTypes.first { $0.id == newValue }?.display_name
+            wageLevel = 1
+            usesSavedTariffRates = false
+            shouldApplyTariffOvertime = true
           }
+        )
+      ) {
+        ForEach(tariffTypes) { type in
+          Text(type.display_name)
+            .tag(type.id)
+        }
+      }
+      .pickerStyle(.menu)
+      .tint(.tidexBrandPrimary)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
+      .background(Color.tidexSurfaceSecondary)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+    }
+  }
+
+  @ViewBuilder
+  private var tariffRatesStatus: some View {
+    if usesSavedTariffRates {
+      Text(.settingsPayEditorSavedTariff)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+      Button(String(localized: .settingsPayEditorRefreshTariff)) {
+        usesSavedTariffRates = false
+        applyTariffOvertimeDefaultIfNeeded(force: true)
+      }
+      .disabled(isLoadingTariff || tariffVersion?.rate(forLevel: wageLevel) == nil)
+    } else if !isLoadingTariff, tariffVersion?.rate(forLevel: wageLevel) == nil {
+      Text(.settingsPayEditorTariffUnavailable)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexWarning)
+      Button(String(localized: .commonRetry)) {
+        Task {
+          await loadTariffVersion()
+          await loadTariffVersionForDate(fromDate)
         }
       }
     }
@@ -556,327 +611,32 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           .foregroundColor(.tidexTextSecondary)
       }
 
-      Text(mode == .edit ? .settingsPayEditorEditImpact : .settingsPayEditorCreateImpact)
+      dateNotes
+    }
+    .padding(.horizontal)
+  }
+
+  @ViewBuilder
+  private var dateNotes: some View {
+    Text(mode == .edit ? .settingsPayEditorEditImpact : .settingsPayEditorCreateImpact)
+      .font(.tidexFootnote)
+      .foregroundColor(.tidexTextSecondary)
+      .fixedSize(horizontal: false, vertical: true)
+
+    if let nextDate = nextChangeDate {
+      Text(
+        .settingsPayEditorNextChange(
+          nextDate.formatted(.dateTime.day().month().year().calendar(.gregorian)))
+      )
+      .font(.tidexFootnote)
+      .foregroundColor(.tidexTextSecondary)
+      .fixedSize(horizontal: false, vertical: true)
+    }
+
+    if hasDateConflict {
+      Text(.settingsPayEditorDateConflictHelp)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-        .fixedSize(horizontal: false, vertical: true)
-
-      if let nextDate = nextChangeDate {
-        Text(
-          .settingsPayEditorNextChange(
-            nextDate.formatted(.dateTime.day().month().year().calendar(.gregorian))))
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-
-      if hasDateConflict {
-        Text(.settingsPayEditorDateConflictHelp)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexError)
-      }
-    }
-    .padding(.horizontal)
-  }
-
-  // MARK: - Supplements Section
-
-  @ViewBuilder
-  private var supplementsSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      HStack {
-        Text(.settingsPayEditorSupplementsTitle)
-          .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
-        if !usePreset {
-          Button(action: {
-            editingSupplementRule = nil
-            showingSupplementEditor = true
-          }) {
-            Image(systemName: "plus")
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexBlue)
-              .frame(minWidth: 44, minHeight: 44)
-          }
-          .accessibilityLabel(Text(.supplementsAddRule))
-        }
-      }
-
-      if usePreset {
-        // Read-only preset supplements (from tariff version or fallback)
-        Text(.settingsPayEditorSupplementsTariff)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-
-        let presetRules = resolvedSupplements.rules
-        ForEach(presetRules.indices, id: \.self) { index in
-          presetSupplementRow(presetRules[index])
-        }
-      } else {
-        // Editable custom supplements
-        if supplements.isEmpty {
-          Text(.settingsPayEditorSupplementsEmpty)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
-            .padding(Spacing.sm)
-            .frame(maxWidth: .infinity)
-            .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-        } else {
-          ForEach(supplements) { rule in
-            customSupplementRow(rule)
-          }
-        }
-      }
-    }
-    .padding(.horizontal)
-    .sensoryFeedback(.impact(weight: .light), trigger: supplements.count)
-  }
-
-  @ViewBuilder
-  private func presetSupplementRow(_ rule: SupplementRule) -> some View {
-    HStack {
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(formatDays(rule.days))
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text("\(rule.from) - \(rule.to)")
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      Spacer()
-
-      Text(formatRuleValue(rule))
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBrandPrimary)
-    }
-    .padding(Spacing.xs)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
-  }
-
-  @ViewBuilder
-  private func customSupplementRow(_ rule: OnboardingSupplementRule) -> some View {
-    HStack {
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(rule.daysDescription)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(rule.timeDescription)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      Spacer()
-
-      Text(rule.valueDescription(locale: Locale.current, currency: currency))
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBrandPrimary)
-
-      // Edit button
-      Button(action: {
-        editingSupplementRule = rule
-        showingSupplementEditor = true
-      }) {
-        Image(systemName: "pencil")
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextMuted)
-      }
-      .accessibilityLabel(
-        Text(.supplementsEditRuleAccessibility("\(rule.daysDescription), \(rule.timeDescription)")))
-
-      // Delete button
-      Button(action: {
-        withAnimation {
-          supplements.removeAll { $0.id == rule.id }
-        }
-      }) {
-        Image(systemName: "trash")
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexError)
-      }
-      .accessibilityLabel(
-        Text(
-          .supplementsDeleteRuleAccessibility("\(rule.daysDescription), \(rule.timeDescription)")))
-    }
-    .padding(Spacing.xs)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
-  }
-
-  private func formatDays(_ days: [Int]) -> String {
-    let sortedDays = days.sorted()
-
-    if sortedDays == [1, 2, 3, 4, 5] {
-      return String(localized: .daysWeekdays)
-    }
-    if sortedDays == [6, 7] || sortedDays == [0, 6] {  // swiftlint:disable:this no_magic_numbers
-      return String(localized: .daysWeekend)
-    }
-    if sortedDays == Array(1...7) || sortedDays == Array(0...6) {  // swiftlint:disable:this no_magic_numbers
-      return String(localized: .daysAllDays)
-    }
-
-    let dayNames = [
-      String(localized: .daysShortSun),
-      String(localized: .daysShortMon),
-      String(localized: .daysShortTue),
-      String(localized: .daysShortWed),
-      String(localized: .daysShortThu),
-      String(localized: .daysShortFri),
-      String(localized: .daysShortSat),
-    ]
-
-    return sortedDays.map { dayNames[$0 % 7] }.joined(separator: ", ")
-  }
-
-  private func formatRuleValue(_ rule: SupplementRule) -> String {
-    OnboardingSupplementRule(from: rule).valueDescription(locale: .appLocale, currency: currency)
-  }
-
-  // MARK: - Overtime Section
-
-  @ViewBuilder
-  private var overtimeSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Toggle(isOn: $overtimeEnabled) {
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(.settingsPayEditorOvertimeTitle)
-            .font(.tidexButton)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(.settingsPayEditorOvertimeSubtitle)
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextSecondary)
-        }
-      }
-      .tint(.tidexBrandPrimary)
-
-      if overtimeEnabled {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-          Text(.settingsPayEditorOvertimeThreshold)
-            .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
-
-          TextField(
-            "",
-            value: $overtimeThresholdHours,
-            format: .number.precision(.fractionLength(0...2))
-          )
-          .keyboardType(.decimalPad)
-          .textFieldStyle(.roundedBorder)
-        }
-
-        ForEach($overtimeRules) { $rule in
-          overtimeRuleRow(rule: $rule)
-        }
-
-        Button {
-          overtimeRules.append(
-            OvertimeRuleDraft(
-              days: Set(1...7),
-              appliesOnHolidays: false,
-              from: "00:00",
-              to: "24:00",
-              percent: 50
-            ))
-        } label: {
-          Label(String(localized: .settingsPayEditorOvertimeAddRule), systemImage: "plus")
-            .font(.tidexLabel)
-        }
-        .buttonStyle(.borderless)
-        .tint(.tidexBrandPrimary)
-      }
-    }
-    .padding(.horizontal)
-  }
-
-  @ViewBuilder
-  private func overtimeRuleRow(rule: Binding<OvertimeRuleDraft>) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      HStack(spacing: Spacing.xs) {
-        ForEach(1...7, id: \.self) { day in
-          Button {
-            if rule.wrappedValue.days.contains(day) {
-              rule.wrappedValue.days.remove(day)
-            } else {
-              rule.wrappedValue.days.insert(day)
-            }
-          } label: {
-            Text(dayShortName(day))
-              .font(.tidexCaption)
-              .foregroundColor(
-                rule.wrappedValue.days.contains(day) ? .tidexTextOnBrand : .tidexTextSecondary
-              )
-              .frame(width: 30, height: 28)
-              .background(
-                rule.wrappedValue.days.contains(day)
-                  ? Color.tidexBrandPrimary
-                  : Color.tidexSurfaceSecondary
-              )
-              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
-          }
-          .buttonStyle(.plain)
-        }
-      }
-
-      Toggle(isOn: rule.appliesOnHolidays) {
-        Text(.settingsPayEditorOvertimeHolidayToggle)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-      }
-      .tint(.tidexBrandPrimary)
-
-      HStack(spacing: Spacing.xs) {
-        TextField(String(localized: .settingsPayEditorOvertimeFrom), text: rule.from)
-          .textInputAutocapitalization(.never)
-          .keyboardType(.numbersAndPunctuation)
-          .textFieldStyle(.roundedBorder)
-
-        TextField(String(localized: .settingsPayEditorOvertimeTo), text: rule.to)
-          .textInputAutocapitalization(.never)
-          .keyboardType(.numbersAndPunctuation)
-          .textFieldStyle(.roundedBorder)
-
-        TextField(
-          String(localized: .settingsPayEditorOvertimePercent),
-          value: rule.percent,
-          format: .number.precision(.fractionLength(0...1))
-        )
-        .keyboardType(.decimalPad)
-        .textFieldStyle(.roundedBorder)
-
-        Button {
-          overtimeRules.removeAll { $0.id == rule.wrappedValue.id }
-        } label: {
-          Image(systemName: "trash")
-            .foregroundColor(.tidexError)
-            .accessibilityHidden(true)
-        }
-        .accessibilityLabel(Text(.commonDelete))
-        .buttonStyle(.plain)
-      }
-    }
-    .padding(Spacing.xs)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
-  }
-
-  private func dayShortName(_ day: Int) -> String {
-    switch day {
-    case 1: String(localized: .daysShortMon)
-    case 2: String(localized: .daysShortTue)
-    case 3: String(localized: .daysShortWed)
-    case 4: String(localized: .daysShortThu)
-    case 5: String(localized: .daysShortFri)
-    case 6: String(localized: .daysShortSat)
-    default: String(localized: .daysShortSun)
+        .foregroundColor(.tidexError)
     }
   }
 
@@ -1035,83 +795,6 @@ extension OnboardingSupplementRule {
     self.toTime = rule.to
     self.type = rule.rate != nil ? .fixed : .percent
     self.value = rule.rate ?? rule.percent ?? 0
-  }
-}
-
-private struct OvertimeRuleDraft: Identifiable, Equatable {
-  let id: UUID
-  var days: Set<Int>
-  var appliesOnHolidays: Bool
-  var from: String
-  var to: String
-  var percent: Double
-
-  init(
-    id: UUID = UUID(),
-    days: Set<Int>,
-    appliesOnHolidays: Bool,
-    from: String,
-    to: String,
-    percent: Double
-  ) {
-    self.id = id
-    self.days = days
-    self.appliesOnHolidays = appliesOnHolidays
-    self.from = from
-    self.to = to
-    self.percent = percent
-  }
-
-  init(_ rule: OvertimeRule) {
-    id = UUID()
-    days = Set(rule.days)
-    appliesOnHolidays = rule.appliesOnHolidays
-    from = rule.from
-    to = rule.to
-    percent = rule.percent
-  }
-
-  func toRule() -> OvertimeRule {
-    OvertimeRule(
-      days: Array(days).sorted(),
-      appliesOnHolidays: appliesOnHolidays,
-      from: from,
-      to: to,
-      percent: percent
-    )
-  }
-}
-
-// MARK: - WageSnapshotEditorInput Extension
-
-extension WageSnapshotEditorInput {
-  /// Create input with explicit values (for editor sheet)
-  init(
-    fromDate: Date?,
-    hourlyWage: Double,
-    wageLevel: Int?,
-    supplements: SupplementRulesSnapshot,
-    overtime: OvertimeConfig = .disabled,
-    taxEnabled: Bool,
-    taxPercentage: Double,
-    breakEnabled: Bool,
-    breakMethod: BreakMethod,
-    breakThresholdHours: Double,
-    breakDeductionMinutes: Int,
-    tariffTypeId: String? = nil
-  ) {
-    self.fromDate = fromDate
-    self.hourlyWage = hourlyWage
-    self.wageLevel = wageLevel
-    self.supplements = supplements
-    self.overtime = overtime
-    self.taxEnabled = taxEnabled
-    self.taxPercentage = taxPercentage
-    self.breakEnabled = breakEnabled
-    self.breakMethod = breakMethod
-    self.breakThresholdHours = breakThresholdHours
-    self.breakDeductionMinutes = breakDeductionMinutes
-    self.tariffTypeId = tariffTypeId
   }
 }
 

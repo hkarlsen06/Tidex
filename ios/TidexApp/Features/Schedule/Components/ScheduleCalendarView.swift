@@ -478,60 +478,16 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     let currentTodayISO = todayISO()
 
     CalendarMonthGrid(days: days, monthTransitionPhase: phase) { dayInfo in
-      let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
-      let eventsOnDay = dayInfo.dateISO.flatMap { eventCoverageByDate[$0] } ?? []
-      let isSelected =
-        dayInfo.dateISO.map { selectedDates.contains($0) || copyTargetDates.contains($0) } ?? false
-      let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
-      let isDeepLinkHighlighted =
-        dayInfo.dateISO.map { deepLinkHighlightDates.contains($0) } ?? false
-      let isToday = dayInfo.dateISO == currentTodayISO
-      let hasConflict =
-        dayInfo.dateISO.map { conflictDates.contains($0) || copyPreviewConflictDates.contains($0) }
-        ?? false
-      let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
-      let shouldColorJobMetrics =
-        shouldUseWorkplaceCalendarColors
-        && hasMultipleActiveJobs
-        && !dayInfo.isOutsideMonth
-        && !isSelected
-        && !isNewlyAdded
-        && !isDeepLinkHighlighted
-        && !shiftsOnDay.isEmpty
-        && dayJobTimeColors != nil
-      let eventIndicatorCount = eventsOnDay.count
-
-      CalendarDayCell(
-        dayInfo: dayInfo,
-        style: cellStyle(
-          isToday: isToday,
-          isSelected: isSelected,
-          isNewlyAdded: isNewlyAdded,
-          isDeepLinkHighlighted: isDeepLinkHighlighted,
-          hasConflict: hasConflict
-        ),
-        content: cellContent(
-          for: dayInfo,
-          dayJobTimeColors: dayJobTimeColors,
-          shouldColorJobMetrics: shouldColorJobMetrics,
+      calendarDayCell(
+        dayInfo,
+        lookups: CalendarDayLookups(
+          shiftsByDate: shiftsByDate,
           earningsByDate: earningsByDate,
-          hoursByDate: hoursByDate
-        ),
-        eventIndicatorCount: eventIndicatorCount
-      )
-      // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
-      .accessibilityElement(children: .ignore)
-      .accessibilityLabel(
-        dayAccessibilityLabel(
-          dateISO: dayInfo.dateISO,
-          isToday: isToday,
-          shiftsOnDay: shiftsOnDay,
-          earnings: dayInfo.dateISO.flatMap { earningsByDate[$0] },
-          eventCount: eventsOnDay.count
+          hoursByDate: hoursByDate,
+          dayJobTimeColorsByDate: dayJobTimeColorsByDate,
+          todayISO: currentTodayISO
         )
       )
-      .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-      .accessibilityHidden(dayInfo.dateISO == nil)
     }
     .coordinateSpace(name: "calendar")
     .overlay {
@@ -553,6 +509,95 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     }
   }
 
+  private struct CalendarDayLookups {
+    let shiftsByDate: [String: [ShiftWithComputations]]
+    let earningsByDate: [String: CalendarEarningsData]
+    let hoursByDate: [String: HoursData]
+    let dayJobTimeColorsByDate: [String: DayJobTimeColors]
+    let todayISO: String
+  }
+
+  private struct CalendarDayState {
+    let isToday: Bool
+    let isSelected: Bool
+    let isNewlyAdded: Bool
+    let isDeepLinkHighlighted: Bool
+    let hasConflict: Bool
+  }
+
+  private func dayState(for dateISO: String?, todayISO: String) -> CalendarDayState {
+    CalendarDayState(
+      isToday: dateISO == todayISO,
+      isSelected: dateISO.map { selectedDates.contains($0) || copyTargetDates.contains($0) }
+        ?? false,
+      isNewlyAdded: dateISO.map { newlyAddedDates.contains($0) } ?? false,
+      isDeepLinkHighlighted: dateISO.map { deepLinkHighlightDates.contains($0) } ?? false,
+      hasConflict: dateISO.map {
+        conflictDates.contains($0) || copyPreviewConflictDates.contains($0)
+      } ?? false
+    )
+  }
+
+  private func usesJobMetricColors(
+    for dayInfo: CalendarDayInfo,
+    state: CalendarDayState,
+    hasShifts: Bool,
+    hasJobColors: Bool
+  ) -> Bool {
+    shouldUseWorkplaceCalendarColors
+      && hasMultipleActiveJobs
+      && !dayInfo.isOutsideMonth
+      && !state.isSelected
+      && !state.isNewlyAdded
+      && !state.isDeepLinkHighlighted
+      && hasShifts
+      && hasJobColors
+  }
+
+  @ViewBuilder
+  private func calendarDayCell(_ dayInfo: CalendarDayInfo, lookups: CalendarDayLookups) -> some View
+  {
+    let shiftsOnDay = dayInfo.dateISO.flatMap { lookups.shiftsByDate[$0] } ?? []
+    let eventsOnDay = dayInfo.dateISO.flatMap { eventCoverageByDate[$0] } ?? []
+    let state = dayState(for: dayInfo.dateISO, todayISO: lookups.todayISO)
+    let dayJobTimeColors = dayInfo.dateISO.flatMap { lookups.dayJobTimeColorsByDate[$0] }
+    let shouldColorJobMetrics = usesJobMetricColors(
+      for: dayInfo, state: state, hasShifts: !shiftsOnDay.isEmpty,
+      hasJobColors: dayJobTimeColors != nil)
+
+    CalendarDayCell(
+      dayInfo: dayInfo,
+      style: cellStyle(
+        isToday: state.isToday,
+        isSelected: state.isSelected,
+        isNewlyAdded: state.isNewlyAdded,
+        isDeepLinkHighlighted: state.isDeepLinkHighlighted,
+        hasConflict: state.hasConflict
+      ),
+      content: cellContent(
+        for: dayInfo,
+        dayJobTimeColors: dayJobTimeColors,
+        shouldColorJobMetrics: shouldColorJobMetrics,
+        earningsByDate: lookups.earningsByDate,
+        hoursByDate: lookups.hoursByDate
+      ),
+      eventIndicatorCount: eventsOnDay.count
+    )
+    // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      dayAccessibilityLabel(
+        dateISO: dayInfo.dateISO,
+        isToday: state.isToday,
+        shiftsOnDay: shiftsOnDay,
+        earnings: dayInfo.dateISO.flatMap { lookups.earningsByDate[$0] },
+        eventCount: eventsOnDay.count
+      )
+    )
+    .accessibilityAddTraits(state.isSelected ? [.isButton, .isSelected] : .isButton)
+    .accessibilityHidden(dayInfo.dateISO == nil)
+  }
+
   private func dayAccessibilityLabel(
     dateISO: String?,
     isToday: Bool,
@@ -564,7 +609,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       return Text(verbatim: "")
     }
     var parts: [String] = [
-      date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
+      date.formatted(
+        .dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
     ]
     if isToday {
       parts.append(String(localized: .commonToday))
@@ -596,6 +642,16 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   /// Purple/violet color for deep link highlight from widgets
   private static let deepLinkHighlightColor = Color.tidexPurple
 
+  private static func highlightStyle(color: Color) -> CalendarCellStyle {
+    CalendarCellStyle(
+      backgroundColor: color.opacity(0.2),
+      borderColor: color,
+      borderWidth: 2.5,
+      dayNumberColor: .tidexTextPrimary,
+      showsTodayBadge: false
+    )
+  }
+
   private func cellStyle(
     isToday: Bool,
     isSelected: Bool,
@@ -605,22 +661,10 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   ) -> CalendarCellStyle {
     // Priority order: deep link > newly added > selected/drag > conflict > today > default
     if isDeepLinkHighlighted {
-      return CalendarCellStyle(
-        backgroundColor: Self.deepLinkHighlightColor.opacity(0.2),
-        borderColor: Self.deepLinkHighlightColor,
-        borderWidth: 2.5,
-        dayNumberColor: .tidexTextPrimary,
-        showsTodayBadge: false
-      )
+      return Self.highlightStyle(color: Self.deepLinkHighlightColor)
     }
     if isNewlyAdded {
-      return CalendarCellStyle(
-        backgroundColor: Self.celebrationColor.opacity(0.2),
-        borderColor: Self.celebrationColor,
-        borderWidth: 2.5,
-        dayNumberColor: .tidexTextPrimary,
-        showsTodayBadge: false
-      )
+      return Self.highlightStyle(color: Self.celebrationColor)
     }
     if isSelected {
       let color: Color = hasConflict ? .tidexWarning : .tidexBlue
@@ -829,37 +873,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   @ViewBuilder
   private var copyMoveBar: some View {
     HStack(spacing: Spacing.xxs) {
-      if isCopying || isMoving {
-        ProgressView()
-          .progressViewStyle(
-            CircularProgressViewStyle(tint: isCopyMode ? .tidexBlue : .tidexWarning)
-          )
-          .scaleEffect(0.8)
-          .frame(width: 36)
-
-        Text(
-          isCopyMode
-            ? String(localized: .shiftsCopying)
-            : String(localized: .shiftsMoving)
-        )
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-        .frame(maxWidth: .infinity)
-      } else {
-        Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
-          .font(.tidexLabel)
-          .foregroundColor(isCopyMode ? .tidexTextSecondary : .tidexWarning)
-          .frame(width: 36)
-
-        Text(
-          isCopyMode
-            ? String(localized: .shiftsChooseDates)
-            : String(localized: .shiftsSelectMoveTarget)
-        )
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-        .frame(maxWidth: .infinity)
-      }
+      copyMoveStatus
 
       Button {
         toggleHaptic.impactOccurred()
@@ -879,27 +893,66 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       .disabled(isCopying || isMoving)
 
       if isCopyMode {
-        Button {
-          toggleHaptic.impactOccurred()
-          onFinishCopy?()
-        } label: {
-          Text(.commonCopy)
-            .font(.tidexLabelStrong)
-            .foregroundColor(copyTargetDates.isEmpty ? .tidexTextMuted : .tidexTextOnBrand)
-            .padding(.horizontal, Spacing.md)
-            .frame(height: 44)
-            .background(
-              Capsule()
-                .fill(copyTargetDates.isEmpty ? Color.clear : Color.tidexBrandPrimary)
-                .tidexGlass(shape: .capsule, interactive: !copyTargetDates.isEmpty)
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(isCopying || copyTargetDates.isEmpty)
+        finishCopyButton
       }
     }
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
+  }
+
+  @ViewBuilder
+  private var copyMoveStatus: some View {
+    if isCopying || isMoving {
+      ProgressView()
+        .progressViewStyle(
+          CircularProgressViewStyle(tint: isCopyMode ? .tidexBlue : .tidexWarning)
+        )
+        .scaleEffect(0.8)
+        .frame(width: 36)
+
+      Text(
+        isCopyMode
+          ? String(localized: .shiftsCopying)
+          : String(localized: .shiftsMoving)
+      )
+      .font(.tidexLabel)
+      .foregroundColor(.tidexTextSecondary)
+      .frame(maxWidth: .infinity)
+    } else {
+      Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
+        .font(.tidexLabel)
+        .foregroundColor(isCopyMode ? .tidexTextSecondary : .tidexWarning)
+        .frame(width: 36)
+
+      Text(
+        isCopyMode
+          ? String(localized: .shiftsChooseDates)
+          : String(localized: .shiftsSelectMoveTarget)
+      )
+      .font(.tidexLabel)
+      .foregroundColor(.tidexTextSecondary)
+      .frame(maxWidth: .infinity)
+    }
+  }
+
+  private var finishCopyButton: some View {
+    Button {
+      toggleHaptic.impactOccurred()
+      onFinishCopy?()
+    } label: {
+      Text(.commonCopy)
+        .font(.tidexLabelStrong)
+        .foregroundColor(copyTargetDates.isEmpty ? .tidexTextMuted : .tidexTextOnBrand)
+        .padding(.horizontal, Spacing.md)
+        .frame(height: 44)
+        .background(
+          Capsule()
+            .fill(copyTargetDates.isEmpty ? Color.clear : Color.tidexBrandPrimary)
+            .tidexGlass(shape: .capsule, interactive: !copyTargetDates.isEmpty)
+        )
+    }
+    .buttonStyle(.plain)
+    .disabled(isCopying || copyTargetDates.isEmpty)
   }
 
   @ViewBuilder
@@ -937,34 +990,38 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         onDetails?()
       }
 
-      Button {
-        toggleHaptic.impactOccurred()
-        showSingleSelectionDeleteConfirm = true
-      } label: {
-        Group {
-          if isDeleting {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexError))
-              .scaleEffect(0.7)
-          } else {
-            Image(systemName: "trash")
-              .font(.tidexLabel)
-          }
-        }
-        .foregroundColor(.tidexError)
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-        .background(
-          Capsule().fill(.clear)
-            .tidexGlass(shape: .capsule, tint: .tidexError.opacity(0.15), interactive: true)
-        )
-      }
-      .buttonStyle(.plain)
-      .disabled(isDeleting)
-      .accessibilityLabel(Text(.shiftsActionsDelete))
+      singleSelectionDeleteButton
     }
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
+  }
+
+  private var singleSelectionDeleteButton: some View {
+    Button {
+      toggleHaptic.impactOccurred()
+      showSingleSelectionDeleteConfirm = true
+    } label: {
+      Group {
+        if isDeleting {
+          ProgressView()
+            .progressViewStyle(CircularProgressViewStyle(tint: .tidexError))
+            .scaleEffect(0.7)
+        } else {
+          Image(systemName: "trash")
+            .font(.tidexLabel)
+        }
+      }
+      .foregroundColor(.tidexError)
+      .frame(maxWidth: .infinity)
+      .frame(height: 44)
+      .background(
+        Capsule().fill(.clear)
+          .tidexGlass(shape: .capsule, tint: .tidexError.opacity(0.15), interactive: true)
+      )
+    }
+    .buttonStyle(.plain)
+    .disabled(isDeleting)
+    .accessibilityLabel(Text(.shiftsActionsDelete))
   }
 
   private func singleSelectionButton(

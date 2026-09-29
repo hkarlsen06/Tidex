@@ -59,110 +59,131 @@ struct TaxDeductionSection: View {
         .foregroundColor(.tidexTextSecondary)
 
       VStack(spacing: Spacing.sm) {
-        // Quick percentage buttons
-        LazyVGrid(
-          columns: [GridItem(.adaptive(minimum: presetMinimumWidth), spacing: Spacing.xs)],
-          spacing: Spacing.xs
-        ) {
-          ForEach([0, 20, 22, 25, 30], id: \.self) { value in
-            QuickPercentageButton(
-              value: value,
-              isSelected: percentage == Double(value),
-              action: {
-                withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.8)) {
-                  percentage = Double(value)
-                }
-              }
-            )
-          }
-        }
-
-        // Slider with value display
-        HStack(spacing: Spacing.sm) {
-          // Tappable value display
-          if showingPercentageInput {
-            HStack(spacing: Spacing.micro) {
-              TextField(
-                "",
-                value: $percentage,
-                format: .number.precision(.fractionLength(0...1)).locale(.appLocale)
-              )
-              .font(.tidexTitle2)
-              .foregroundColor(.tidexBlue)
-              .keyboardType(.decimalPad)
-              .multilineTextAlignment(.trailing)
-              .focused($isPercentageInputFocused)
-              .frame(width: percentageInputWidth)
-              .frame(minHeight: 44)
-              .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
-              .padding(.horizontal, Spacing.xxs)
-              .padding(.vertical, Spacing.micro)
-              .background(Color.tidexBlue.opacity(0.15))
-              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
-              .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-                  .stroke(Color.tidexBlue, lineWidth: 1)
-              )
-              .onChange(of: percentage) { _, newValue in
-                let clamped = min(max(newValue, 0), 100)
-                if clamped != newValue { percentage = clamped }
-              }
-              .onChange(of: isPercentageInputFocused) { _, focused in
-                if !focused {
-                  showingPercentageInput = false
-                }
-              }
-              .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                  Spacer()
-                  Button(String(localized: .commonDone)) {
-                    isPercentageInputFocused = false
-                  }
-                  .fontWeight(.semibold)
-                }
-              }
-
-              Text("%")
-                .font(.tidexLabel)
-                .foregroundColor(.tidexTextMuted)
-            }
-          } else {
-            Button(action: {
-              showingPercentageInput = true
-              isPercentageInputFocused = true
-            }) {
-              HStack(spacing: Spacing.micro) {
-                Text(
-                  percentage, format: .number.precision(.fractionLength(0...1)).locale(.appLocale)
-                )
-                .font(.tidexTitle2)
-                .foregroundColor(.tidexBlue)
-                .contentTransition(.numericText())
-
-                Text("%")
-                  .font(.tidexLabel)
-                  .foregroundColor(.tidexTextMuted)
-              }
-              .frame(minWidth: 44, minHeight: 44)
-              .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
-            .accessibilityValue(FormatterCache.percentagePoints(percentage))
-          }
-
-          Slider(value: $percentage, in: 0...50, step: 1)
-            .tint(.tidexBlue)
-            .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
-            .accessibilityValue(FormatterCache.percentagePoints(percentage))
-        }
-        .padding(Spacing.sm)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+        quickPercentageGrid
+        percentageSliderRow
       }
     }
     .sensoryFeedback(.selection, trigger: percentage)
     .sensoryFeedback(.impact(weight: .light), trigger: showingPercentageInput)
+  }
+
+  private var quickPercentageGrid: some View {
+    LazyVGrid(
+      columns: [GridItem(.adaptive(minimum: presetMinimumWidth), spacing: Spacing.xs)],
+      spacing: Spacing.xs
+    ) {
+      ForEach([0, 20, 22, 25, 30], id: \.self) { value in
+        QuickPercentageButton(
+          value: value,
+          isSelected: percentage == Double(value),
+          action: {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.8)) {
+              percentage = Double(value)
+            }
+          }
+        )
+      }
+    }
+  }
+
+  /// Slider with value display
+  private var percentageSliderRow: some View {
+    HStack(spacing: Spacing.sm) {
+      // Tappable value display
+      if showingPercentageInput {
+        percentageTextField
+      } else {
+        percentageValueButton
+      }
+
+      Slider(value: $percentage, in: 0...50, step: 1)
+        .tint(.tidexBlue)
+        .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
+        .accessibilityValue(FormatterCache.percentagePoints(percentage))
+    }
+    .padding(Spacing.sm)
+    .background(Color.tidexSurfaceSecondary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+  }
+
+  private var percentageTextField: some View {
+    HStack(spacing: Spacing.micro) {
+      percentageInputField
+
+      Text("%")
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextMuted)
+    }
+  }
+
+  private var percentageInputField: some View {
+    TextField(
+      "",
+      value: $percentage,
+      format: .number.precision(.fractionLength(0...1)).locale(.appLocale)
+    )
+    .font(.tidexTitle2)
+    .foregroundColor(.tidexBlue)
+    .keyboardType(.decimalPad)
+    .multilineTextAlignment(.trailing)
+    .focused($isPercentageInputFocused)
+    .frame(width: percentageInputWidth)
+    .frame(minHeight: 44)
+    .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
+    .padding(.horizontal, Spacing.xxs)
+    .padding(.vertical, Spacing.micro)
+    .background(Color.tidexBlue.opacity(0.15))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
+        .stroke(Color.tidexBlue, lineWidth: 1)
+    )
+    .onChange(of: percentage) { _, newValue in
+      let clamped = min(max(newValue, 0), 100)
+      if clamped != newValue { percentage = clamped }
+    }
+    .onChange(of: isPercentageInputFocused) { _, focused in
+      if !focused {
+        showingPercentageInput = false
+      }
+    }
+    .toolbar { keyboardDoneToolbar }
+  }
+
+  @ToolbarContentBuilder
+  private var keyboardDoneToolbar: some ToolbarContent {
+    ToolbarItemGroup(placement: .keyboard) {
+      Spacer()
+      Button(String(localized: .commonDone)) {
+        isPercentageInputFocused = false
+      }
+      .fontWeight(.semibold)
+    }
+  }
+
+  private var percentageValueButton: some View {
+    Button(action: {
+      showingPercentageInput = true
+      isPercentageInputFocused = true
+    }) {
+      HStack(spacing: Spacing.micro) {
+        Text(
+          percentage, format: .number.precision(.fractionLength(0...1)).locale(.appLocale)
+        )
+        .font(.tidexTitle2)
+        .foregroundColor(.tidexBlue)
+        .contentTransition(.numericText())
+
+        Text("%")
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextMuted)
+      }
+      .frame(minWidth: 44, minHeight: 44)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
+    .accessibilityValue(FormatterCache.percentagePoints(percentage))
   }
 }
 

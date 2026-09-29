@@ -498,6 +498,64 @@ private func findLocalizationReferences(in directory: String) -> LocalizationRef
 
 // MARK: - Orphaned Key Detection
 
+/// Real localization keys use dot notation: "feature.subfeature.key".
+/// Other keys are placeholders/symbols ("+", "---", "OK"), sentence-style legacy keys that contain
+/// punctuation periods, or debug strings that don't need localization.
+private func isDotNotationKey(_ key: String) -> Bool {
+  let keyParts = key.split(separator: ".", omittingEmptySubsequences: false)
+  return keyParts.count >= 2
+    && !keyParts.contains(where: {
+      $0.isEmpty
+        || !$0.allSatisfy { character in
+          character == "_" || character.isLetter || character.isNumber
+        }
+    })
+}
+
+private func isAdminOrDebugKey(_ key: String) -> Bool {
+  let lowercased = key.lowercased()
+  return lowercased.hasPrefix("admin.") || lowercased.hasPrefix("debug.")
+    || lowercased.contains("impersonate") || lowercased.contains("storekit")
+}
+
+/// Keys worth checking for references. Skips numbers, format strings, non-dot-notation keys and
+/// admin/debug keys.
+private func isOrphanCandidate(_ key: String) -> Bool {
+  // Just numbers or very short (likely placeholders or format strings)
+  if key.allSatisfy({ $0.isNumber || $0 == "." || $0 == " " }) {
+    return false
+  }
+
+  // Format specifiers (they might be used via String(format:))
+  if key.contains("%") {
+    return false
+  }
+
+  return isDotNotationKey(key) && !isAdminOrDebugKey(key)
+}
+
+/// Checks whether the key is used via a symbol, a direct key or a dynamic prefix.
+private func isReferenced(
+  _ key: String,
+  symbolName: String,
+  in references: LocalizationReferences
+) -> Bool {
+  // 1. Symbol reference (e.g., .dashboardTitle)
+  if references.symbols.contains(symbolName) {
+    return true
+  }
+
+  // 2. Direct key reference (e.g., NSLocalizedString("common.cancel", ...))
+  if references.directKeys.contains(key) {
+    return true
+  }
+
+  // 3. Dynamic prefix (e.g., "onboarding.paycheck.industry." matches "onboarding.paycheck.industry.retail")
+  return references.dynamicPrefixes.contains { prefix in
+    key.hasPrefix(prefix)
+  }
+}
+
 private func findOrphanedKeys(
   catalogPath: String,
   catalogEntries: [CatalogEntry],
@@ -522,57 +580,7 @@ private func findOrphanedKeys(
       continue
     }
 
-    // Skip keys that are just numbers or very short (likely placeholders or format strings)
-    if key.allSatisfy({ $0.isNumber || $0 == "." || $0 == " " }) {
-      continue
-    }
-
-    // Skip keys that contain format specifiers (they might be used via String(format:))
-    if key.contains("%") {
-      continue
-    }
-
-    // Skip keys that are not dot-notation identifiers. These are likely:
-    // - Single-word keys that are placeholders/symbols ("+", "---", "OK")
-    // - Sentence-style legacy keys that contain punctuation periods
-    // - Debug strings that don't need localization
-    // Real localization keys use dot notation: "feature.subfeature.key"
-    let keyParts = key.split(separator: ".", omittingEmptySubsequences: false)
-    if keyParts.count < 2
-      || keyParts.contains(where: {
-        $0.isEmpty
-          || !$0.allSatisfy { character in
-            character == "_" || character.isLetter || character.isNumber
-          }
-      })
-    {
-      continue
-    }
-
-    // Skip admin/debug keys
-    let lowercased = key.lowercased()
-    if lowercased.hasPrefix("admin.") || lowercased.hasPrefix("debug.")
-      || lowercased.contains("impersonate") || lowercased.contains("storekit")
-    {
-      continue
-    }
-
-    // Check if the key is used via any method:
-    // 1. Symbol reference (e.g., .dashboardTitle)
-    if references.symbols.contains(symbolName) {
-      continue
-    }
-
-    // 2. Direct key reference (e.g., NSLocalizedString("common.cancel", ...))
-    if references.directKeys.contains(key) {
-      continue
-    }
-
-    // 3. Dynamic prefix (e.g., "onboarding.paycheck.industry." matches "onboarding.paycheck.industry.retail")
-    let matchesDynamicPrefix = references.dynamicPrefixes.contains { prefix in
-      key.hasPrefix(prefix)
-    }
-    if matchesDynamicPrefix {
+    guard isOrphanCandidate(key), !isReferenced(key, symbolName: symbolName, in: references) else {
       continue
     }
 
@@ -748,6 +756,15 @@ private func printHelp() {
     """)
 }
 
+private func printViolationsByFile(_ findings: [Violation]) {
+  let grouped = Dictionary(grouping: findings) { $0.file }
+  for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
+    print("  \(file):")
+    for violation in violations { print("    L\(violation.line): \(violation.pattern)") }
+    print("")
+  }
+}
+
 private func checkRawErrorDescriptions(config: Config) -> Bool {
   print("Scanning for raw LocalizedError.errorDescription strings in: \(config.searchPath)\n")
 
@@ -759,13 +776,8 @@ private func checkRawErrorDescriptions(config: Config) -> Bool {
     return false
   }
 
-  let grouped = Dictionary(grouping: findings) { $0.file }
   print("Found \(findings.count) raw LocalizedError.errorDescription strings:\n")
-  for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
-    print("  \(file):")
-    for violation in violations { print("    L\(violation.line): \(violation.pattern)") }
-    print("")
-  }
+  printViolationsByFile(findings)
   print("To fix: return localized symbols from user-facing error descriptions.")
   print("  Example: return String(localized: .commonNetworkError)\n")
   return true
@@ -786,13 +798,8 @@ private func checkHardcodedStrings(config: Config) -> Bool {
     return false
   }
 
-  let grouped = Dictionary(grouping: allFindings) { $0.file }
   print("Found \(allFindings.count) potential hardcoded strings:\n")
-  for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
-    print("  \(file):")
-    for violation in violations { print("    L\(violation.line): \(violation.pattern)") }
-    print("")
-  }
+  printViolationsByFile(allFindings)
   print("To fix: Use String Catalog symbols instead of literal strings.")
   print("  Example: Text(.settingsSaveButton) instead of Text(\"Save\")")
   print("\nTo add a new string:")
@@ -829,16 +836,33 @@ private func printOrphanedKeysHumanReadable(
   print("Verify before removing!")
 }
 
-private func checkOrphanedKeys(config: Config) -> Bool {
-  if !config.jsonOutput, !config.removeOrphaned {
-    print("Checking for orphaned keys in String Catalogs...\n")
+private func printOrphanedKeysJSON(_ allOrphaned: [OrphanedKey], singleCatalog: Bool) {
+  let jsonObject: Any
+  if singleCatalog {
+    jsonObject = allOrphaned.map(\.key)
+  } else {
+    jsonObject = allOrphaned.map { key in
+      [
+        "catalog": key.catalogPath,
+        "key": key.key,
+        "reason": key.reason,
+      ]
+    }
   }
 
-  guard !config.catalogPaths.isEmpty else {
-    print("Warning: Could not find any String Catalogs")
-    return false
+  if let jsonData = try? JSONSerialization.data(
+    withJSONObject: jsonObject,
+    options: [
+      .prettyPrinted, .sortedKeys,
+    ]), let jsonString = String(data: jsonData, encoding: .utf8)
+  {
+    print(jsonString)
   }
+}
 
+private func findOrphanedKeysByCatalog(
+  config: Config
+) -> [(catalogPath: String, orphaned: [OrphanedKey])] {
   let references = findLocalizationReferences(in: config.searchPath)
   var orphanedByCatalog: [(catalogPath: String, orphaned: [OrphanedKey])] = []
   for catalogPath in config.catalogPaths {
@@ -855,7 +879,20 @@ private func checkOrphanedKeys(config: Config) -> Bool {
     )
     orphanedByCatalog.append((catalogPath: catalogPath, orphaned: orphaned))
   }
+  return orphanedByCatalog
+}
 
+private func checkOrphanedKeys(config: Config) -> Bool {
+  if !config.jsonOutput, !config.removeOrphaned {
+    print("Checking for orphaned keys in String Catalogs...\n")
+  }
+
+  guard !config.catalogPaths.isEmpty else {
+    print("Warning: Could not find any String Catalogs")
+    return false
+  }
+
+  let orphanedByCatalog = findOrphanedKeysByCatalog(config: config)
   let allOrphaned = orphanedByCatalog.flatMap(\.orphaned)
 
   guard !allOrphaned.isEmpty else {
@@ -864,27 +901,7 @@ private func checkOrphanedKeys(config: Config) -> Bool {
   }
 
   if config.jsonOutput {
-    let jsonObject: Any
-    if config.catalogPaths.count == 1 {
-      jsonObject = allOrphaned.map(\.key)
-    } else {
-      jsonObject = allOrphaned.map { key in
-        [
-          "catalog": key.catalogPath,
-          "key": key.key,
-          "reason": key.reason,
-        ]
-      }
-    }
-
-    if let jsonData = try? JSONSerialization.data(
-      withJSONObject: jsonObject,
-      options: [
-        .prettyPrinted, .sortedKeys,
-      ]), let jsonString = String(data: jsonData, encoding: .utf8)
-    {
-      print(jsonString)
-    }
+    printOrphanedKeysJSON(allOrphaned, singleCatalog: config.catalogPaths.count == 1)
   } else if config.removeOrphaned {
     print("Removing \(allOrphaned.count) orphaned keys from String Catalogs...")
     for (catalogPath, orphaned) in orphanedByCatalog where !orphaned.isEmpty {

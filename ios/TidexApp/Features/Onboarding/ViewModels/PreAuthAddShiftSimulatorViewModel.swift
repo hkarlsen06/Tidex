@@ -227,7 +227,11 @@ final class PreAuthAddShiftSimulatorViewModel: AddShiftCalendarViewModeling {
     return CalendarEarningsData(net: net, gross: computed.gross, hasTaxEnabled: taxEnabled)
   }
 
-  // MARK: - Seed Data
+}
+
+// MARK: - Seed Data
+
+extension PreAuthAddShiftSimulatorViewModel {
 
   private static func makeBaselineSnapshot(hourlyWage: Double) -> WageSnapshot {
     WageSnapshot(

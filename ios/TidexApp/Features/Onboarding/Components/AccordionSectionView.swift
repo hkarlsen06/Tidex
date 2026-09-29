@@ -12,64 +12,11 @@ struct AccordionSectionView<Content: View>: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      // Header
-      HStack {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(title)
-            .font(.tidexButton)
-            .foregroundColor(.tidexTextPrimary)
-
-          if !isExpanded, let summary {
-            Text(summary)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextSecondary)
-          }
-        }
-
-        Spacer()
-
-        // Status indicator
-        if isComplete {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 20))
-            .foregroundColor(.tidexSuccess)
-        } else if isExpanded {
-          Image(systemName: "chevron.up")
-            .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
-        } else {
-          Image(systemName: "chevron.down")
-            .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
-        }
-      }
-      .padding(Spacing.md)
+      header
 
       // Content (when expanded)
       if isExpanded {
-        VStack(spacing: Spacing.md) {
-          content()
-
-          if let onContinue {
-            Button(action: {
-              Haptics.play(.medium)
-              onContinue()
-            }) {
-              Text(.commonContinue)
-                .font(.tidexLabelStrong)
-                .foregroundColor(.tidexTextOnBrand)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.xs)
-                .frame(minHeight: 44)
-                .background(Color.tidexBrandPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-            }
-            .buttonStyle(.plain)
-          }
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.bottom, Spacing.md)
-        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+        expandedContent
       }
     }
     .background(Color.tidexSurfaceSecondary)
@@ -78,6 +25,66 @@ struct AccordionSectionView<Content: View>: View {
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .stroke(isExpanded ? Color.tidexBrandPrimary.opacity(0.3) : Color.tidexBorder, lineWidth: 1)
     )
+  }
+
+  private var header: some View {
+    HStack {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        Text(title)
+          .font(.tidexButton)
+          .foregroundColor(.tidexTextPrimary)
+
+        if !isExpanded, let summary {
+          Text(summary)
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+        }
+      }
+
+      Spacer()
+
+      // Status indicator
+      if isComplete {
+        Image(systemName: "checkmark.circle.fill")
+          .font(.system(size: 20))
+          .foregroundColor(.tidexSuccess)
+      } else if isExpanded {
+        Image(systemName: "chevron.up")
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+      } else {
+        Image(systemName: "chevron.down")
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+      }
+    }
+    .padding(Spacing.md)
+  }
+
+  private var expandedContent: some View {
+    VStack(spacing: Spacing.md) {
+      content()
+
+      if let onContinue {
+        Button(action: {
+          Haptics.play(.medium)
+          onContinue()
+        }) {
+          Text(.commonContinue)
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexTextOnBrand)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.xs)
+            .frame(minHeight: 44)
+            .background(Color.tidexBrandPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+        }
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(.horizontal, Spacing.md)
+    .padding(.bottom, Spacing.md)
+    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
   }
 }
 

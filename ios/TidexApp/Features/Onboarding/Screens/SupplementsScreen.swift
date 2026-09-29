@@ -22,120 +22,7 @@ struct SupplementsScreen: View {
 
       VStack(spacing: 0) {
         ScrollView {
-          VStack(spacing: 0) {
-            // Back button (if provided)
-            if let onBack {
-              HStack {
-                Button(action: {
-                  Haptics.play(.light)
-                  onBack()
-                }) {
-                  HStack(spacing: Spacing.xxs) {
-                    Image(systemName: "chevron.left")
-                      .font(.tidexButton)
-                    Text(.commonBack)
-                      .font(.tidexBody)
-                  }
-                  .foregroundColor(.tidexBlue)
-                }
-                .buttonStyle(.plain)
-                Spacer()
-              }
-              .padding(.horizontal, Spacing.lg)
-              .padding(.top, Spacing.md)
-              .adaptiveContentWidth()
-            }
-
-            Spacer()
-              .frame(height: onBack != nil ? 24 : 60)
-
-            // Header
-            VStack(spacing: Spacing.sm) {
-              Text(.onboardingSupplementsTitle)
-                .font(.tidexScreenTitle)
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
-
-              Text(.onboardingSupplementsSubtitle)
-                .font(.tidexBody)
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, Spacing.xl)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: 32)
-
-            // Supplement rules list
-            if !data.supplementRules.isEmpty {
-              VStack(spacing: Spacing.sm) {
-                ForEach(data.supplementRules) { rule in
-                  SupplementRuleCard(
-                    rule: rule,
-                    locale: Locale.current,
-                    currency: data.currency,
-                    onEdit: {
-                      editingRule = rule
-                      showingRuleEditor = true
-                    },
-                    onDelete: {
-                      withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        data.supplementRules.removeAll { $0.id == rule.id }
-                      }
-                    }
-                  )
-                }
-              }
-              .padding(.horizontal, Spacing.lg)
-              .adaptiveContentWidth()
-
-              Spacer()
-                .frame(height: 16)
-            }
-
-            // Add rule button
-            Button(action: {
-              Haptics.play(.medium)
-              editingRule = nil
-              showingRuleEditor = true
-            }) {
-              HStack(spacing: Spacing.xs) {
-                Image(systemName: "plus.circle.fill")
-                  .font(.system(size: 20))
-                Text(.onboardingSupplementsAddRule)
-                  .font(.tidexBodyMedium)
-              }
-              .foregroundColor(.tidexBlue)
-              .frame(maxWidth: .infinity)
-              .frame(height: 56)
-              .background(Color.tidexBlue.opacity(0.08))
-              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-              .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-                  .stroke(Color.tidexBlue.opacity(0.3), lineWidth: 1)
-              )
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, Spacing.lg)
-            .adaptiveContentWidth()
-
-            // Info text when no rules
-            if data.supplementRules.isEmpty {
-              Spacer()
-                .frame(height: 24)
-
-              Text(.onboardingSupplementsHint)
-                .font(.tidexSubheadline)
-                .foregroundColor(.tidexTextMuted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Spacing.xl)
-                .adaptiveContentWidth()
-            }
-
-            Spacer()
-              .frame(height: 48)
-          }
+          scrollContent
         }
 
         // Bottom action
@@ -168,6 +55,137 @@ struct SupplementsScreen: View {
         }
       )
     }
+  }
+
+  private var scrollContent: some View {
+    VStack(spacing: 0) {
+      // Back button (if provided)
+      if let onBack {
+        backButton(onBack)
+      }
+
+      Spacer()
+        .frame(height: onBack != nil ? 24 : 60)
+
+      header
+
+      Spacer()
+        .frame(height: 32)
+
+      // Supplement rules list
+      if !data.supplementRules.isEmpty {
+        rulesList
+
+        Spacer()
+          .frame(height: 16)
+      }
+
+      addRuleButton
+
+      // Info text when no rules
+      if data.supplementRules.isEmpty {
+        Spacer()
+          .frame(height: 24)
+
+        Text(.onboardingSupplementsHint)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextMuted)
+          .multilineTextAlignment(.center)
+          .padding(.horizontal, Spacing.xl)
+          .adaptiveContentWidth()
+      }
+
+      Spacer()
+        .frame(height: 48)
+    }
+  }
+
+  private func backButton(_ onBack: @escaping () -> Void) -> some View {
+    HStack {
+      Button(action: {
+        Haptics.play(.light)
+        onBack()
+      }) {
+        HStack(spacing: Spacing.xxs) {
+          Image(systemName: "chevron.left")
+            .font(.tidexButton)
+          Text(.commonBack)
+            .font(.tidexBody)
+        }
+        .foregroundColor(.tidexBlue)
+      }
+      .buttonStyle(.plain)
+      Spacer()
+    }
+    .padding(.horizontal, Spacing.lg)
+    .padding(.top, Spacing.md)
+    .adaptiveContentWidth()
+  }
+
+  private var header: some View {
+    VStack(spacing: Spacing.sm) {
+      Text(.onboardingSupplementsTitle)
+        .font(.tidexScreenTitle)
+        .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+
+      Text(.onboardingSupplementsSubtitle)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextSecondary)
+        .multilineTextAlignment(.center)
+    }
+    .padding(.horizontal, Spacing.xl)
+    .adaptiveContentWidth()
+  }
+
+  private var rulesList: some View {
+    VStack(spacing: Spacing.sm) {
+      ForEach(data.supplementRules) { rule in
+        SupplementRuleCard(
+          rule: rule,
+          locale: Locale.current,
+          currency: data.currency,
+          onEdit: {
+            editingRule = rule
+            showingRuleEditor = true
+          },
+          onDelete: {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+              data.supplementRules.removeAll { $0.id == rule.id }
+            }
+          }
+        )
+      }
+    }
+    .padding(.horizontal, Spacing.lg)
+    .adaptiveContentWidth()
+  }
+
+  private var addRuleButton: some View {
+    Button(action: {
+      Haptics.play(.medium)
+      editingRule = nil
+      showingRuleEditor = true
+    }) {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "plus.circle.fill")
+          .font(.system(size: 20))
+        Text(.onboardingSupplementsAddRule)
+          .font(.tidexBodyMedium)
+      }
+      .foregroundColor(.tidexBlue)
+      .frame(maxWidth: .infinity)
+      .frame(height: 56)
+      .background(Color.tidexBlue.opacity(0.08))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(Color.tidexBlue.opacity(0.3), lineWidth: 1)
+      )
+    }
+    .buttonStyle(.plain)
+    .padding(.horizontal, Spacing.lg)
+    .adaptiveContentWidth()
   }
 }
 

@@ -146,7 +146,8 @@ struct TotalCardWidgetProvider: TimelineProvider {
       let totalsJson = userDefaults.string(forKey: WidgetAppGroup.monthlyTotalsKey),
       let data = totalsJson.data(using: .utf8)
     else {
-      let currency = WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.currencyKey)
+      let currency =
+        WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.currencyKey)
         ?? "kr"
       return TotalCardWidgetEntry.empty(currency: currency)
     }
@@ -157,7 +158,8 @@ struct TotalCardWidgetProvider: TimelineProvider {
       let totals = try decoder.decode(StoredMonthlyTotals.self, from: data)
 
       // Totals saved last month would show the wrong month's earnings once the month changes.
-      guard Calendar.gregorianCurrent.isDate(totals.updatedAt, equalTo: .now, toGranularity: .month) else {
+      guard Calendar.gregorianCurrent.isDate(totals.updatedAt, equalTo: .now, toGranularity: .month)
+      else {
         return TotalCardWidgetEntry.empty(currency: totals.currencySymbol)
       }
 
@@ -178,7 +180,8 @@ struct TotalCardWidgetProvider: TimelineProvider {
         hasData: true
       )
     } catch {
-      let currency = WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.currencyKey)
+      let currency =
+        WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.currencyKey)
         ?? "kr"
       return TotalCardWidgetEntry.empty(currency: currency)
     }
@@ -497,72 +500,82 @@ struct TotalCardWidget: Widget {
   #Preview(as: .systemMedium) {
     TotalCardWidget()
   } timeline: {
-    // Case 1: Has future shifts AND real earned amount → "7 500 kr hittil"
-    TotalCardWidgetEntry(
-      date: Date(),
-      gross: 15_000,
-      net: 12_500,
-      completedGross: 9_000,
-      completedNet: 7_500,
-      shiftCount: 8,
-      plannedCount: 3,
-      totalHours: 64,
-      percentageChange: 15,
-      taxEnabled: true,
-      currencySymbol: "kr",
-      yearMonth: "2026-02",
-      hasData: true
-    )
-    // Case 2: No future shifts, tax enabled → "12 000 kr før skatt"
-    TotalCardWidgetEntry(
-      date: Date(),
-      gross: 12_000,
-      net: 10_000,
-      completedGross: 12_000,
-      completedNet: 10_000,
-      shiftCount: 5,
-      plannedCount: 0,
-      totalHours: 40,
-      percentageChange: -8,
-      taxEnabled: true,
-      currencySymbol: "kr",
-      yearMonth: "2026-02",
-      hasData: true
-    )
-    // Case 3: No future shifts, no tax → "5 vakter"
-    TotalCardWidgetEntry(
-      date: Date(),
-      gross: 12_000,
-      net: nil,
-      completedGross: 12_000,
-      completedNet: nil,
-      shiftCount: 5,
-      plannedCount: 0,
-      totalHours: 40,
-      percentageChange: -8,
-      taxEnabled: false,
-      currencySymbol: "kr",
-      yearMonth: "2026-02",
-      hasData: true
-    )
-    // Case 4: Future shifts, no earnings yet → "3 vakter planlagt"
-    TotalCardWidgetEntry(
-      date: Date(),
-      gross: 5_000,
-      net: nil,
-      completedGross: 0,
-      completedNet: nil,
-      shiftCount: 3,
-      plannedCount: 3,
-      totalHours: 24,
-      percentageChange: nil,
-      taxEnabled: false,
-      currencySymbol: "kr",
-      yearMonth: "2026-02",
-      hasData: true
-    )
-    // Case 5: Zero earnings (shows dashes)
-    TotalCardWidgetEntry.empty()
+    for entry in TotalCardWidgetEntry.previewEntries {
+      entry
+    }
+  }
+
+  extension TotalCardWidgetEntry {
+    fileprivate static var previewEntries: [TotalCardWidgetEntry] {
+      [
+        // Case 1: Has future shifts AND real earned amount → "7 500 kr hittil"
+        TotalCardWidgetEntry(
+          date: Date(),
+          gross: 15_000,
+          net: 12_500,
+          completedGross: 9_000,
+          completedNet: 7_500,
+          shiftCount: 8,
+          plannedCount: 3,
+          totalHours: 64,
+          percentageChange: 15,
+          taxEnabled: true,
+          currencySymbol: "kr",
+          yearMonth: "2026-02",
+          hasData: true
+        ),
+        // Case 2: No future shifts, tax enabled → "12 000 kr før skatt"
+        TotalCardWidgetEntry(
+          date: Date(),
+          gross: 12_000,
+          net: 10_000,
+          completedGross: 12_000,
+          completedNet: 10_000,
+          shiftCount: 5,
+          plannedCount: 0,
+          totalHours: 40,
+          percentageChange: -8,
+          taxEnabled: true,
+          currencySymbol: "kr",
+          yearMonth: "2026-02",
+          hasData: true
+        ),
+        // Case 3: No future shifts, no tax → "5 vakter"
+        TotalCardWidgetEntry(
+          date: Date(),
+          gross: 12_000,
+          net: nil,
+          completedGross: 12_000,
+          completedNet: nil,
+          shiftCount: 5,
+          plannedCount: 0,
+          totalHours: 40,
+          percentageChange: -8,
+          taxEnabled: false,
+          currencySymbol: "kr",
+          yearMonth: "2026-02",
+          hasData: true
+        ),
+        // Case 4: Future shifts, no earnings yet → "3 vakter planlagt"
+        TotalCardWidgetEntry(
+          date: Date(),
+          gross: 5_000,
+          net: nil,
+          completedGross: 0,
+          completedNet: nil,
+          shiftCount: 3,
+          plannedCount: 3,
+          totalHours: 24,
+          percentageChange: nil,
+          taxEnabled: false,
+          currencySymbol: "kr",
+          yearMonth: "2026-02",
+          hasData: true
+        ),
+        // Case 5: Zero earnings (shows dashes)
+        TotalCardWidgetEntry.empty(),
+      ]
+    }
   }
 #endif
 // swiftlint:enable file_length

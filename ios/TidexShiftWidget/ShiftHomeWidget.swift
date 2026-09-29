@@ -927,85 +927,95 @@ internal struct ShiftHomeWidget: Widget {
   #Preview(as: .systemSmall) {
     ShiftHomeWidget()
   } timeline: {
-    // State A: Before shift starts (start time emphasized)
-    ShiftWidgetEntry.placeholder()
-    ShiftWidgetEntry.placeholder()
-    // State A: After shift starts (end time emphasized)
-    ShiftWidgetEntry(
-      date: Date(),
-      shiftDate: "I dag",
-      startTime: "07:00",
-      endTime: "15:00",
-      netEarnings: "892 kr",
-      salute: "Du klarer det!",
-      hasShift: true,
-      daysRemaining: 0,
-      layoutState: .todayOrTomorrow,
-      shiftHasStarted: true,
-      shiftHasEnded: false,
-      deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-15&action=highlight")
-    )
-    // State A: After shift ends (shows "Ferdig")
-    ShiftWidgetEntry(
-      date: Date(),
-      shiftDate: "I dag",
-      startTime: "07:00",
-      endTime: "15:00",
-      netEarnings: "892 kr",
-      salute: "Godt jobbet!",
-      hasShift: true,
-      daysRemaining: 0,
-      layoutState: .todayOrTomorrow,
-      shiftHasStarted: true,
-      shiftHasEnded: true,
-      deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-15&action=highlight")
-    )
-    // State B: Countdown layouts
-    ShiftWidgetEntry(
-      date: Date(),
-      shiftDate: "Man. 20.",
-      startTime: "16:00",
-      endTime: "23:15",
-      netEarnings: "1 332 kr",
-      salute: "Du klarer det!",
-      hasShift: true,
-      daysRemaining: 5,
-      layoutState: .countdown,
-      shiftHasStarted: false,
-      shiftHasEnded: false,
-      deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-20&action=highlight")
-    )
-    ShiftWidgetEntry(
-      date: Date(),
-      shiftDate: "Mon. 20.",
-      startTime: "16:00",
-      endTime: "23:15",
-      netEarnings: "$234",
-      salute: "You got this!",
-      hasShift: true,
-      daysRemaining: 12,
-      layoutState: .countdown,
-      shiftHasStarted: false,
-      shiftHasEnded: false,
-      deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-20&action=highlight")
-    )
-    // State C: Past shift (days ago countup)
-    ShiftWidgetEntry(
-      date: Date(),
-      shiftDate: "Fre. 9.",
-      startTime: "12:00",
-      endTime: "16:00",
-      netEarnings: "230 kr",
-      salute: "Godt jobbet!",
-      hasShift: true,
-      daysRemaining: -3,
-      layoutState: .pastShift,
-      shiftHasStarted: true,
-      shiftHasEnded: true,
-      deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-09&action=highlight")
-    )
-    // Empty state
-    ShiftWidgetEntry.empty()
+    for entry in ShiftWidgetEntry.previewEntries {
+      entry
+    }
+  }
+
+  extension ShiftWidgetEntry {
+    fileprivate static var previewEntries: [ShiftWidgetEntry] {
+      [
+        // State A: Before shift starts (start time emphasized)
+        ShiftWidgetEntry.placeholder(),
+        ShiftWidgetEntry.placeholder(),
+        // State A: After shift starts (end time emphasized)
+        ShiftWidgetEntry(
+          date: Date(),
+          shiftDate: "I dag",
+          startTime: "07:00",
+          endTime: "15:00",
+          netEarnings: "892 kr",
+          salute: "Du klarer det!",
+          hasShift: true,
+          daysRemaining: 0,
+          layoutState: .todayOrTomorrow,
+          shiftHasStarted: true,
+          shiftHasEnded: false,
+          deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-15&action=highlight")
+        ),
+        // State A: After shift ends (shows "Ferdig")
+        ShiftWidgetEntry(
+          date: Date(),
+          shiftDate: "I dag",
+          startTime: "07:00",
+          endTime: "15:00",
+          netEarnings: "892 kr",
+          salute: "Godt jobbet!",
+          hasShift: true,
+          daysRemaining: 0,
+          layoutState: .todayOrTomorrow,
+          shiftHasStarted: true,
+          shiftHasEnded: true,
+          deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-15&action=highlight")
+        ),
+        // State B: Countdown layouts
+        ShiftWidgetEntry(
+          date: Date(),
+          shiftDate: "Man. 20.",
+          startTime: "16:00",
+          endTime: "23:15",
+          netEarnings: "1 332 kr",
+          salute: "Du klarer det!",
+          hasShift: true,
+          daysRemaining: 5,
+          layoutState: .countdown,
+          shiftHasStarted: false,
+          shiftHasEnded: false,
+          deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-20&action=highlight")
+        ),
+        ShiftWidgetEntry(
+          date: Date(),
+          shiftDate: "Mon. 20.",
+          startTime: "16:00",
+          endTime: "23:15",
+          netEarnings: "$234",
+          salute: "You got this!",
+          hasShift: true,
+          daysRemaining: 12,
+          layoutState: .countdown,
+          shiftHasStarted: false,
+          shiftHasEnded: false,
+          deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-20&action=highlight")
+        ),
+        // State C: Past shift (days ago countup)
+        ShiftWidgetEntry(
+          date: Date(),
+          shiftDate: "Fre. 9.",
+          startTime: "12:00",
+          endTime: "16:00",
+          netEarnings: "230 kr",
+          salute: "Godt jobbet!",
+          hasShift: true,
+          daysRemaining: -3,
+          layoutState: .pastShift,
+          shiftHasStarted: true,
+          shiftHasEnded: true,
+          deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-09&action=highlight")
+        ),
+        // Empty state
+        ShiftWidgetEntry.empty(),
+      ]
+    }
   }
 #endif
 // swiftlint:enable file_length function_body_length

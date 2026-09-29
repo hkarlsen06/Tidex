@@ -77,7 +77,7 @@ internal final class AddShiftViewModel {
   private let addShiftCoordinator: AddShiftCoordinator
   private let draftDefaults: UserDefaults
   @ObservationIgnored private var eventRangeAnchorDate: Date?
-  @ObservationIgnored private var didEditEventCalendarSelectionSinceEnteringEventMode: Bool = false
+  @ObservationIgnored private var didEditEventCalendarSinceEnteringEvents: Bool = false
   @ObservationIgnored private var isSyncingCalendarSelectionAcrossModes: Bool = false
   @ObservationIgnored private var pendingDeepLinkMode: AddShiftMode?
 
@@ -1144,8 +1144,12 @@ internal final class AddShiftViewModel {
 
     publishStateToCoordinator()
 
+    let shiftCount = cachedShifts.count
+    let recurringCount = cachedRecurringShifts.count
+    let snapshotCount = cachedSnapshots.count
+    let jobCount = activeJobs.count
     kLogger.info(
-      "Loaded data: \(self.cachedShifts.count) shifts, \(self.cachedRecurringShifts.count) recurring, \(self.cachedSnapshots.count) snapshots, \(self.activeJobs.count) jobs"
+      "Loaded data: \(shiftCount) shifts, \(recurringCount) recurring, \(snapshotCount) snapshots, \(jobCount) jobs"
     )
   }
 
@@ -1169,8 +1173,12 @@ internal final class AddShiftViewModel {
 
     publishStateToCoordinator()
 
+    let shifts = cachedShifts.count
+    let recurring = cachedRecurringShifts.count
+    let snapshots = cachedSnapshots.count
+    let jobs = activeJobs.count
     kLogger.info(
-      "Refreshed add tab data: \(self.cachedShifts.count) shifts, \(self.cachedRecurringShifts.count) recurring, \(self.cachedSnapshots.count) snapshots, \(self.activeJobs.count) jobs"
+      "Refreshed add tab data: \(shifts) shifts, \(recurring) recurring, \(snapshots) snapshots, \(jobs) jobs"
     )
   }
 
@@ -1365,11 +1373,7 @@ internal final class AddShiftViewModel {
       return
     }
 
-    let userId: String
-    do {
-      userId = try AppCoordinator.shared.requireUserId()
-    } catch {
-      self.error = error.localizedDescription
+    guard let userId = resolveSubmitUserId() else {
       return
     }
 
@@ -1377,14 +1381,7 @@ internal final class AddShiftViewModel {
     error = nil
     var createdDates: Set<String> = []
     defer {
-      if !createdDates.isEmpty {
-        reloadShiftsForDisplayedMonth()
-        refreshDistinctShiftTimePairCount(for: userId)
-        NotificationCenter.default.postShiftsDidChange(
-          context: .affecting(isoDates: Array(createdDates))
-        )
-      }
-      isLoading = false
+      endSingleSubmission(createdDates: createdDates, userId: userId)
     }
 
     do {
@@ -1403,25 +1400,7 @@ internal final class AddShiftViewModel {
         createdDates.insert(shiftDate.toISODateString())
       }
 
-      kLogger.info("Created \(createdDates.count) shifts")
-
-      // Trigger celebration with the dates that were added
-      // Use the current display month as the origin for confetti
-      CelebrationManager.shared.celebrate(
-        dates: createdDates,
-        originMonth: (year: displayYear, month: displayMonthNumber)
-      )
-
-      // Clear form
-      clearForm()
-
-      // Success haptic
-      Haptics.playShiftCreationSuccess()
-
-      // Notify completion
-      onShiftsCreated?(.single(dates: createdDates))
-      await requestShiftReminderPermission(for: userId)
-
+      await finishSingleSubmission(createdDates: createdDates, userId: userId)
     } catch {
       kLogger.error("Failed to create shifts: \(error.localizedDescription)")
       self.error =
@@ -1430,6 +1409,48 @@ internal final class AddShiftViewModel {
         : String(localized: .addShiftSinglePartialSave) + "\n" + error.localizedDescription
       Haptics.play(.error)
     }
+  }
+
+  private func resolveSubmitUserId() -> String? {
+    do {
+      return try AppCoordinator.shared.requireUserId()
+    } catch {
+      self.error = error.localizedDescription
+      return nil
+    }
+  }
+
+  /// Reloads what changed and clears the loading state, also after a partial save.
+  private func endSingleSubmission(createdDates: Set<String>, userId: String) {
+    if !createdDates.isEmpty {
+      reloadShiftsForDisplayedMonth()
+      refreshDistinctShiftTimePairCount(for: userId)
+      NotificationCenter.default.postShiftsDidChange(
+        context: .affecting(isoDates: Array(createdDates))
+      )
+    }
+    isLoading = false
+  }
+
+  private func finishSingleSubmission(createdDates: Set<String>, userId: String) async {
+    kLogger.info("Created \(createdDates.count) shifts")
+
+    // Trigger celebration with the dates that were added
+    // Use the current display month as the origin for confetti
+    CelebrationManager.shared.celebrate(
+      dates: createdDates,
+      originMonth: (year: displayYear, month: displayMonthNumber)
+    )
+
+    // Clear form
+    clearForm()
+
+    // Success haptic
+    Haptics.playShiftCreationSuccess()
+
+    // Notify completion
+    onShiftsCreated?(.single(dates: createdDates))
+    await requestShiftReminderPermission(for: userId)
   }
 
   private func requestShiftReminderPermission(for userId: String) async {
@@ -1464,11 +1485,7 @@ internal final class AddShiftViewModel {
       return
     }
 
-    let userId: String
-    do {
-      userId = try AppCoordinator.shared.requireUserId()
-    } catch {
-      self.error = error.localizedDescription
+    guard let userId = resolveSubmitUserId() else {
       return
     }
 
@@ -1497,17 +1514,9 @@ internal final class AddShiftViewModel {
         notificationAnchorTime: notificationAnchorTime
       )
 
-      kLogger.info("Created private event")
-
-      clearForm()
-      Haptics.playShiftCreationSuccess()
-      NotificationCenter.default.postShiftsDidChange(
-        context: .affecting(dateRangeStart: startDate, end: endDate)
-      )
-      onShiftsCreated?(.event)
-      if notificationMinutesArray != nil {
-        await NotificationService.shared.requestPermissionAndRegister(for: userId)
-      }
+      await finishEventSubmission(
+        startDate: startDate, endDate: endDate,
+        hasReminders: notificationMinutesArray != nil, userId: userId)
     } catch {
       kLogger.error("Failed to create event: \(error.localizedDescription)")
       self.error = error.localizedDescription
@@ -1515,6 +1524,22 @@ internal final class AddShiftViewModel {
     }
 
     isLoading = false
+  }
+
+  private func finishEventSubmission(
+    startDate: Date, endDate: Date, hasReminders: Bool, userId: String
+  ) async {
+    kLogger.info("Created private event")
+
+    clearForm()
+    Haptics.playShiftCreationSuccess()
+    NotificationCenter.default.postShiftsDidChange(
+      context: .affecting(dateRangeStart: startDate, end: endDate)
+    )
+    onShiftsCreated?(.event)
+    if hasReminders {
+      await NotificationService.shared.requestPermissionAndRegister(for: userId)
+    }
   }
 
   // MARK: - Recurring Shift Actions
@@ -1603,11 +1628,7 @@ internal final class AddShiftViewModel {
       return
     }
 
-    let userId: String
-    do {
-      userId = try AppCoordinator.shared.requireUserId()
-    } catch {
-      self.error = error.localizedDescription
+    guard let userId = resolveSubmitUserId() else {
       return
     }
 
@@ -1630,38 +1651,7 @@ internal final class AddShiftViewModel {
         dateSpecificSupplements: nil
       )
 
-      kLogger.info(
-        "Created recurring shift with \(self.cachedProjectedDates.count) projected dates, \(conflicts.count) exclusions"
-      )
-
-      // Get non-excluded dates for celebration (the ones actually created)
-      let createdDates = Set(cachedProjectedDates).subtracting(conflicts)
-
-      // Trigger celebration with created dates
-      // Use the current display month as the origin for confetti
-      CelebrationManager.shared.celebrate(
-        dates: createdDates,
-        originMonth: (year: displayYear, month: displayMonthNumber)
-      )
-
-      refreshDistinctShiftTimePairCount(for: userId)
-
-      // Clear form
-      clearForm()
-
-      // Dismiss preview sheet
-      showPreviewSheet = false
-
-      // Success haptic
-      Haptics.playShiftCreationSuccess()
-
-      // Notify that shifts changed (for dashboard refresh)
-      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
-
-      // Notify completion
-      onShiftsCreated?(.recurring)
-      await requestShiftReminderPermission(for: userId)
-
+      await finishRecurringSubmission(conflicts: conflicts, userId: userId)
     } catch {
       kLogger.error("Failed to create recurring shift: \(error.localizedDescription)")
       self.error = error.localizedDescription
@@ -1669,6 +1659,40 @@ internal final class AddShiftViewModel {
     }
 
     isLoading = false
+  }
+
+  private func finishRecurringSubmission(conflicts: Set<String>, userId: String) async {
+    kLogger.info(
+      "Created recurring shift with \(self.cachedProjectedDates.count) projected dates, \(conflicts.count) exclusions"
+    )
+
+    // Get non-excluded dates for celebration (the ones actually created)
+    let createdDates = Set(cachedProjectedDates).subtracting(conflicts)
+
+    // Trigger celebration with created dates
+    // Use the current display month as the origin for confetti
+    CelebrationManager.shared.celebrate(
+      dates: createdDates,
+      originMonth: (year: displayYear, month: displayMonthNumber)
+    )
+
+    refreshDistinctShiftTimePairCount(for: userId)
+
+    // Clear form
+    clearForm()
+
+    // Dismiss preview sheet
+    showPreviewSheet = false
+
+    // Success haptic
+    Haptics.playShiftCreationSuccess()
+
+    // Notify that shifts changed (for dashboard refresh)
+    NotificationCenter.default.postShiftsDidChange(context: .fullReload)
+
+    // Notify completion
+    onShiftsCreated?(.recurring)
+    await requestShiftReminderPermission(for: userId)
   }
 
   // MARK: - Private Helpers
@@ -1823,17 +1847,50 @@ internal final class AddShiftViewModel {
     )
   }
 
+  private struct CalendarDisplayAccumulator {
+    var existingDates = Set<String>()
+    var netEarnings: [String: Double] = [:]
+    var grossEarnings: [String: Double] = [:]
+    var hasTax: [String: Bool] = [:]
+    var shiftTimesByDate: [String: [(start: String, end: String)]] = [:]
+    var virtualShiftsWithEarnings: [CalendarDisplayData.VirtualShiftWithEarnings] = []
+  }
+
   private nonisolated static func buildCalendarDisplayData(
     _ input: CalendarDisplayComputationInput
   ) -> CalendarDisplayData {
-    var existingDates = Set<String>()
-    var existingNetEarnings: [String: Double] = [:]
-    var existingGrossEarnings: [String: Double] = [:]
-    var existingHasTax: [String: Bool] = [:]
-    var shiftTimesByDate: [String: [(start: String, end: String)]] = [:]
+    var accumulator = CalendarDisplayAccumulator()
+    accumulateExistingShifts(input, into: &accumulator)
+    accumulateVirtualShifts(input, into: &accumulator)
 
+    var existingEarnings: [String: CalendarEarningsData] = [:]
+    for (date, net) in accumulator.netEarnings {
+      existingEarnings[date] = CalendarEarningsData(
+        net: net,
+        gross: accumulator.grossEarnings[date] ?? net,
+        hasTaxEnabled: accumulator.hasTax[date] ?? false
+      )
+    }
+
+    let existingHours = buildExistingShiftHours(from: accumulator.shiftTimesByDate)
+
+    return CalendarDisplayData(
+      existingShiftDates: accumulator.existingDates,
+      existingShiftEarnings: existingEarnings,
+      existingShiftHours: existingHours,
+      virtualShifts: accumulator.virtualShiftsWithEarnings,
+      year: input.year,
+      month: input.month,
+      timestamp: Date()
+    )
+  }
+
+  private nonisolated static func accumulateExistingShifts(
+    _ input: CalendarDisplayComputationInput,
+    into accumulator: inout CalendarDisplayAccumulator
+  ) {
     for shift in input.shifts {
-      existingDates.insert(shift.shift_date)
+      accumulator.existingDates.insert(shift.shift_date)
 
       let wageSnapshot = Self.snapshotForDate(
         shift.shift_date,
@@ -1854,20 +1911,23 @@ internal final class AddShiftViewModel {
       )
 
       let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
-      existingNetEarnings[shift.shift_date, default: 0] += computed.netPay(
+      accumulator.netEarnings[shift.shift_date, default: 0] += computed.netPay(
         taxEnabled: taxEnabled,
         taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
       )
-      existingGrossEarnings[shift.shift_date, default: 0] += computed.gross
-      existingHasTax[shift.shift_date, default: false] =
-        existingHasTax[shift.shift_date, default: false] || taxEnabled
-      shiftTimesByDate[shift.shift_date, default: []].append(
+      accumulator.grossEarnings[shift.shift_date, default: 0] += computed.gross
+      accumulator.hasTax[shift.shift_date, default: false] =
+        accumulator.hasTax[shift.shift_date, default: false] || taxEnabled
+      accumulator.shiftTimesByDate[shift.shift_date, default: []].append(
         (start: shift.start_time, end: shift.end_time)
       )
     }
+  }
 
-    var virtualShiftsWithEarnings: [CalendarDisplayData.VirtualShiftWithEarnings] = []
-
+  private nonisolated static func accumulateVirtualShifts(
+    _ input: CalendarDisplayComputationInput,
+    into accumulator: inout CalendarDisplayAccumulator
+  ) {
     for recurring in input.recurringShifts {
       let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
         year: input.year,
@@ -1876,7 +1936,7 @@ internal final class AddShiftViewModel {
       )
 
       for virtualShift in virtualShifts {
-        existingDates.insert(virtualShift.date)
+        accumulator.existingDates.insert(virtualShift.date)
 
         let shift = recurring.makeVirtualShift(
           date: virtualShift.date,
@@ -1885,70 +1945,59 @@ internal final class AddShiftViewModel {
           userId: nil
         )
 
-        let wageSnapshot = Self.snapshotForDate(
-          virtualShift.date,
-          jobId: recurring.job_id,
-          snapshots: input.snapshots,
-          jobs: input.jobs
-        )
-        let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+        let earnings = Self.virtualShiftEarnings(
+          shift, on: virtualShift.date, recurring: recurring, input: input)
 
-        let payoutDate = Self.payoutSchedule(
-          for: recurring.job_id,
-          jobs: input.jobs,
-          settings: input.settings
-        ).payoutDate(for: virtualShift.date)
-        let taxSnapshot = Self.snapshotForDate(
-          payoutDate,
-          jobId: recurring.job_id,
-          snapshots: input.snapshots,
-          jobs: input.jobs
-        )
-
-        let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
-        let netEarnings = computed.netPay(
-          taxEnabled: taxEnabled,
-          taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
-        )
-        let earnings = CalendarEarningsData(
-          net: netEarnings,
-          gross: computed.gross,
-          hasTaxEnabled: taxEnabled
-        )
-
-        virtualShiftsWithEarnings.append(
+        accumulator.virtualShiftsWithEarnings.append(
           CalendarDisplayData.VirtualShiftWithEarnings(date: virtualShift.date, earnings: earnings)
         )
 
-        existingNetEarnings[virtualShift.date, default: 0] += netEarnings
-        existingGrossEarnings[virtualShift.date, default: 0] += computed.gross
-        existingHasTax[virtualShift.date, default: false] =
-          existingHasTax[virtualShift.date, default: false] || taxEnabled
-        shiftTimesByDate[virtualShift.date, default: []].append(
+        accumulator.netEarnings[virtualShift.date, default: 0] += earnings.net
+        accumulator.grossEarnings[virtualShift.date, default: 0] += earnings.gross
+        accumulator.hasTax[virtualShift.date, default: false] =
+          accumulator.hasTax[virtualShift.date, default: false] || earnings.hasTaxEnabled
+        accumulator.shiftTimesByDate[virtualShift.date, default: []].append(
           (start: recurring.cleanStartTime, end: recurring.cleanEndTime)
         )
       }
     }
+  }
 
-    var existingEarnings: [String: CalendarEarningsData] = [:]
-    for (date, net) in existingNetEarnings {
-      existingEarnings[date] = CalendarEarningsData(
-        net: net,
-        gross: existingGrossEarnings[date] ?? net,
-        hasTaxEnabled: existingHasTax[date] ?? false
-      )
-    }
+  private nonisolated static func virtualShiftEarnings(
+    _ shift: ShiftRow,
+    on date: String,
+    recurring: RecurringShiftRow,
+    input: CalendarDisplayComputationInput
+  ) -> CalendarEarningsData {
+    let wageSnapshot = Self.snapshotForDate(
+      date,
+      jobId: recurring.job_id,
+      snapshots: input.snapshots,
+      jobs: input.jobs
+    )
+    let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 
-    let existingHours = buildExistingShiftHours(from: shiftTimesByDate)
+    let payoutDate = Self.payoutSchedule(
+      for: recurring.job_id,
+      jobs: input.jobs,
+      settings: input.settings
+    ).payoutDate(for: date)
+    let taxSnapshot = Self.snapshotForDate(
+      payoutDate,
+      jobId: recurring.job_id,
+      snapshots: input.snapshots,
+      jobs: input.jobs
+    )
 
-    return CalendarDisplayData(
-      existingShiftDates: existingDates,
-      existingShiftEarnings: existingEarnings,
-      existingShiftHours: existingHours,
-      virtualShifts: virtualShiftsWithEarnings,
-      year: input.year,
-      month: input.month,
-      timestamp: Date()
+    let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
+    let netEarnings = computed.netPay(
+      taxEnabled: taxEnabled,
+      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+    )
+    return CalendarEarningsData(
+      net: netEarnings,
+      gross: computed.gross,
+      hasTaxEnabled: taxEnabled
     )
   }
 
@@ -2000,19 +2049,37 @@ internal final class AddShiftViewModel {
     }.value
   }
 
-  private nonisolated static func buildConflictsAndPreviews(
-    _ input: ConflictsAndPreviewsComputationInput
-  ) -> ConflictsAndPreviewsComputationResult {
-    let earningsContext = EarningsComputationContext(
-      requiresExplicitJobSelection: input.requiresExplicitJobSelection,
-      selectedJobId: input.selectedJobId,
-      effectiveJobId: input.effectiveJobId,
-      snapshots: input.snapshots,
-      jobs: input.jobs,
-      configuredJobIds: input.configuredJobIds,
-      settings: input.settings
-    )
+  private struct RecurringProjection {
+    let projectedRecurringDates: [String]?
+    let anchorEarnings: [String: CalendarEarningsData]?
+    let datesToCheck: [String]
+  }
 
+  /// Earnings for each selected weekday anchor, or nil when the times are not valid yet.
+  private nonisolated static func anchorEarnings(
+    for input: ConflictsAndPreviewsComputationInput,
+    earningsContext: EarningsComputationContext
+  ) -> [String: CalendarEarningsData]? {
+    guard input.hasValidTimes else { return nil }
+
+    var computedByAnchor: [String: CalendarEarningsData] = [:]
+    for (weekday, anchorISO) in input.selectedDays {
+      if let earnings = Self.computeEarningsForDate(
+        anchorISO,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        context: earningsContext
+      ) {
+        computedByAnchor[weekday] = earnings
+      }
+    }
+    return computedByAnchor
+  }
+
+  private nonisolated static func recurringProjection(
+    for input: ConflictsAndPreviewsComputationInput,
+    earningsContext: EarningsComputationContext
+  ) -> RecurringProjection {
     let projectedRecurringDates: [String]?
     let anchorEarnings: [String: CalendarEarningsData]?
     let datesToCheck: [String]
@@ -2034,22 +2101,7 @@ internal final class AddShiftViewModel {
         projectedRecurringDates = generated
         datesToCheck = generated
 
-        if input.hasValidTimes {
-          var computedByAnchor: [String: CalendarEarningsData] = [:]
-          for (weekday, anchorISO) in input.selectedDays {
-            if let earnings = Self.computeEarningsForDate(
-              anchorISO,
-              startTime: input.startTime,
-              endTime: input.endTime,
-              context: earningsContext
-            ) {
-              computedByAnchor[weekday] = earnings
-            }
-          }
-          anchorEarnings = computedByAnchor
-        } else {
-          anchorEarnings = nil
-        }
+        anchorEarnings = Self.anchorEarnings(for: input, earningsContext: earningsContext)
       } else {
         projectedRecurringDates = []
         anchorEarnings = [:]
@@ -2061,6 +2113,51 @@ internal final class AddShiftViewModel {
       anchorEarnings = nil
       datesToCheck = []
     }
+
+    return RecurringProjection(
+      projectedRecurringDates: projectedRecurringDates,
+      anchorEarnings: anchorEarnings,
+      datesToCheck: datesToCheck
+    )
+  }
+
+  private nonisolated static func singleModePreviewEarnings(
+    for input: ConflictsAndPreviewsComputationInput,
+    earningsContext: EarningsComputationContext
+  ) -> [String: CalendarEarningsData] {
+    var previewEarnings: [String: CalendarEarningsData] = [:]
+    if input.mode == .single {
+      for dateISO in input.selectedDates {
+        if let earnings = Self.computeEarningsForDate(
+          dateISO,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          context: earningsContext
+        ) {
+          previewEarnings[dateISO] = earnings
+        }
+      }
+    }
+    return previewEarnings
+  }
+
+  private nonisolated static func buildConflictsAndPreviews(
+    _ input: ConflictsAndPreviewsComputationInput
+  ) -> ConflictsAndPreviewsComputationResult {
+    let earningsContext = EarningsComputationContext(
+      requiresExplicitJobSelection: input.requiresExplicitJobSelection,
+      selectedJobId: input.selectedJobId,
+      effectiveJobId: input.effectiveJobId,
+      snapshots: input.snapshots,
+      jobs: input.jobs,
+      configuredJobIds: input.configuredJobIds,
+      settings: input.settings
+    )
+
+    let projection = Self.recurringProjection(for: input, earningsContext: earningsContext)
+    let projectedRecurringDates = projection.projectedRecurringDates
+    let anchorEarnings = projection.anchorEarnings
+    let datesToCheck = projection.datesToCheck
 
     guard input.hasValidTimes, !datesToCheck.isEmpty else {
       return ConflictsAndPreviewsComputationResult(
@@ -2079,19 +2176,8 @@ internal final class AddShiftViewModel {
       existingRecurringShifts: input.existingRecurringShifts
     )
 
-    var previewEarnings: [String: CalendarEarningsData] = [:]
-    if input.mode == .single {
-      for dateISO in input.selectedDates {
-        if let earnings = Self.computeEarningsForDate(
-          dateISO,
-          startTime: input.startTime,
-          endTime: input.endTime,
-          context: earningsContext
-        ) {
-          previewEarnings[dateISO] = earnings
-        }
-      }
-    }
+    let previewEarnings = Self.singleModePreviewEarnings(
+      for: input, earningsContext: earningsContext)
 
     return ConflictsAndPreviewsComputationResult(
       projectedRecurringDates: projectedRecurringDates,
@@ -2101,18 +2187,28 @@ internal final class AddShiftViewModel {
     )
   }
 
-  nonisolated static func computeEarningsForDate(
-    _ dateISO: String,
-    startTime: String,
-    endTime: String,
-    context: EarningsComputationContext
-  ) -> CalendarEarningsData? {
+  /// The job to preview earnings for, or nil when no configured job is selected.
+  private nonisolated static func previewableJobId(in context: EarningsComputationContext)
+    -> String?
+  {
     if context.requiresExplicitJobSelection, context.selectedJobId == nil {
       return nil
     }
     guard let effectiveJobId = context.effectiveJobId,
       context.configuredJobIds.contains(effectiveJobId)
     else {
+      return nil
+    }
+    return effectiveJobId
+  }
+
+  nonisolated static func computeEarningsForDate(
+    _ dateISO: String,
+    startTime: String,
+    endTime: String,
+    context: EarningsComputationContext
+  ) -> CalendarEarningsData? {
+    guard let effectiveJobId = Self.previewableJobId(in: context) else {
       return nil
     }
 
@@ -2528,17 +2624,17 @@ internal final class AddShiftViewModel {
     switch (previousMode, newMode) {
     case (.single, .events):
       syncSingleSelectionIntoEvent()
-      didEditEventCalendarSelectionSinceEnteringEventMode = false
+      didEditEventCalendarSinceEnteringEvents = false
 
     case (.events, .single):
-      if didEditEventCalendarSelectionSinceEnteringEventMode || selectedDates.isEmpty {
+      if didEditEventCalendarSinceEnteringEvents || selectedDates.isEmpty {
         syncEventSelectionIntoSingle()
       }
-      didEditEventCalendarSelectionSinceEnteringEventMode = false
+      didEditEventCalendarSinceEnteringEvents = false
 
     default:
       if newMode != .events {
-        didEditEventCalendarSelectionSinceEnteringEventMode = false
+        didEditEventCalendarSinceEnteringEvents = false
       }
     }
   }
@@ -2588,7 +2684,7 @@ internal final class AddShiftViewModel {
     guard mode == .events, !isSyncingCalendarSelectionAcrossModes else {
       return
     }
-    didEditEventCalendarSelectionSinceEnteringEventMode = true
+    didEditEventCalendarSinceEnteringEvents = true
   }
 
   private func contiguousDateSelection(from start: Date, to end: Date) -> Set<String> {

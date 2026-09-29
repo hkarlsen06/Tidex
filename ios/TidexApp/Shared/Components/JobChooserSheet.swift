@@ -46,24 +46,7 @@ struct JobChooserSheet: View {
   var body: some View {
     NavigationStack {
       List {
-        Section {
-          ForEach(jobs, id: \.id) { job in
-            row(job)
-          }
-
-          if let onAddJob {
-            Button(action: onAddJob) {
-              Label {
-                Text(.settingsPayAddJobCta)
-              } icon: {
-                Image(systemName: "plus.circle.fill")
-              }
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexBlue)
-            }
-          }
-        }
-        .listRowBackground(Color.tidexSurfacePrimary)
+        jobsSection
       }
       .tidexListBackground()
       .overlay {
@@ -93,6 +76,27 @@ struct JobChooserSheet: View {
     }
     .presentationDetents([.height(detentHeight), .large])
     .presentationDragIndicator(.visible)
+  }
+
+  private var jobsSection: some View {
+    Section {
+      ForEach(jobs, id: \.id) { job in
+        row(job)
+      }
+
+      if let onAddJob {
+        Button(action: onAddJob) {
+          Label {
+            Text(.settingsPayAddJobCta)
+          } icon: {
+            Image(systemName: "plus.circle.fill")
+          }
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexBlue)
+        }
+      }
+    }
+    .listRowBackground(Color.tidexSurfacePrimary)
   }
 
   private func row(_ job: Job) -> some View {

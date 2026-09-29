@@ -75,6 +75,67 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     case temporaryClockOut(start: Date, end: Date, jobId: String?)
   }
 
+  @ViewBuilder
+  // swiftlint:disable:next type_contents_order
+  private func shiftDetailsSheet(for shift: ShiftWithComputations) -> some View {
+    // swiftlint:disable:next explicit_type_interface
+    let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil
+    ShiftDetailsSheet(
+      shift: shift,
+      jobName: shiftJob?.name,
+      jobColorHex: shiftJob?.color,
+      onDelete: {
+        pendingSheetAction = .shiftDelete(shift)
+        selectedShift = nil
+      },
+      onUpdate: { editResult in
+        try await applyShiftEdit(editResult, originalShift: shift)
+      },
+      onUpdatePause: { pauseResult in
+        selectedShift = nil
+        Task {
+          await viewModel.updateShiftPause(pauseResult)
+        }
+      },
+      onEditRecurring: { recurringId in
+        if let recurring = viewModel.getRecurringShift(id: recurringId) {
+          pendingSheetAction = .recurringEdit(recurring)
+        }
+        selectedShift = nil
+      },
+      onStopRecurringAfterDate: { recurringId, occurrenceDate in
+        try await viewModel.stopRecurringShiftAfterDate(
+          recurringId: recurringId,
+          occurrenceDate: occurrenceDate
+        )
+        selectedShift = nil
+      },
+      showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+      onShowInCalendarRequested: {
+        openCalendarSubscriptionSetupFromDashboard()
+      },
+      tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
+    )
+    .presentationDetents([.medium, .large])
+    .presentationDragIndicator(.visible)
+  }
+
+  private func applyShiftEdit(
+    _ editResult: ShiftEditResult,
+    originalShift: ShiftWithComputations
+  ) async throws {  // swiftlint:disable:this type_contents_order
+    let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(  // swiftlint:disable:this explicit_type_interface
+      after: editResult, originalShift: originalShift)  // swiftlint:disable:this multiline_arguments_brackets
+    try await viewModel.updateShift(editResult)
+    if shouldKeepSheetOpen {
+      if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
+        selectedShift = refreshedShift
+      }
+    } else {
+      selectedShift = nil
+    }
+  }
+
   private func shouldKeepShiftDetailsOpen(  // swiftlint:disable:this type_contents_order
     after editResult: ShiftEditResult,
     originalShift: ShiftWithComputations
@@ -279,7 +340,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   /// Variant ids are per job, so the same id can belong to both the next and the previous payout.
   private func isSamePayout(_ lhs: PayrollCardVariant, _ rhs: PayrollCardVariant) -> Bool {  // swiftlint:disable:this line_length type_contents_order
     lhs.id == rhs.id
-      && lhs.jobBreakdowns.first?.earningsPeriodStart == rhs.jobBreakdowns.first?.earningsPeriodStart
+      && lhs.jobBreakdowns.first?.earningsPeriodStart
+        == rhs.jobBreakdowns.first?.earningsPeriodStart
   }
 
   /// The previous payout for the displayed month, or nil when the sheet already shows it.
@@ -579,54 +641,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .sheet(
         item: $selectedShift, onDismiss: performPendingSheetAction
       ) { shift in
-        let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil  // swiftlint:disable:this explicit_type_interface line_length
-        ShiftDetailsSheet(
-          shift: shift,
-          jobName: shiftJob?.name,
-          jobColorHex: shiftJob?.color,
-          onDelete: {
-            pendingSheetAction = .shiftDelete(shift)
-            selectedShift = nil
-          },
-          onUpdate: { editResult in
-            let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(  // swiftlint:disable:this explicit_type_interface
-              after: editResult, originalShift: shift)  // swiftlint:disable:this multiline_arguments_brackets
-            try await viewModel.updateShift(editResult)
-            if shouldKeepSheetOpen {
-              if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
-                selectedShift = refreshedShift
-              }
-            } else {
-              selectedShift = nil
-            }
-          },
-          onUpdatePause: { pauseResult in
-            selectedShift = nil
-            Task {
-              await viewModel.updateShiftPause(pauseResult)
-            }
-          },
-          onEditRecurring: { recurringId in
-            if let recurring = viewModel.getRecurringShift(id: recurringId) {
-              pendingSheetAction = .recurringEdit(recurring)
-            }
-            selectedShift = nil
-          },
-          onStopRecurringAfterDate: { recurringId, occurrenceDate in
-            try await viewModel.stopRecurringShiftAfterDate(
-              recurringId: recurringId,
-              occurrenceDate: occurrenceDate
-            )
-            selectedShift = nil
-          },
-          showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
-          onShowInCalendarRequested: {
-            openCalendarSubscriptionSetupFromDashboard()
-          },
-          tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
-        )
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+        shiftDetailsSheet(for: shift)
       }
       .sheet(item: $selectedEvent, onDismiss: performPendingSheetAction) { selection in
         EventDetailsSheet(
@@ -803,23 +818,33 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   // MARK: - Countdown Configuration
 
-  private typealias CountdownState = (
-    text: String, isActive: Bool, progress: Double, finalSeconds: Int?
-  )
+  private struct CountdownState {
+    let text: String
+    let isActive: Bool
+    let progress: Double
+    let finalSeconds: Int?
+  }
+
+  private struct CountdownTarget {
+    let shiftDate: String
+    let startTime: String
+    let endTime: String
+  }
 
   /// Shift/event date and times to feed the countdown, if the featured item currently tracks one.
-  private func countdownTarget(for data: DashboardData) -> (
-    shiftDate: String, startTime: String, endTime: String
-  )? {  // swiftlint:disable:this type_contents_order
+  private func countdownTarget(for data: DashboardData) -> CountdownTarget? {
+    // swiftlint:disable:previous type_contents_order
     switch data.featuredItem {
     case .shift(let shift)
     where data.isViewingCurrentMonth && !data.featuredShiftIsBestShift:
-      return (shift.shiftDate, shift.startTime, shift.endTime)
+      return CountdownTarget(
+        shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
 
     case .event(let event, _)
     where data.isViewingCurrentMonth && !data.featuredShiftIsBestShift && !event.is_all_day:
       guard let startTime = event.start_time, let endTime = event.end_time else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
-      return (event.start_date, startTime, endTime)
+      return CountdownTarget(
+        shiftDate: event.start_date, startTime: startTime, endTime: endTime)
 
     default:
       return nil
@@ -842,7 +867,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       endTime: target.endTime,
       now: now
     )
-    return (text, isActive, progress, finalSeconds)
+    return CountdownState(
+      text: text, isActive: isActive, progress: progress, finalSeconds: finalSeconds)
   }
 
   private func featuredEventCountdownStatus(_ event: EventRow, now: Date)  // swiftlint:disable:this type_contents_order
@@ -1065,8 +1091,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       VStack(spacing: Spacing.lg) {  // swiftlint:disable:this closure_body_length
         // Total Card (Displayed Month) - THE ANCHOR
         // Numbers animate smoothly when values change
-        // The button trait is conditional: the tap only acts with mixed currencies
-        TotalCard(  // swiftlint:disable:this accessibility_trait_for_button
+        TotalCard(
           gross: data.currentMonthGross,
           net: data.currentMonthNet,
           completedGross: data.currentMonthCompletedGross,

@@ -247,6 +247,9 @@ final class ShiftsRepository {
     }
   }
 
+}
+
+extension ShiftsRepository {
   // MARK: - Write Operations (Local with Dirty Tracking)
 
   /// Create a new shift locally

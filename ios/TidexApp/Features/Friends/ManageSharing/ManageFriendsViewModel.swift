@@ -58,6 +58,9 @@ final class ManageSharingViewModel {
   private var hasHydratedFromInitialSnapshot = false
   var onBootstrapRefresh: ((FriendsTabBootstrapData) async -> Void)?
 
+  /// Callback for when visibility changes (hide/show) to trigger sharer list refresh
+  var onVisibilityChange: (() -> Void)?
+
   // MARK: - Initialization
 
   init(
@@ -206,6 +209,11 @@ final class ManageSharingViewModel {
     return false
   }
 
+}
+
+// MARK: - Actions
+
+extension ManageSharingViewModel {
   // MARK: - Toggle Earnings Visibility
 
   /// Toggle whether a recipient can see my earnings
@@ -633,16 +641,15 @@ final class ManageSharingViewModel {
     actionInProgress = nil
   }
 
-  // MARK: - Callbacks
-
-  /// Callback for when visibility changes (hide/show) to trigger sharer list refresh
-  var onVisibilityChange: (() -> Void)?
+  // MARK: - Derived State
 
   /// Friends left out of the friends list, sorted by name.
   var hiddenFriends: [Friend] {
     friends
       .filter { isHiddenInFriendsTab(for: $0) }
-      .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+      .sorted {
+        $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+      }
   }
 
   var hasHiddenOrBlockedPeople: Bool {

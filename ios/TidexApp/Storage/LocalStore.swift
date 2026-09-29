@@ -60,11 +60,9 @@ internal final class LocalStore {
     }
   }
 
-  private init() {
-    Self.ensureStoreParentDirectoryExists()
-
-    // Create schema with all local models
-    let schema = Schema([
+  private static func makeSchema() -> Schema {
+    // Schema with all local models
+    Schema([
       LocalJob.self,
       LocalUserShift.self,
       LocalEvent.self,
@@ -87,6 +85,11 @@ internal final class LocalStore {
       LocalMessageReaction.self,
       LocalFriendMessagingSyncState.self,
     ])
+  }
+
+  /// Persistent container, or an in-memory / default fallback if persistent storage fails.
+  private static func makeContainer() -> (container: ModelContainer, isInMemoryFallback: Bool) {
+    let schema = makeSchema()
 
     // Configure container for persistent storage
     var usesScreenshotMemoryStore = false
@@ -100,57 +103,66 @@ internal final class LocalStore {
     )
 
     do {
-      container = try ModelContainer(for: schema, configurations: [configuration])
-      storeActor = LocalStoreActor(modelContainer: container)
-      isUsingInMemoryFallback = false
+      let container = try ModelContainer(for: schema, configurations: [configuration])
       kLocalStoreLogger.info("LocalStore initialized successfully")
+      return (container, false)
     } catch {
       kLocalStoreLogger.error("Failed to initialize LocalStore: \(error.localizedDescription)")
+      return (makeFallbackContainer(schema: schema), true)
+    }
+  }
 
-      // Try to recover by creating an in-memory container as fallback
-      // This allows the app to function (without persistence) rather than crash
-      kLocalStoreLogger.warning("Attempting fallback to in-memory storage")
-      let fallbackConfig = ModelConfiguration(
-        schema: schema,
-        isStoredInMemoryOnly: true,
-        allowsSave: true
+  private static func makeFallbackContainer(schema: Schema) -> ModelContainer {
+    // Try to recover by creating an in-memory container as fallback
+    // This allows the app to function (without persistence) rather than crash
+    kLocalStoreLogger.warning("Attempting fallback to in-memory storage")
+    let fallbackConfig = ModelConfiguration(
+      schema: schema,
+      isStoredInMemoryOnly: true,
+      allowsSave: true
+    )
+
+    do {
+      let container = try ModelContainer(for: schema, configurations: [fallbackConfig])
+      kLocalStoreLogger.warning(
+        "LocalStore initialized with in-memory fallback - data will not persist")
+      return container
+    } catch {
+      let fallbackError: Error = error
+      // This should essentially never happen - in-memory containers rarely fail
+      // But we need to initialize the properties, so create a minimal container
+      kLocalStoreLogger.critical(
+        "Failed to create even in-memory storage: \(fallbackError.localizedDescription)"
       )
 
+      // Last resort: try with default configuration
+      // If this fails, there's a fundamental issue with the app's model definitions
       do {
-        container = try ModelContainer(for: schema, configurations: [fallbackConfig])
-        storeActor = LocalStoreActor(modelContainer: container)
-        isUsingInMemoryFallback = true
-        kLocalStoreLogger.warning(
-          "LocalStore initialized with in-memory fallback - data will not persist")
+        let container = try ModelContainer(for: schema)
+        kLocalStoreLogger.critical("LocalStore using default container - app may be unstable")
+        return container
       } catch {
-        let fallbackError: Error = error
-        // This should essentially never happen - in-memory containers rarely fail
-        // But we need to initialize the properties, so create a minimal container
-        kLocalStoreLogger.critical(
-          "Failed to create even in-memory storage: \(fallbackError.localizedDescription)"
+        let lastResortError: Error = error
+        fatalError(
+          """
+          LocalStore: All storage initialization attempts failed.
+          Original error: \(error.localizedDescription)
+          In-memory fallback error: \(fallbackError.localizedDescription)
+          Default container error: \(lastResortError.localizedDescription)
+          This indicates a fundamental issue with the app's SwiftData model definitions.
+          """
         )
-
-        // Last resort: try with default configuration
-        // If this fails, there's a fundamental issue with the app's model definitions
-        do {
-          container = try ModelContainer(for: schema)
-          storeActor = LocalStoreActor(modelContainer: container)
-          isUsingInMemoryFallback = true
-          kLocalStoreLogger.critical("LocalStore using default container - app may be unstable")
-        } catch {
-          let lastResortError: Error = error
-          fatalError(
-            """
-            LocalStore: All storage initialization attempts failed.
-            Original error: \(error.localizedDescription)
-            In-memory fallback error: \(fallbackError.localizedDescription)
-            Default container error: \(lastResortError.localizedDescription)
-            This indicates a fundamental issue with the app's SwiftData model definitions.
-            """
-          )
-        }
       }
     }
+  }
+
+  private init() {
+    Self.ensureStoreParentDirectoryExists()
+
+    let result = Self.makeContainer()
+    container = result.container
+    storeActor = LocalStoreActor(modelContainer: result.container)
+    isUsingInMemoryFallback = result.isInMemoryFallback
   }
 
   /// Get a fresh ModelContext for main actor operations
@@ -3049,39 +3061,21 @@ internal actor LocalStoreActor {
 
     }
 
-    if !localDirtyFields.contains(.name) {
-      existing.name = serverRow.name
+    func mergeUnlessDirty(_ field: JobField, _ apply: () -> Void) {
+      if !localDirtyFields.contains(field) { apply() }
     }
-    if !localDirtyFields.contains(.color) {
-      existing.color = serverRow.color
-    }
-    if !localDirtyFields.contains(.currency) {
-      existing.currency = serverRow.currency
-    }
-    if !localDirtyFields.contains(.isDefault) {
-      existing.isDefault = serverRow.is_default
-    }
-    if !localDirtyFields.contains(.sortOrder) {
-      existing.sortOrder = serverRow.sort_order
-    }
-    if !localDirtyFields.contains(.payrollDay) {
-      existing.payrollDay = serverRow.payroll_day
-    }
-    if !localDirtyFields.contains(.halfTaxMonth) {
-      existing.halfTaxMonth = serverRow.half_tax_month
-    }
-    if !localDirtyFields.contains(.payPeriod) {
-      existing.payPeriodJSON = serverRow.pay_period?.storageJSON
-    }
-    if !localDirtyFields.contains(.monthlyGoal) {
-      existing.monthlyGoal = serverRow.monthly_goal
-    }
-    if !localDirtyFields.contains(.archivedAt) {
-      existing.archivedAt = archivedAt
-    }
-    if !localDirtyFields.contains(.deletedAt) {
-      existing.deletedAt = deletedAt
-    }
+
+    mergeUnlessDirty(.name) { existing.name = serverRow.name }
+    mergeUnlessDirty(.color) { existing.color = serverRow.color }
+    mergeUnlessDirty(.currency) { existing.currency = serverRow.currency }
+    mergeUnlessDirty(.isDefault) { existing.isDefault = serverRow.is_default }
+    mergeUnlessDirty(.sortOrder) { existing.sortOrder = serverRow.sort_order }
+    mergeUnlessDirty(.payrollDay) { existing.payrollDay = serverRow.payroll_day }
+    mergeUnlessDirty(.halfTaxMonth) { existing.halfTaxMonth = serverRow.half_tax_month }
+    mergeUnlessDirty(.payPeriod) { existing.payPeriodJSON = serverRow.pay_period?.storageJSON }
+    mergeUnlessDirty(.monthlyGoal) { existing.monthlyGoal = serverRow.monthly_goal }
+    mergeUnlessDirty(.archivedAt) { existing.archivedAt = archivedAt }
+    mergeUnlessDirty(.deletedAt) { existing.deletedAt = deletedAt }
 
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -3590,44 +3584,32 @@ internal actor LocalStoreActor {
 
     let dateFormatter = isoDateFormatter
 
-    if !localDirtyFields.contains(.jobId) {
-      existing.jobId = serverRow.job_id
+    func mergeUnlessDirty(_ field: WageSnapshotField, _ apply: () -> Void) {
+      if !localDirtyFields.contains(field) { apply() }
     }
-    if !localDirtyFields.contains(.fromDate) {
+
+    mergeUnlessDirty(.jobId) { existing.jobId = serverRow.job_id }
+    mergeUnlessDirty(.fromDate) {
       existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
     }
-    if !localDirtyFields.contains(.hourlyWage) {
-      existing.hourlyWage = serverRow.hourly_wage
-    }
-    if !localDirtyFields.contains(.wageLevel) {
-      existing.wageLevel = serverRow.wage_level
-    }
-    if !localDirtyFields.contains(.tariffTypeId) {
-      existing.tariffTypeId = serverRow.tariff_type_id
-    }
-    if !localDirtyFields.contains(.supplements) {
+    mergeUnlessDirty(.hourlyWage) { existing.hourlyWage = serverRow.hourly_wage }
+    mergeUnlessDirty(.wageLevel) { existing.wageLevel = serverRow.wage_level }
+    mergeUnlessDirty(.tariffTypeId) { existing.tariffTypeId = serverRow.tariff_type_id }
+    mergeUnlessDirty(.supplements) {
       existing.supplements = (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
     }
-    if !localDirtyFields.contains(.overtime) {
+    mergeUnlessDirty(.overtime) {
       existing.overtime =
         (try? kCanonicalJSONEncoder.encode(serverRow.overtime ?? .disabled)) ?? Data()
     }
-    if !localDirtyFields.contains(.taxEnabled) {
-      existing.taxEnabled = serverRow.tax_enabled
-    }
-    if !localDirtyFields.contains(.taxPercentage) {
-      existing.taxPercentage = serverRow.tax_percentage
-    }
-    if !localDirtyFields.contains(.breakEnabled) {
-      existing.breakEnabled = serverRow.break_enabled
-    }
-    if !localDirtyFields.contains(.breakMethod) {
-      existing.breakMethod = serverRow.break_method
-    }
-    if !localDirtyFields.contains(.breakThresholdHours) {
+    mergeUnlessDirty(.taxEnabled) { existing.taxEnabled = serverRow.tax_enabled }
+    mergeUnlessDirty(.taxPercentage) { existing.taxPercentage = serverRow.tax_percentage }
+    mergeUnlessDirty(.breakEnabled) { existing.breakEnabled = serverRow.break_enabled }
+    mergeUnlessDirty(.breakMethod) { existing.breakMethod = serverRow.break_method }
+    mergeUnlessDirty(.breakThresholdHours) {
       existing.breakThresholdHours = serverRow.break_threshold_hours
     }
-    if !localDirtyFields.contains(.breakDeductionMinutes) {
+    mergeUnlessDirty(.breakDeductionMinutes) {
       existing.breakDeductionMinutes = serverRow.break_deduction_minutes
     }
 
@@ -3713,6 +3695,51 @@ internal actor LocalStoreActor {
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
+  private func mergeServerFields(
+    into existing: LocalUserSettings,
+    from serverRow: SyncUserSettingsRow,
+    keepingLocal localDirtyFields: Set<UserSettingsField>
+  ) {
+    let dateFormatter = FormatterCache.iso8601Formatter()
+
+    func mergeUnlessDirty(_ field: UserSettingsField, _ apply: () -> Void) {
+      if !localDirtyFields.contains(field) { apply() }
+    }
+
+    mergeUnlessDirty(.monthlyGoal) { existing.monthlyGoal = serverRow.monthly_goal }
+    mergeUnlessDirty(.monthlyGoalsByMonth) {
+      existing.monthlyGoalsByMonth = serverRow.monthly_goals_by_month ?? [:]
+    }
+    mergeUnlessDirty(.defaultShiftsView) {
+      existing.defaultShiftsView = serverRow.default_shifts_view
+    }
+    mergeUnlessDirty(.profilePictureUrl) {
+      existing.profilePictureUrl = serverRow.profile_picture_url
+    }
+    mergeUnlessDirty(.payrollDay) { existing.payrollDay = serverRow.payroll_day }
+    mergeUnlessDirty(.theme) { existing.theme = serverRow.theme }
+    mergeUnlessDirty(.calendarContentColorStyle) {
+      existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
+    }
+    mergeUnlessDirty(.showDashboardClockButtons) {
+      existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
+    }
+    mergeUnlessDirty(.aiDataSharingEnabled) {
+      existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
+    }
+    mergeUnlessDirty(.wageyShowcaseSeen) {
+      existing.wageyShowcaseSeen = serverRow.wagey_showcase_seen ?? false
+    }
+    mergeUnlessDirty(.halfTaxMonth) { existing.halfTaxMonth = serverRow.half_tax_month }
+    mergeUnlessDirty(.currency) { existing.currency = serverRow.currency }
+    mergeUnlessDirty(.defaultStartupTab) {
+      existing.defaultStartupTab = serverRow.default_startup_tab
+    }
+    mergeUnlessDirty(.lastActive) {
+      existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
+    }
+  }
+
   internal func autoMergeUserSettings(
     userId: String,
     serverRow: SyncUserSettingsRow,
@@ -3731,50 +3758,7 @@ internal actor LocalStoreActor {
 
     }
 
-    let dateFormatter = FormatterCache.iso8601Formatter()
-
-    if !localDirtyFields.contains(.monthlyGoal) {
-      existing.monthlyGoal = serverRow.monthly_goal
-    }
-    if !localDirtyFields.contains(.monthlyGoalsByMonth) {
-      existing.monthlyGoalsByMonth = serverRow.monthly_goals_by_month ?? [:]
-    }
-    if !localDirtyFields.contains(.defaultShiftsView) {
-      existing.defaultShiftsView = serverRow.default_shifts_view
-    }
-    if !localDirtyFields.contains(.profilePictureUrl) {
-      existing.profilePictureUrl = serverRow.profile_picture_url
-    }
-    if !localDirtyFields.contains(.payrollDay) {
-      existing.payrollDay = serverRow.payroll_day
-    }
-    if !localDirtyFields.contains(.theme) {
-      existing.theme = serverRow.theme
-    }
-    if !localDirtyFields.contains(.calendarContentColorStyle) {
-      existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
-    }
-    if !localDirtyFields.contains(.showDashboardClockButtons) {
-      existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
-    }
-    if !localDirtyFields.contains(.aiDataSharingEnabled) {
-      existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
-    }
-    if !localDirtyFields.contains(.wageyShowcaseSeen) {
-      existing.wageyShowcaseSeen = serverRow.wagey_showcase_seen ?? false
-    }
-    if !localDirtyFields.contains(.halfTaxMonth) {
-      existing.halfTaxMonth = serverRow.half_tax_month
-    }
-    if !localDirtyFields.contains(.currency) {
-      existing.currency = serverRow.currency
-    }
-    if !localDirtyFields.contains(.defaultStartupTab) {
-      existing.defaultStartupTab = serverRow.default_startup_tab
-    }
-    if !localDirtyFields.contains(.lastActive) {
-      existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
-    }
+    mergeServerFields(into: existing, from: serverRow, keepingLocal: localDirtyFields)
 
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision

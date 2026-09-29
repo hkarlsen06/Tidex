@@ -502,114 +502,15 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: Spacing.lg) {
-          if isEditing {
-            editableTimeSection
-          } else {
-            headerSection
-          }
-
-          if isEditing {
-            noteEditorSection
-          }
-
-          if isEditing, shouldShowEditOptionsSection {
-            editOptionsSection
-          }
-
-          if let error = errorMessage {
-            errorBanner(message: error)
-          }
-
-          if !isEditing, shouldShowNoteSection {
-            noteSection
-          }
-
-          if !isEditing, shouldShowEarningsSection {
-            earningsSection
-          }
-
-          if !isEditing, !detailRowItems.isEmpty {
-            detailRowsSection
-          }
-
-          if !isEditing, shouldShowViewModeActionButtons {
-            viewModeActionButtons
-          }
-
-          // Added/edited timestamps (only in view mode, for non-virtual shifts)
-          if !isEditing, !isVirtualShift {
-            shiftTimestampFooter(createdAt: shift.createdAt, updatedAt: shift.updatedAt)
-          }
-        }
-        .padding(Spacing.mlg)
-      }
-      .background(Color.tidexBackground)
-      .navigationTitle(
-        isEditing
-          ? String(localized: .shiftsEditTitle)
-          : String(localized: .shiftsDetailsTitle)
-      )
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItemGroup(placement: .topBarLeading) {
-          if isEditing {
-            Button(String(localized: .commonCancel)) {
-              cancelEditing()
-            }
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextSecondary)
-          } else {
-            Button {
-              impactHaptic.impactOccurred()
-              if canSendShiftSnapshots {
-                showingShareDestinationPicker = true
-              } else {
-                showingImageShareOptions = true
-              }
-            } label: {
-              Image(systemName: "square.and.arrow.up")
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextPrimary)
-            }
-
-            if let onDelete {
-              Button(role: .destructive) {
-                onDelete()
-              } label: {
-                Image(systemName: isVirtualShift ? "minus.circle" : "trash")
-                  .font(.tidexBodyMedium)
-                  .foregroundColor(.tidexError)
-              }
-              .accessibilityLabel(
-                Text(
-                  isVirtualShift
-                    ? String(localized: .shiftsExcludeButton)
-                    : String(localized: .shiftsDeleteButton)
-                )
-              )
-            }
-          }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-          if isEditing {
-            Button(String(localized: .commonSave)) {
-              saveChanges()
-            }
-            .font(.tidexButton)
-            .foregroundColor(.tidexBlue)
-            .disabled(isSaving || !hasChanges)
-            .opacity(isSaving || !hasChanges ? 0.5 : 1)
-          } else {
-            Button(String(localized: .commonDone)) {
-              dismiss()
-            }
-            .font(.tidexButton)
-            .foregroundColor(.tidexBlue)
-          }
-        }
-      }
+      scrollContent
+        .background(Color.tidexBackground)
+        .navigationTitle(
+          isEditing
+            ? String(localized: .shiftsEditTitle)
+            : String(localized: .shiftsDetailsTitle)
+        )
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbarContent }
     }
     .onAppear {
       initializeEditState()
@@ -779,6 +680,128 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           localized: .shiftsRecurringStopAfterDateConfirmMessage(formattedStopRecurringDate)
         )
       )
+    }
+  }
+
+  private var scrollContent: some View {
+    ScrollView {
+      VStack(spacing: Spacing.lg) {
+        if isEditing {
+          editModeSections
+        } else {
+          headerSection
+        }
+
+        if let error = errorMessage {
+          errorBanner(message: error)
+        }
+
+        if !isEditing {
+          viewModeSections
+        }
+      }
+      .padding(Spacing.mlg)
+    }
+  }
+
+  @ViewBuilder
+  private var editModeSections: some View {
+    editableTimeSection
+
+    noteEditorSection
+
+    if shouldShowEditOptionsSection {
+      editOptionsSection
+    }
+  }
+
+  @ViewBuilder
+  private var viewModeSections: some View {
+    if shouldShowNoteSection {
+      noteSection
+    }
+
+    if shouldShowEarningsSection {
+      earningsSection
+    }
+
+    if !detailRowItems.isEmpty {
+      detailRowsSection
+    }
+
+    if shouldShowViewModeActionButtons {
+      viewModeActionButtons
+    }
+
+    // Added/edited timestamps (only for non-virtual shifts)
+    if !isVirtualShift {
+      shiftTimestampFooter(createdAt: shift.createdAt, updatedAt: shift.updatedAt)
+    }
+  }
+
+  @ViewBuilder
+  private var shareAndDeleteButtons: some View {
+    Button {
+      impactHaptic.impactOccurred()
+      if canSendShiftSnapshots {
+        showingShareDestinationPicker = true
+      } else {
+        showingImageShareOptions = true
+      }
+    } label: {
+      Image(systemName: "square.and.arrow.up")
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
+        .accessibilityLabel(Text(.shiftsShareTitle))
+    }
+
+    if let onDelete {
+      Button(role: .destructive) {
+        onDelete()
+      } label: {
+        Image(systemName: isVirtualShift ? "minus.circle" : "trash")
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexError)
+      }
+      .accessibilityLabel(
+        Text(
+          isVirtualShift
+            ? String(localized: .shiftsExcludeButton)
+            : String(localized: .shiftsDeleteButton)
+        )
+      )
+    }
+  }
+
+  @ToolbarContentBuilder
+  private var toolbarContent: some ToolbarContent {
+    ToolbarItemGroup(placement: .topBarLeading) {
+      if isEditing {
+        Button(String(localized: .commonCancel)) {
+          cancelEditing()
+        }
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextSecondary)
+      } else {
+        shareAndDeleteButtons
+      }
+    }
+    ToolbarItem(placement: .topBarTrailing) {
+      if isEditing {
+        Button(String(localized: .commonSave)) {
+          saveChanges()
+        }
+        .font(.tidexButton)
+        .foregroundColor(.tidexBlue)
+        .disabled(isSaving || !hasChanges)
+        .opacity(isSaving || !hasChanges ? 0.5 : 1)
+      } else {
+        Button(String(localized: .commonDone)) {
+          dismiss()
+        }
+        .font(.tidexButton)
+        .foregroundColor(.tidexBlue)
+      }
     }
   }
 
@@ -1971,6 +1994,7 @@ private struct ShareOptionsSheet: View {
             .font(.tidexTitle2)
             .foregroundColor(.tidexTextSecondary)
             .frame(width: 28)
+            .accessibilityHidden(true)
           Text(label)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
@@ -2203,41 +2227,66 @@ struct BreakDeductionBreakdown: Equatable {
         nextPeriodIndex += 1
       }
 
-      let originalMetrics = overlappingMetrics(
-        periods: originalPeriods,
-        from: groupStart,
-        to: groupEnd,
-        supplementRate: rate
-      )
-      let adjustedMetrics = overlappingMetrics(
-        periods: adjustedPeriods,
-        from: groupStart,
-        to: groupEnd,
-        supplementRate: rate
-      )
-      let deductedHours = max(0, originalMetrics.hours - adjustedMetrics.hours)
-      let amount = roundedCurrency(max(0, originalMetrics.pay - adjustedMetrics.pay))
-
-      if deductedHours > 0 {
-        parts.append(
-          BreakDeductionPart(
-            id: "supplement-\(groupStart)-\(groupEnd)-\(rate)",
-            kind: .supplement,
-            supplementSegment: SupplementSegment(
-              fromMin: groupStart,
-              toMin: groupEnd,
-              rate: rate,
-              actualHours: deductedHours
-            ),
-            hours: deductedHours,
-            rate: rate,
-            amount: amount
-          ))
+      if let part = supplementPart(
+        originalPeriods: originalPeriods,
+        adjustedPeriods: adjustedPeriods,
+        groupStart: groupStart,
+        groupEnd: groupEnd,
+        rate: rate
+      ) {
+        parts.append(part)
       }
 
       periodIndex = nextPeriodIndex
     }
 
+    return allocatingRemainder(
+      to: parts, originalPeriods: originalPeriods, adjustedPeriods: adjustedPeriods)
+  }
+
+  private static func supplementPart(
+    originalPeriods: [WagePeriod],
+    adjustedPeriods: [WagePeriod],
+    groupStart: Double,
+    groupEnd: Double,
+    rate: Double
+  ) -> BreakDeductionPart? {
+    let originalMetrics = overlappingMetrics(
+      periods: originalPeriods,
+      from: groupStart,
+      to: groupEnd,
+      supplementRate: rate
+    )
+    let adjustedMetrics = overlappingMetrics(
+      periods: adjustedPeriods,
+      from: groupStart,
+      to: groupEnd,
+      supplementRate: rate
+    )
+    let deductedHours = max(0, originalMetrics.hours - adjustedMetrics.hours)
+    let amount = roundedCurrency(max(0, originalMetrics.pay - adjustedMetrics.pay))
+
+    guard deductedHours > 0 else { return nil }
+    return BreakDeductionPart(
+      id: "supplement-\(groupStart)-\(groupEnd)-\(rate)",
+      kind: .supplement,
+      supplementSegment: SupplementSegment(
+        fromMin: groupStart,
+        toMin: groupEnd,
+        rate: rate,
+        actualHours: deductedHours
+      ),
+      hours: deductedHours,
+      rate: rate,
+      amount: amount
+    )
+  }
+
+  private static func allocatingRemainder(
+    to parts: [BreakDeductionPart],
+    originalPeriods: [WagePeriod],
+    adjustedPeriods: [WagePeriod]
+  ) -> [BreakDeductionPart] {
     // The visible deduction must equal the difference of the rounded pay components.
     // Allocate any fractional-cent remainder without inventing an extra deduction row.
     var remaining = roundedCurrency(

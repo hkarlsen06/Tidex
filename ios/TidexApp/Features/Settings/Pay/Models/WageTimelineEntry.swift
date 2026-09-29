@@ -67,24 +67,7 @@ enum WageTimelineProcessor {
       let previousSnapshot = index > 0 ? snapshots[index - 1] : nil
       let nextSnapshot = index < snapshots.count - 1 ? snapshots[index + 1] : nil
 
-      // Determine entry type
-      let entryType: WageTimelineEntry.EntryType
-      if let fromDate = snapshot.from_date {
-        if fromDate > today {
-          entryType = .future
-        } else if !foundCurrent {
-          entryType = .current
-          foundCurrent = true
-        } else {
-          entryType = .past
-        }
-      } else {
-        // Baseline (nil from_date)
-        entryType = foundCurrent ? .past : .current
-        if entryType == .current {
-          foundCurrent = true
-        }
-      }
+      let entryType = entryType(for: snapshot, today: today, foundCurrent: &foundCurrent)
 
       // Calculate end date (previous snapshot's from_date - 1 day)
       let endDate = calculateEndDate(for: snapshot, previousSnapshot: previousSnapshot)
@@ -118,6 +101,32 @@ enum WageTimelineProcessor {
   }
 
   // MARK: - Private Helpers
+
+  /// Determine the entry type, marking the first non-future snapshot as current
+  private static func entryType(
+    for snapshot: WageSnapshot,
+    today: String,
+    foundCurrent: inout Bool
+  ) -> WageTimelineEntry.EntryType {
+    let entryType: WageTimelineEntry.EntryType
+    if let fromDate = snapshot.from_date {
+      if fromDate > today {
+        entryType = .future
+      } else if !foundCurrent {
+        entryType = .current
+        foundCurrent = true
+      } else {
+        entryType = .past
+      }
+    } else {
+      // Baseline (nil from_date)
+      entryType = foundCurrent ? .past : .current
+      if entryType == .current {
+        foundCurrent = true
+      }
+    }
+    return entryType
+  }
 
   /// Calculate the end date for a snapshot (one day before the next snapshot starts)
   private static func calculateEndDate(

@@ -4,14 +4,12 @@ import XCTest
 
 final class PayrollCalculatorBehaviorTests: XCTestCase {
   func testTariffPayRoundsHalfCentsConsistentlyAcrossPeriodSplits() throws {
-    let scenarios: [(rate: Double, minutes: Int, split: Int, expected: Double)] = [
-      (184.54, 45, 7, 138.41), (185.38, 15, 4, 46.35),
-      (187.46, 15, 4, 46.87), (193.05, 10, 2, 32.18),
-      (210.81, 30, 9, 105.41), (256.14, 45, 3, 192.11),
-      (193.049999, 10, 2, 32.17),
+    let scenarios = [
+      HalfCentScenario(184.54, 45, 7, 138.41), HalfCentScenario(185.38, 15, 4, 46.35),
+      HalfCentScenario(187.46, 15, 4, 46.87), HalfCentScenario(193.05, 10, 2, 32.18),
+      HalfCentScenario(210.81, 30, 9, 105.41), HalfCentScenario(256.14, 45, 3, 192.11),
+      HalfCentScenario(193.049999, 10, 2, 32.17),
     ]
-    let encoder = JSONEncoder()
-    let decoder = JSONDecoder()
     for scenario in scenarios {
       let end = String(format: "08:%02d", scenario.minutes)
       let cut = String(format: "08:%02d", scenario.split)
@@ -30,22 +28,30 @@ final class PayrollCalculatorBehaviorTests: XCTestCase {
           WagePeriod(
             fromMin: 0, toMin: Double(scenario.minutes), baseRate: scenario.rate, supplementRate: 0)
         ]).base, scenario.expected)
-      let payload = SharingRPCPayloadInput(
-        ownerId: try XCTUnwrap(row.user_id), showEarnings: true,
-        settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)),
-        shifts: [try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode(row))],
-        recurringShifts: [],
-        snapshots: [
-          try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode(snapshot))
-        ],
-        jobs: [])
-      let shared = try XCTUnwrap(
-        SharingComputeCore.computeShiftsInRange(
-          payload: payload, startDate: row.shift_date, endDate: row.shift_date, mode: .visible
-        ).first)
+      let shared = try sharedComputedShift(row, snapshot: snapshot)
       XCTAssertEqual(shared.computed.basePay, scenario.expected)
       XCTAssertEqual(shared.computed.supplementPay, scenario.expected)
     }
+  }
+
+  private func sharedComputedShift(
+    _ row: ShiftRow, snapshot: WageSnapshot
+  ) throws -> SharingComputedShift {
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    let payload = SharingRPCPayloadInput(
+      ownerId: try XCTUnwrap(row.user_id), showEarnings: true,
+      settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)),
+      shifts: [try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode(row))],
+      recurringShifts: [],
+      snapshots: [
+        try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode(snapshot))
+      ],
+      jobs: [])
+    return try XCTUnwrap(
+      SharingComputeCore.computeShiftsInRange(
+        payload: payload, startDate: row.shift_date, endDate: row.shift_date, mode: .visible
+      ).first)
   }
 
   func testOvernightSupplementsFollowTheWeekdayAtEachRuleStart() {
@@ -386,5 +392,19 @@ final class PayrollCalculatorBehaviorTests: XCTestCase {
 
     XCTAssertEqual(computed.basePay, 184.54, accuracy: 0.01)
     XCTAssertEqual(computed.gross, 184.54, accuracy: 0.01)
+  }
+}
+
+private struct HalfCentScenario {
+  let rate: Double
+  let minutes: Int
+  let split: Int
+  let expected: Double
+
+  init(_ rate: Double, _ minutes: Int, _ split: Int, _ expected: Double) {
+    self.rate = rate
+    self.minutes = minutes
+    self.split = split
+    self.expected = expected
   }
 }

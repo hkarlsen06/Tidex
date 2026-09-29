@@ -173,6 +173,9 @@
       return counts
     }
 
+  }
+
+  extension SyncTestHelper {
     // MARK: - Validation Tests
 
     /// Validate Test 8.1: Local-only UI validation

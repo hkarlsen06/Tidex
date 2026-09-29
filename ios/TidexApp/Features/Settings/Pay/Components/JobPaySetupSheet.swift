@@ -190,19 +190,7 @@ struct JobPaySetupSheet: View {
     isSaving = true
     saveError = nil
 
-    let snapshotInput = JobBaselineSnapshotInput(
-      hourlyWage: onboardingData.resolvedHourlyWage,
-      wageLevel: onboardingData.resolvedWageLevel,
-      tariffTypeId: onboardingData.resolvedTariffTypeId,
-      supplements: onboardingData.resolvedSupplements,
-      overtime: onboardingData.resolvedOvertime,
-      taxEnabled: onboardingData.taxEnabled,
-      taxPercentage: onboardingData.taxEnabled ? onboardingData.taxPercentage : nil,
-      breakEnabled: onboardingData.breakEnabled,
-      breakMethod: "proportional",
-      breakThresholdHours: 5.5,
-      breakDeductionMinutes: 30
-    )
+    let snapshotInput = onboardingData.baselineSnapshotInput
 
     let didSave = await onSave(
       JobPaySetupInput(
@@ -240,75 +228,17 @@ private struct JobPayScheduleSetupScreen: View {
       VStack(spacing: 0) {
         ScrollView {
           VStack(spacing: 0) {
-            HStack {
-              Button(dismissTitle) {
-                onCancel()
-              }
-              .font(.tidexBody)
-              .foregroundColor(.tidexBlue)
-              .lineLimit(1)
-              .frame(minWidth: 44, minHeight: 44, alignment: .leading)
-              .contentShape(Rectangle())
-              .disabled(isSaving)
-
-              Spacer()
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.md)
-            .adaptiveContentWidth()
+            cancelRow
 
             Spacer()
               .frame(height: 24)
 
-            VStack(spacing: Spacing.sm) {
-              Image(systemName: "calendar.badge.clock")
-                .font(.tidexSubheadline)
-                .foregroundColor(.tidexBlue)
-
-              Text(.settingsPaySetupScheduleTitle)
-                .font(.tidexScreenTitle)
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
-
-              WorkplaceNameText(
-                name: job.name,
-                colorHex: job.color,
-                font: .tidexFootnote,
-                fallbackBadgeColor: .tidexBlue,
-                lineLimit: 2,
-                maxTextWidth: .infinity,
-                maxTextAlignment: .center,
-                multilineTextAlignment: .center
-              )
-            }
-            .padding(.horizontal, Spacing.xl)
-            .adaptiveContentWidth()
+            titleBlock
 
             Spacer()
               .frame(height: 28)
 
-            GlobalPaySettingsCard(
-              jobId: job.id,
-              currency: currency,
-              payrollDay: payrollDay,
-              halfTaxMonth: halfTaxMonth,
-              canChangeCurrency: true,
-              onUpdatePayrollDay: { value in
-                payrollDay = value
-              },
-              onUpdateHalfTaxMonth: { value in
-                await MainActor.run {
-                  halfTaxMonth = value
-                }
-              },
-              onUpdateCurrency: { value in
-                await MainActor.run {
-                  currency = value
-                }
-              }
-            )
-            .padding(.horizontal, Spacing.lg)
-            .adaptiveContentWidth()
+            payrollSettingsCard
 
             if let saveError {
               Text(saveError)
@@ -326,28 +256,103 @@ private struct JobPayScheduleSetupScreen: View {
         }
         .scrollDismissesKeyboard(.interactively)
 
-        VStack(spacing: 0) {
-          LinearGradient(
-            colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
-            startPoint: .top,
-            endPoint: .bottom
-          )
-          .frame(height: 24)
+        continueBar
+      }
+    }
+  }
 
-          OnboardingButton(
-            title: String(localized: .commonContinue),
-            isEnabled: !isSaving,
-            action: {
-              Haptics.play(.success)
-              onContinue()
-            }
-          )
-          .padding(.horizontal, Spacing.lg)
-          .padding(.bottom, Spacing.xl)
-          .adaptiveContentWidth()
-          .background(Color.tidexBackground)
+  private var cancelRow: some View {
+    HStack {
+      Button(dismissTitle) {
+        onCancel()
+      }
+      .font(.tidexBody)
+      .foregroundColor(.tidexBlue)
+      .lineLimit(1)
+      .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+      .contentShape(Rectangle())
+      .disabled(isSaving)
+
+      Spacer()
+    }
+    .padding(.horizontal, Spacing.lg)
+    .padding(.top, Spacing.md)
+    .adaptiveContentWidth()
+  }
+
+  private var titleBlock: some View {
+    VStack(spacing: Spacing.sm) {
+      Image(systemName: "calendar.badge.clock")
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexBlue)
+        .accessibilityHidden(true)
+
+      Text(.settingsPaySetupScheduleTitle)
+        .font(.tidexScreenTitle)
+        .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+
+      WorkplaceNameText(
+        name: job.name,
+        colorHex: job.color,
+        font: .tidexFootnote,
+        fallbackBadgeColor: .tidexBlue,
+        lineLimit: 2,
+        maxTextWidth: .infinity,
+        maxTextAlignment: .center,
+        multilineTextAlignment: .center
+      )
+    }
+    .padding(.horizontal, Spacing.xl)
+    .adaptiveContentWidth()
+  }
+
+  private var payrollSettingsCard: some View {
+    GlobalPaySettingsCard(
+      jobId: job.id,
+      currency: currency,
+      payrollDay: payrollDay,
+      halfTaxMonth: halfTaxMonth,
+      canChangeCurrency: true,
+      onUpdatePayrollDay: { value in
+        payrollDay = value
+      },
+      onUpdateHalfTaxMonth: { value in
+        await MainActor.run {
+          halfTaxMonth = value
+        }
+      },
+      onUpdateCurrency: { value in
+        await MainActor.run {
+          currency = value
         }
       }
+    )
+    .padding(.horizontal, Spacing.lg)
+    .adaptiveContentWidth()
+  }
+
+  private var continueBar: some View {
+    VStack(spacing: 0) {
+      LinearGradient(
+        colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
+        startPoint: .top,
+        endPoint: .bottom
+      )
+      .frame(height: 24)
+
+      OnboardingButton(
+        title: String(localized: .commonContinue),
+        isEnabled: !isSaving,
+        action: {
+          Haptics.play(.success)
+          onContinue()
+        }
+      )
+      .padding(.horizontal, Spacing.lg)
+      .padding(.bottom, Spacing.xl)
+      .adaptiveContentWidth()
+      .background(Color.tidexBackground)
     }
   }
 }

@@ -36,71 +36,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
 
       VStack(spacing: 0) {
         ScrollView {
-          VStack(spacing: 0) {
-            // Back button (if provided)
-            if let onBack {
-              HStack {
-                Button(action: {
-                  Haptics.play(.light)
-                  onBack()
-                }) {
-                  HStack(spacing: Spacing.xxs) {
-                    Image(systemName: "chevron.left")
-                      .font(.tidexButton)
-                    Text(.commonBack)
-                      .font(.tidexBody)
-                  }
-                  .foregroundColor(.tidexBlue)
-                  .frame(minHeight: 44)
-                }
-                .buttonStyle(.plain)
-                Spacer()
-              }
-              .padding(.horizontal, Spacing.lg)
-              .padding(.top, Spacing.md)
-              .adaptiveContentWidth()
-            }
-
-            Spacer()
-              .frame(height: onBack != nil ? 24 : 60)
-
-            // Header
-            VStack(spacing: Spacing.sm) {
-              Text(.onboardingSettingsTitle)
-                .font(.tidexLargeTitle)
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
-
-              Text(.onboardingSettingsSubtitle)
-                .font(.tidexBody)
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, Spacing.xl)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: Spacing.xl)
-
-            // Accordion sections
-            VStack(spacing: Spacing.sm) {
-              // Break deduction section
-              breakSection
-
-              // Tax section
-              taxSection
-
-              // Payday section
-              if showsPayday {
-                paydaySection
-              }
-            }
-            .padding(.horizontal, Spacing.lg)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: Spacing.xxxl)
-          }
+          scrollContent
         }
 
         // Final continue button (visible when all sections complete)
@@ -121,6 +57,81 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentSection)
       .animation(.spring(response: 0.35, dampingFraction: 0.85), value: completedSections)
     }
+  }
+
+  private var scrollContent: some View {
+    VStack(spacing: 0) {
+      // Back button (if provided)
+      if let onBack {
+        backButton(onBack)
+      }
+
+      Spacer()
+        .frame(height: onBack != nil ? 24 : 60)
+
+      header
+
+      Spacer()
+        .frame(height: Spacing.xl)
+
+      // Accordion sections
+      VStack(spacing: Spacing.sm) {
+        // Break deduction section
+        breakSection
+
+        // Tax section
+        taxSection
+
+        // Payday section
+        if showsPayday {
+          paydaySection
+        }
+      }
+      .padding(.horizontal, Spacing.lg)
+      .adaptiveContentWidth()
+
+      Spacer()
+        .frame(height: Spacing.xxxl)
+    }
+  }
+
+  private func backButton(_ onBack: @escaping () -> Void) -> some View {
+    HStack {
+      Button(action: {
+        Haptics.play(.light)
+        onBack()
+      }) {
+        HStack(spacing: Spacing.xxs) {
+          Image(systemName: "chevron.left")
+            .font(.tidexButton)
+          Text(.commonBack)
+            .font(.tidexBody)
+        }
+        .foregroundColor(.tidexBlue)
+        .frame(minHeight: 44)
+      }
+      .buttonStyle(.plain)
+      Spacer()
+    }
+    .padding(.horizontal, Spacing.lg)
+    .padding(.top, Spacing.md)
+    .adaptiveContentWidth()
+  }
+
+  private var header: some View {
+    VStack(spacing: Spacing.sm) {
+      Text(.onboardingSettingsTitle)
+        .font(.tidexLargeTitle)
+        .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+
+      Text(.onboardingSettingsSubtitle)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextSecondary)
+        .multilineTextAlignment(.center)
+    }
+    .padding(.horizontal, Spacing.xl)
+    .adaptiveContentWidth()
   }
 
   private var allSectionsComplete: Bool {
@@ -193,125 +204,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         completeSection(.tax)
       }
     ) {
-      VStack(alignment: .leading, spacing: Spacing.md) {
-        Toggle(isOn: $data.taxEnabled) {
-          Text(.onboardingSettingsTaxEnable)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextPrimary)
-        }
-        .tint(.tidexBrandPrimary)
-
-        Text(.onboardingSettingsTaxHint)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-          .fixedSize(horizontal: false, vertical: true)
-
-        if data.taxEnabled {
-          VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(.onboardingSettingsTaxPercentage)
-              .font(.tidexLabel)
-              .foregroundColor(.tidexTextSecondary)
-
-            // Tax preset buttons
-            LazyVGrid(
-              columns: [GridItem(.adaptive(minimum: taxPresetMinimumWidth), spacing: Spacing.xs)],
-              spacing: Spacing.xs
-            ) {
-              ForEach(taxPresets, id: \.self) { preset in
-                TaxPresetButton(
-                  value: preset,
-                  isSelected: data.taxPercentage == preset,
-                  action: {
-                    withAnimation {
-                      data.taxPercentage = preset
-                    }
-                  }
-                )
-              }
-            }
-
-            // Current value display - tappable
-            HStack {
-              if showingTaxInput {
-                // Editable input field
-                HStack(spacing: Spacing.xxs) {
-                  TextField("", text: $taxInputText)
-                    .font(.tidexTitle2)
-                    .foregroundColor(.tidexBlue)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.leading)
-                    .focused($isTaxInputFocused)
-                    .frame(width: 60)
-                    .padding(.horizontal, Spacing.xxs)
-                    .padding(.vertical, Spacing.micro)
-                    .background(Color.tidexBlue.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
-                    .overlay(
-                      RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-                        .stroke(Color.tidexBlue, lineWidth: 2)
-                    )
-                    .onChange(of: isTaxInputFocused) { _, focused in
-                      if !focused {
-                        applyTaxInput()
-                      }
-                    }
-                    .toolbar {
-                      ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button(String(localized: .commonDone)) {
-                          applyTaxInput()
-                        }
-                        .fontWeight(.semibold)
-                      }
-                    }
-
-                  Text("%")
-                    .font(.tidexLabel)
-                    .foregroundColor(.tidexTextMuted)
-                }
-              } else {
-                // Tappable display
-                Button(action: {
-                  Haptics.play(.light)
-                  taxInputText = formatTaxValue(data.taxPercentage)
-                  showingTaxInput = true
-                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isTaxInputFocused = true
-                  }
-                }) {
-                  HStack(spacing: Spacing.micro) {
-                    Text(formatTaxValue(data.taxPercentage))
-                      .font(.tidexTitle2)
-                      .foregroundColor(.tidexBlue)
-                      .contentTransition(.numericText())
-                    Text("%")
-                      .font(.tidexLabel)
-                      .foregroundColor(.tidexTextMuted)
-                  }
-                  .padding(.horizontal, Spacing.xxxs)
-                  .padding(.vertical, Spacing.micro)
-                  .background(Color.tidexBlue.opacity(0.08))
-                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
-                }
-                .buttonStyle(.plain)
-              }
-              Spacer()
-            }
-
-            Slider(
-              value: $data.taxPercentage,
-              in: 0...50,
-              step: 1,
-              onEditingChanged: { isEditing in
-                if isEditing {
-                  Haptics.play(.light)
-                }
-              }
-            )
-            .tint(.tidexBlue)
-          }
-        }
-      }
+      taxContent
     }
     .onTapGesture {
       // Allow tapping if: already completed (to edit) OR unlocked and not yet completed
@@ -324,6 +217,152 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       }
     }
     .opacity(completedSections.contains(.breakDeduction) || currentSection == .tax ? 1 : 0.5)
+  }
+
+  private var taxContent: some View {
+    VStack(alignment: .leading, spacing: Spacing.md) {
+      Toggle(isOn: $data.taxEnabled) {
+        Text(.onboardingSettingsTaxEnable)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextPrimary)
+      }
+      .tint(.tidexBrandPrimary)
+
+      Text(.onboardingSettingsTaxHint)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      if data.taxEnabled {
+        taxPercentageControls
+      }
+    }
+  }
+
+  private var taxPercentageControls: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      Text(.onboardingSettingsTaxPercentage)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextSecondary)
+
+      taxPresetGrid
+
+      // Current value display - tappable
+      HStack {
+        if showingTaxInput {
+          taxInputField
+        } else {
+          taxValueButton
+        }
+        Spacer()
+      }
+
+      Slider(
+        value: $data.taxPercentage,
+        in: 0...50,
+        step: 1,
+        onEditingChanged: { isEditing in
+          if isEditing {
+            Haptics.play(.light)
+          }
+        }
+      )
+      .tint(.tidexBlue)
+    }
+  }
+
+  /// Tax preset buttons
+  private var taxPresetGrid: some View {
+    LazyVGrid(
+      columns: [GridItem(.adaptive(minimum: taxPresetMinimumWidth), spacing: Spacing.xs)],
+      spacing: Spacing.xs
+    ) {
+      ForEach(taxPresets, id: \.self) { preset in
+        TaxPresetButton(
+          value: preset,
+          isSelected: data.taxPercentage == preset,
+          action: {
+            withAnimation {
+              data.taxPercentage = preset
+            }
+          }
+        )
+      }
+    }
+  }
+
+  /// Editable input field
+  private var taxInputField: some View {
+    HStack(spacing: Spacing.xxs) {
+      taxTextField
+
+      Text("%")
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextMuted)
+    }
+  }
+
+  private var taxTextField: some View {
+    TextField("", text: $taxInputText)
+      .font(.tidexTitle2)
+      .foregroundColor(.tidexBlue)
+      .keyboardType(.decimalPad)
+      .multilineTextAlignment(.leading)
+      .focused($isTaxInputFocused)
+      .frame(width: 60)
+      .padding(.horizontal, Spacing.xxs)
+      .padding(.vertical, Spacing.micro)
+      .background(Color.tidexBlue.opacity(0.15))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
+          .stroke(Color.tidexBlue, lineWidth: 2)
+      )
+      .onChange(of: isTaxInputFocused) { _, focused in
+        if !focused {
+          applyTaxInput()
+        }
+      }
+      .toolbar {
+        ToolbarItemGroup(placement: .keyboard) {
+          Spacer()
+          Button(String(localized: .commonDone)) {
+            applyTaxInput()
+          }
+          .fontWeight(.semibold)
+        }
+      }
+  }
+
+  /// Tappable display
+  private var taxValueButton: some View {
+    Button(action: {
+      Haptics.play(.light)
+      taxInputText = formatTaxValue(data.taxPercentage)
+      showingTaxInput = true
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        isTaxInputFocused = true
+      }
+    }) {
+      taxValueLabel
+    }
+    .buttonStyle(.plain)
+  }
+
+  private var taxValueLabel: some View {
+    HStack(spacing: Spacing.micro) {
+      Text(formatTaxValue(data.taxPercentage))
+        .font(.tidexTitle2)
+        .foregroundColor(.tidexBlue)
+        .contentTransition(.numericText())
+      Text("%")
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextMuted)
+    }
+    .padding(.horizontal, Spacing.xxxs)
+    .padding(.vertical, Spacing.micro)
+    .background(Color.tidexBlue.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
   }
 
   private var taxSummary: String {
@@ -346,121 +385,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         completeSection(.payday)
       }
     ) {
-      VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(.onboardingSettingsPaydayHint)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
-
-        // Horizontal scroll with day options + custom input
-        // Overlay with fade gradient to hint there's more content
-        ZStack(alignment: .trailing) {
-          ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.xs) {
-              ForEach(payrollDayOptions, id: \.self) { day in
-                PaydayButton(
-                  day: day,
-                  isLast: day == 31,
-                  isSelected: data.payrollDay == day && !showingPaydayInput,
-                  action: {
-                    showingPaydayInput = false
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                      data.payrollDay = day
-                    }
-                  }
-                )
-              }
-
-              // Custom day input button/field
-              if showingPaydayInput {
-                HStack(spacing: Spacing.xxs) {
-                  TextField("", text: $paydayInputText)
-                    .font(.tidexButton)
-                    .foregroundColor(.tidexBlue)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.center)
-                    .focused($isPaydayInputFocused)
-                    .frame(width: 44)
-                    .frame(minHeight: 44)
-                    .background(Color.tidexBlue.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-                    .overlay(
-                      RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                        .stroke(Color.tidexBlue, lineWidth: 2)
-                    )
-                    .onChange(of: isPaydayInputFocused) { _, focused in
-                      if !focused {
-                        applyPaydayInput()
-                      }
-                    }
-                    .toolbar {
-                      ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button(String(localized: .commonDone)) {
-                          applyPaydayInput()
-                        }
-                        .fontWeight(.semibold)
-                      }
-                    }
-                }
-              } else {
-                // "Other" button to enter custom day
-                Button(action: {
-                  Haptics.play(.light)
-                  paydayInputText =
-                    !payrollDayOptions.contains(data.payrollDay) ? "\(data.payrollDay)" : ""
-                  showingPaydayInput = true
-                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isPaydayInputFocused = true
-                  }
-                }) {
-                  HStack(spacing: Spacing.xxs) {
-                    Image(systemName: "pencil")
-                      .font(.tidexCaptionRegular)
-                    Text(.onboardingSettingsPaydayOther)
-                  }
-                  .font(
-                    !payrollDayOptions.contains(data.payrollDay) ? .tidexLabelStrong : .tidexLabel
-                  )
-                  .foregroundColor(
-                    !payrollDayOptions.contains(data.payrollDay) ? .white : .tidexTextSecondary
-                  )
-                  .frame(minWidth: 56, minHeight: 44)
-                  .padding(.horizontal, Spacing.xs)
-                  .background(
-                    !payrollDayOptions.contains(data.payrollDay)
-                      ? Color.tidexBrandPrimary : Color.tidexBackground
-                  )
-                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-                  .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                      .stroke(
-                        !payrollDayOptions.contains(data.payrollDay)
-                          ? Color.clear : Color.tidexBorder, lineWidth: 1)
-                  )
-                }
-                .buttonStyle(.plain)
-              }
-            }
-            .padding(.trailing, Spacing.lg)  // Extra padding for fade area
-          }
-
-          // Trailing fade gradient to hint more content
-          LinearGradient(
-            colors: [Color.tidexSurfaceSecondary.opacity(0), Color.tidexSurfaceSecondary],
-            startPoint: .leading,
-            endPoint: .trailing
-          )
-          .frame(width: 32)
-          .allowsHitTesting(false)
-        }
-
-        // Show current custom value if not a preset
-        if !payrollDayOptions.contains(data.payrollDay), !showingPaydayInput {
-          Text(String(localized: .onboardingSettingsPaydayCustomValue(data.payrollDay)))
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexBlue)
-        }
-      }
+      paydayContent
     }
     .onTapGesture {
       // Allow tapping if: already completed (to edit) OR unlocked and not yet completed
@@ -473,6 +398,127 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       }
     }
     .opacity(completedSections.contains(.tax) || currentSection == .payday ? 1 : 0.5)
+  }
+
+  private var paydayContent: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      Text(.onboardingSettingsPaydayHint)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextMuted)
+
+      // Horizontal scroll with day options + custom input
+      // Overlay with fade gradient to hint there's more content
+      ZStack(alignment: .trailing) {
+        ScrollView(.horizontal, showsIndicators: false) {
+          paydayOptions
+        }
+
+        // Trailing fade gradient to hint more content
+        LinearGradient(
+          colors: [Color.tidexSurfaceSecondary.opacity(0), Color.tidexSurfaceSecondary],
+          startPoint: .leading,
+          endPoint: .trailing
+        )
+        .frame(width: 32)
+        .allowsHitTesting(false)
+      }
+
+      // Show current custom value if not a preset
+      if !payrollDayOptions.contains(data.payrollDay), !showingPaydayInput {
+        Text(String(localized: .onboardingSettingsPaydayCustomValue(data.payrollDay)))
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexBlue)
+      }
+    }
+  }
+
+  private var paydayOptions: some View {
+    HStack(spacing: Spacing.xs) {
+      ForEach(payrollDayOptions, id: \.self) { day in
+        PaydayButton(
+          day: day,
+          isLast: day == 31,
+          isSelected: data.payrollDay == day && !showingPaydayInput,
+          action: {
+            showingPaydayInput = false
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+              data.payrollDay = day
+            }
+          }
+        )
+      }
+
+      // Custom day input button/field
+      if showingPaydayInput {
+        paydayInputField
+      } else {
+        paydayOtherButton
+      }
+    }
+    .padding(.trailing, Spacing.lg)  // Extra padding for fade area
+  }
+
+  private var paydayInputField: some View {
+    HStack(spacing: Spacing.xxs) {
+      TextField("", text: $paydayInputText)
+        .font(.tidexButton)
+        .foregroundColor(.tidexBlue)
+        .keyboardType(.numberPad)
+        .multilineTextAlignment(.center)
+        .focused($isPaydayInputFocused)
+        .frame(width: 44)
+        .frame(minHeight: 44)
+        .background(Color.tidexBlue.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+        .overlay(
+          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+            .stroke(Color.tidexBlue, lineWidth: 2)
+        )
+        .onChange(of: isPaydayInputFocused) { _, focused in
+          if !focused {
+            applyPaydayInput()
+          }
+        }
+        .toolbar {
+          ToolbarItemGroup(placement: .keyboard) {
+            Spacer()
+            Button(String(localized: .commonDone)) {
+              applyPaydayInput()
+            }
+            .fontWeight(.semibold)
+          }
+        }
+    }
+  }
+
+  /// "Other" button to enter custom day
+  private var paydayOtherButton: some View {
+    let isCustomDay = !payrollDayOptions.contains(data.payrollDay)
+    return Button(action: {
+      Haptics.play(.light)
+      paydayInputText = isCustomDay ? "\(data.payrollDay)" : ""
+      showingPaydayInput = true
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        isPaydayInputFocused = true
+      }
+    }) {
+      HStack(spacing: Spacing.xxs) {
+        Image(systemName: "pencil")
+          .font(.tidexCaptionRegular)
+        Text(.onboardingSettingsPaydayOther)
+      }
+      .font(isCustomDay ? .tidexLabelStrong : .tidexLabel)
+      .foregroundColor(isCustomDay ? .white : .tidexTextSecondary)
+      .frame(minWidth: 56, minHeight: 44)
+      .padding(.horizontal, Spacing.xs)
+      .background(isCustomDay ? Color.tidexBrandPrimary : Color.tidexBackground)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+          .stroke(isCustomDay ? Color.clear : Color.tidexBorder, lineWidth: 1)
+      )
+    }
+    .buttonStyle(.plain)
   }
 
   private var paydaySummary: String {

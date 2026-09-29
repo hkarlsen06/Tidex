@@ -35,33 +35,7 @@ struct SuccessScreen: View {
           .frame(height: Spacing.xl)
 
         // Header and content - constrained for iPad
-        VStack(spacing: Spacing.sm) {
-          Text(statusTitle)
-            .font(.tidexScreenTitle)
-            .foregroundColor(.tidexTextPrimary)
-            .multilineTextAlignment(.center)
-
-          Text(statusSubtitle)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextSecondary)
-            .multilineTextAlignment(.center)
-
-          if saveStatus == .success || saveStatus == .idle {
-            Spacer()
-              .frame(height: 8)
-
-            // Reassurance line
-            Text(reassuranceText)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextMuted)
-              .multilineTextAlignment(.center)
-              .padding(.horizontal, Spacing.md)
-          }
-        }
-        .padding(.horizontal, Spacing.xl)
-        .adaptiveContentWidth()
-        .opacity(contentVisible ? 1 : 0)
-        .offset(y: contentVisible ? 0 : 20)
+        statusText
 
         // Error message
         if saveStatus == .error, let errorMessage {
@@ -76,53 +50,7 @@ struct SuccessScreen: View {
         Spacer()
 
         // Bottom button(s)
-        VStack(spacing: Spacing.sm) {
-          // Add first shift, or Go to Dashboard / Friends when there is no shift to add
-          OnboardingButton(
-            title: addFirstShiftAction == nil
-              ? buttonTitle : String(localized: .onboardingSuccessAddFirstShift),
-            action: {
-              Haptics.play(.medium)
-              (addFirstShiftAction ?? onComplete)()
-            }
-          )
-          .disabled(!saveStatus.allowsCompletion)
-          .opacity(saveStatus.allowsCompletion ? 1 : 0.5)
-
-          if addFirstShiftAction != nil {
-            OnboardingButton(title: buttonTitle, action: onComplete, style: .secondary)
-              .disabled(!saveStatus.allowsCompletion)
-              .opacity(saveStatus.allowsCompletion ? 1 : 0.5)
-          }
-
-          // Import from an employer calendar link (Planday, Quinyx, Tamigo, MinGat)
-          if completionMode == .fullSetup, saveStatus.allowsCompletion {
-            Button {
-              Haptics.play(.light)
-              showCalendarImport = true
-            } label: {
-              Text(.calendarImportEntryButton)
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexBlue)
-            }
-          }
-
-          // Retry button (only on error)
-          if saveStatus == .error, let onRetry {
-            Button(action: {
-              Haptics.play(.medium)
-              onRetry()
-            }) {
-              Text(.commonRetry)
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexBlue)
-            }
-          }
-        }
-        .padding(.horizontal, Spacing.lg)
-        .adaptiveContentWidth()
-        .padding(.bottom, Spacing.xl)
-        .opacity(contentVisible ? 1 : 0)
+        actionButtons
       }
     }
     .onAppear {
@@ -150,6 +78,95 @@ struct SuccessScreen: View {
     ) {
       CalendarImportView { _ in
         didImportFromCalendar = true
+      }
+    }
+  }
+
+  // MARK: - Status Text Block
+
+  private var statusText: some View {
+    VStack(spacing: Spacing.sm) {
+      Text(statusTitle)
+        .font(.tidexScreenTitle)
+        .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+
+      Text(statusSubtitle)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextSecondary)
+        .multilineTextAlignment(.center)
+
+      if saveStatus == .success || saveStatus == .idle {
+        Spacer()
+          .frame(height: 8)
+
+        // Reassurance line
+        Text(reassuranceText)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextMuted)
+          .multilineTextAlignment(.center)
+          .padding(.horizontal, Spacing.md)
+      }
+    }
+    .padding(.horizontal, Spacing.xl)
+    .adaptiveContentWidth()
+    .opacity(contentVisible ? 1 : 0)
+    .offset(y: contentVisible ? 0 : 20)
+  }
+
+  // MARK: - Action Buttons
+
+  private var actionButtons: some View {
+    VStack(spacing: Spacing.sm) {
+      // Add first shift, or Go to Dashboard / Friends when there is no shift to add
+      OnboardingButton(
+        title: addFirstShiftAction == nil
+          ? buttonTitle : String(localized: .onboardingSuccessAddFirstShift),
+        action: {
+          Haptics.play(.medium)
+          (addFirstShiftAction ?? onComplete)()
+        }
+      )
+      .disabled(!saveStatus.allowsCompletion)
+      .opacity(saveStatus.allowsCompletion ? 1 : 0.5)
+
+      if addFirstShiftAction != nil {
+        OnboardingButton(title: buttonTitle, action: onComplete, style: .secondary)
+          .disabled(!saveStatus.allowsCompletion)
+          .opacity(saveStatus.allowsCompletion ? 1 : 0.5)
+      }
+
+      secondaryActions
+    }
+    .padding(.horizontal, Spacing.lg)
+    .adaptiveContentWidth()
+    .padding(.bottom, Spacing.xl)
+    .opacity(contentVisible ? 1 : 0)
+  }
+
+  @ViewBuilder
+  private var secondaryActions: some View {
+    // Import from an employer calendar link (Planday, Quinyx, Tamigo, MinGat)
+    if completionMode == .fullSetup, saveStatus.allowsCompletion {
+      Button {
+        Haptics.play(.light)
+        showCalendarImport = true
+      } label: {
+        Text(.calendarImportEntryButton)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexBlue)
+      }
+    }
+
+    // Retry button (only on error)
+    if saveStatus == .error, let onRetry {
+      Button(action: {
+        Haptics.play(.medium)
+        onRetry()
+      }) {
+        Text(.commonRetry)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexBlue)
       }
     }
   }

@@ -208,7 +208,9 @@
         .dynamicTypeSize(screen == "pay-settings-accessibility" ? .accessibility3 : dynamicTypeSize)
       }
     }
+  }
 
+  extension DesignReviewView {
     private static var payReviewJob: Job {
       Job(
         id: "pay-review", user_id: "design-preview", name: "Harbour", color: nil, currency: "$",
@@ -306,7 +308,7 @@
       )
       return PayrollEngine.computeShiftsForMonth(
         .init(
-          year: 2026, month: 2, shifts: [row], recurring: [], snapshots: [snapshot],
+          year: 2_026, month: 2, shifts: [row], recurring: [], snapshots: [snapshot],
           settings: nil, jobs: []
         ))[0]
     }
@@ -332,9 +334,7 @@
         )
       }
     }
-  }
 
-  extension DesignReviewView {
     /// Friend's shifts from `shifts`, overlaid with the viewer's own shifts, including an
     /// overnight one and two on Mondays so week numbers and person indicators share a cell.
     var sharedCalendar: some View {

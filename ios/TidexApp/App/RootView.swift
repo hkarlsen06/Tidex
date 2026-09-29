@@ -350,7 +350,7 @@ struct LoadingView: View {
       // Center the logo without reading container geometry during launch.
       Image("TidexLaunchLogo")
         .resizable()
-        .aspectRatio(contentMode: .fit)
+        .scaledToFit()
         .frame(width: 150, height: 150)
 
       ProgressView()

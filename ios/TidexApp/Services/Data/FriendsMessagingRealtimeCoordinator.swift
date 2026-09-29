@@ -11,6 +11,13 @@ extension Notification.Name {
   static let friendsThreadTypingDidChange = Notification.Name("friendsThreadTypingDidChange")
 }
 
+private struct ThreadDetailStreams {
+  let threads: AsyncStream<AnyAction>
+  let messages: AsyncStream<AnyAction>
+  let reactions: AsyncStream<AnyAction>
+  let state: AsyncStream<AnyAction>
+}
+
 @MainActor
 protocol FriendsMessagingRealtimeCoordinating: AnyObject {
   func startForAuthenticatedUser(viewerUserId: String) async
@@ -348,6 +355,36 @@ final class FriendsMessagingRealtimeCoordinator {
     let channel = supabase.channel("friends-thread-detail:\(threadId)") { config in
       config.broadcast.receiveOwnBroadcasts = true
     }
+    let streams = makeThreadDetailStreams(on: channel, threadId: threadId)
+
+    do {
+      try await subscribeWithTimeout(channel)
+      guard authenticatedViewerUserId == viewerUserId else {
+        await supabase.removeChannel(channel)
+        return
+      }
+      threadChannels[threadId] = channel
+
+      threadTasks[threadId] = makeThreadDetailTasks(
+        for: channel,
+        threadId: threadId,
+        viewerUserId: viewerUserId,
+        streams: streams
+      )
+    } catch {
+      realtimeLogger.error(
+        "Failed to subscribe thread detail realtime: \(error.localizedDescription)")
+      await supabase.removeChannel(channel)
+      if activeThreadId == threadId {
+        scheduleTypingChannelRepair(threadId: threadId, reason: error.localizedDescription)
+      }
+    }
+  }
+
+  private func makeThreadDetailStreams(
+    on channel: RealtimeChannelV2,
+    threadId: String
+  ) -> ThreadDetailStreams {
     let threadChanges = channel.postgresChange(
       AnyAction.self,
       schema: "public",
@@ -373,58 +410,56 @@ final class FriendsMessagingRealtimeCoordinator {
       filter: .eq("thread_id", value: threadId)
     )
 
-    do {
-      try await subscribeWithTimeout(channel)
-      guard authenticatedViewerUserId == viewerUserId else {
-        await supabase.removeChannel(channel)
-        return
-      }
-      threadChannels[threadId] = channel
+    return ThreadDetailStreams(
+      threads: threadChanges,
+      messages: messageChanges,
+      reactions: reactionChanges,
+      state: stateChanges
+    )
+  }
 
-      threadTasks[threadId] = [
-        makeThreadStatusTask(
-          for: channel,
-          threadId: threadId,
-          viewerUserId: viewerUserId,
-          skipInitialSubscribedRefresh: true
-        ),
-        Task { [weak self] in
-          guard let self else { return }
-          for await action in threadChanges {
-            await handleThreadDetailThreadAction(
-              action, threadId: threadId, viewerUserId: viewerUserId)
-          }
-        },
-        Task { [weak self] in
-          guard let self else { return }
-          for await action in messageChanges {
-            await handleThreadDetailMessageAction(
-              action, threadId: threadId, viewerUserId: viewerUserId)
-          }
-        },
-        Task { [weak self] in
-          guard let self else { return }
-          for await action in reactionChanges {
-            await handleThreadDetailReactionAction(
-              action, threadId: threadId, viewerUserId: viewerUserId)
-          }
-        },
-        Task { [weak self] in
-          guard let self else { return }
-          for await action in stateChanges {
-            await handleThreadDetailStateAction(
-              action, threadId: threadId, viewerUserId: viewerUserId)
-          }
-        },
-      ]
-    } catch {
-      realtimeLogger.error(
-        "Failed to subscribe thread detail realtime: \(error.localizedDescription)")
-      await supabase.removeChannel(channel)
-      if activeThreadId == threadId {
-        scheduleTypingChannelRepair(threadId: threadId, reason: error.localizedDescription)
-      }
-    }
+  private func makeThreadDetailTasks(
+    for channel: RealtimeChannelV2,
+    threadId: String,
+    viewerUserId: String,
+    streams: ThreadDetailStreams
+  ) -> [Task<Void, Never>] {
+    return [
+      makeThreadStatusTask(
+        for: channel,
+        threadId: threadId,
+        viewerUserId: viewerUserId,
+        skipInitialSubscribedRefresh: true
+      ),
+      Task { [weak self] in
+        guard let self else { return }
+        for await action in streams.threads {
+          await handleThreadDetailThreadAction(
+            action, threadId: threadId, viewerUserId: viewerUserId)
+        }
+      },
+      Task { [weak self] in
+        guard let self else { return }
+        for await action in streams.messages {
+          await handleThreadDetailMessageAction(
+            action, threadId: threadId, viewerUserId: viewerUserId)
+        }
+      },
+      Task { [weak self] in
+        guard let self else { return }
+        for await action in streams.reactions {
+          await handleThreadDetailReactionAction(
+            action, threadId: threadId, viewerUserId: viewerUserId)
+        }
+      },
+      Task { [weak self] in
+        guard let self else { return }
+        for await action in streams.state {
+          await handleThreadDetailStateAction(
+            action, threadId: threadId, viewerUserId: viewerUserId)
+        }
+      },
+    ]
   }
 
   func stopThreadSubscription(threadId: String) async {

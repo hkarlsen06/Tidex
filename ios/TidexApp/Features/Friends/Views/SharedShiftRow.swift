@@ -162,33 +162,45 @@ struct SharedShiftRow: View {
 
 }
 
+private func previewShift(
+  id: String,
+  date: String,
+  times: (start: String, end: String),
+  paidHours: Double,
+  supplementPay: Double
+) -> ShiftWithComputations {
+  let basePay = paidHours * 200
+  return ShiftWithComputations(
+    shift: ShiftRow(
+      id: id,
+      user_id: "owner",
+      shift_date: date,
+      start_time: times.start,
+      end_time: times.end,
+      custom_supplements: nil
+    ),
+    computed: ShiftComputed(
+      id: id,
+      durationHours: 8,
+      paidHours: paidHours,
+      basePay: basePay,
+      supplementPay: supplementPay,
+      gross: basePay + supplementPay,
+      wagePeriods: [],
+      originalWagePeriods: [],
+      breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
+    ),
+    taxEnabled: false,
+    taxPercentage: 0
+  )
+}
+
 #Preview {
   VStack(spacing: Spacing.sm) {
     // With earnings visible
     SharedShiftRow(
-      shift: ShiftWithComputations(
-        shift: ShiftRow(
-          id: "1",
-          user_id: "owner",
-          shift_date: "2025-01-18",
-          start_time: "09:00",
-          end_time: "17:00",
-          custom_supplements: nil
-        ),
-        computed: ShiftComputed(
-          id: "1",
-          durationHours: 8,
-          paidHours: 7.5,
-          basePay: 1_500,
-          supplementPay: 200,
-          gross: 1_700,
-          wagePeriods: [],
-          originalWagePeriods: [],
-          breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
-        ),
-        taxEnabled: false,
-        taxPercentage: 0
-      ),
+      shift: previewShift(
+        id: "1", date: "2025-01-18", times: ("09:00", "17:00"), paidHours: 7.5, supplementPay: 200),
       isToday: true,
       showEarnings: true,
       currency: "kr"
@@ -196,29 +208,8 @@ struct SharedShiftRow: View {
 
     // With earnings hidden
     SharedShiftRow(
-      shift: ShiftWithComputations(
-        shift: ShiftRow(
-          id: "2",
-          user_id: "owner",
-          shift_date: "2025-01-19",
-          start_time: "08:00",
-          end_time: "16:00",
-          custom_supplements: nil
-        ),
-        computed: ShiftComputed(
-          id: "2",
-          durationHours: 8,
-          paidHours: 8,
-          basePay: 1_600,
-          supplementPay: 0,
-          gross: 1_600,
-          wagePeriods: [],
-          originalWagePeriods: [],
-          breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
-        ),
-        taxEnabled: false,
-        taxPercentage: 0
-      ),
+      shift: previewShift(
+        id: "2", date: "2025-01-19", times: ("08:00", "16:00"), paidHours: 8, supplementPay: 0),
       isToday: false,
       showEarnings: false,
       currency: "kr"

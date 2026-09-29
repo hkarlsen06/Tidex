@@ -66,7 +66,6 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
       accuracy: 1)
   }
 
-
   func testDecodeTypingPayloadParsesRealtimeBroadcastEnvelope() throws {
     let payload: JSONObject = [
       "event": "typing_start",

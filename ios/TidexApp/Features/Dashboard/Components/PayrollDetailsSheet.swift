@@ -107,7 +107,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         onSave: { draft in
           if let adjustment = context.adjustment {
             guard let onUpdateAdjustment else { return }  // swiftlint:disable:this conditional_returns_on_newline
-            let updated = try await onUpdateAdjustment(adjustment.id, draft)  // swiftlint:disable:this explicit_type_interface
+            // swiftlint:disable:next explicit_type_interface
+            let updated = try await onUpdateAdjustment(adjustment.id, draft)
             replaceAdjustment(updated, in: context.breakdown.id)
           } else {
             guard let onCreateAdjustment else { return }  // swiftlint:disable:this conditional_returns_on_newline
@@ -341,26 +342,31 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           .frame(maxWidth: .infinity, alignment: .leading)
       }
 
-      if breakdown.earningsPeriodStart != nil {
-        Button {
-          paySettingsBreakdown = breakdown
-        } label: {
-          HStack(spacing: Spacing.sm) {
-            Label(.settingsPayReviewOpen, systemImage: "slider.horizontal.3")
-              .font(.tidexLabel)
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-              .font(.tidexCaption)
-              .foregroundColor(.tidexTextMuted)
-              .accessibilityHidden(true)
-          }
-          .frame(minHeight: 44)
-          .contentShape(Rectangle())
+      paySettingsLink(for: breakdown)
+    }
+  }
+
+  @ViewBuilder
+  private func paySettingsLink(for breakdown: PayrollCardJobBreakdown) -> some View {
+    if breakdown.earningsPeriodStart != nil {
+      Button {
+        paySettingsBreakdown = breakdown
+      } label: {
+        HStack(spacing: Spacing.sm) {
+          Label(.settingsPayReviewOpen, systemImage: "slider.horizontal.3")
+            .font(.tidexLabel)
+          Spacer(minLength: 0)
+          Image(systemName: "chevron.right")
+            .font(.tidexCaption)
+            .foregroundColor(.tidexTextMuted)
+            .accessibilityHidden(true)
         }
-        .buttonStyle(.plain)
-        .foregroundColor(.tidexBlue)
-        .accessibilityIdentifier("payroll-details.pay-settings")
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
       }
+      .buttonStyle(.plain)
+      .foregroundColor(.tidexBlue)
+      .accessibilityIdentifier("payroll-details.pay-settings")
     }
   }
 
@@ -466,7 +472,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     let label: LocalizedStringResource =
       !breakdown.taxEnabled
       ? .dashboardPayrollDetailsAdjustments
-      : kind == .taxable ? .dashboardPayrollDetailsAdjustmentsBeforeTax : .dashboardPayrollDetailsAdjustmentsAfterTax
+      : kind == .taxable
+        ? .dashboardPayrollDetailsAdjustmentsBeforeTax : .dashboardPayrollDetailsAdjustmentsAfterTax
     return HStack(spacing: Spacing.xs) {
       Text(label)
         .font(.tidexSubheadline)
@@ -489,7 +496,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   private func supplementBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {
     VStack(spacing: Spacing.sm) {
       let canExpand = !breakdown.supplementBreakdowns.isEmpty  // swiftlint:disable:this explicit_type_interface
-      let isExpanded = expandedSupplementJobIds.contains(breakdown.id)  // swiftlint:disable:this explicit_type_interface
+      // swiftlint:disable:next explicit_type_interface
+      let isExpanded = expandedSupplementJobIds.contains(breakdown.id)
 
       if canExpand {
         Button {
@@ -563,7 +571,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   private func postDeductionBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {
     VStack(spacing: Spacing.xs) {
       let canExpand = !breakdown.postDeductionParts.isEmpty  // swiftlint:disable:this explicit_type_interface
-      let isExpanded = expandedPostDeductionJobIds.contains(breakdown.id)  // swiftlint:disable:this explicit_type_interface
+      // swiftlint:disable:next explicit_type_interface
+      let isExpanded = expandedPostDeductionJobIds.contains(breakdown.id)
 
       if canExpand {
         Button {

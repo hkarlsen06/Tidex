@@ -72,6 +72,7 @@ struct SettingsView: View {
   private let jobsRepository = JobsRepository.shared
   private let settingsRepository = SettingsRepository.shared
   private let jobPaySetupStatusService = JobPaySetupStatusService.shared
+  private let profileAvatarSize: CGFloat = 64
 
   private enum PaySetupAction: Equatable {
     case openPay
@@ -210,6 +211,9 @@ struct SettingsView: View {
     }
   }
 
+}
+
+extension SettingsView {
   private var presentsPayChooserDirectly: Bool {
     guard case .pay(let jobId)? = initialDestination else { return false }
     return jobId == nil
@@ -217,78 +221,85 @@ struct SettingsView: View {
 
   private var settingsRootView: some View {
     NavigationStack(path: $navigationPath) {
-      List {
-        Group {
-          Section {
-            profileCard
-          }
-
-          accountSection
-          preferencesSection
-          workSection
-          supportSection
-          adminSection
-          debugSection
-        }
-        .listRowBackground(Color.tidexSurfacePrimary)
-      }
-      .listStyle(.insetGrouped)
-      .tidexListBackground()
-      .navigationTitle(String(localized: .settingsTitle))
-      .navigationBarTitleDisplayMode(.large)
-      .toolbar {
-        if !isTabRoot {
-          ToolbarItem(placement: .confirmationAction) {
-            Button(String(localized: .commonDone)) {
-              dismiss()
+      settingsList
+        .listStyle(.insetGrouped)
+        .tidexListBackground()
+        .navigationTitle(String(localized: .settingsTitle))
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+          if !isTabRoot {
+            ToolbarItem(placement: .confirmationAction) {
+              Button(String(localized: .commonDone)) {
+                dismiss()
+              }
             }
           }
         }
-      }
-      .addShiftDestination(in: isTabRoot ? .profile : nil)
-      .navigationDestination(for: SettingsDestination.self) { destination in
-        Group {
-          switch destination {
-          case .profile:
-            ProfileSettingsView {
-              navigationPath.append(SettingsDestination.security)
-            }
-
-          case .security:
-            SecuritySettingsView()
-
-          case .notifications:
-            NotificationSettingsView()
-
-          case .appearance:
-            AppearanceSettingsView()
-
-          case .pay(let jobId):
-            PaySettingsView(initialJobId: jobId)
-
-          case .recurringShifts:
-            RecurringShiftsSettingsView()
-
-          case .calendarSync(let calendarSetupIntent):
-            CalendarSyncSettingsView(calendarSetupIntent: calendarSetupIntent)
-
-          case .data:
-            DataSettingsView()
-
-          case .feedback:
-            FeedbackSettingsView()
-
-          case .admin:
-            AdminSettingsView()
-
-          #if DEBUG
-            case .debug:
-              SyncDebugView()
-          #endif
-          }
+        .addShiftDestination(in: isTabRoot ? .profile : nil)
+        .navigationDestination(for: SettingsDestination.self) { destination in
+          settingsDestinationView(destination)
+            .toolbarRole(.editor)
         }
-        .toolbarRole(.editor)
+    }
+  }
+
+  private var settingsList: some View {
+    List {
+      Group {
+        Section {
+          profileCard
+        }
+
+        accountSection
+        preferencesSection
+        workSection
+        supportSection
+        adminSection
+        debugSection
       }
+      .listRowBackground(Color.tidexSurfacePrimary)
+    }
+  }
+
+  @ViewBuilder
+  private func settingsDestinationView(_ destination: SettingsDestination) -> some View {
+    switch destination {
+    case .profile:
+      ProfileSettingsView {
+        navigationPath.append(SettingsDestination.security)
+      }
+
+    case .security:
+      SecuritySettingsView()
+
+    case .notifications:
+      NotificationSettingsView()
+
+    case .appearance:
+      AppearanceSettingsView()
+
+    case .pay(let jobId):
+      PaySettingsView(initialJobId: jobId)
+
+    case .recurringShifts:
+      RecurringShiftsSettingsView()
+
+    case .calendarSync(let calendarSetupIntent):
+      CalendarSyncSettingsView(calendarSetupIntent: calendarSetupIntent)
+
+    case .data:
+      DataSettingsView()
+
+    case .feedback:
+      FeedbackSettingsView()
+
+    case .admin:
+      AdminSettingsView()
+
+    #if DEBUG
+      case .debug:
+        SyncDebugView()
+    #endif
     }
   }
 
@@ -298,8 +309,6 @@ struct SettingsView: View {
         await openPaySettings(presentAsSheet: false)
       }
   }
-
-  private let profileAvatarSize: CGFloat = 64
 
   private var profileCard: some View {
     NavigationLink(value: SettingsDestination.profile) {
@@ -558,15 +567,16 @@ struct SettingsView: View {
     }
   }
 
-  private func completeConfiguredPayJob(input: AddJobSetupInput) async -> Bool {
-    let resolvedUserId: String?
+  /// The cached chooser user id, or the signed-in user's id when none is cached yet.
+  private func resolvePayChooserUserId() async -> String? {
     if let payChooserUserId {
-      resolvedUserId = payChooserUserId
-    } else {
-      resolvedUserId = try? await AuthSessionManager.shared.getUserId()
+      return payChooserUserId
     }
+    return try? await AuthSessionManager.shared.getUserId()
+  }
 
-    guard let userId = resolvedUserId else {
+  private func completeConfiguredPayJob(input: AddJobSetupInput) async -> Bool {
+    guard let userId = await resolvePayChooserUserId() else {
       presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return false
     }
@@ -843,14 +853,7 @@ struct SettingsView: View {
   }
 
   private func completePaySetup(for job: Job, input: JobPaySetupInput) async -> Bool {
-    let resolvedUserId: String?
-    if let payChooserUserId {
-      resolvedUserId = payChooserUserId
-    } else {
-      resolvedUserId = try? await AuthSessionManager.shared.getUserId()
-    }
-
-    guard let userId = resolvedUserId else {
+    guard let userId = await resolvePayChooserUserId() else {
       presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return false
     }
@@ -907,121 +910,142 @@ struct SettingsView: View {
   }
 
   private func payJobChooserNavigationStack(isPresentedAsNestedSheet: Bool) -> some View {
-    let defaultJob = payChooserJobs.first(where: \.is_default)  // swiftlint:disable:this explicit_type_interface
-
-    return NavigationStack {
-      List {
-        Group {
-          Section {
-            if payChooserJobs.isEmpty {
-              Text(.settingsPayChooseJobEmpty)
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexTextSecondary)
-            } else {
-              ForEach(payChooserJobs, id: \.id) { job in
-                payChooserWorkplaceRow(job, isDefault: job.id == defaultJob?.id)
-              }
-            }
-
-            Button {
-              openAddPayJob()
-            } label: {
-              Label {
-                Text(.settingsPayAddJobCta)
-                  .foregroundColor(.tidexBlue)
-              } icon: {
-                Image(systemName: "plus.circle.fill")
-                  .foregroundColor(.tidexBlue)
-              }
-              .font(.tidexBodyMedium)
-            }
-          } footer: {
-            if !payChooserJobs.isEmpty {
-              Text(.settingsPayManageJobsFooter)
-            }
+    NavigationStack {
+      payChooserScreen(isPresentedAsNestedSheet: isPresentedAsNestedSheet)
+        .alert(
+          payChooserErrorAlert?.title ?? String(localized: .commonError),
+          isPresented: payChooserErrorIsPresented
+        ) {
+          Button(String(localized: .commonOk)) {
+            clearPayChooserError()
           }
-
-          if !payArchivedJobs.isEmpty {
-            archivedPayJobsSection
-          }
-
-          if let payChooserError {
-            Section {
-              Text(payChooserError)
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexError)
-            }
+        } message: {
+          if let payChooserErrorAlert {
+            Text(payChooserErrorAlert.message)
           }
         }
-        .listRowBackground(Color.tidexSurfacePrimary)
-      }
-      .tidexListBackground()
-      .navigationTitle(String(localized: .settingsPayManageJobsTitle))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(
-            isPresentedAsNestedSheet
-              ? String(localized: .commonCancel) : String(localized: .commonDone)
-          ) {
-            if isPresentedAsNestedSheet {
-              showPayJobChooser = false
-            } else {
-              dismiss()
-            }
-          }
+        .confirmationDialog(
+          String(localized: .settingsPayJobActionsDeleteHistoryConfirmTitle),
+          isPresented: pendingDeleteIsPresented,
+          titleVisibility: .visible,
+          presenting: pendingPayChooserDeleteJob
+        ) { preview in
+          payChooserDeleteDialogActions(preview)
+        } message: { preview in
+          Text(preview.confirmationMessage)
         }
-      }
-      .alert(
-        payChooserErrorAlert?.title ?? String(localized: .commonError),
-        isPresented: .init(
-          get: { payChooserErrorAlert != nil },
-          set: { if !$0 { clearPayChooserError() } }
+        .sheet(item: $payChooserDetailRoute) { route in
+          payChooserDetailSheet(route)
+        }
+        .simultaneousGesture(
+          payChooserManagementExitGesture(isEnabled: !isPresentedAsNestedSheet)
         )
-      ) {
-        Button(String(localized: .commonOk)) {
-          clearPayChooserError()
-        }
-      } message: {
-        if let payChooserErrorAlert {
-          Text(payChooserErrorAlert.message)
-        }
-      }
-      .confirmationDialog(
-        String(localized: .settingsPayJobActionsDeleteHistoryConfirmTitle),
-        isPresented: .init(
-          get: { pendingPayChooserDeleteJob != nil },
-          set: { if !$0 { pendingPayChooserDeleteJob = nil } }
-        ),
-        titleVisibility: .visible,
-        presenting: pendingPayChooserDeleteJob
-      ) { preview in
-        Button(String(localized: .settingsPayJobActionsDeleteHistory), role: .destructive) {
-          pendingPayChooserDeleteJob = nil
-          Task {
-            await deletePayJob(preview)
-          }
-        }
-
-        Button(role: .cancel) {
-          pendingPayChooserDeleteJob = nil
-        } label: {
-          Text(.commonCancel)
-        }
-      } message: { preview in
-        Text(preview.confirmationMessage)
-      }
-      .sheet(item: $payChooserDetailRoute) { route in
-        payChooserDetailSheet(route)
-      }
-      .simultaneousGesture(
-        payChooserManagementExitGesture(isEnabled: !isPresentedAsNestedSheet)
-      )
     }
     .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
       guard let payChooserUserId else { return }
       refreshPayJobLists(for: payChooserUserId)
       refreshPayChooserDefaults(for: payChooserUserId)
+    }
+  }
+
+  private var payChooserErrorIsPresented: Binding<Bool> {
+    .init(
+      get: { payChooserErrorAlert != nil },
+      set: { if !$0 { clearPayChooserError() } }
+    )
+  }
+
+  private var pendingDeleteIsPresented: Binding<Bool> {
+    .init(
+      get: { pendingPayChooserDeleteJob != nil },
+      set: { if !$0 { pendingPayChooserDeleteJob = nil } }
+    )
+  }
+
+  @ViewBuilder
+  private func payChooserDeleteDialogActions(_ preview: JobDeletionPreview) -> some View {
+    Button(String(localized: .settingsPayJobActionsDeleteHistory), role: .destructive) {
+      pendingPayChooserDeleteJob = nil
+      Task {
+        await deletePayJob(preview)
+      }
+    }
+
+    Button(role: .cancel) {
+      pendingPayChooserDeleteJob = nil
+    } label: {
+      Text(.commonCancel)
+    }
+  }
+
+  private func payChooserScreen(isPresentedAsNestedSheet: Bool) -> some View {
+    List {
+      Group {
+        payChooserJobsSection
+
+        if !payArchivedJobs.isEmpty {
+          archivedPayJobsSection
+        }
+
+        if let payChooserError {
+          Section {
+            Text(payChooserError)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexError)
+          }
+        }
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
+    }
+    .tidexListBackground()
+    .navigationTitle(String(localized: .settingsPayManageJobsTitle))
+    .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      ToolbarItem(placement: .cancellationAction) {
+        Button(
+          isPresentedAsNestedSheet
+            ? String(localized: .commonCancel) : String(localized: .commonDone)
+        ) {
+          if isPresentedAsNestedSheet {
+            showPayJobChooser = false
+          } else {
+            dismiss()
+          }
+        }
+      }
+    }
+  }
+
+  private var payChooserJobsSection: some View {
+    let defaultJob = payChooserJobs.first(where: \.is_default)  // swiftlint:disable:this explicit_type_interface
+
+    return Section {
+      if payChooserJobs.isEmpty {
+        Text(.settingsPayChooseJobEmpty)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+      } else {
+        ForEach(payChooserJobs, id: \.id) { job in
+          payChooserWorkplaceRow(job, isDefault: job.id == defaultJob?.id)
+        }
+      }
+
+      Button {
+        openAddPayJob()
+      } label: {
+        Label {
+          Text(.settingsPayAddJobCta)
+            .foregroundColor(.tidexBlue)
+        } icon: {
+          Image(systemName: "plus.circle.fill")
+            .foregroundColor(.tidexBlue)
+        }
+        .font(.tidexBodyMedium)
+      }
+    } footer: {
+      if !payChooserJobs.isEmpty {
+        Text(.settingsPayManageJobsFooter)
+      }
     }
   }
 
@@ -1084,25 +1108,29 @@ struct SettingsView: View {
           payChooserArchivedJobRow(job)
         }
       } label: {
-        Label {
-          HStack(spacing: Spacing.sm) {
-            Text(.settingsPayManageJobsArchivedTitle)
-              .foregroundColor(.tidexTextSecondary)
-
-            Spacer(minLength: Spacing.sm)
-
-            Text(payArchivedJobs.count, format: .number)
-              .foregroundColor(.tidexTextMuted)
-              .monospacedDigit()
-          }
-        } icon: {
-          Image(systemName: "archivebox")
-            .foregroundColor(.tidexTextMuted)
-        }
-        .font(.tidexBodyMedium)
+        archivedPayJobsLabel
       }
       .tint(.tidexTextMuted)
     }
+  }
+
+  private var archivedPayJobsLabel: some View {
+    Label {
+      HStack(spacing: Spacing.sm) {
+        Text(.settingsPayManageJobsArchivedTitle)
+          .foregroundColor(.tidexTextSecondary)
+
+        Spacer(minLength: Spacing.sm)
+
+        Text(payArchivedJobs.count, format: .number)
+          .foregroundColor(.tidexTextMuted)
+          .monospacedDigit()
+      }
+    } icon: {
+      Image(systemName: "archivebox")
+        .foregroundColor(.tidexTextMuted)
+    }
+    .font(.tidexBodyMedium)
   }
 
   private func payChooserWorkplaceRow(_ job: Job, isDefault: Bool) -> some View {
@@ -1132,7 +1160,7 @@ struct SettingsView: View {
             isDefault: isDefault,
             requiresPaySetup: !payConfiguredJobIds.contains(job.id)
           )
-            .layoutPriority(2)
+          .layoutPriority(2)
         }
 
         Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
@@ -1235,217 +1263,6 @@ struct SettingsView: View {
       )
     }
     .disabled(payJobManagementLoadingJobId != nil)
-  }
-}
-
-// MARK: - Recurring Shifts Settings
-
-private struct RecurringShiftsSettingsView: View {
-  @State private var recurringShifts: [RecurringShiftRow] = []
-  @State private var recurringShiftToEdit: RecurringShiftRow?
-  @State private var isLoading = true
-  @State private var errorMessage: String?
-
-  var body: some View {
-    List {
-      Group {
-        if let errorMessage {
-          Section {
-            Label {
-              Text(errorMessage)
-                .foregroundColor(.tidexError)
-            } icon: {
-              Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.tidexError)
-            }
-            .font(.tidexSubheadline)
-          }
-        }
-
-        if isLoading && recurringShifts.isEmpty {
-          Section {
-            ProgressView()
-              .frame(maxWidth: .infinity)
-          }
-        } else if !recurringShifts.isEmpty {
-          Section {
-            ForEach(recurringShifts, id: \.id) { recurring in
-              recurringShiftRow(recurring)
-            }
-          } footer: {
-            Text(.settingsRecurringShiftsSubtitle)
-          }
-        }
-      }
-      .listRowBackground(Color.tidexSurfacePrimary)
-    }
-    .tidexListBackground()
-    .overlay {
-      if !isLoading, recurringShifts.isEmpty, errorMessage == nil {
-        ContentUnavailableView {
-          Label(String(localized: .settingsRecurringShiftsEmptyTitle), systemImage: "repeat")
-        } description: {
-          Text(.settingsRecurringShiftsEmptyDescription)
-        }
-      }
-    }
-    .navigationTitle(String(localized: .settingsRecurringShiftsTitle))
-    .navigationBarTitleDisplayMode(.inline)
-    .task {
-      await loadRecurringShifts()
-    }
-    .refreshable {
-      await loadRecurringShifts()
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
-      Task {
-        await loadRecurringShifts()
-      }
-    }
-    .sheet(item: $recurringShiftToEdit) { recurring in
-      RecurringShiftEditorSheet(
-        recurringShift: recurring,
-        onSave: { editResult in
-          recurringShiftToEdit = nil
-          Task {
-            await updateRecurringShift(editResult)
-          }
-        },
-        onDelete: {
-          let recurringId = recurring.id
-          recurringShiftToEdit = nil
-          Task {
-            await deleteRecurringShift(recurringId)
-          }
-        }
-      )
-      .presentationDetents([.large])
-      .presentationDragIndicator(.visible)
-    }
-    .sensoryFeedback(.impact(weight: .light), trigger: recurringShiftToEdit) { _, new in
-      new != nil
-    }
-  }
-
-  private func recurringShiftRow(_ recurring: RecurringShiftRow) -> some View {
-    let exclusionCount = recurring.effectiveExclusions.count
-    var details = [weekdaySummary(for: recurring.selected_days), repeatLabel(for: recurring.repeat_interval_weeks)]
-    if exclusionCount > 0 {
-      details.append(String(localized: .settingsRecurringShiftsExcludedCount(exclusionCount)))
-    }
-
-    return Button {
-      recurringShiftToEdit = recurring
-    } label: {
-      VStack(alignment: .leading, spacing: Spacing.xxs) {
-        Text(verbatim: "\(recurring.cleanStartTime) - \(recurring.cleanEndTime)")
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-          .monospacedDigit()
-
-        Text(verbatim: details.joined(separator: " • "))
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-      }
-      .padding(.vertical, Spacing.xxxs)
-    }
-  }
-
-  private func loadRecurringShifts() async {
-    isLoading = true
-    errorMessage = nil
-
-    do {
-      let userId = try await resolveRecurringSettingsUserId()
-      let shifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
-      recurringShifts = sortRecurringShifts(shifts)
-    } catch {
-      logger.error("Failed to load recurring shifts settings: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsRecurringShiftsLoadFailed)
-    }
-
-    isLoading = false
-  }
-
-  private func resolveRecurringSettingsUserId() async throws -> String {
-    do {
-      let session = try await AuthSessionManager.shared.getSession()
-      return session.normalizedUserId
-    } catch {
-      guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
-        let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
-      else {
-        throw error
-      }
-
-      return offlineUserId
-    }
-  }
-
-  private func updateRecurringShift(_ editResult: RecurringShiftEditResult) async {
-    do {
-      _ = try await RecurringShiftsRepository.shared.updateRecurringShift(
-        id: editResult.recurringId,
-        startTime: editResult.startTime,
-        endTime: editResult.endTime,
-        repeatIntervalWeeks: editResult.repeatIntervalWeeks,
-        selectedDays: editResult.selectedDays,
-        endCondition: editResult.endCondition,
-        exclusions: editResult.exclusions
-      )
-
-      await loadRecurringShifts()
-      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
-      Haptics.play(.success)
-    } catch {
-      logger.error("Failed to update recurring shift from settings: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsRecurringShiftsSaveFailed)
-    }
-  }
-
-  private func deleteRecurringShift(_ recurringId: String) async {
-    do {
-      try await RecurringShiftsRepository.shared.deleteRecurringShift(id: recurringId)
-      await loadRecurringShifts()
-      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
-      Haptics.play(.success)
-    } catch {
-      logger.error("Failed to delete recurring shift from settings: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsRecurringShiftsDeleteFailed)
-    }
-  }
-
-  private func sortRecurringShifts(_ shifts: [RecurringShiftRow]) -> [RecurringShiftRow] {
-    shifts.sorted { lhs, rhs in
-      let lhsEarliestAnchor = lhs.selected_days.values.min() ?? "9999-12-31"
-      let rhsEarliestAnchor = rhs.selected_days.values.min() ?? "9999-12-31"
-      if lhsEarliestAnchor != rhsEarliestAnchor {
-        return lhsEarliestAnchor < rhsEarliestAnchor
-      }
-      if lhs.cleanStartTime != rhs.cleanStartTime {
-        return lhs.cleanStartTime < rhs.cleanStartTime
-      }
-      return lhs.id < rhs.id
-    }
-  }
-
-  private func weekdaySummary(for selectedDays: SelectedDays) -> String {
-    let order = ["1", "2", "3", "4", "5", "6", "0"]
-    var calendar = Calendar.gregorianCurrent
-    calendar.locale = Locale(identifier: Locale.current.identifier)
-    let symbols = calendar.shortWeekdaySymbols
-    let labels =
-      order
-      .filter { selectedDays[$0] != nil }
-      .compactMap { key -> String? in
-        guard let index = Int(key), index >= 0, index < symbols.count else { return nil }
-        return symbols[index]
-      }
-    return labels.joined(separator: ", ")
-  }
-
-  private func repeatLabel(for repeatInterval: Int) -> String {
-    String(localized: .addShiftEveryNWeeks(repeatInterval + 1))
   }
 }
 

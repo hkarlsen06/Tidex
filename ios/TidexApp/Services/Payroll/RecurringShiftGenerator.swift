@@ -52,20 +52,10 @@ struct RecurringShiftGenerator {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = Date.localTimeZone
 
-    // Create month start/end dates in UTC
-    var startComponents = DateComponents()
-    startComponents.year = year
-    startComponents.month = month
-    startComponents.day = 1
-    startComponents.hour = 12  // Noon to avoid any timezone edge cases
-    guard let monthStartDate = calendar.date(from: startComponents) else { return [] }
-
-    var endComponents = DateComponents()
-    endComponents.year = year
-    endComponents.month = month
-    endComponents.day = Date.daysInMonth(year: year, month: month)
-    endComponents.hour = 12
-    guard let monthEndDate = calendar.date(from: endComponents) else { return [] }
+    // Noon on the first and last day of the month avoids timezone edge cases
+    guard let bounds = monthBounds(year: year, month: month, calendar: calendar) else { return [] }
+    let monthStartDate = bounds.start
+    let monthEndDate = bounds.end
 
     // For each selected weekday anchor
     for (weekdayKey, anchorISO) in recurring.selected_days {
@@ -82,36 +72,18 @@ struct RecurringShiftGenerator {
       while current <= monthEndDate {
         let currentISO = toISODateLocal(current)
 
-        // Check date range
-        guard currentISO >= monthStartISO, currentISO <= monthEndISO else {
+        // Stay inside the month and only generate forwards from the anchor date
+        guard currentISO >= monthStartISO, currentISO <= monthEndISO, currentISO >= anchorISO else {
           current = calendar.date(byAdding: .weekOfYear, value: 1, to: current) ?? current
           continue
         }
 
-        // Only generate forwards from anchor date
-        guard currentISO >= anchorISO else {
-          current = calendar.date(byAdding: .weekOfYear, value: 1, to: current) ?? current
-          continue
-        }
-
-        // Check if in phase with anchor
-        let inPhase = isInPhase(
-          dateISO: currentISO,
-          anchorISO: anchorISO,
-          interval: recurring.repeat_interval_weeks
-        )
-
-        // Check if within recurring shift window (end condition)
-        let withinWindow = checkEndCondition(
+        if isOccurrence(
           currentISO: currentISO,
-          endCondition: recurring.end_condition,
-          selectedDays: recurring.selected_days
-        )
-
-        // Check if not excluded
-        let notExcluded = !exclusionSet.contains(currentISO)
-
-        if inPhase, withinWindow, notExcluded {
+          anchorISO: anchorISO,
+          recurring: recurring,
+          exclusionSet: exclusionSet
+        ) {
           virtualShifts.append(
             RecurringVirtualShift(
               date: currentISO,
@@ -126,6 +98,54 @@ struct RecurringShiftGenerator {
 
     // Sort by date
     return virtualShifts.sorted { $0.date < $1.date }
+  }
+
+  private static func monthBounds(
+    year: Int,
+    month: Int,
+    calendar: Calendar
+  ) -> (start: Date, end: Date)? {
+    var startComponents = DateComponents()
+    startComponents.year = year
+    startComponents.month = month
+    startComponents.day = 1
+    startComponents.hour = 12  // Noon to avoid any timezone edge cases
+    guard let monthStartDate = calendar.date(from: startComponents) else { return nil }
+
+    var endComponents = DateComponents()
+    endComponents.year = year
+    endComponents.month = month
+    endComponents.day = Date.daysInMonth(year: year, month: month)
+    endComponents.hour = 12
+    guard let monthEndDate = calendar.date(from: endComponents) else { return nil }
+
+    return (monthStartDate, monthEndDate)
+  }
+
+  private static func isOccurrence(
+    currentISO: String,
+    anchorISO: String,
+    recurring: RecurringShiftRow,
+    exclusionSet: Set<String>
+  ) -> Bool {
+    // Check if in phase with anchor
+    let inPhase = isInPhase(
+      dateISO: currentISO,
+      anchorISO: anchorISO,
+      interval: recurring.repeat_interval_weeks
+    )
+
+    // Check if within recurring shift window (end condition)
+    let withinWindow = checkEndCondition(
+      currentISO: currentISO,
+      endCondition: recurring.end_condition,
+      selectedDays: recurring.selected_days
+    )
+
+    // Check if not excluded
+    let notExcluded = !exclusionSet.contains(currentISO)
+
+    return inPhase && withinWindow && notExcluded
   }
 
   // MARK: - Private Helpers

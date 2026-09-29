@@ -123,30 +123,9 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
       TestFixtures.job(id: "job-usd", isDefault: false, currency: "$"),
     ]
     let shifts = [
-      TestFixtures.computedShift(
-        id: "s-default",
-        shiftDate: "2026-03-01",
-        startTime: "08:00",
-        endTime: "16:00",
-        jobId: "job-default",
-        gross: 1_000
-      ),
-      TestFixtures.computedShift(
-        id: "s-extra",
-        shiftDate: "2026-03-02",
-        startTime: "08:00",
-        endTime: "16:00",
-        jobId: "job-extra",
-        gross: 500
-      ),
-      TestFixtures.computedShift(
-        id: "s-usd",
-        shiftDate: "2026-03-03",
-        startTime: "08:00",
-        endTime: "16:00",
-        jobId: "job-usd",
-        gross: 2_000
-      ),
+      marchDayShift(id: "s-default", day: "01", jobId: "job-default", gross: 1_000),
+      marchDayShift(id: "s-extra", day: "02", jobId: "job-extra", gross: 500),
+      marchDayShift(id: "s-usd", day: "03", jobId: "job-usd", gross: 2_000),
     ]
 
     let resolution = JobCurrencyAggregateResolver.resolve(
@@ -169,30 +148,21 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
     XCTAssertEqual(resolution.secondary.count, 1)
     XCTAssertEqual(resolution.secondary.first?.jobId, "job-usd")
     XCTAssertEqual(Set(primaryShifts.map(\.id)), Set(["s-default", "s-extra"]))
-    XCTAssertTrue(
+    func primaryMatches(_ jobId: String) -> Bool {
       JobCurrencyAggregateResolver.matches(
-        entry: resolution.primary,
-        jobId: "job-default",
-        jobs: jobs,
-        fallbackCurrency: "kr"
-      )
-    )
-    XCTAssertTrue(
-      JobCurrencyAggregateResolver.matches(
-        entry: resolution.primary,
-        jobId: "job-extra",
-        jobs: jobs,
-        fallbackCurrency: "kr"
-      )
-    )
-    XCTAssertFalse(
-      JobCurrencyAggregateResolver.matches(
-        entry: resolution.primary,
-        jobId: "job-usd",
-        jobs: jobs,
-        fallbackCurrency: "kr"
-      )
-    )
+        entry: resolution.primary, jobId: jobId, jobs: jobs, fallbackCurrency: "kr")
+    }
+    XCTAssertTrue(primaryMatches("job-default"))
+    XCTAssertTrue(primaryMatches("job-extra"))
+    XCTAssertFalse(primaryMatches("job-usd"))
+  }
+
+  private func marchDayShift(
+    id: String, day: String, jobId: String, gross: Double
+  ) -> ShiftWithComputations {
+    TestFixtures.computedShift(
+      id: id, shiftDate: "2026-03-\(day)", startTime: "08:00", endTime: "16:00",
+      jobId: jobId, gross: gross)
   }
 
   func testResolveReturnsZeroPrimaryInDefaultJobCurrencyWhenMonthIsEmpty() {

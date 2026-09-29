@@ -1,4 +1,4 @@
-// swiftlint:disable cyclomatic_complexity explicit_acl explicit_type_interface
+// swiftlint:disable explicit_acl explicit_type_interface
 // swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
@@ -403,46 +403,25 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
   /// Compute changed fields compared to another snapshot
   func changedFields(from other: Self) -> Set<WageSnapshotField> {
     var changed: Set<WageSnapshotField> = []
+    func compare<Value: Equatable>(_ keyPath: KeyPath<Self, Value>, _ field: WageSnapshotField) {
+      if self[keyPath: keyPath] != other[keyPath: keyPath] {
+        changed.insert(field)
+      }
+    }
 
-    if jobId != other.jobId {
-      changed.insert(.jobId)
-    }
-    if fromDate != other.fromDate {
-      changed.insert(.fromDate)
-    }
-    if hourlyWage != other.hourlyWage {
-      changed.insert(.hourlyWage)
-    }
-    if wageLevel != other.wageLevel {
-      changed.insert(.wageLevel)
-    }
-    if tariffTypeId != other.tariffTypeId {
-      changed.insert(.tariffTypeId)
-    }
-    if supplements != other.supplements {
-      changed.insert(.supplements)
-    }
-    if overtime != other.overtime {
-      changed.insert(.overtime)
-    }
-    if taxEnabled != other.taxEnabled {
-      changed.insert(.taxEnabled)
-    }
-    if taxPercentage != other.taxPercentage {
-      changed.insert(.taxPercentage)
-    }
-    if breakEnabled != other.breakEnabled {
-      changed.insert(.breakEnabled)
-    }
-    if breakMethod != other.breakMethod {
-      changed.insert(.breakMethod)
-    }
-    if breakThresholdHours != other.breakThresholdHours {
-      changed.insert(.breakThresholdHours)
-    }
-    if breakDeductionMinutes != other.breakDeductionMinutes {
-      changed.insert(.breakDeductionMinutes)
-    }
+    compare(\.jobId, .jobId)
+    compare(\.fromDate, .fromDate)
+    compare(\.hourlyWage, .hourlyWage)
+    compare(\.wageLevel, .wageLevel)
+    compare(\.tariffTypeId, .tariffTypeId)
+    compare(\.supplements, .supplements)
+    compare(\.overtime, .overtime)
+    compare(\.taxEnabled, .taxEnabled)
+    compare(\.taxPercentage, .taxPercentage)
+    compare(\.breakEnabled, .breakEnabled)
+    compare(\.breakMethod, .breakMethod)
+    compare(\.breakThresholdHours, .breakThresholdHours)
+    compare(\.breakDeductionMinutes, .breakDeductionMinutes)
 
     return changed
   }

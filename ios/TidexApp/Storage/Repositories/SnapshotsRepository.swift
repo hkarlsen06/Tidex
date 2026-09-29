@@ -56,6 +56,23 @@ final class SnapshotsRepository {
     }
   }
 
+  /// From-date descending, baseline (nil date) last, ties broken by most recent local update.
+  private static func isOrderedBefore(_ lhs: LocalWageSnapshot, _ rhs: LocalWageSnapshot) -> Bool {
+    switch (lhs.fromDate, rhs.fromDate) {
+    case (let leftDate?, let rightDate?):
+      return leftDate > rightDate
+
+    case (_?, nil):
+      return true
+
+    case (nil, _?):
+      return false
+
+    case (nil, nil):
+      return lhs.localUpdatedAt > rhs.localUpdatedAt
+    }
+  }
+
   // MARK: - Read Operations (Local Only)
 
   /// Get all non-deleted wage snapshots for a user
@@ -90,21 +107,7 @@ final class SnapshotsRepository {
           )
           var combined = try context.fetch(primaryDescriptor)
           combined.append(contentsOf: try context.fetch(legacyDescriptor))
-          localSnapshots = combined.sorted { lhs, rhs in
-            switch (lhs.fromDate, rhs.fromDate) {
-            case (let l?, let r?):
-              return l > r
-
-            case (_?, nil):
-              return true
-
-            case (nil, _?):
-              return false
-
-            case (nil, nil):
-              return lhs.localUpdatedAt > rhs.localUpdatedAt
-            }
-          }
+          localSnapshots = combined.sorted(by: Self.isOrderedBefore)
         } else {
           localSnapshots = try context.fetch(primaryDescriptor)
         }
@@ -261,6 +264,9 @@ final class SnapshotsRepository {
     }
   }
 
+}
+
+extension SnapshotsRepository {
   // MARK: - Write Operations (Local with Dirty Tracking)
 
   /// Create a new wage snapshot locally

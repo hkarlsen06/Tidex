@@ -40,77 +40,7 @@ struct FriendsComposerShiftCalendarPicker: View {
   var body: some View {
     NavigationStack {
       GeometryReader { geometry in
-        ZStack {
-          Color.tidexBackground
-            .ignoresSafeArea()
-
-          VStack {
-            Spacer()
-
-            ShiftsCalendarView(
-              shifts: viewModel.shifts,
-              month: displayedMonthDate,
-              year: viewModel.committedYear,
-              monthNumber: viewModel.committedMonth,
-              currency: viewModel.currency,
-              showEarnings: true,
-              jobs: viewModel.activeJobs,
-              showsActionBar: false,
-              phase: transitionPhase,
-              onDayTapped: handleDayTapped(dateISO:shiftsOnDay:),
-              onSwipeLeft: goToNextMonth,
-              onSwipeRight: goToPreviousMonth,
-              selectedDates: $selectedDates,
-              confirmingDelete: false,
-              isDeleting: false,
-              selectedEarnings: nil,
-              selectedCurrencyAggregate: nil,
-              selectedHasTaxEnabled: false,
-              onDelete: nil,
-              onConfirmDelete: nil,
-              onCancelDelete: nil,
-              onCopy: nil,
-              onDetails: nil,
-              onEdit: nil,
-              onMove: nil,
-              onClearSelection: nil,
-              onEmptyDayTapped: nil,
-              isCopyMode: false,
-              isMoveMode: false,
-              isCopying: false,
-              isMoving: false,
-              onCopyToDate: nil,
-              onMoveToDate: nil,
-              onCancelCopyMove: nil,
-              newlyAddedDates: [],
-              deepLinkHighlightDates: [],
-              conflictDates: viewModel.conflictDates,
-              excludedFromTotalIds: viewModel.excludedFromTotalIds
-            )
-            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-            .padding(.bottom, MonthPickerLayout.totalBottomInset)
-            .allowsHitTesting(!isSelectingShift)
-
-            Spacer()
-          }
-
-          if isSelectingShift {
-            ProgressView()
-              .controlSize(.large)
-          }
-        }
-        .frame(width: geometry.size.width, height: geometry.size.height)
-        .contentShape(Rectangle())
-        .monthSwipeGesture(
-          onSwipeLeft: {
-            goToNextMonth()
-          },
-          onSwipeRight: {
-            goToPreviousMonth()
-          },
-          isEnabled: true
-        )
+        pickerContent(size: geometry.size)
       }
       .navigationTitle(
         .friendsChatComposerShiftPickerTitle
@@ -148,6 +78,84 @@ struct FriendsComposerShiftCalendarPicker: View {
       .presentationDragIndicator(.visible)
       .interactiveDismissDisabled(isSelectingShift)
     }
+  }
+
+  private func pickerContent(size: CGSize) -> some View {
+    ZStack {
+      Color.tidexBackground
+        .ignoresSafeArea()
+
+      VStack {
+        Spacer()
+
+        calendarView
+          .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+          .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+          .padding(.bottom, MonthPickerLayout.totalBottomInset)
+          .allowsHitTesting(!isSelectingShift)
+
+        Spacer()
+      }
+
+      if isSelectingShift {
+        ProgressView()
+          .controlSize(.large)
+      }
+    }
+    .frame(width: size.width, height: size.height)
+    .contentShape(Rectangle())
+    .monthSwipeGesture(
+      onSwipeLeft: {
+        goToNextMonth()
+      },
+      onSwipeRight: {
+        goToPreviousMonth()
+      },
+      isEnabled: true
+    )
+  }
+
+  private var calendarView: some View {
+    ShiftsCalendarView(
+      shifts: viewModel.shifts,
+      month: displayedMonthDate,
+      year: viewModel.committedYear,
+      monthNumber: viewModel.committedMonth,
+      currency: viewModel.currency,
+      showEarnings: true,
+      jobs: viewModel.activeJobs,
+      showsActionBar: false,
+      phase: transitionPhase,
+      onDayTapped: handleDayTapped(dateISO:shiftsOnDay:),
+      onSwipeLeft: goToNextMonth,
+      onSwipeRight: goToPreviousMonth,
+      selectedDates: $selectedDates,
+      confirmingDelete: false,
+      isDeleting: false,
+      selectedEarnings: nil,
+      selectedCurrencyAggregate: nil,
+      selectedHasTaxEnabled: false,
+      onDelete: nil,
+      onConfirmDelete: nil,
+      onCancelDelete: nil,
+      onCopy: nil,
+      onDetails: nil,
+      onEdit: nil,
+      onMove: nil,
+      onClearSelection: nil,
+      onEmptyDayTapped: nil,
+      isCopyMode: false,
+      isMoveMode: false,
+      isCopying: false,
+      isMoving: false,
+      onCopyToDate: nil,
+      onMoveToDate: nil,
+      onCancelCopyMove: nil,
+      newlyAddedDates: [],
+      deepLinkHighlightDates: [],
+      conflictDates: viewModel.conflictDates,
+      excludedFromTotalIds: viewModel.excludedFromTotalIds
+    )
   }
 
   private func handleDayTapped(dateISO: String, shiftsOnDay: [ShiftWithComputations]) {

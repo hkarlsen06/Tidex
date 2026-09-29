@@ -86,7 +86,7 @@ struct WagePeriod: Codable, Equatable {
   /// Supplement per hour in NOK
   let supplementRate: Double
   /// Nil for older shared data that did not identify overtime periods.
-  var isOvertime: Bool? = nil
+  var isOvertime: Bool?
 
   /// Total rate (base + supplement)
   var totalRate: Double { baseRate + supplementRate }

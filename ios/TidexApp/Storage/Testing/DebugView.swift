@@ -79,33 +79,7 @@
 
     private var notificationsSection: some View {
       Section("Notifications") {
-        // Work Pattern Status
-        HStack {
-          Text("Work Pattern")
-          Spacer()
-          if let result = workPatternResult {
-            switch result {
-            case .success(let pattern):
-              Text("\(pattern.typicalWorkDays.count) work days")
-                .foregroundColor(.green)
-
-            case .insufficientData(let weeksFound):
-              Text("\(weeksFound)/\(WorkPatternAnalyzer.WorkPattern.minimumWeeksRequired) weeks")
-                .foregroundColor(.orange)
-
-            case .noShifts:
-              Text("No shifts")
-                .foregroundColor(.red)
-
-            case .noPatternDetected:
-              Text("No pattern")
-                .foregroundColor(.orange)
-            }
-          } else {
-            Text("Not loaded")
-              .foregroundColor(.secondary)
-          }
-        }
+        workPatternRow
 
         // Pending notification counts
         HStack {
@@ -122,83 +96,124 @@
             .foregroundColor(pendingReminderCount > 0 ? .green : .secondary)
         }
 
-        // Scheduled notification details
-        if !scheduledNotifications.isEmpty {
-          ForEach(scheduledNotifications, id: \.id) { notification in
-            HStack {
-              let label = notificationLabel(for: notification.id)
-              Image(systemName: label.icon)
+        scheduledNotificationRows
+
+        sendTestNotificationMenu
+
+        notificationActions
+      }
+    }
+
+    @ViewBuilder
+    private var notificationActions: some View {
+      Button {
+        guard let userId else { return }
+        Task {
+          await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
+          testNotificationResult = "Rescheduled"
+          await loadNotificationState()
+        }
+      } label: {
+        Label("Reschedule Smart Notifications", systemImage: "arrow.clockwise")
+      }
+      .disabled(userId == nil)
+
+      Button {
+        Task { await loadNotificationState() }
+      } label: {
+        Label("Reload Notification State", systemImage: "arrow.clockwise.circle")
+      }
+
+      if let result = testNotificationResult {
+        Text(result)
+          .font(.caption)
+          .foregroundColor(result.contains("Failed") ? .red : .green)
+      }
+    }
+
+    private var workPatternRow: some View {
+      HStack {
+        Text("Work Pattern")
+        Spacer()
+        if let result = workPatternResult {
+          switch result {
+          case .success(let pattern):
+            Text("\(pattern.typicalWorkDays.count) work days")
+              .foregroundColor(.green)
+
+          case .insufficientData(let weeksFound):
+            Text("\(weeksFound)/\(WorkPatternAnalyzer.WorkPattern.minimumWeeksRequired) weeks")
+              .foregroundColor(.orange)
+
+          case .noShifts:
+            Text("No shifts")
+              .foregroundColor(.red)
+
+          case .noPatternDetected:
+            Text("No pattern")
+              .foregroundColor(.orange)
+          }
+        } else {
+          Text("Not loaded")
+            .foregroundColor(.secondary)
+        }
+      }
+    }
+
+    @ViewBuilder
+    private var scheduledNotificationRows: some View {
+      if !scheduledNotifications.isEmpty {
+        ForEach(scheduledNotifications, id: \.id) { notification in
+          HStack {
+            let label = notificationLabel(for: notification.id)
+            Image(systemName: label.icon)
+              .font(.caption)
+              .foregroundColor(label.color)
+              .frame(width: 16)
+
+            Text(label.text)
+              .font(.caption)
+              .foregroundColor(.primary)
+
+            Spacer()
+
+            if let fireDate = notification.fireDate {
+              Text(fireDate, style: .relative)
+                .font(.caption.monospaced())
+                .foregroundColor(.secondary)
+            } else {
+              Text("—")
                 .font(.caption)
-                .foregroundColor(label.color)
-                .frame(width: 16)
-
-              Text(label.text)
-                .font(.caption)
-                .foregroundColor(.primary)
-
-              Spacer()
-
-              if let fireDate = notification.fireDate {
-                Text(fireDate, style: .relative)
-                  .font(.caption.monospaced())
-                  .foregroundColor(.secondary)
-              } else {
-                Text("—")
-                  .font(.caption)
-                  .foregroundColor(.secondary)
-              }
+                .foregroundColor(.secondary)
             }
           }
         }
+      }
+    }
 
-        // Test actions
-        Menu {
-          Button("Send Morning Test") {
-            Task {
-              let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
-                type: .morning
-              )
-              testNotificationResult =
-                success ? "Morning test scheduled (5s)" : "Failed to schedule"
-            }
-          }
-
-          Button("Send Evening Test") {
-            Task {
-              let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
-                type: .evening
-              )
-              testNotificationResult =
-                success ? "Evening test scheduled (5s)" : "Failed to schedule"
-            }
-          }
-        } label: {
-          Label("Send Test Notification", systemImage: "paperplane")
-        }
-
-        Button {
-          guard let userId else { return }
+    private var sendTestNotificationMenu: some View {
+      Menu {
+        Button("Send Morning Test") {
           Task {
-            await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
-            testNotificationResult = "Rescheduled"
-            await loadNotificationState()
+            let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
+              type: .morning
+            )
+            testNotificationResult =
+              success ? "Morning test scheduled (5s)" : "Failed to schedule"
           }
-        } label: {
-          Label("Reschedule Smart Notifications", systemImage: "arrow.clockwise")
-        }
-        .disabled(userId == nil)
-
-        Button {
-          Task { await loadNotificationState() }
-        } label: {
-          Label("Reload Notification State", systemImage: "arrow.clockwise.circle")
         }
 
-        if let result = testNotificationResult {
-          Text(result)
-            .font(.caption)
-            .foregroundColor(result.contains("Failed") ? .red : .green)
+        Button("Send Evening Test") {
+          Task {
+            let success = await SmartNotificationScheduler.shared.scheduleTestNotification(
+              type: .evening
+            )
+            testNotificationResult =
+              success ? "Evening test scheduled (5s)" : "Failed to schedule"
+          }
         }
+      } label: {
+        Label("Send Test Notification", systemImage: "paperplane")
       }
     }
 

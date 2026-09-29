@@ -114,13 +114,7 @@ final class AuthSessionManager {
       // Preserve caller semantics: if the in-flight task skipped proactive refresh,
       // a waiter that requires proactive refresh should still refresh when needed.
       if allowProactiveRefresh, !existingAllowsProactiveRefresh {
-        let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
-        let timeUntilExpiry = expiresAt.timeIntervalSinceNow
-        if timeUntilExpiry < refreshBuffer {
-          logger.info(
-            "Waiting caller requires proactive refresh; token expires in \(timeUntilExpiry)s")
-          return try await performRefresh()
-        }
+        return try await refreshWaitingCallerSessionIfNeeded(session)
       }
 
       return session
@@ -454,6 +448,15 @@ final class AuthSessionManager {
       group.cancelAll()
       return result
     }
+  }
+
+  /// Refreshes when a caller that waited on a non-proactive session fetch sees a token close to expiry.
+  private func refreshWaitingCallerSessionIfNeeded(_ session: Session) async throws -> Session {
+    let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
+    let timeUntilExpiry = expiresAt.timeIntervalSinceNow
+    guard timeUntilExpiry < refreshBuffer else { return session }
+    logger.info("Waiting caller requires proactive refresh; token expires in \(timeUntilExpiry)s")
+    return try await performRefresh()
   }
 
   /// Performs the actual refresh operation, ensuring only one refresh happens at a time.

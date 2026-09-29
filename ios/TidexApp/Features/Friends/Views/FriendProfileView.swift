@@ -137,7 +137,9 @@ struct FriendProfileView: View {
       Text(.friendsChatBlockConfirmMessage)
     }
   }
+}
 
+extension FriendProfileView {
   // MARK: - Profile Header
 
   private var profileHeaderSection: some View {
@@ -264,40 +266,48 @@ struct FriendProfileView: View {
     }
 
     if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
-      // A separate section so the footer can say what each option does and doesn't do.
-      Section {
-        Button {
-          Task { await toggleFeedPlacement() }
-        } label: {
-          Label(
-            String(
-              localized: isMovedToBottom
-                ? .sharingProfileRestoreNormalOrder
-                : .sharingProfileMoveToBottom),
-            systemImage: isMovedToBottom ? "arrow.up.to.line" : "arrow.down.to.line"
-          )
-        }
-
-        let isHidden = viewModel.isHiddenInFriendsTab(for: friend)
-        Button {
-          Task {
-            await viewModel.toggleHidden(for: friend)
-            onVisibilityChange?()
-          }
-        } label: {
-          Label(
-            String(
-              localized: isHidden
-                ? .sharingProfileShowInList(friend.firstNameOnly)
-                : .sharingProfileHideFromList(friend.firstNameOnly)),
-            systemImage: isHidden ? "eye" : "eye.slash"
-          )
-        }
-      } footer: {
-        Text(.sharingProfileOrderAndVisibilityFooter(friend.firstNameOnly))
-      }
+      feedPlacementSection(friend: friend)
     }
 
+    removalSection(friend: friend, sectionType: sectionType)
+  }
+
+  /// A separate section so the footer can say what each option does and doesn't do.
+  private func feedPlacementSection(friend: Friend) -> some View {
+    Section {
+      Button {
+        Task { await toggleFeedPlacement() }
+      } label: {
+        Label(
+          String(
+            localized: isMovedToBottom
+              ? .sharingProfileRestoreNormalOrder
+              : .sharingProfileMoveToBottom),
+          systemImage: isMovedToBottom ? "arrow.up.to.line" : "arrow.down.to.line"
+        )
+      }
+
+      let isHidden = viewModel.isHiddenInFriendsTab(for: friend)
+      Button {
+        Task {
+          await viewModel.toggleHidden(for: friend)
+          onVisibilityChange?()
+        }
+      } label: {
+        Label(
+          String(
+            localized: isHidden
+              ? .sharingProfileShowInList(friend.firstNameOnly)
+              : .sharingProfileHideFromList(friend.firstNameOnly)),
+          systemImage: isHidden ? "eye" : "eye.slash"
+        )
+      }
+    } footer: {
+      Text(.sharingProfileOrderAndVisibilityFooter(friend.firstNameOnly))
+    }
+  }
+
+  private func removalSection(friend: Friend, sectionType: FriendSectionType) -> some View {
     Section {
       ForEach(FriendSharingRemovalAction.availableActions(for: sectionType), id: \.self) {
         removalAction in

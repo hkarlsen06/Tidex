@@ -102,36 +102,7 @@ struct OnboardingCurrencyPickerSheet: View {
         Color.tidexBackground
           .ignoresSafeArea()
 
-        ScrollView {
-          LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
-            ForEach(CurrencyConfig.groups) { group in
-              Section {
-                ForEach(group.options) { option in
-                  CurrencyRow(
-                    option: option,
-                    isSelected: selectedCurrency == option.value,
-                    action: {
-                      selectedCurrency = option.value
-                      isPresented = false
-                    }
-                  )
-                }
-              } header: {
-                HStack {
-                  Text(group.localizedLabel)
-                    .font(.tidexFootnoteStrong)
-                    .foregroundColor(.tidexTextMuted)
-                    .textCase(.uppercase)
-                  Spacer()
-                }
-                .padding(.horizontal, Spacing.mlg)
-                .padding(.vertical, Spacing.xs)
-                .background(Color.tidexBackground)
-              }
-            }
-          }
-          .padding(.top, Spacing.xs)
-        }
+        currencyList
       }
       .navigationTitle(String(localized: .onboardingCurrencyTitle))
       .navigationBarTitleDisplayMode(.inline)
@@ -143,6 +114,39 @@ struct OnboardingCurrencyPickerSheet: View {
           }
         }
       }
+    }
+  }
+
+  private var currencyList: some View {
+    ScrollView {
+      LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+        ForEach(CurrencyConfig.groups) { group in
+          Section {
+            ForEach(group.options) { option in
+              CurrencyRow(
+                option: option,
+                isSelected: selectedCurrency == option.value,
+                action: {
+                  selectedCurrency = option.value
+                  isPresented = false
+                }
+              )
+            }
+          } header: {
+            HStack {
+              Text(group.localizedLabel)
+                .font(.tidexFootnoteStrong)
+                .foregroundColor(.tidexTextMuted)
+                .textCase(.uppercase)
+              Spacer()
+            }
+            .padding(.horizontal, Spacing.mlg)
+            .padding(.vertical, Spacing.xs)
+            .background(Color.tidexBackground)
+          }
+        }
+      }
+      .padding(.top, Spacing.xs)
     }
   }
 }
