@@ -914,6 +914,15 @@ final class FriendsThreadExyteChatTests: XCTestCase {
       FriendsThreadChatViewportResolver.isPulledUpPastBottom(contentOffsetY: -30, topInset: 20))
   }
 
+  func testViewportResolverDetectsBottomEdgeRelativeToInset() {
+    XCTAssertTrue(
+      FriendsThreadChatViewportResolver.isAtBottomEdge(contentOffsetY: -80, topInset: 80))
+    XCTAssertTrue(
+      FriendsThreadChatViewportResolver.isAtBottomEdge(contentOffsetY: -76, topInset: 80))
+    XCTAssertFalse(
+      FriendsThreadChatViewportResolver.isAtBottomEdge(contentOffsetY: -30, topInset: 80))
+  }
+
   func testViewportLayoutSnapshotPreservesPresentedMessageIndexPaths() {
     let calendar = Calendar(identifier: .gregorian)
     let firstDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_731_000_000))

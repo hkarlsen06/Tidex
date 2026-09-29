@@ -585,7 +585,8 @@ enum FriendsThreadChatViewportScrollDeferralResolver {
 
 enum FriendsThreadChatViewportResolver {
   private static let pinnedToBottomThreshold: CGFloat = 1
-  private static let pullUpToFocusThreshold: CGFloat = 24
+  static let pullUpToFocusThreshold: CGFloat = 24
+  private static let bottomEdgeTolerance: CGFloat = 8
 
   struct LayoutSnapshot {
     private let messageIDsSignature: [String]
@@ -665,6 +666,10 @@ enum FriendsThreadChatViewportResolver {
 
   static func isPinnedToBottom(contentOffsetY: CGFloat) -> Bool {
     contentOffsetY <= pinnedToBottomThreshold
+  }
+
+  static func isAtBottomEdge(contentOffsetY: CGFloat, topInset: CGFloat) -> Bool {
+    contentOffsetY <= -topInset + bottomEdgeTolerance
   }
 
   /// The chat table is inverted, so pulling up past the newest message overscrolls
@@ -1684,6 +1689,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var onDidHandleScrollRequest: ((FriendsThreadChatViewportScrollRequest) -> Void)?
     private var onPulledUpPastBottom: (() -> Void)?
     private var didReportPullUpInCurrentDrag = false
+    private var didStartDragAtBottomEdge: Bool?
 
     func update(
       from view: UIView,
@@ -1768,11 +1774,20 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     }
 
     private func reportPulledUpPastBottomIfNeeded(for tableView: UITableView) {
-      guard tableView.isDragging else {
+      // Only a drag that starts at the newest message counts, so a fast scroll
+      // that overshoots the bottom doesn't open the keyboard.
+      guard tableView.isTracking else {
         didReportPullUpInCurrentDrag = false
+        didStartDragAtBottomEdge = nil
         return
       }
-      guard !didReportPullUpInCurrentDrag else { return }
+      if didStartDragAtBottomEdge == nil {
+        didStartDragAtBottomEdge = FriendsThreadChatViewportResolver.isAtBottomEdge(
+          contentOffsetY: tableView.contentOffset.y,
+          topInset: tableView.adjustedContentInset.top
+        )
+      }
+      guard didStartDragAtBottomEdge == true, !didReportPullUpInCurrentDrag else { return }
       guard
         FriendsThreadChatViewportResolver.isPulledUpPastBottom(
           contentOffsetY: tableView.contentOffset.y,

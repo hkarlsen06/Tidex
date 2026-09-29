@@ -161,41 +161,23 @@ struct FriendsThreadComposerHostedView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      modeBanner
-
-      if !configuration.stagedAttachments.isEmpty {
-        FriendsThreadComposerAttachmentPreview(
-          attachments: configuration.stagedAttachments,
-          onRemove: removeStagedAttachment(at:)
-        )
-        .padding(.horizontal, Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-
-      readOnlyNotice
-
-      composerMeta
-
-      composerField
-
-      attachmentDrawer
+    // A drag down on the composer drives the interactive keyboard dismissal the
+    // same way a drag on the message list does, and a pull up focuses it.
+    ScrollView {
+      composerContent
     }
-    .animation(
-      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86),
-      value: attachmentController.isDrawerOpen
-    )
-    .fixedSize(horizontal: false, vertical: true)
-    .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
-    .frame(maxWidth: .infinity, alignment: .bottom)
-    .background(
-      GeometryReader { geometry in
-        Color.clear.preference(
-          key: FriendsThreadComposerHeightPreferenceKey.self,
-          value: geometry.size.height
-        )
+    .scrollDismissesKeyboard(.interactively)
+    .onScrollGeometryChange(for: Bool.self) { geometry in
+      geometry.contentOffset.y > FriendsThreadChatViewportResolver.pullUpToFocusThreshold
+    } action: { _, isPulledUp in
+      if isPulledUp, !isComposerFocused {
+        composerFocusTrigger += 1
       }
-    )
+    }
+    .scrollBounceBehavior(.always, axes: .vertical)
+    .scrollIndicators(.hidden)
+    .scrollClipDisabled()
+    .fixedSize(horizontal: false, vertical: true)
     .onPreferenceChange(FriendsThreadComposerHeightPreferenceKey.self) { height in
       bridge.reportHeight(height)
     }
@@ -237,6 +219,48 @@ struct FriendsThreadComposerHostedView: View {
       FriendsComposerShiftCalendarPicker { shift in
         await handleShiftSelection(shift)
       }
+    }
+  }
+
+  private var composerContent: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      modeBanner
+
+      if !configuration.stagedAttachments.isEmpty {
+        FriendsThreadComposerAttachmentPreview(
+          attachments: configuration.stagedAttachments,
+          onRemove: removeStagedAttachment(at:)
+        )
+        .padding(.horizontal, Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      readOnlyNotice
+
+      composerMeta
+
+      composerField
+
+      attachmentDrawer
+    }
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86),
+      value: attachmentController.isDrawerOpen
+    )
+    .fixedSize(horizontal: false, vertical: true)
+    .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+    .frame(maxWidth: .infinity, alignment: .bottom)
+    .background(
+      GeometryReader { geometry in
+        Color.clear.preference(
+          key: FriendsThreadComposerHeightPreferenceKey.self,
+          value: geometry.size.height
+        )
+      }
+    )
+    .visualEffect { content, proxy in
+      // Cancel the scroll so only the keyboard follows the finger.
+      content.offset(y: -proxy.frame(in: .scrollView).minY)
     }
   }
 
