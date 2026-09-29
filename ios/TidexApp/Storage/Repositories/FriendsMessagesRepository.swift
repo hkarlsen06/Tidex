@@ -12,6 +12,7 @@ protocol FriendsMessagesRepositoryProviding: AnyObject {
     -> FriendMessagingSyncState?
   func saveThreads(_ threads: [FriendThread], for viewerUserId: String) async
   func saveThread(_ thread: FriendThread, for viewerUserId: String) async
+  func saveThread(from snapshot: FriendThreadSyncSnapshot, for viewerUserId: String) async
   func saveMessages(_ messages: [FriendMessage], in threadId: String, for viewerUserId: String)
     async
   func saveThreadState(_ state: FriendThreadState) async
@@ -285,6 +286,20 @@ extension FriendsMessagesRepository {
       logger.info("Saved thread \(thread.id, privacy: .private)")
     } catch {
       logger.error("Failed to save thread: \(error.localizedDescription)")
+    }
+  }
+
+  /// Saves a thread snapshot's thread, keeping a newer stored unread count and mute.
+  func saveThread(from snapshot: FriendThreadSyncSnapshot, for viewerUserId: String) async {
+    do {
+      try await storeActor.saveThreadSummary(
+        snapshot.thread,
+        for: viewerUserId,
+        viewerStateUpdatedAt: snapshot.viewerState.updatedAt
+      )
+      try await storeActor.save()
+    } catch {
+      logger.error("Failed to save thread snapshot: \(error.localizedDescription)")
     }
   }
 

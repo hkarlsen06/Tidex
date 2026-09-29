@@ -18,6 +18,40 @@ private struct ThreadDetailStreams {
   let state: AsyncStream<AnyAction>
 }
 
+/// Runs refreshes for the same key one at a time. One new message fires realtime events on
+/// messages, threads and thread_user_state at once. Each used to start its own fetch, and a slow
+/// older response could overwrite newer rows and unread counts. Calls that arrive while a refresh
+/// runs merge into one more pass, and every caller returns after a pass that started after its call.
+@MainActor
+final class SerializedRefreshRunner {
+  private var runningTasks: [String: Task<Void, Never>] = [:]
+  /// The next pass per key. False when any merged caller asked for a full snapshot.
+  private var queuedAllowIncrementalSync: [String: Bool] = [:]
+
+  func run(
+    key: String,
+    allowIncrementalSync: Bool,
+    _ refresh: @escaping @MainActor (_ allowIncrementalSync: Bool) async -> Void
+  ) async {
+    queuedAllowIncrementalSync[key] =
+      (queuedAllowIncrementalSync[key] ?? true) && allowIncrementalSync
+
+    if let runningTask = runningTasks[key] {
+      await runningTask.value
+      return
+    }
+
+    let task = Task { @MainActor in
+      while let allowIncrementalSync = queuedAllowIncrementalSync.removeValue(forKey: key) {
+        await refresh(allowIncrementalSync)
+      }
+      runningTasks[key] = nil
+    }
+    runningTasks[key] = task
+    await task.value
+  }
+}
+
 @MainActor
 protocol FriendsMessagingRealtimeCoordinating: AnyObject {
   func startForAuthenticatedUser(viewerUserId: String) async
@@ -125,6 +159,7 @@ final class FriendsMessagingRealtimeCoordinator {
   private var typingRetryTasks: [String: Task<Void, Never>] = [:]
   private var threadChannels: [String: RealtimeChannelV2] = [:]
   private var threadTasks: [String: [Task<Void, Never>]] = [:]
+  private let refreshRunner = SerializedRefreshRunner()
 
   struct ThreadTypingPayload: Codable, Equatable {
     let threadId: String
@@ -372,6 +407,16 @@ final class FriendsMessagingRealtimeCoordinator {
         viewerUserId: viewerUserId,
         streams: streams
       )
+
+      // Realtime changes replay the event log from the stored cursor. Without one, the first
+      // change would fall back to a snapshot of the newest page and move the cursor past edits
+      // to older loaded messages, so set the cursor now.
+      if await repository.getMessagingSyncState(
+        viewerUserId: viewerUserId,
+        scope: .thread(threadId: threadId)
+      ) == nil {
+        await refreshThreadSnapshot(threadId: threadId, viewerUserId: viewerUserId)
+      }
     } catch {
       realtimeLogger.error(
         "Failed to subscribe thread detail realtime: \(error.localizedDescription)")
@@ -483,6 +528,24 @@ final class FriendsMessagingRealtimeCoordinator {
     viewerUserId: String,
     allowIncrementalSync: Bool = true
   ) async {
+    await refreshRunner.run(
+      key: "inbox:\(viewerUserId)",
+      allowIncrementalSync: allowIncrementalSync
+    ) { [weak self] allowIncrementalSync in
+      await self?.performThreadListRefresh(
+        viewerUserId: viewerUserId,
+        allowIncrementalSync: allowIncrementalSync
+      )
+    }
+  }
+
+  private func performThreadListRefresh(
+    viewerUserId: String,
+    allowIncrementalSync: Bool
+  ) async {
+    // Queued passes can outlive a sign-out or user switch.
+    guard authenticatedViewerUserId == viewerUserId else { return }
+
     if allowIncrementalSync {
       do {
         if let syncState = await repository.getMessagingSyncState(
@@ -531,30 +594,35 @@ final class FriendsMessagingRealtimeCoordinator {
     notifyThreadUpdated(threadId: threadId)
   }
 
-  private func refreshThreadSummary(
-    threadId: String,
-    viewerUserId: String,
-    shouldNotify: Bool = true
-  ) async {
-    do {
-      let thread = try await service.fetchThreadSummary(threadId: threadId)
-      await repository.saveThread(thread, for: viewerUserId)
-      if shouldNotify {
-        notifyThreadUpdated(threadId: threadId)
-      }
-    } catch {
-      realtimeLogger.error(
-        "Failed to refresh thread summary for \(threadId, privacy: .private): \(error.localizedDescription)"
-      )
-    }
-  }
-
   private func refreshThreadSnapshot(
     threadId: String,
     viewerUserId: String,
     shouldNotify: Bool = true,
     allowIncrementalSync: Bool = true
   ) async {
+    await refreshRunner.run(
+      key: "thread:\(viewerUserId):\(threadId)",
+      allowIncrementalSync: allowIncrementalSync
+    ) { [weak self] allowIncrementalSync in
+      await self?.performThreadSnapshotRefresh(
+        threadId: threadId,
+        viewerUserId: viewerUserId,
+        allowIncrementalSync: allowIncrementalSync
+      )
+    }
+    if shouldNotify {
+      notifyThreadUpdated(threadId: threadId)
+    }
+  }
+
+  // swiftlint:disable:next function_body_length
+  private func performThreadSnapshotRefresh(
+    threadId: String,
+    viewerUserId: String,
+    allowIncrementalSync: Bool
+  ) async {
+    guard authenticatedViewerUserId == viewerUserId else { return }
+
     // True when the server no longer has the events since our cursor, so deletions in them are lost.
     var eventHistoryExpired = false
     if allowIncrementalSync {
@@ -568,9 +636,6 @@ final class FriendsMessagingRealtimeCoordinator {
             viewerUserId: viewerUserId,
             startingAt: syncState
           ) {
-            if shouldNotify {
-              notifyThreadUpdated(threadId: threadId)
-            }
             return
           }
           eventHistoryExpired = true
@@ -588,7 +653,7 @@ final class FriendsMessagingRealtimeCoordinator {
         threadId: threadId,
         messageLimit: Pagination.pageSize
       )
-      await repository.saveThread(snapshot.thread, for: viewerUserId)
+      await repository.saveThread(from: snapshot, for: viewerUserId)
       await repository.saveMessages(
         snapshot.messages,
         in: threadId,
@@ -607,9 +672,6 @@ final class FriendsMessagingRealtimeCoordinator {
         version: snapshot.snapshotVersion,
         retainedFromVersion: snapshot.retainedFromVersion
       )
-      if shouldNotify {
-        notifyThreadUpdated(threadId: threadId)
-      }
     } catch {
       realtimeLogger.error(
         "Failed to refresh thread snapshot for \(threadId, privacy: .private): \(error.localizedDescription)"
@@ -630,27 +692,6 @@ final class FriendsMessagingRealtimeCoordinator {
       realtimeLogger.error(
         "Failed to refresh thread states for \(threadId, privacy: .private): \(error.localizedDescription)"
       )
-    }
-  }
-
-  private func refreshMessage(messageId: String, viewerUserId: String) async {
-    do {
-      let message = try await service.fetchMessageSyncPayloadV2(messageId: messageId)
-      if message.deletedAt != nil {
-        await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
-        await refreshThreadSummary(
-          threadId: message.threadId,
-          viewerUserId: viewerUserId,
-          shouldNotify: false
-        )
-        notifyThreadUpdated(threadId: message.threadId)
-        return
-      }
-      await repository.saveMessages([message], in: message.threadId, for: viewerUserId)
-      notifyThreadUpdated(threadId: message.threadId)
-    } catch {
-      realtimeLogger.error(
-        "Failed to refresh message \(messageId, privacy: .private): \(error.localizedDescription)")
     }
   }
 
@@ -703,11 +744,9 @@ final class FriendsMessagingRealtimeCoordinator {
       return
     }
 
-    if let messageId = Self.extractMessageId(from: action) {
-      await refreshMessage(messageId: messageId, viewerUserId: viewerUserId)
-    } else {
-      await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
-    }
+    // The thread event log has every message change in order, so replaying it beats fetching
+    // each changed message, where a slow earlier fetch could overwrite a newer one.
+    await refreshThreadSnapshot(threadId: threadId, viewerUserId: viewerUserId)
   }
 
   private func handleThreadDetailStateAction(
@@ -729,12 +768,7 @@ final class FriendsMessagingRealtimeCoordinator {
     viewerUserId: String
   ) async {
     guard Self.extractThreadId(from: action) == threadId else { return }
-
-    if let messageId = Self.extractReactionMessageId(from: action) {
-      await refreshMessage(messageId: messageId, viewerUserId: viewerUserId)
-    } else {
-      await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
-    }
+    await refreshThreadSnapshot(threadId: threadId, viewerUserId: viewerUserId)
   }
 
   private func notifyThreadUpdated(threadId: String) {
@@ -1352,14 +1386,6 @@ final class FriendsMessagingRealtimeCoordinator {
 
   static func extractMessageId(fromRecord record: JSONObject) -> String? {
     record["id"]?.stringValue ?? record["message_id"]?.stringValue
-  }
-
-  static func extractReactionMessageId(from action: AnyAction) -> String? {
-    extractReactionMessageId(fromRecord: changedRecord(of: action))
-  }
-
-  static func extractReactionMessageId(fromRecord record: JSONObject) -> String? {
-    record["message_id"]?.stringValue
   }
 
   static func decodeThreadUserState(from action: AnyAction) -> FriendThreadState? {

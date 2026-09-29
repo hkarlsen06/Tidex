@@ -26,17 +26,66 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
     XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractMessageId(fromRecord: record), "thread-22")
   }
 
-  func testExtractReactionMessageIdUsesMessageIdInsteadOfReactionPrimaryId() {
-    let record: JSONObject = [
-        "id": "reaction-1",
-        "thread_id": "thread-1",
-        "message_id": "message-1",
-      ]
+  @MainActor
+  private final class RefreshRecorder {
+    var startedCalls = 0
+    var passes: [Bool] = []
+    var didOverlap = false
+    var holdsFirstPass = true
+    var releaseFirstPass: CheckedContinuation<Void, Never>?
+    private var isRunning = false
 
-    XCTAssertEqual(
-      FriendsMessagingRealtimeCoordinator.extractReactionMessageId(fromRecord: record),
-      "message-1"
-    )
+    func refresh(_ allowIncrementalSync: Bool) async {
+      didOverlap = didOverlap || isRunning
+      isRunning = true
+      passes.append(allowIncrementalSync)
+      if holdsFirstPass, passes.count == 1 {
+        await withCheckedContinuation { releaseFirstPass = $0 }
+      }
+      isRunning = false
+    }
+  }
+
+  func testSerializedRefreshRunnerMergesCallsDuringARefreshIntoOneMorePass() async {
+    let runner = SerializedRefreshRunner()
+    let recorder = RefreshRecorder()
+
+    let first = Task {
+      recorder.startedCalls += 1
+      await runner.run(key: "inbox", allowIncrementalSync: true, recorder.refresh)
+    }
+    while recorder.releaseFirstPass == nil { await Task.yield() }
+
+    let second = Task {
+      recorder.startedCalls += 1
+      await runner.run(key: "inbox", allowIncrementalSync: true, recorder.refresh)
+    }
+    let third = Task {
+      recorder.startedCalls += 1
+      await runner.run(key: "inbox", allowIncrementalSync: false, recorder.refresh)
+    }
+    while recorder.startedCalls < 3 { await Task.yield() }
+
+    recorder.releaseFirstPass?.resume()
+    await first.value
+    await second.value
+    await third.value
+
+    // The two calls that arrived during the first pass share one pass, and it takes the full
+    // snapshot the third call asked for.
+    XCTAssertEqual(recorder.passes, [true, false])
+    XCTAssertFalse(recorder.didOverlap)
+  }
+
+  func testSerializedRefreshRunnerRunsAgainAfterEarlierRefreshFinished() async {
+    let runner = SerializedRefreshRunner()
+    let recorder = RefreshRecorder()
+    recorder.holdsFirstPass = false
+
+    await runner.run(key: "inbox", allowIncrementalSync: true, recorder.refresh)
+    await runner.run(key: "inbox", allowIncrementalSync: true, recorder.refresh)
+
+    XCTAssertEqual(recorder.passes, [true, true])
   }
 
   func testDecodeThreadUserStateParsesInsertedPayload() throws {

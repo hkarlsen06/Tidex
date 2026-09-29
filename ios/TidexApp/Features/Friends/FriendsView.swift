@@ -660,7 +660,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       guard !Task.isCancelled else { return }
 
       if let viewerUserId = coordinator.getCurrentUserId() {
-        await friendsMessagesRepository.saveThread(snapshot.thread, for: viewerUserId)
+        await friendsMessagesRepository.saveThread(from: snapshot, for: viewerUserId)
         await friendsMessagesRepository.saveMessages(
           snapshot.messages,
           in: threadId,

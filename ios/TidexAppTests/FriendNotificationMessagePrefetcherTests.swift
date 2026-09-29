@@ -249,6 +249,10 @@ private final class MockFriendsMessagesRepository: FriendsMessagesRepositoryProv
     threads[thread.id] = thread
   }
 
+  func saveThread(from snapshot: FriendThreadSyncSnapshot, for viewerUserId: String) async {
+    await saveThread(snapshot.thread, for: viewerUserId)
+  }
+
   func saveMessages(_ messages: [FriendMessage], in _: String, for _: String)
     async
   {

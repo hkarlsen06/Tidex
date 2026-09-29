@@ -1039,7 +1039,7 @@ internal final class FriendsThreadViewModel {
         messageLimit: Pagination.pageSize
       )
       hasMoreHistoricalMessages = snapshot.hasMore
-      await repository.saveThread(snapshot.thread, for: viewerUserId)
+      await repository.saveThread(from: snapshot, for: viewerUserId)
       await repository.saveMessages(snapshot.messages, in: route.threadId, for: viewerUserId)
       await repository.deleteSentMessagesMissingFromSnapshot(
         snapshot, includingOlderHistory: false, writtenBefore: requestedAt, for: viewerUserId)

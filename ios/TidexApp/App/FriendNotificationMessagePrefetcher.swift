@@ -144,7 +144,7 @@ final class FriendNotificationMessagePrefetcher {
           threadId: normalizedThreadId,
           messageLimit: 50
         )
-        await repository.saveThread(snapshot.thread, for: viewerUserId)
+        await repository.saveThread(from: snapshot, for: viewerUserId)
         await repository.saveMessages(snapshot.messages, in: normalizedThreadId, for: viewerUserId)
         await repository.saveThreadState(snapshot.viewerState)
       }

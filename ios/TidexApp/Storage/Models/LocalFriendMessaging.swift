@@ -90,6 +90,9 @@ final class LocalThreadState {
   var lastReadAt: Date?
   var muted: Bool
   var updatedAt: Date
+  /// The server's `thread_user_state.updated_at` for the stored read marker. It grows with every
+  /// update of the row, so it orders states that arrive out of order.
+  var serverUpdatedAt: Date?
 
   init(
     threadId: String,
@@ -97,7 +100,8 @@ final class LocalThreadState {
     lastReadMessageId: String? = nil,
     lastReadAt: Date? = nil,
     muted: Bool = false,
-    updatedAt: Date = Date()
+    updatedAt: Date = Date(),
+    serverUpdatedAt: Date? = nil
   ) {
     self.compositeKey = "\(userId):\(threadId)"
     self.threadId = threadId
@@ -106,6 +110,7 @@ final class LocalThreadState {
     self.lastReadAt = lastReadAt
     self.muted = muted
     self.updatedAt = updatedAt
+    self.serverUpdatedAt = serverUpdatedAt
   }
 }
 
@@ -406,6 +411,13 @@ extension LocalThreadState {
     lastReadAt = state.lastReadAt
     muted = state.muted
     updatedAt = state.updatedAt
+    serverUpdatedAt = state.updatedAt
+  }
+
+  /// True when the stored state is a newer server version than one from `updatedAt`, for example
+  /// when a mark-read response arrives after a newer realtime event.
+  func isNewer(than updatedAt: Date) -> Bool {
+    serverUpdatedAt.map { updatedAt < $0 } ?? false
   }
 }
 
