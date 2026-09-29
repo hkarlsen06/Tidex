@@ -13,6 +13,8 @@ struct ProfileDisclosureChevron: View {
 /// A title with its current value on the trailing side.
 /// Rows without an action show a lock instead of a chevron.
 struct ProfileValueRow: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   let title: String
   let value: String
   let placeholder: String
@@ -20,30 +22,8 @@ struct ProfileValueRow: View {
   let action: (() -> Void)?
 
   var body: some View {
-    let content = HStack(spacing: Spacing.sm) {
-      Text(title)
-        .foregroundColor(.tidexTextPrimary)
-
-      Spacer(minLength: Spacing.sm)
-
-      Text(value.isEmpty ? placeholder : value)
-        .foregroundColor(value.isEmpty ? .tidexTextMuted : .tidexTextSecondary)
-        .lineLimit(1)
-        .truncationMode(.middle)
-
-      if isSaving {
-        ProgressView()
-          .controlSize(.small)
-      } else if action != nil {
-        ProfileDisclosureChevron()
-      } else {
-        Image(systemName: "lock.fill")
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-          .accessibilityHidden(true)
-      }
-    }
-    .contentShape(Rectangle())
+    let content = rowContent
+      .contentShape(Rectangle())
 
     return Group {
       if let action {
@@ -52,6 +32,61 @@ struct ProfileValueRow: View {
       } else {
         content
           .accessibilityElement(children: .combine)
+      }
+    }
+  }
+
+  private var titleText: some View {
+    Text(title)
+      .foregroundColor(.tidexTextPrimary)
+  }
+
+  /// Long values such as an email address stay on one line at normal sizes and wrap at accessibility sizes.
+  private var valueText: some View {
+    Text(value.isEmpty ? placeholder : value)
+      .foregroundColor(value.isEmpty ? .tidexTextMuted : .tidexTextSecondary)
+      .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+      .truncationMode(.middle)
+  }
+
+  @ViewBuilder
+  private var trailingIndicator: some View {
+    if isSaving {
+      ProgressView()
+        .controlSize(.small)
+    } else if action != nil {
+      ProfileDisclosureChevron()
+    } else {
+      Image(systemName: "lock.fill")
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
+    }
+  }
+
+  @ViewBuilder
+  private var rowContent: some View {
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        titleText
+
+        HStack(spacing: Spacing.sm) {
+          valueText
+
+          Spacer(minLength: Spacing.sm)
+
+          trailingIndicator
+        }
+      }
+    } else {
+      HStack(spacing: Spacing.sm) {
+        titleText
+
+        Spacer(minLength: Spacing.sm)
+
+        valueText
+
+        trailingIndicator
       }
     }
   }
@@ -66,6 +101,7 @@ struct ProfilePersonalInfoFooter: View {
       if let error = viewModel.usernameErrorMessage {
         Text(error)
           .foregroundColor(.tidexError)
+          .announcesToVoiceOver(error)
       }
 
       if viewModel.isOfflineProfileFallback {
@@ -119,7 +155,7 @@ struct ProfileAvatarImage: View {
 
       Text(initials)
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
     }
   }
 }

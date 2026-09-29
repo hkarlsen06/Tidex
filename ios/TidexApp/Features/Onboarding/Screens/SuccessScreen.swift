@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Screen 6: Success/Ready
 /// Confirms setup complete, shows save status, transitions to app
-struct SuccessScreen: View {
+struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
   let completionMode: OnboardingCompletionMode
   // New API with save status handling
   var saveStatus: OnboardingSaveManager.SaveStatus = .success
@@ -13,11 +13,22 @@ struct SuccessScreen: View {
   var onAddFirstShift: (() -> Void)?
   var onRetry: (() -> Void)?
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var checkmarkScale: CGFloat = 0.0
   @State private var checkmarkOpacity: Double = 0.0
   @State private var contentVisible = false
   @State private var showCalendarImport = false
   @State private var didImportFromCalendar = false
+  @ScaledMetric(relativeTo: .largeTitle) private var scaledIconSize: CGFloat = 80
+
+  /// The status icon grows with text, up to a size that still leaves room for the message.
+  private var iconSize: CGFloat {
+    min(scaledIconSize, 120)  // swiftlint:disable:this no_magic_numbers
+  }
+
+  private var badgeSize: CGFloat {
+    iconSize * 1.5
+  }
 
   var body: some View {
     ZStack {
@@ -52,6 +63,7 @@ struct SuccessScreen: View {
         // Bottom button(s)
         actionButtons
       }
+      .scrollsOnOverflow()
     }
     .onAppear {
       startAnimations()
@@ -63,6 +75,10 @@ struct SuccessScreen: View {
         withAnimation(.easeOut(duration: 0.2)) {
           contentVisible = true
         }
+      }
+      // The status changes without moving VoiceOver focus, so read the new title aloud.
+      if newStatus != .idle {
+        AccessibilityNotification.Announcement(statusTitle).post()
       }
     }
     .sensoryFeedback(.success, trigger: saveStatus) { _, newValue in newValue == .success }
@@ -90,6 +106,7 @@ struct SuccessScreen: View {
         .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       Text(statusSubtitle)
         .font(.tidexBody)
@@ -111,7 +128,7 @@ struct SuccessScreen: View {
     .padding(.horizontal, Spacing.xl)
     .adaptiveContentWidth()
     .opacity(contentVisible ? 1 : 0)
-    .offset(y: contentVisible ? 0 : 20)
+    .offset(y: contentVisible || reduceMotion ? 0 : 20)
   }
 
   // MARK: - Action Buttons
@@ -154,7 +171,10 @@ struct SuccessScreen: View {
       } label: {
         Text(.calendarImportEntryButton)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
+          .multilineTextAlignment(.center)
+          .frame(minHeight: 44)
+          .contentShape(Rectangle())
       }
     }
 
@@ -166,7 +186,9 @@ struct SuccessScreen: View {
       }) {
         Text(.commonRetry)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
+          .frame(minHeight: 44)
+          .contentShape(Rectangle())
       }
     }
   }
@@ -181,35 +203,38 @@ struct SuccessScreen: View {
         // Checkmark
         Circle()
           .fill(Color.tidexSuccess.opacity(0.15))
-          .frame(width: 120, height: 120)
+          .frame(width: badgeSize, height: badgeSize)
           .scaleEffect(checkmarkScale)
 
         Image(systemName: "checkmark.circle.fill")
-          .font(.system(size: 80))
+          .font(.system(size: iconSize))
           .foregroundColor(.tidexSuccess)
           .scaleEffect(checkmarkScale)
           .opacity(checkmarkOpacity)
+          .accessibilityHidden(true)
 
       case .saving:
         // Loading spinner
         Circle()
           .fill(Color.tidexBlue.opacity(0.15))
-          .frame(width: 120, height: 120)
+          .frame(width: badgeSize, height: badgeSize)
 
         ProgressView()
           .progressViewStyle(.circular)
           .scaleEffect(1.5)
           .tint(.tidexBlue)
+          .accessibilityHidden(true)
 
       case .error:
         // Error icon
         Circle()
           .fill(Color.tidexError.opacity(0.15))
-          .frame(width: 120, height: 120)
+          .frame(width: badgeSize, height: badgeSize)
 
         Image(systemName: "exclamationmark.circle.fill")
-          .font(.system(size: 80))
+          .font(.system(size: iconSize))
           .foregroundColor(.tidexError)
+          .accessibilityHidden(true)
       }
     }
   }
@@ -286,35 +311,39 @@ struct SuccessScreen: View {
       Image(systemName: "exclamationmark.triangle.fill")
         .font(.tidexBody)
         .foregroundColor(.tidexError)
+        .accessibilityHidden(true)
 
       Text(message)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
-        .lineLimit(3)
+        .fixedSize(horizontal: false, vertical: true)
 
       Spacer()
     }
     .padding(Spacing.md)
     .background(Color.tidexError.opacity(0.1))
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .announcesToVoiceOver(message)
   }
 
   // MARK: - Animation Sequence
 
   private func startAnimations() {
-    checkmarkScale = 0
+    checkmarkScale = reduceMotion ? 1.0 : 0
     checkmarkOpacity = 0
 
     // Only animate checkmark for idle/success states
     if saveStatus == .idle || saveStatus == .success {
-      // Checkmark draw and scale animation
-      withAnimation(.spring(response: 0.4, dampingFraction: 0.6).delay(0.1)) {
-        checkmarkScale = 1.1
+      // Checkmark draw and scale animation. Reduce Motion skips the bounce and only fades in.
+      let drawAnimation: Animation =
+        reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.4, dampingFraction: 0.6).delay(0.1)
+      withAnimation(drawAnimation) {
+        checkmarkScale = reduceMotion ? 1.0 : 1.1
         checkmarkOpacity = 1.0
       }
 
       // Settle to normal scale
-      withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.4)) {
+      withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8).delay(0.4)) {
         checkmarkScale = 1.0
       }
 
@@ -325,7 +354,7 @@ struct SuccessScreen: View {
     }
 
     // Show content
-    withAnimation(.easeOut(duration: 0.3).delay(0.5)) {
+    withAnimation(.easeOut(duration: 0.3).delay(reduceMotion ? 0 : 0.5)) {
       contentVisible = true
     }
   }

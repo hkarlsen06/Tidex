@@ -112,6 +112,9 @@ struct BreakDeductionSection: View {
       )
     }
     .buttonStyle(.plain)
+    .accessibilityValue(
+      isAdvancedExpanded ? Text(.settingsAccessibilityExpanded) : Text(.settingsAccessibilityCollapsed)
+    )
     .accessibilityIdentifier("pay-settings.break-method")
     .sensoryFeedback(.impact(weight: .light), trigger: isAdvancedExpanded)
   }
@@ -268,12 +271,12 @@ private struct BreakMethodRow: View {
         // Selection indicator
         ZStack {
           Circle()
-            .stroke(isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 1)
+            .stroke(isSelected ? Color.tidexBlueText : Color.tidexBorder, lineWidth: 1)
             .frame(width: 20, height: 20)
 
           if isSelected {
             Circle()
-              .fill(Color.tidexBrandPrimary)
+              .fill(Color.tidexBlueText)
               .frame(width: 10, height: 10)
           }
         }

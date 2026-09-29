@@ -4,6 +4,8 @@ import UIKit
 /// Celebration sheet shown after a shift completes, presented as a growing bottom sheet
 struct CelebrationOverlay: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @Environment(\.dismiss) private var dismiss
 
@@ -42,21 +44,85 @@ struct CelebrationOverlay: View {
     horizontalSizeClass == .regular ? AdaptiveMaxWidth.tabContent : .infinity
   }
 
+  /// The fixed-height detents only fit regular text sizes. At accessibility sizes the sheet
+  /// is full height and its content scrolls.
+  private var usesAdaptiveLayout: Bool {
+    dynamicTypeSize.isAccessibilitySize
+  }
+
+  /// Skips the timed reveal for people who use Reduce Motion or VoiceOver.
+  private var skipsReveal: Bool {
+    reduceMotion || voiceOverEnabled
+  }
+
+  private var detentSelection: Binding<PresentationDetent> {
+    usesAdaptiveLayout ? .constant(.large) : $sheetDetent
+  }
+
   var body: some View {
+    Group {
+      if usesAdaptiveLayout {
+        ScrollView {
+          content
+        }
+      } else {
+        content
+      }
+    }
+    .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.8), value: showCard)
+    .task {
+      Haptics.play(.success)
+
+      if skipsReveal {
+        displayedAmount = data.newDisplayValue
+        showCard = true
+        sheetDetent = Self.expandedDetent
+        AccessibilityNotification.LayoutChanged().post()
+      } else {
+        // Start count-up after the sheet slides in
+        try? await Task.sleep(for: .seconds(0.5))
+        withAnimation(.spring(duration: 1.0, bounce: 0)) {
+          displayedAmount = data.newDisplayValue
+        }
+
+        // Show card after count-up completes (with a brief pause)
+        try? await Task.sleep(for: .seconds(1.5))
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+          showCard = true
+          sheetDetent = Self.expandedDetent
+        }
+        AccessibilityNotification.LayoutChanged().post()
+      }
+    }
+    .userCurrency(data.currency)
+    .presentationDetents(
+      usesAdaptiveLayout ? [.large] : [Self.compactDetent, Self.expandedDetent],
+      selection: detentSelection
+    )
+    .presentationDragIndicator(.visible)
+    .presentationBackground(Color.tidexBackground)
+  }
+
+  private var content: some View {
     VStack(spacing: 0) {  // swiftlint:disable:this closure_body_length
       // Header with large number
       VStack(spacing: Spacing.sm) {
         Text(.celebrationYouEarned)
           .font(.tidexHeadline)
           .foregroundColor(.tidexTextSecondary)
+          .accessibilityAddTraits(.isHeader)
 
-        // Large amount - same size as TotalCard (88pt)
+        // Large amount - same size as TotalCard (88pt) at regular sizes. At accessibility sizes it
+        // uses a smaller base font and wraps instead of shrinking.
         Text(CurrencyConfig.format(displayedAmount, currency: data.currency))
-          .font(.tidexHeroAmount)
-          .foregroundColor(.tidexBlue)
-          .minimumScaleFactor(0.4)
-          .lineLimit(1)
+          .font(usesAdaptiveLayout ? .tidexAmountLarge : .tidexHeroAmount)
+          .foregroundColor(.tidexBlueText)
+          .multilineTextAlignment(.center)
+          .minimumScaleFactor(usesAdaptiveLayout ? 1 : 0.4)
+          .lineLimit(usesAdaptiveLayout ? nil : 1)
           .contentTransition(.numericText(value: displayedAmount))
+          // The visible number counts up, so speak the final amount from the start.
+          .accessibilityLabel(CurrencyConfig.format(data.newDisplayValue, currency: data.currency))
 
         Text(.celebrationSoFarThisMonth)
           .font(.tidexSubheadline)
@@ -101,7 +167,7 @@ struct CelebrationOverlay: View {
         Text(.celebrationContinue)
           .font(.tidexButton)
           .frame(maxWidth: .infinity)
-          .frame(height: Spacing.buttonHeight)
+          .frame(minHeight: Spacing.buttonHeight)
           .background(Color.tidexBrandPrimary)
           .foregroundColor(.tidexTextOnBrand)
           .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
@@ -112,32 +178,6 @@ struct CelebrationOverlay: View {
       .padding(.horizontal, Spacing.md)
       .padding(.bottom, Spacing.sm)
     }
-    .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.8), value: showCard)
-    .task {
-      Haptics.play(.success)
-
-      if reduceMotion {
-        displayedAmount = data.newDisplayValue
-        showCard = true
-        sheetDetent = Self.expandedDetent
-      } else {
-        // Start count-up after the sheet slides in
-        try? await Task.sleep(for: .seconds(0.5))
-        withAnimation(.spring(duration: 1.0, bounce: 0)) {
-          displayedAmount = data.newDisplayValue
-        }
-
-        // Show card after count-up completes (with a brief pause)
-        try? await Task.sleep(for: .seconds(1.5))
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-          showCard = true
-          sheetDetent = Self.expandedDetent
-        }
-      }
-    }
-    .userCurrency(data.currency)
-    .presentationDetents([Self.compactDetent, Self.expandedDetent], selection: $sheetDetent)
-    .presentationDragIndicator(.visible)
   }
 }
 

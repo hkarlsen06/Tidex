@@ -23,6 +23,24 @@ enum SharedPalette {
     dark: UIColor(red: 0.125, green: 0.169, blue: 0.235, alpha: 1)
   )
 
+  /// TidexTextSecondary
+  static let textSecondary: Color = adaptive(
+    light: UIColor(red: 0.318, green: 0.345, blue: 0.380, alpha: 1),
+    dark: UIColor(red: 0.741, green: 0.765, blue: 0.796, alpha: 1)
+  )
+
+  /// TidexBlueText (light #1D4ED8, dark #7AA0F3)
+  static let blueText: Color = adaptive(
+    light: UIColor(red: 0.114, green: 0.306, blue: 0.847, alpha: 1),
+    dark: UIColor(red: 0.478, green: 0.627, blue: 0.953, alpha: 1)
+  )
+
+  /// TidexError (light #B42D2E, dark #F56B6B)
+  static let error: Color = adaptive(
+    light: UIColor(red: 0.706, green: 0.176, blue: 0.180, alpha: 1),
+    dark: UIColor(red: 0.961, green: 0.420, blue: 0.420, alpha: 1)
+  )
+
   private static func adaptive(light: UIColor, dark: UIColor) -> Color {
     Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? dark : light })
   }

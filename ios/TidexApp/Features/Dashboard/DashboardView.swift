@@ -153,8 +153,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     !dynamicTypeSize.isAccessibilitySize
   }
 
-  private let payrollSectionMinHeight: CGFloat = 89
-  private let featuredSectionMinHeight: CGFloat = 118
+  @ScaledMetric(relativeTo: .body) private var payrollSectionMinHeight: CGFloat = 89  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  @ScaledMetric(relativeTo: .body) private var featuredSectionMinHeight: CGFloat = 118  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  @ScaledMetric(relativeTo: .largeTitle) private var errorIconSize: CGFloat = 48  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers type_contents_order
 
   @discardableResult
   private func refreshWorkSetupPresentationState() -> Bool {  // swiftlint:disable:this type_contents_order
@@ -604,12 +605,14 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           },
           onSave: { start, end, jobId in
             try await viewModel.commitTemporaryClockOut(start: start, end: end, jobId: jobId)
+            AccessibilityNotification.Announcement(String(localized: .dashboardAccessibilityClockedOut))
+              .post()
           },
           onDiscard: {
             await viewModel.discardTemporaryClockSession()
           }
         )
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
       }
       .sheet(isPresented: $showClockInJobChooser) {
@@ -905,14 +908,14 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
       }
-      .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
+      .frame(minHeight: 20)  // swiftlint:disable:this no_magic_numbers
     } else if let countdownText = state?.text {
       ShiftCountdownBadge(
         text: countdownText,
         status: featuredEventCountdownStatus(event, now: now),
         finalCountdownSeconds: state?.finalSeconds
       )
-      .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
+      .frame(minHeight: 20)  // swiftlint:disable:this no_magic_numbers
     } else {
       RoundedRectangle(cornerRadius: CornerRadius.xxs)
         .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
@@ -931,12 +934,38 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       await viewModel.refresh()
     }) {
       // Cards centered in available space (between toolbar and month picker)
+      centeredDashboardCards {
+        // Animated card content - centered vertically
+        animatedCardContent(data: data)
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // Pass user's currency to all child views
+    .userCurrency(data.currency)
+  }
+
+  /// Centers the cards between the toolbar and the month picker. At accessibility text sizes the
+  /// cards are taller than the screen, so they scroll from the top instead of being squeezed
+  /// into a viewport-height frame.
+  @ViewBuilder
+  private func centeredDashboardCards<Content: View>(  // swiftlint:disable:this type_contents_order
+    @ViewBuilder content: @escaping () -> Content
+  ) -> some View {
+    if dynamicTypeSize.isAccessibilitySize {
+      content()
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+        .padding(.horizontal, Spacing.xxl)
+        .padding(.top, Spacing.lg)
+        // Offset for month picker overlay so the last card stays reachable
+        .padding(.bottom, MonthPickerLayout.totalBottomInset)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+    } else {
       GeometryReader { geometry in
         VStack(spacing: 0) {
           Spacer()
 
-          // Animated card content - centered vertically
-          animatedCardContent(data: data)
+          content()
             .frame(maxWidth: AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, Spacing.xxl)
 
@@ -949,9 +978,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       }
       .contentShape(Rectangle())
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    // Pass user's currency to all child views
-    .userCurrency(data.currency)
   }
 
   // MARK: - Animated Card Content
@@ -1091,6 +1117,12 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       VStack(spacing: Spacing.lg) {  // swiftlint:disable:this closure_body_length
         // Total Card (Displayed Month) - THE ANCHOR
         // Numbers animate smoothly when values change
+        let toggleMixedCurrencyBreakdown = {  // swiftlint:disable:this explicit_type_interface
+          if data.currentMonthCurrencyAggregate.hasMixedCurrency {
+            Haptics.play(.medium)
+            showMixedCurrencyBreakdownPopover.toggle()
+          }
+        }
         TotalCard(
           gross: data.currentMonthGross,
           net: data.currentMonthNet,
@@ -1105,12 +1137,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           isElevated: false
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-          if data.currentMonthCurrencyAggregate.hasMixedCurrency {
-            Haptics.play(.medium)
-            showMixedCurrencyBreakdownPopover.toggle()
-          }
-        }
+        .onTapGesture(perform: toggleMixedCurrencyBreakdown)
+        .accessibilityElement(children: .combine)
+        .accessibilityAction(.default, toggleMixedCurrencyBreakdown)
         .accessibilityAddTraits(
           data.currentMonthCurrencyAggregate.hasMixedCurrency ? .isButton : []
         )
@@ -1190,8 +1219,12 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   @ViewBuilder
-  private func clockButtonsSection() -> some View {  // swiftlint:disable:this type_contents_order
-    HStack(spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
+  private func clockButtonsSection() -> some View {  // swiftlint:disable:this function_body_length type_contents_order
+    let layout =  // swiftlint:disable:this explicit_type_interface
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.sm))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+    layout {  // swiftlint:disable:this closure_body_length
       clockButton(
         title: .dashboardClockIn,
         systemImage: "play.fill",
@@ -1226,6 +1259,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           let route = await viewModel.routeClockOut()  // swiftlint:disable:this explicit_type_interface
           if case .temporaryReview(let session) = route {
             await presentTemporaryClockReview(session)
+          } else if case .persistedEnded = route {
+            AccessibilityNotification.Announcement(String(localized: .dashboardAccessibilityClockedOut))
+              .post()
           }
         }
       }
@@ -1332,18 +1368,23 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       onToggleReceived: showsReceivedToggle ? toggleReceived : nil
     )
 
+    let openPayrollDetails = {  // swiftlint:disable:this explicit_type_interface
+      guard !isLoading else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      Haptics.play(.medium)
+      selectedPayrollDetailsVariant = selectedVariant
+    }
+
     card
       .userCurrency(selectedVariant.currency)
       .accessibilityIdentifier("home.payroll-card")
       .contentShape(Rectangle())
-      .onTapGesture {
-        guard !isLoading else { return }  // swiftlint:disable:this conditional_returns_on_newline
-        Haptics.play(.medium)
-        selectedPayrollDetailsVariant = selectedVariant
-      }
+      .onTapGesture(perform: openPayrollDetails)
       .accessibilityElement(children: .combine)
       .accessibilityAddTraits(.isButton)
+      .accessibilityAction(.default, openPayrollDetails)
       .accessibilityHint(Text(.dashboardPayrollDetailsTitle))
+      // The skeleton has no text, so an empty button would be announced.
+      .accessibilityHidden(isLoading)
       .accessibilityActions {
         if showsReceivedToggle {
           Button(
@@ -1401,6 +1442,12 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           at: now
         )
         let shiftJob = viewModel.jobForTemporarySession(session)  // swiftlint:disable:this explicit_type_interface
+        let openTemporaryReview = {  // swiftlint:disable:this explicit_type_interface
+          Haptics.play(.medium)
+          Task {
+            await presentTemporaryClockReview(session)
+          }
+        }
         FeaturedShiftCard(
           shift: temporaryShift,
           isToday: true,
@@ -1413,14 +1460,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         )
         .userCurrency(shiftJob?.currency ?? data.currency)
         .contentShape(Rectangle())
-        .onTapGesture {
-          Haptics.play(.medium)
-          Task {
-            await presentTemporaryClockReview(session)
-          }
-        }
+        .onTapGesture(perform: openTemporaryReview)
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits([.isButton, .updatesFrequently])
+        .accessibilityAction(.default, openTemporaryReview)
       } else if let featuredItem = data.featuredItem {
         switch featuredItem {
         case .shift(let featuredShift):
@@ -1433,18 +1476,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             ? viewModel.liveFeaturedShiftWhileOngoing(from: featuredShift, at: now)
             : featuredShift
           let shiftJob = viewModel.jobForShift(featuredShift)  // swiftlint:disable:this explicit_type_interface
-          FeaturedShiftCard(
-            shift: displayedFeaturedShift,
-            isToday: data.isFeaturedItemToday,
-            isBestShift: data.featuredShiftIsBestShift,
-            countdownText: state?.text,
-            progress: shiftProgress,
-            finalCountdownSeconds: state?.finalSeconds,
-            surfaceStyle: .flat
-          )
-          .userCurrency(shiftJob?.currency ?? data.currency)
-          .contentShape(Rectangle())
-          .onTapGesture {
+          let openFeaturedShift = {  // swiftlint:disable:this explicit_type_interface
             Haptics.play(.medium)
             if isActive {
               if viewModel.shouldShowDashboardClockButtons {
@@ -1457,8 +1489,21 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
               selectedShift = featuredShift
             }
           }
+          FeaturedShiftCard(
+            shift: displayedFeaturedShift,
+            isToday: data.isFeaturedItemToday,
+            isBestShift: data.featuredShiftIsBestShift,
+            countdownText: state?.text,
+            progress: shiftProgress,
+            finalCountdownSeconds: state?.finalSeconds,
+            surfaceStyle: .flat
+          )
+          .userCurrency(shiftJob?.currency ?? data.currency)
+          .contentShape(Rectangle())
+          .onTapGesture(perform: openFeaturedShift)
           .accessibilityElement(children: .combine)
-          .accessibilityAddTraits(.isButton)
+          .accessibilityAddTraits([.isButton, .updatesFrequently])
+          .accessibilityAction(.default, openFeaturedShift)
 
         case .event(let event, let coveredDateISO):  // swiftlint:disable:this pattern_matching_keywords
           VStack(spacing: Spacing.sm) {
@@ -1506,6 +1551,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     }
 
     await viewModel.clockIn(jobId: jobId)
+    if case .temporary = viewModel.activeClockState {
+      AccessibilityNotification.Announcement(String(localized: .dashboardAccessibilityClockedIn))
+        .post()
+    }
   }
 
   private func completeClockPaySetup(for job: Job, input: JobPaySetupInput) async -> Bool {  // swiftlint:disable:this line_length type_contents_order
@@ -1546,67 +1595,56 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     PullToRefreshContainer(onRefresh: {
       await viewModel.refresh()
     }) {  // swiftlint:disable:this closure_body_length
-      GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
-        VStack(spacing: 0) {  // swiftlint:disable:this closure_body_length
-          Spacer()
+      centeredDashboardCards {  // swiftlint:disable:this closure_body_length
+        // Skeleton cards matching the real dashboard layout
+        VStack(spacing: Spacing.lg) {  // swiftlint:disable:this closure_body_length
+          // Total Card skeleton
+          TotalCard(
+            gross: 0,
+            net: nil,
+            completedGross: 0,
+            completedNet: nil,
+            shiftCount: 0,
+            plannedCount: 0,
+            percentageChange: nil,
+            taxEnabled: false,
+            isElevated: false,
+            isLoading: true
+          )
 
-          // Skeleton cards matching the real dashboard layout
-          VStack(spacing: Spacing.lg) {  // swiftlint:disable:this closure_body_length
-            // Total Card skeleton
-            TotalCard(
+          if viewModel.shouldShowDashboardClockButtons {
+            clockButtonsSkeletonSection()
+          }
+
+          VStack(spacing: Spacing.sm) {
+            // Payroll Card skeleton
+            PayrollCard(
+              payrollDate: Date(),
+              label: String(localized: .dashboardNextPayout),
               gross: 0,
               net: nil,
-              completedGross: 0,
-              completedNet: nil,
-              shiftCount: 0,
-              plannedCount: 0,
-              percentageChange: nil,
+              tax: nil,
               taxEnabled: false,
-              isElevated: false,
-              isLoading: true
+              isLoading: true,
+              isElevated: false
+            )
+            .frame(
+              height: usesFixedCardHeights ? payrollSectionMinHeight : nil,
+              alignment: .top
             )
 
-            if viewModel.shouldShowDashboardClockButtons {
-              clockButtonsSkeletonSection()
-            }
-
-            VStack(spacing: Spacing.sm) {
-              // Payroll Card skeleton
-              PayrollCard(
-                payrollDate: Date(),
-                label: String(localized: .dashboardNextPayout),
-                gross: 0,
-                net: nil,
-                tax: nil,
-                taxEnabled: false,
-                isLoading: true,
-                isElevated: false
-              )
-              .frame(
-                height: usesFixedCardHeights ? payrollSectionMinHeight : nil,
-                alignment: .top
-              )
-
-              // Featured Shift Card skeleton
-              if usesFixedCardHeights {
-                EmptyShiftCard(isLoading: true, isElevated: false)
-                  .frame(height: featuredSectionMinHeight, alignment: .top)
-              } else {
-                EmptyShiftCard(isLoading: true, isElevated: false)
-              }
+            // Featured Shift Card skeleton
+            if usesFixedCardHeights {
+              EmptyShiftCard(isLoading: true, isElevated: false)
+                .frame(height: featuredSectionMinHeight, alignment: .top)
+            } else {
+              EmptyShiftCard(isLoading: true, isElevated: false)
             }
           }
-          .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, Spacing.xxl)
-
-          Spacer()
         }
-        // Offset for month picker overlay so content centers in available space
-        .padding(.bottom, MonthPickerLayout.totalBottomInset)
-        .frame(width: geometry.size.width, height: geometry.size.height)
-        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(.commonLoading))
       }
-      .contentShape(Rectangle())
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
@@ -1617,7 +1655,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   private func errorView(error: Error) -> some View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
-        .font(.system(size: 48))  // swiftlint:disable:this no_magic_numbers
+        .font(.system(size: errorIconSize))
         .foregroundColor(.tidexWarning)
         .accessibilityHidden(true)
 
@@ -1635,7 +1673,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       } label: {
         Text(.commonRetry)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))  // swiftlint:disable:this no_magic_numbers
@@ -1644,6 +1682,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .padding(.horizontal, Spacing.xxl)
+    .announcesToVoiceOver(String(localized: .dashboardLoadError))
   }
 
 }
@@ -1666,6 +1705,8 @@ private struct ClockOutReviewSheet: View {
   let onDiscard: () async -> Void
 
   @Environment(\.dismiss) private var dismiss  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
   @State private var availableJobs: [Job]
   @State private var startTime: Date?
   @State private var endTime: Date?
@@ -1740,93 +1781,96 @@ private struct ClockOutReviewSheet: View {
 
   var body: some View {
     NavigationStack {  // swiftlint:disable:this closure_body_length
-      VStack(alignment: .leading, spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
-        VStack(spacing: Spacing.xxs) {
-          Text(durationText)
-            .font(.tidexAmountLarge)
-            .monospacedDigit()
-            .foregroundColor(isValidRange ? .tidexTextPrimary : .tidexTextMuted)
-            .contentTransition(.numericText())
-            .animation(.snappy, value: durationText)
-          if let startTime {
-            Text(startTime, format: .dateTime.weekday(.wide).day().month(.wide))
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextSecondary)
+      ScrollView {  // swiftlint:disable:this closure_body_length
+        VStack(alignment: .leading, spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
+          VStack(spacing: Spacing.xxs) {
+            Text(durationText)
+              .font(.tidexAmountLarge)
+              .monospacedDigit()
+              .foregroundColor(isValidRange ? .tidexTextPrimary : .tidexTextMuted)
+              .contentTransition(reduceMotion ? .identity : .numericText())
+              .animation(reduceMotion ? nil : .snappy, value: durationText)
+            if let startTime {
+              Text(startTime, format: .dateTime.weekday(.wide).day().month(.wide))
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexTextSecondary)
+            }
           }
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
+          .frame(maxWidth: .infinity)
+          .accessibilityElement(children: .combine)
 
-        VStack(spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
-          TimeRangePicker(
-            startTime: $startTime,
-            endTime: $endTime,
-            focusedFieldBinding: $focusedTimeField,
-            showsRecentTimeChips: false
+          VStack(spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
+            TimeRangePicker(
+              startTime: $startTime,
+              endTime: $endTime,
+              focusedFieldBinding: $focusedTimeField,
+              showsRecentTimeChips: false
+            )
+
+            if availableJobs.count > 1 {
+              Divider()
+
+              Button {
+                showJobChooser = true
+              } label: {
+                HStack(spacing: Spacing.sm) {
+                  Text(.settingsPayChooseJobTitle)
+                    .font(.tidexSubheadline)
+                    .foregroundColor(.tidexTextSecondary)
+
+                  Spacer(minLength: Spacing.sm)
+
+                  if let selectedJob {
+                    WorkplaceNameText(
+                      name: selectedJob.name,
+                      colorHex: selectedJob.color,
+                      font: .tidexMonoCaption,
+                      fallbackBadgeColor: .tidexBlue,
+                      lineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 1,
+                      badgeHorizontalPadding: Spacing.xs,
+                      badgeVerticalPadding: 2  // swiftlint:disable:this no_magic_numbers
+                    )
+                    .truncationMode(.tail)
+                  }
+
+                  Image(systemName: "chevron.up.chevron.down")
+                    .font(.tidexMicro)
+                    .foregroundColor(.tidexTextMuted)
+                    .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+              }
+              .buttonStyle(.plain)
+            }
+          }
+          .padding(Spacing.md)
+          .background(
+            RoundedRectangle(cornerRadius: CornerRadius.xxl)
+              .fill(Color.tidexSurfacePrimary)
           )
 
-          if availableJobs.count > 1 {
-            Divider()
-
-            Button {
-              showJobChooser = true
-            } label: {
-              HStack(spacing: Spacing.sm) {
-                Text(.settingsPayChooseJobTitle)
-                  .font(.tidexSubheadline)
-                  .foregroundColor(.tidexTextSecondary)
-
-                Spacer(minLength: Spacing.sm)
-
-                if let selectedJob {
-                  WorkplaceNameText(
-                    name: selectedJob.name,
-                    colorHex: selectedJob.color,
-                    font: .tidexMonoCaption,
-                    fallbackBadgeColor: .tidexBlue,
-                    badgeHorizontalPadding: Spacing.xs,
-                    badgeVerticalPadding: 2  // swiftlint:disable:this no_magic_numbers
-                  )
-                  .lineLimit(1)
-                  .truncationMode(.tail)
-                }
-
-                Image(systemName: "chevron.up.chevron.down")  // swiftlint:disable:this accessibility_label_for_image
-                  .font(.tidexMicro)
-                  .foregroundColor(.tidexTextMuted)
-              }
-              .contentShape(Rectangle())
+          if showsCrossMidnightHint {
+            HStack(spacing: Spacing.xs) {
+              Image(systemName: "moon.fill")
+                .font(.tidexCaption)
+                .foregroundColor(.tidexTextSecondary)
+                .accessibilityHidden(true)
+              Text(.shiftsCrossMidnightInfo)
+                .font(.tidexFootnote)
+                .foregroundColor(.tidexTextSecondary)
             }
-            .buttonStyle(.plain)
           }
-        }
-        .padding(Spacing.md)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.xxl)
-            .fill(Color.tidexSurfacePrimary)
-        )
 
-        if showsCrossMidnightHint {
-          HStack(spacing: Spacing.xs) {
-            Image(systemName: "moon.fill")  // swiftlint:disable:this accessibility_label_for_image
-              .font(.tidexCaption)
-              .foregroundColor(.tidexTextSecondary)
-            Text(.shiftsCrossMidnightInfo)
+          if let errorMessage {
+            Text(errorMessage)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundColor(.tidexError)
+              .announcesToVoiceOver(errorMessage)
           }
         }
-
-        if let errorMessage {
-          Text(errorMessage)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
-        }
-
-        Spacer()
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.md)
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.top, Spacing.md)
       .background(Color.tidexBackground.ignoresSafeArea())
       .navigationTitle(.dashboardClockOutReviewTitle)
       .navigationBarTitleDisplayMode(.inline)

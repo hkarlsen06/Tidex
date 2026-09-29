@@ -13,6 +13,7 @@ struct FriendProfileView: View {
   var initialSnapshot: FriendsManagementSnapshot?
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var viewModel = ManageSharingViewModel()
 
   @State private var friendToRemove: Friend?
@@ -152,7 +153,7 @@ extension FriendProfileView {
             dismiss()
           }
           .font(.tidexHeadline)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
           .buttonStyle(.plain)
         }
 
@@ -162,19 +163,20 @@ extension FriendProfileView {
             initials: sharedUser.initials,
             size: 64
           )
+          .accessibilityHidden(true)
 
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(sharedUser.displayName)
               .font(.tidexTitle)
               .foregroundColor(.tidexTextPrimary)
-              .lineLimit(1)
+              .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
               .truncationMode(.tail)
 
             if let contactInfo = sharedUser.contactInfo {
               Text(contactInfo)
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextMuted)
-                .lineLimit(1)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 .truncationMode(.tail)
             }
           }

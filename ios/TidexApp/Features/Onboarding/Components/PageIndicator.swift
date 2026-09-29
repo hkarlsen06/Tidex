@@ -11,6 +11,8 @@ internal struct PageIndicator: View {
   internal let totalPages: Int
   internal let currentPage: Int
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   internal var body: some View {
     HStack(spacing: Spacing.xs) {
       ForEach(0..<totalPages, id: \.self) { index in
@@ -23,14 +25,18 @@ internal struct PageIndicator: View {
           .frame(width: Self.dotSize, height: Self.dotSize)
           .scaleEffect(index == currentPage ? Self.selectedScale : 1.0)
           .animation(
-            .spring(
-              response: Self.animationResponse,
-              dampingFraction: Self.animationDampingFraction
-            ),
+            reduceMotion
+              ? nil
+              : .spring(
+                response: Self.animationResponse,
+                dampingFraction: Self.animationDampingFraction
+              ),
             value: currentPage
           )
       }
     }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(.onboardingAccessibilityPageIndicator(currentPage + 1, totalPages)))
   }
 }
 

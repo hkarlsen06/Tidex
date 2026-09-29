@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Sheet that asks for a new email address and then confirms that the link was sent.
 struct ProfileEmailChangeSheet: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @Bindable var viewModel: ProfileSettingsViewModel
 
   var body: some View {
@@ -56,6 +57,7 @@ struct ProfileEmailChangeSheet: View {
           if let error = viewModel.errorMessage {
             Text(error)
               .foregroundColor(.tidexError)
+              .announcesToVoiceOver(error)
           } else {
             Text(.profileEmailChangeInstructions)
           }
@@ -73,7 +75,7 @@ struct ProfileEmailChangeSheet: View {
   private var currentEmailRow: some View {
     LabeledContent(String(localized: .profileEmailChangeCurrentEmailLabel)) {
       Text(viewModel.email)
-        .lineLimit(1)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .truncationMode(.middle)
     }
   }

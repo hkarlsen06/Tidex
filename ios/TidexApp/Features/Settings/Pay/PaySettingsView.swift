@@ -10,6 +10,7 @@ struct PaySettingsView: View {
   @State private var paySetupJob: Job?
   @State private var showingArchiveConfirmation = false
   @State private var isPayReviewExpanded: Bool
+  @ScaledMetric(relativeTo: .body) private var actionIconWidth: CGFloat = 22
   /// Shifts open this screen to check a date, so the date review goes above the history.
   private let showsReviewFirst: Bool
 
@@ -40,14 +41,6 @@ struct PaySettingsView: View {
     }
     .navigationTitle(String(localized: .settingsPayTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      ToolbarItem(placement: .principal) {
-        Text(.settingsPayTitle)
-          .font(.headline)
-          .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1)
-      }
-    }
     .sheet(isPresented: $viewModel.showingEditor) {
       editorSheetContent
     }
@@ -273,6 +266,7 @@ extension PaySettingsView {
       Image(systemName: "exclamationmark.circle.fill")
         .font(.tidexTitle)
         .foregroundColor(.tidexWarning)
+        .accessibilityHidden(true)
 
       Text(.settingsPaySetupFinishTitle)
         .font(.tidexTitle)
@@ -331,7 +325,7 @@ extension PaySettingsView {
       jobActionRow(
         icon: "pencil",
         title: String(localized: .settingsPayEditJobTitle),
-        tint: .tidexBlue
+        tint: .tidexBlueText
       )
     }
     .buttonStyle(.plain)
@@ -346,7 +340,7 @@ extension PaySettingsView {
       jobActionRow(
         icon: "checkmark.circle",
         title: String(localized: .settingsPayJobActionsSetDefault),
-        tint: .tidexBlue,
+        tint: .tidexBlueText,
         isEnabled: viewModel.canSetSelectedJobAsDefault
           && !viewModel.isProcessingJobAction
       )
@@ -373,7 +367,7 @@ extension PaySettingsView {
   /// Starts under the row titles, past the icon column.
   private var jobActionDivider: some View {
     Divider()
-      .padding(.leading, Spacing.md + 22 + Spacing.sm)
+      .padding(.leading, Spacing.md + actionIconWidth + Spacing.sm)
   }
 
   private func jobActionRow(
@@ -386,7 +380,7 @@ extension PaySettingsView {
       Image(systemName: icon)
         .font(.tidexBodyMedium)
         .foregroundColor(tint)
-        .frame(width: 22)
+        .frame(width: actionIconWidth)
 
       Text(title)
         .font(.tidexBodyMedium)

@@ -98,6 +98,18 @@ struct ShiftSupplementRuleCard: View {
     CurrencyConfig.get(currency)
   }
 
+  /// Spoken time range, for example "21:00 to 06:00".
+  private var timeRangeDescription: String {
+    String(localized: .calendarAccessibilityTimeRange(rule.from, rule.to))
+  }
+
+  private var ruleDescription: String {
+    let badge =
+      rule.isCustom
+      ? String(localized: .supplementsCustom) : String(localized: .supplementsTariff)
+    return "\(badge), \(timeRangeDescription), \(rule.formattedValue(currency: currency))"
+  }
+
   var body: some View {
     HStack(spacing: Spacing.sm) {
       // Badge and content
@@ -110,7 +122,7 @@ struct ShiftSupplementRuleCard: View {
               : String(localized: .supplementsTariff)
           )
           .font(.tidexMicro)
-          .foregroundColor(rule.isCustom ? .tidexBlue : .tidexTextSecondary)
+          .foregroundColor(rule.isCustom ? .tidexBlueText : .tidexTextSecondary)
           .padding(.horizontal, Spacing.xs)
           .padding(.vertical, 3)
           .background(
@@ -144,6 +156,8 @@ struct ShiftSupplementRuleCard: View {
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
       }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(Text(verbatim: ruleDescription))
 
       Spacer()
 
@@ -154,26 +168,28 @@ struct ShiftSupplementRuleCard: View {
           Image(systemName: "pencil")
             .font(.tidexLabel)
             .foregroundColor(.tidexTextPrimary)
-            .frame(width: 36, height: 36)
+            .frame(minWidth: 36, minHeight: 36)
             .background(Color.tidexBlue.opacity(0.1))
             .clipShape(Circle())
             .contentShape(Rectangle())
             .frame(minWidth: 44, minHeight: 44)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(.shiftsAccessibilityEditItem(timeRangeDescription)))
 
         // Delete button
         Button(action: onDelete) {
           Image(systemName: "trash")
             .font(.tidexLabel)
             .foregroundColor(.tidexError)
-            .frame(width: 36, height: 36)
+            .frame(minWidth: 36, minHeight: 36)
             .background(Color.tidexError.opacity(0.1))
             .clipShape(Circle())
             .contentShape(Rectangle())
             .frame(minWidth: 44, minHeight: 44)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(.shiftsAccessibilityDeleteItem(timeRangeDescription)))
       }
     }
     .padding(Spacing.md)
@@ -192,6 +208,8 @@ struct SupplementRuleEditorSheet: View {
   let onSave: (CustomSupplementRuleWithId) -> Void
   let onCancel: () -> Void
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var fromTime = Date()  // swiftlint:disable:this explicit_type_interface
   @State private var toTime = Date()  // swiftlint:disable:this explicit_type_interface
   @State private var supplementType: CustomSupplementRuleWithId.SupplementType = .fixed
@@ -315,7 +333,7 @@ struct SupplementRuleEditorSheet: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: Spacing.md) {
+      stackedAtAccessibilitySizes(spacing: Spacing.md) {
         // From time
         VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.onboardingSupplementsFrom)
@@ -323,7 +341,7 @@ struct SupplementRuleEditorSheet: View {
             .foregroundColor(.tidexTextMuted)
 
           DatePicker(
-            "",
+            String(localized: .onboardingSupplementsFrom),
             selection: $fromTime,
             displayedComponents: .hourAndMinute
           )
@@ -342,7 +360,7 @@ struct SupplementRuleEditorSheet: View {
             .foregroundColor(.tidexTextMuted)
 
           DatePicker(
-            "",
+            String(localized: .onboardingSupplementsTo),
             selection: $toTime,
             displayedComponents: .hourAndMinute
           )
@@ -366,11 +384,21 @@ struct SupplementRuleEditorSheet: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: Spacing.sm) {
+      stackedAtAccessibilitySizes(spacing: Spacing.sm) {
         typeButton(.fixed, title: .onboardingSupplementsFixedRate, subtitle: hourRateSuffix)
         typeButton(.percent, title: .onboardingSupplementsPercentRate, subtitle: "%")
       }
     }
+  }
+
+  /// Lays out side-by-side controls in a row, and in a column at accessibility text sizes.
+  private func stackedAtAccessibilitySizes<Content: View>(
+    spacing: CGFloat, @ViewBuilder content: () -> Content
+  ) -> some View {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: spacing)) : AnyLayout(HStackLayout(spacing: spacing))
+    return layout { content() }
   }
 
   private func typeButton(
@@ -380,7 +408,7 @@ struct SupplementRuleEditorSheet: View {
   ) -> some View {
     Button {
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
-      withAnimation {
+      withAnimation(reduceMotion ? nil : .default) {
         supplementType = type
         value = defaultValue(for: type)
       }
@@ -395,7 +423,7 @@ struct SupplementRuleEditorSheet: View {
           .foregroundColor(.tidexTextMuted)
       }
       .frame(maxWidth: .infinity)
-      .frame(height: 64)
+      .frame(minHeight: 64)
       .background(
         supplementType == type
           ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary
@@ -409,6 +437,7 @@ struct SupplementRuleEditorSheet: View {
       )
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(supplementType == type ? .isSelected : [])
   }
 
   // MARK: - Value Section
@@ -444,6 +473,8 @@ struct SupplementRuleEditorSheet: View {
           }
         )
         .tint(.tidexTextPrimary)
+        .accessibilityLabel(Text(.onboardingSupplementsValueLabel))
+        .accessibilityValue(Text(verbatim: spokenValue(value)))
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary)
@@ -452,23 +483,42 @@ struct SupplementRuleEditorSheet: View {
   }
 
   private var quickValueButtons: some View {
-    HStack(spacing: Spacing.xs) {
-      ForEach(quickValues, id: \.self) { quickValue in
-        quickValueButton(quickValue)
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        LazyVGrid(
+          columns: [GridItem(.adaptive(minimum: 96), spacing: Spacing.xs)],
+          alignment: .leading, spacing: Spacing.xs
+        ) {
+          ForEach(quickValues, id: \.self) { quickValue in
+            quickValueButton(quickValue)
+          }
+        }
+      } else {
+        HStack(spacing: Spacing.xs) {
+          ForEach(quickValues, id: \.self) { quickValue in
+            quickValueButton(quickValue)
+          }
+        }
       }
     }
+  }
+
+  /// Spoken amount with its unit, for example "45 kr/h" or "50%".
+  private func spokenValue(_ amount: Double) -> String {
+    let formatted = formatValueWithDecimals(amount)
+    return supplementType == .fixed ? "\(formatted) \(hourRateSuffix)" : "\(formatted)%"
   }
 
   private func quickValueButton(_ quickValue: Double) -> some View {
     Button {
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
-      withAnimation {
+      withAnimation(reduceMotion ? nil : .default) {
         value = quickValue
       }
     } label: {
-      Text(supplementType == .fixed ? "+\(Int(quickValue))" : "\(Int(quickValue))%")
+      Text(quickValueTitle(quickValue))
         .font(value == quickValue ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(value == quickValue ? .white : .tidexTextSecondary)
+        .foregroundColor(value == quickValue ? .tidexTextOnBrand : .tidexTextSecondary)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
         .background(
@@ -481,6 +531,13 @@ struct SupplementRuleEditorSheet: View {
         )
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(Text(verbatim: spokenValue(quickValue)))
+    .accessibilityInputLabels([Text(verbatim: quickValueTitle(quickValue))])
+    .accessibilityAddTraits(value == quickValue ? .isSelected : [])
+  }
+
+  private func quickValueTitle(_ quickValue: Double) -> String {
+    supplementType == .fixed ? "+\(Int(quickValue))" : "\(Int(quickValue))%"
   }
 
   /// Editable input field
@@ -496,12 +553,13 @@ struct SupplementRuleEditorSheet: View {
 
   private var valueTextField: some View {
     TextField("", text: $valueInputText)
+      .accessibilityLabel(Text(.onboardingSupplementsValueLabel))
       .font(.tidexLargeTitle)
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
       .keyboardType(.decimalPad)
       .multilineTextAlignment(.leading)
       .focused($isValueInputFocused)
-      .frame(width: 80)
+      .frame(minWidth: 80)
       .padding(.horizontal, Spacing.xxs)
       .padding(.vertical, Spacing.micro)
       .background(Color.tidexBlue.opacity(0.15))
@@ -539,18 +597,21 @@ struct SupplementRuleEditorSheet: View {
     } label: {
       Text(formatValueWithDecimals(value))
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlue)
-        .contentTransition(.numericText())
+        .foregroundColor(.tidexBlueText)
+        .contentTransition(reduceMotion ? .identity : .numericText())
         .padding(.horizontal, Spacing.xxs)
         .padding(.vertical, Spacing.micro)
         .background(Color.tidexBlue.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(Text(.onboardingSupplementsValueLabel))
+    .accessibilityValue(Text(verbatim: spokenValue(value)))
 
     Text(supplementType == .fixed ? hourRateSuffix : "%")
       .font(.tidexLabel)
       .foregroundColor(.tidexTextMuted)
+      .accessibilityHidden(true)
   }
 
   private var quickValues: [Double] {

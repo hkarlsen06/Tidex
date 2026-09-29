@@ -72,6 +72,26 @@ struct EventRowCard: View {
       .onTapGesture {
         onTap?()
       }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(Text(verbatim: accessibilityDescription))
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction(.default) {
+        onTap?()
+      }
+  }
+
+  /// One spoken summary instead of a fragment per text label.
+  private var accessibilityDescription: String {
+    var parts = ["\(dateParts.weekday) \(dateParts.dayMonth)"]
+    if showTodayHighlight, isToday {
+      parts.append(String(localized: .commonToday))
+    }
+    parts.append(event.note)
+    parts.append(subtitleText)
+    if isContinuingFromPreviousDay {
+      parts.append(dateRangeText)
+    }
+    return parts.joined(separator: ", ")
   }
 
   private var content: some View {
@@ -101,18 +121,18 @@ struct EventRowCard: View {
         .tracking(-0.5)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.trailing)
-        .lineLimit(2)
+        .lineLimit(usesFixedCardHeight ? 2 : nil)
         .truncationMode(.tail)
         .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: 170, alignment: .trailing)
+        .frame(maxWidth: usesFixedCardHeight ? 170 : .infinity, alignment: .trailing)
     } trailingBottom: {
       if isContinuingFromPreviousDay {
         Text(dateRangeText)
           .font(.tidexMicro)
           .foregroundColor(.tidexTextMuted)
           .multilineTextAlignment(.trailing)
-          .lineLimit(1)
-          .frame(maxWidth: 170, alignment: .trailing)
+          .lineLimit(usesFixedCardHeight ? 1 : nil)
+          .frame(maxWidth: usesFixedCardHeight ? 170 : .infinity, alignment: .trailing)
       }
     }
     .padding(.horizontal, isElevated ? Spacing.mlg : 0)

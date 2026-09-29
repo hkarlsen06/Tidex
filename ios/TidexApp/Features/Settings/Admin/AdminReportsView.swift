@@ -89,7 +89,7 @@ extension AdminReportStatus {
   var color: Color {
     switch self {
     case .open: return .tidexWarning
-    case .inReview: return .tidexBlue
+    case .inReview: return .tidexBlueText
     case .actioned: return .tidexSuccess
     case .dismissed: return .tidexTextMuted
     }
@@ -277,7 +277,7 @@ private struct AdminReportDetailView: View {
           ) {
             confirmBan = true
           }
-          .foregroundStyle(reported.isBanned ? Color.tidexBlue : Color.tidexError)
+          .foregroundStyle(reported.isBanned ? Color.tidexBlueText : Color.tidexError)
         }
         userLink("Reported user", reported) { self.reported = $0 }
       }

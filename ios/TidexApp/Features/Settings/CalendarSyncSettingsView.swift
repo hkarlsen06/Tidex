@@ -145,7 +145,7 @@ struct CalendarSyncSettingsView: View {
         }
       }
     }
-    .foregroundColor(.tidexBlue)
+    .foregroundColor(.tidexBlueText)
     .disabled(viewModel.isUpdatingCalendarSubscription)
   }
 
@@ -170,10 +170,11 @@ struct CalendarSyncSettingsView: View {
     Section {
       Button {
         viewModel.copyCalendarSubscriptionFallbackURL()
+        AccessibilityNotification.Announcement(String(localized: .settingsAccessibilityCopied)).post()
       } label: {
         Label(String(localized: .calendarSubscriptionCopyLinkButton), systemImage: "doc.on.doc")
       }
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
     } footer: {
       Text(.calendarSubscriptionFallbackDescription)
     }

@@ -120,6 +120,7 @@ struct AddFriendSheet: View {
         if let error = viewModel.addError {
           Text(error)
             .foregroundStyle(Color.tidexError)
+            .announcesToVoiceOver(error)
         }
 
         if viewModel.areServerActionsUnavailable {
@@ -154,6 +155,7 @@ struct AddFriendSheet: View {
 /// Pushed from `AddFriendSheet`. Pops itself once nobody is left to show.
 private struct HiddenAndBlockedPeopleView: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   let viewModel: ManageSharingViewModel
 
@@ -218,42 +220,61 @@ private struct HiddenAndBlockedPeopleView: View {
     }
   }
 
-  private func personRow(
-    _ friend: Friend,
-    actionTitle: String,
-    isDisabled: Bool,
-    action: @escaping () -> Void
-  ) -> some View {
+  private func personIdentity(_ friend: Friend) -> some View {
     HStack(spacing: Spacing.sm) {
       AvatarView(
         url: friend.avatarUrl,
         initials: friend.initials,
         size: AvatarView.Size.medium
       )
+      .accessibilityHidden(true)
 
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(friend.displayName)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
         if let contactInfo = friend.contactInfo {
           Text(contactInfo)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
-            .lineLimit(1)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         }
       }
+    }
+  }
 
-      Spacer(minLength: Spacing.sm)
+  @ViewBuilder
+  private func personRow(
+    _ friend: Friend,
+    actionTitle: String,
+    isDisabled: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    // The name, the contact line and the button need their own lines at accessibility sizes.
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+
+    layout {
+      personIdentity(friend)
+
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer(minLength: Spacing.sm)
+      }
 
       if viewModel.actionInProgress == friend.id {
         ProgressView()
       } else {
         Button(actionTitle, action: action)
           .buttonStyle(.borderless)
-          .tint(.tidexBlue)
+          .tint(.tidexBlueText)
           .disabled(isDisabled)
+          // Every row has the same button text, so the spoken label names the person.
+          .accessibilityLabel("\(actionTitle), \(friend.displayName)")
+          .accessibilityInputLabels([actionTitle])
       }
     }
     .padding(.vertical, Spacing.xxxs)

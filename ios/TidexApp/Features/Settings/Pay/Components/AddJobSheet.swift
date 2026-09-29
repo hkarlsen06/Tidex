@@ -27,6 +27,7 @@ struct AddJobSheet: View {
   }
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   let initialCurrency: String
   let prefilledBasicJob: Job?
@@ -122,6 +123,10 @@ struct AddJobSheet: View {
       Text(.settingsPayErrorSaveFailed)
     }
     .interactiveDismissDisabled(isSaving)
+    // Steps replace each other in place, so tell VoiceOver the screen changed.
+    .onChange(of: step) { _, _ in
+      AccessibilityNotification.ScreenChanged().post()
+    }
   }
 
 }
@@ -141,7 +146,7 @@ extension AddJobSheet {
           dismiss()
         }
         .font(.tidexBody)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .disabled(isSaving)
         Spacer()
       }
@@ -172,6 +177,7 @@ extension AddJobSheet {
           text: $existingJobName,
           prompt: Text(.settingsPayAddJobName)
         )
+        .accessibilityLabel(Text(.settingsPayAddJobName))
         .textInputAutocapitalization(.words)
         .foregroundColor(.tidexTextPrimary)
       }
@@ -194,6 +200,7 @@ extension AddJobSheet {
         .foregroundColor(.tidexTextSecondary)
 
       TextField("", text: $name, prompt: Text(.settingsPayAddJobName))
+        .accessibilityLabel(Text(.settingsPayAddJobName))
         .textInputAutocapitalization(.words)
         .foregroundColor(.tidexTextPrimary)
     }
@@ -281,7 +288,7 @@ extension AddJobSheet {
             Text(.commonBack)
           }
           .font(.tidexBody)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         }
         .disabled(isSaving)
 
@@ -291,7 +298,7 @@ extension AddJobSheet {
           dismiss()
         }
         .font(.tidexBody)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .disabled(isSaving)
       }
     } cards: {
@@ -304,14 +311,15 @@ extension AddJobSheet {
       dismiss()
     }
     .font(.tidexBodyMedium)
-    .foregroundColor(.tidexBlue)
-    .lineLimit(1)
+    .foregroundColor(.tidexBlueText)
+    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
-    .background(.thinMaterial, in: Capsule())
+    .frame(minHeight: 44)
+    .background(Color.tidexSurfacePrimary, in: Capsule())
     .overlay(
       Capsule()
-        .stroke(Color.tidexBorder.opacity(0.75), lineWidth: 1)
+        .stroke(Color.tidexBorder, lineWidth: 1)
     )
     .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 3)
     .padding(.top, Spacing.md)
@@ -450,4 +458,4 @@ extension AddJobSheet {
     }
     return "kr"
   }
-}
+}  // swiftlint:disable:this file_length

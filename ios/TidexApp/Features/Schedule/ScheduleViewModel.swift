@@ -908,6 +908,8 @@ final class ShiftsViewModel: MonthNavigable {
 
       // Play deletion feedback
       Haptics.playShiftDeleted()
+      UIAccessibility.post(
+        notification: .announcement, argument: String(localized: .shiftsAccessibilityShiftsDeleted))
     } catch {
       kScheduleLogger.error("Failed to delete shifts: \(error.localizedDescription)")
     }
@@ -1025,6 +1027,8 @@ final class ShiftsViewModel: MonthNavigable {
       // Reload to show the new shift
       await reloadFromLocal()
       notifyShiftsDidChange(context: .affecting(isoDates: sortedTargetDates))
+      UIAccessibility.post(
+        notification: .announcement, argument: String(localized: .shiftsAccessibilityShiftsCopied))
 
     } catch {
       kScheduleLogger.error("Failed to copy shift: \(error.localizedDescription)")
@@ -1162,6 +1166,8 @@ final class ShiftsViewModel: MonthNavigable {
         context: .affecting(
           isoDates: [sourceShift.shiftDate, targetDateISO]
         ))
+      UIAccessibility.post(
+        notification: .announcement, argument: String(localized: .shiftsAccessibilityShiftsMoved))
 
     } catch {
       kScheduleLogger.error("Failed to move shift: \(error.localizedDescription)")

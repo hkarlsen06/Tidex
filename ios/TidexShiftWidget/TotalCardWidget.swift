@@ -196,7 +196,7 @@ struct TotalCardWidgetView: View {
 
   // MARK: - Colors (matching TotalCard.swift)
 
-  private var tidexBlue: Color { WidgetPalette.blue }
+  private var tidexBlue: Color { WidgetPalette.blueText }
   private var tidexTextSecondary: Color { WidgetPalette.textSecondary }
   private var tidexTextMuted: Color { WidgetPalette.textMuted }
   private var tidexWidgetBackground: Color { WidgetPalette.background }
@@ -315,6 +315,33 @@ struct TotalCardWidgetView: View {
       .padding(.horizontal, 20)
       .padding(.vertical, 12)
     }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: accessibilitySummary))
+  }
+
+  /// One spoken summary of the amount, the change and the stats, so a lone "5" or "64" has a label.
+  private var accessibilitySummary: String {
+    let title = String(localized: .widgetNameMonthlyTotal)
+    guard !entry.showDashes else { return title }
+
+    var change: String?
+    if !entry.showPercentageDash {
+      let percent = (entry.displayPercentage / 100).formatted(.percent.precision(.fractionLength(0)))
+      if entry.hasChange {
+        change = String(
+          localized: entry.isPositive
+            ? .widgetAccessibilityUp(percent) : .widgetAccessibilityDown(percent))
+      } else {
+        change = percent
+      }
+    }
+    let done = "\(entry.shiftCount - entry.plannedCount) \(String(localized: .widgetDone))"
+    let hours =
+      entry.totalHours > 0 ? "\(formattedHours) \(String(localized: .widgetHours))" : nil
+    return WidgetAccessibility.join([
+      title, formatCurrency(entry.mainDisplayValue), change, subtitleText,
+      String(localized: .widgetShiftsCount(entry.shiftCount)), done, hours,
+    ])
   }
 
   // MARK: - Left Column (Total)

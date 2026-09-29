@@ -24,7 +24,7 @@ struct EventAllDayReminderPickerSheet: View {
             .multilineTextAlignment(.center)
 
           HStack(spacing: Spacing.sm) {
-            Picker("", selection: $daysBefore) {
+            Picker(String(localized: .commonAccessibilityReminderDay), selection: $daysBefore) {
               Text(.eventsNotificationsSameDay)
                 .tag(0)
               Text(.eventsNotificationsOneDayBefore)
@@ -37,7 +37,7 @@ struct EventAllDayReminderPickerSheet: View {
             .clipped()
 
             DatePicker(
-              "",
+              String(localized: .commonAccessibilityReminderTime),
               selection: $anchorTime,
               displayedComponents: .hourAndMinute
             )
@@ -89,7 +89,8 @@ struct EventAllDayReminderPickerSheet: View {
   private var previewLabel: some View {
     HStack(spacing: Spacing.xs) {
       Image(systemName: "bell.fill")
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
+        .accessibilityHidden(true)
 
       Text(
         ReminderOffsetFormatter.localizedAllDayEventReminder(
@@ -120,7 +121,7 @@ struct EventAllDayReminderPickerSheet: View {
       }
       .foregroundColor(.tidexTextOnDanger)
       .frame(maxWidth: .infinity)
-      .frame(height: Spacing.buttonHeight)
+      .frame(minHeight: Spacing.buttonHeight)
       .background(Color.tidexError)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }

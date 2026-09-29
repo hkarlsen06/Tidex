@@ -40,6 +40,8 @@ struct SharedShiftsListView: View {
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.isSceneCaptured) private var isSceneCaptured
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @ScaledMetric(relativeTo: .largeTitle) private var emptyIconSize: CGFloat = 48
 
   // View mode toggle (synced with Shifts tab)
   @AppStorage("shiftsViewMode") private var showListView = false
@@ -139,7 +141,7 @@ extension SharedShiftsListView {
     }
     // Offset for month picker overlay so content centers in available space
     .padding(.bottom, MonthPickerLayout.totalBottomInset)
-    .animation(.spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
+    .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
   }
 
   private var calendarView: some View {
@@ -180,9 +182,10 @@ extension SharedShiftsListView {
           .onTapGesture {
             dismissScreenshotBubble()
           }
+          .accessibilityAddTraits(.isButton)
           .transition(
             .asymmetric(
-              insertion: .scale.combined(with: .opacity),
+              insertion: reduceMotion ? .opacity : .scale.combined(with: .opacity),
               removal: .opacity
             ))
         Spacer()
@@ -234,8 +237,9 @@ extension SharedShiftsListView {
     if shifts.isEmpty {
       VStack(spacing: Spacing.md) {
         Image(systemName: "calendar.badge.minus")
-          .font(.system(size: 48))
+          .font(.system(size: emptyIconSize))
           .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
         Text(.shiftsEmptyNoShiftsThisMonth)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)

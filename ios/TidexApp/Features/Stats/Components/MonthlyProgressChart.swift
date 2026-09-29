@@ -7,6 +7,7 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
   let data: [DailyCumulativeData]  // swiftlint:disable:this explicit_acl
 
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
 
   // MARK: - Computed Properties
 
@@ -45,6 +46,31 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
     return Array(data[todayIdx...])
   }
 
+  private var chartDescriptor: StatsLineChartDescriptor {
+    let thisMonth = StatsLineChartDescriptor.Series(  // swiftlint:disable:this explicit_type_interface
+      name: String(localized: .commonThisMonth),
+      points: actualData.map { (x: Double($0.day), y: $0.currentMonth) }
+    )
+    let projected = StatsLineChartDescriptor.Series(  // swiftlint:disable:this explicit_type_interface
+      name: String(localized: .statsAccessibilityProjected),
+      points: projectedData.map { (x: Double($0.day), y: $0.currentMonth) }
+    )
+    let previous = StatsLineChartDescriptor.Series(  // swiftlint:disable:this explicit_type_interface
+      name: String(localized: .commonPreviousMonth),
+      points: data.map { (x: Double($0.day), y: $0.lastMonth) }
+    )
+    let latest = actualData.last?.currentMonth ?? 0  // swiftlint:disable:this explicit_type_interface
+    return StatsLineChartDescriptor(
+      title: String(localized: .statsChartsMonthlyProgressTitle),
+      summary: String(localized: .statsAccessibilityChartTotal(CurrencyConfig.format(latest, currency: currency))),
+      xAxisTitle: String(localized: .statsAccessibilityAxisDay),
+      yAxisTitle: String(localized: .shiftsEarningsSection),
+      xRange: 1...31,  // swiftlint:disable:this no_magic_numbers
+      series: [thisMonth, projected, previous],
+      formatValue: { CurrencyConfig.format($0, currency: currency) }
+    )
+  }
+
   // MARK: - Body
 
   var body: some View {  // swiftlint:disable:this explicit_acl
@@ -61,7 +87,7 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
             series: .value("Series", "lastMonth")
           )
           .interpolationMethod(.monotone)
-          .foregroundStyle(Color.tidexTextMuted.opacity(0.6))  // swiftlint:disable:this no_magic_numbers
+          .foregroundStyle(Color.tidexTextMuted)
           .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 5]))  // swiftlint:disable:this no_magic_numbers
         }
 
@@ -101,7 +127,7 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
               let isToday = data.first(where: { $0.day == day })?.isToday ?? false  // swiftlint:disable:this explicit_type_interface line_length
               Text("\(day)")
                 .font(isToday ? .tidexCaptionStrong : .tidexCaptionRegular)
-                .foregroundColor(isToday ? .tidexBlue : .tidexTextSecondary)
+                .foregroundColor(isToday ? .tidexBlueText : .tidexTextSecondary)
             }
           }
         }
@@ -121,14 +147,19 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
         }
       }
       .chartLegend(.hidden)
+      .accessibilityChartDescriptor(chartDescriptor)
       .frame(height: 220)  // swiftlint:disable:this no_magic_numbers
 
       // Name the two lines so the dashed grey one doesn't need guessing.
-      HStack(spacing: Spacing.md) {
+      let legendLayout =  // swiftlint:disable:this explicit_type_interface
+        dynamicTypeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+        : AnyLayout(HStackLayout(spacing: Spacing.md))
+      legendLayout {
         ProgressLegendItem(label: .commonThisMonth, color: .tidexBlue, dash: [])
         ProgressLegendItem(
           label: .commonPreviousMonth,
-          color: .tidexTextMuted.opacity(0.6),  // swiftlint:disable:this no_magic_numbers
+          color: .tidexTextMuted,
           dash: [4, 3]  // swiftlint:disable:this no_magic_numbers
         )
       }
@@ -145,6 +176,8 @@ private struct ProgressLegendItem: View {
   let color: Color
   let dash: [CGFloat]
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
+
   var body: some View {
     HStack(spacing: Spacing.xxs) {
       Path { path in
@@ -158,7 +191,7 @@ private struct ProgressLegendItem: View {
       Text(label)
         .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextSecondary)
-        .lineLimit(1)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     }
   }
 }

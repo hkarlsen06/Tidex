@@ -72,6 +72,7 @@ Available colors (all adapt to light/dark mode):
 | Surface | `tidexSurfacePrimary`, `tidexSurfaceSecondary` |
 | Text | `tidexTextPrimary`, `tidexTextSecondary`, `tidexTextMuted`, `tidexTextInverse` |
 | Brand | `tidexBlue`, `tidexBrandPrimary`, `tidexPurple` |
+| Blue text | `tidexBlueText` for blue text, links and small blue icons. `tidexBlue` is a fill; as text it fails 4.5:1 contrast in dark mode |
 | Border | `tidexBorder`, `tidexBorderSubtle` |
 | Status | `tidexError`, `tidexSuccess`, `tidexWarning` |
 

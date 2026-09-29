@@ -48,6 +48,7 @@ struct AccountCreationPromptCard: View {
         .stroke(Color.tidexError.opacity(0.3), lineWidth: 1)
     )
     .cornerRadius(CornerRadius.md)
+    .announcesToVoiceOver(message)
   }
 }
 
@@ -87,7 +88,7 @@ struct LoginFooterLinks: View {
     Button(action: action) {
       title
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.86)
         .multilineTextAlignment(.center)

@@ -17,6 +17,7 @@ struct HowItWorksScreen: View {
   let isExiting: Bool
   let showsTitle: Bool
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var step1Visible = false
   @State private var step2Visible = false
   @State private var shiftPreviewVisible = false
@@ -31,6 +32,9 @@ struct HowItWorksScreen: View {
   @State private var step1TitleFocusTrigger = 0
   @State private var step2TitleFocusTrigger = 0
   @State private var step3TitleFocusTrigger = 0
+
+  /// Steps that are not in focus lose color instead of opacity, so their text keeps its contrast.
+  static let dimmedSaturation: Double = 0.35
 
   private let titleFocusStartDelay: TimeInterval = 0.7
   private let perStepTitleFocusDuration: TimeInterval = 1.32
@@ -81,11 +85,8 @@ struct HowItWorksScreen: View {
         outcomeWhisper
       }
       .padding(.top, showsTitle ? 0 : Spacing.sm)
-      .frame(
-        maxWidth: .infinity,
-        maxHeight: .infinity,
-        alignment: showsTitle ? .center : .top
-      )
+      .frame(maxWidth: .infinity)
+      .scrollsOnOverflow(alignment: showsTitle ? .center : .top)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .overlay {
@@ -126,6 +127,18 @@ struct HowItWorksScreen: View {
     let sequenceID = entranceSequenceID
 
     resetEntranceState()
+
+    // Reduce Motion: show the final state at once, without the staggered entrance or focus dimming.
+    guard !reduceMotion else {
+      step1Visible = true
+      step2Visible = true
+      shiftPreviewVisible = true
+      step3Visible = true
+      totalCardVisible = true
+      outcomeVisible = true
+      hasCompletedFocusSequence = true
+      return
+    }
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
       guard sequenceID == entranceSequenceID else { return }
@@ -233,6 +246,7 @@ extension HowItWorksScreen {
       .foregroundColor(.tidexTextPrimary)
       .multilineTextAlignment(.center)
       .lineSpacing(2)
+      .accessibilityAddTraits(.isHeader)
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .padding(.horizontal, Spacing.md)
       .padding(.top, Spacing.md)
@@ -316,10 +330,11 @@ extension HowItWorksScreen {
     )
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .padding(.horizontal, Spacing.md)
-    .opacity(totalCardVisible ? (isStep3Dimmed ? 0.46 : 1.0) : 0)
+    .opacity(totalCardVisible ? 1 : 0)
+    .saturation(isStep3Dimmed ? Self.dimmedSaturation : 1)
     .offset(y: totalCardVisible ? 0 : 16)
     .animation(
-      .spring(response: 0.42, dampingFraction: 0.84),
+      reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.84),
       value: totalCardVisible
     )
     .animation(.easeInOut(duration: 0.26), value: isStep3Dimmed)
@@ -330,8 +345,8 @@ extension HowItWorksScreen {
   private var outcomeWhisper: some View {
     Text(.onboardingHowOutcome)
       .font(.tidexFootnoteMedium)
-      .foregroundColor(.tidexBlue)
-      .opacity(outcomeVisible ? 0.6 : 0)
+      .foregroundColor(.tidexBlueText)
+      .opacity(outcomeVisible ? 1 : 0)
       .offset(y: outcomeVisible ? 0 : 8)
       .onboardingHowExitStep(isExiting: isExiting, delay: 0.125)
   }
@@ -400,10 +415,12 @@ private struct OnboardingHowExitStepModifier: ViewModifier {
   let isExiting: Bool
   let delay: TimeInterval
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   func body(content: Content) -> some View {
     content
       .opacity(isExiting ? 0 : 1)
-      .offset(y: isExiting ? -24 : 0)
+      .offset(y: isExiting && !reduceMotion ? -24 : 0)
       .animation(
         .easeInOut(duration: 0.18).delay(delay),
         value: isExiting

@@ -37,6 +37,8 @@ internal struct PhoneOTPForm: View {
       Text(.otpTitle)
         .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
         .font(.tidexSubheadline)
@@ -46,7 +48,7 @@ internal struct PhoneOTPForm: View {
   }
 
   private var footerActions: some View {
-    VStack(spacing: Spacing.md) {
+    VStack(spacing: Spacing.micro) {
       resendButton
       backButton
     }
@@ -58,7 +60,10 @@ internal struct PhoneOTPForm: View {
     }) {
       Text(.otpResendCode)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
+        .multilineTextAlignment(.center)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
     .disabled(viewModel.isLoading)
@@ -76,6 +81,8 @@ internal struct PhoneOTPForm: View {
           .font(.tidexSubheadline)
       }
       .foregroundColor(.tidexTextSecondary)
+      .frame(minHeight: 44)
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }

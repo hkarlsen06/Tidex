@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AdminSharesView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var query: String
   @State private var shares: [AdminShare]?
   @State private var total = 0
@@ -97,7 +98,7 @@ struct AdminSharesView: View {
       do {
         try await AdminAPI.deleteShare(id: share.id)
         Haptics.play(.success)
-        withAnimation { shares?.removeAll { $0.id == share.id } }
+        withAnimation(reduceMotion ? nil : .default) { shares?.removeAll { $0.id == share.id } }
         total -= 1
       } catch {
         Haptics.play(.error)

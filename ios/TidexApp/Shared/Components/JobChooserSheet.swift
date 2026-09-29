@@ -15,6 +15,7 @@ struct JobChooserSheet: View {
 
   @State private var jobs: [Job]
   @State private var isLoading: Bool
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   init(
     jobs: [Job],
@@ -92,11 +93,17 @@ struct JobChooserSheet: View {
             Image(systemName: "plus.circle.fill")
           }
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         }
       }
     }
     .listRowBackground(Color.tidexSurfacePrimary)
+  }
+
+  private var nameAndBadgesLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
   }
 
   private func row(_ job: Job) -> some View {
@@ -104,30 +111,36 @@ struct JobChooserSheet: View {
       onSelect(job.id)
     } label: {
       HStack(spacing: Spacing.sm) {
-        WorkplaceNameText(
-          name: job.name,
-          colorHex: job.color,
-          font: .tidexBodyMedium,
-          fallbackBadgeColor: .tidexBlue,
-          lineLimit: 2,
-          badgeCornerRadius: CornerRadius.md,
-          badgeHorizontalPadding: Spacing.sm,
-          badgeVerticalPadding: Spacing.xs
-        )
-        .layoutPriority(1)
+        // The name and its badges stack at accessibility text sizes so neither truncates.
+        nameAndBadgesLayout {
+          WorkplaceNameText(
+            name: job.name,
+            colorHex: job.color,
+            font: .tidexBodyMedium,
+            fallbackBadgeColor: .tidexBlue,
+            lineLimit: 2,
+            badgeCornerRadius: CornerRadius.md,
+            badgeHorizontalPadding: Spacing.sm,
+            badgeVerticalPadding: Spacing.xs
+          )
+          .layoutPriority(1)
 
-        Spacer(minLength: Spacing.sm)
+          if !dynamicTypeSize.isAccessibilitySize {
+            Spacer(minLength: Spacing.sm)
+          }
 
-        JobStatusBadges(
-          isDefault: job.is_default,
-          requiresPaySetup: configuredJobIds.map { !$0.contains(job.id) } ?? false
-        )
-        .layoutPriority(2)
+          JobStatusBadges(
+            isDefault: job.is_default,
+            requiresPaySetup: configuredJobIds.map { !$0.contains(job.id) } ?? false
+          )
+          .layoutPriority(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
 
         if job.id == selectedJobId {
           Image(systemName: "checkmark")
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .accessibilityHidden(true)
         }
       }
@@ -152,26 +165,37 @@ struct JobChooserSheet: View {
 struct JobStatusBadges: View {
   let isDefault: Bool
   let requiresPaySetup: Bool
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
-    HStack(spacing: Spacing.xs) {
+    badgeLayout {
       if isDefault {
-        badge(String(localized: .settingsPayChooseJobDefaultBadge), color: .tidexBlue)
+        badge(
+          String(localized: .settingsPayChooseJobDefaultBadge),
+          color: .tidexBlue, textColor: .tidexBlueText)
       }
 
       if requiresPaySetup {
-        badge(String(localized: .settingsPaySetupRequiredBadge), color: .tidexWarning)
+        badge(
+          String(localized: .settingsPaySetupRequiredBadge),
+          color: .tidexWarning, textColor: .tidexWarning)
       }
     }
-    .fixedSize(horizontal: true, vertical: false)
+    .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
   }
 
-  private func badge(_ title: String, color: Color) -> some View {
+  private var badgeLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xs))
+  }
+
+  private func badge(_ title: String, color: Color, textColor: Color) -> some View {
     Text(title)
       .font(.tidexCaptionStrong)
-      .foregroundColor(color)
-      .lineLimit(1)
-      .fixedSize(horizontal: true, vertical: false)
+      .foregroundColor(textColor)
+      .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+      .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
       .padding(.horizontal, Spacing.xsm)
       .padding(.vertical, Spacing.xxs)
       .background(color.opacity(0.14), in: Capsule())

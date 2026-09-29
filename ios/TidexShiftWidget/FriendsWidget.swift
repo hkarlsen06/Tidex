@@ -323,6 +323,10 @@ struct FriendsWidgetView: View {
     WidgetPalette.blue
   }
 
+  private var tidexBlueText: Color {
+    WidgetPalette.blueText
+  }
+
   private var backgroundColor: Color {
     switch renderingMode {
     case .accented:
@@ -382,12 +386,12 @@ struct FriendsWidgetView: View {
       return .primary
 
     default:
-      return tidexBlue
+      return tidexBlueText
     }
   }
 
   private var activeColor: Color {
-    .green
+    WidgetPalette.success
   }
 
   // MARK: - Localization
@@ -506,6 +510,17 @@ struct FriendsWidgetView: View {
       RoundedRectangle(cornerRadius: 18, style: .continuous)
         .fill(isActive ? activeColor.opacity(0.14) : initialsBackground.opacity(0.5))
     )
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: spokenSummary(for: friend)))
+  }
+
+  /// "Anna, Active, 09:00 to 17:00", read as one line per friend.
+  private func spokenSummary(for friend: FriendPreview) -> String {
+    WidgetAccessibility.join([
+      firstName(from: friend.displayName),
+      friend.status == .active ? String(localized: .widgetActive) : friend.shiftDate,
+      friend.timeRange.map(WidgetAccessibility.spokenTimeRange),
+    ])
   }
 
   /// A 24-hour track with the shift drawn as a filled segment.
@@ -586,6 +601,8 @@ struct FriendsWidgetView: View {
           .fixedSize()
       }
     }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: spokenSummary(for: friend)))
   }
 
   /// Friends not shown above, as a centered row of overlapping avatars.
@@ -610,6 +627,14 @@ struct FriendsWidgetView: View {
       }
     }
     .frame(maxWidth: .infinity)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      Text(
+        verbatim: WidgetAccessibility.join(
+          visible.map { firstName(from: $0.displayName) as String? }
+            + [overflow > 0 ? String(localized: .widgetAccessibilityMoreFriends(overflow)) : nil])
+      )
+    )
   }
 
   private func avatar(_ friend: FriendPreview, size: CGFloat, fontSize: CGFloat) -> some View {
@@ -658,6 +683,7 @@ struct FriendsWidgetView: View {
       Image(systemName: "person.2.circle")
         .font(.system(size: 40))
         .foregroundColor(mutedTextColor)
+        .accessibilityHidden(true)
 
       Text(noFriendsText)
         .font(.system(size: 14, weight: .medium))

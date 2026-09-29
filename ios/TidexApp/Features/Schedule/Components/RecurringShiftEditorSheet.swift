@@ -211,7 +211,7 @@ struct RecurringShiftEditorSheet: View {
         saveChanges()
       }
       .font(.tidexButton)
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
       .disabled(isSaving || !hasChanges || !canSave)
       .opacity(isSaving || !hasChanges || !canSave ? 0.5 : 1)
     }
@@ -303,13 +303,16 @@ struct RecurringShiftEditorSheet: View {
       } label: {
         Text(.recurringRestoreDateButton)
           .font(.tidexFootnoteStrong)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xxxs)
           .background(Color.tidexBlue.opacity(0.12))
           .clipShape(Capsule())
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(
+        Text(.shiftsAccessibilityRestoreItem(formattedExclusionDate(dateISO)))
+      )
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfacePrimary)

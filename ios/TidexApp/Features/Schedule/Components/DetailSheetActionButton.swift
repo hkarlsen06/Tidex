@@ -22,7 +22,7 @@ struct DetailSheetActionButton: View {
         return .tidexTextOnBrand
 
       case .secondary:
-        return .tidexBlue
+        return .tidexBlueText
 
       case .destructive:
         return .tidexTextOnDanger
@@ -93,8 +93,6 @@ struct DetailSheetActionButton: View {
           .font(.tidexLabelStrong)
           .foregroundColor(style.foregroundColor)
           .multilineTextAlignment(.leading)
-          .lineLimit(2)
-          .minimumScaleFactor(0.86)
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)

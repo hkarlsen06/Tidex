@@ -5,6 +5,8 @@ import SwiftUI
 struct DurationPicker: View {
   @Binding var endCondition: EndCondition?
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   @State private var durationType: DurationType = .months
   @State private var monthsValue: Int = 6
   @State private var yearsValue: Int = 1
@@ -37,6 +39,7 @@ struct DurationPicker: View {
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextMuted)
           .textCase(.uppercase)
+          .accessibilityAddTraits(.isHeader)
 
         Spacer()
       }
@@ -49,7 +52,7 @@ struct DurationPicker: View {
               label: type.label,
               isSelected: durationType == type
             ) {
-              withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+              withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
                 durationType = type
                 updateEndCondition()
               }
@@ -129,25 +132,28 @@ private struct DurationTypeButton: View {
     Button(action: action) {
       Text(label)
         .font(isSelected ? .tidexLabelStrong : .tidexSubheadline)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
         .clipShape(Capsule())
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
 
 // MARK: - Indefinite Description
 
 private struct IndefiniteDescription: View {
+  @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 20
 
   var body: some View {
     HStack {
       Image(systemName: "infinity")
-        .font(.system(size: 20))
-        .foregroundColor(.tidexBlue)
+        .font(.system(size: iconSize))
+        .foregroundColor(.tidexBlueText)
+        .accessibilityHidden(true)
 
       Text(.addShiftIndefiniteHint)
         .font(.tidexSubheadline)
@@ -186,6 +192,8 @@ private struct MonthsSlider: View {
         ), in: 1...24, step: 1
       )
       .tint(.tidexBlue)
+      .accessibilityLabel(Text(.addShiftDurationMonths))
+      .accessibilityValue(Text(.addShiftMonthPlural(value)))
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
@@ -219,6 +227,8 @@ private struct YearsSlider: View {
         ), in: 1...5, step: 1
       )
       .tint(.tidexBlue)
+      .accessibilityLabel(Text(.addShiftDurationYears))
+      .accessibilityValue(Text(.addShiftYearPlural(value)))
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
@@ -239,7 +249,7 @@ private struct EndDatePicker: View {
         .foregroundColor(.tidexTextSecondary)
 
       DatePicker(
-        "",
+        String(localized: .addShiftDurationEndDate),
         selection: $date,
         in: Date()...,
         displayedComponents: .date

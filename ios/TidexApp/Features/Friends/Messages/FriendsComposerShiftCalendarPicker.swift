@@ -51,7 +51,7 @@ struct FriendsComposerShiftCalendarPicker: View {
           Button(String(localized: .commonCancel)) {
             dismiss()
           }
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         }
       }
       .safeAreaInset(edge: .bottom, spacing: 0) {

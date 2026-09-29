@@ -6,6 +6,8 @@ import SwiftUI
 struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order
   let data: EmploymentData  // swiftlint:disable:this explicit_acl
 
+  @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor  // swiftlint:disable:this explicit_type_interface line_length
+
   /// Currently selected month label (for tooltip)
   @State private var selectedMonth: String?
 
@@ -51,6 +53,25 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
   private var selectedMonthData: EmploymentMonthlyData? {
     guard let selected = selectedMonth else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
     return data.monthlyData.first { $0.month == selected }
+  }
+
+  private var chartDescriptor: StatsCategoryChartDescriptor {
+    StatsCategoryChartDescriptor(
+      title: String(localized: .statsChartsEmploymentTitle),
+      summary: data.completedMonthsAverage().map {
+        String(localized: .statsAccessibilityChartTotal(Self.formatPercent($0)))
+      },
+      categoryAxisTitle: String(localized: .commonMonth),
+      valueAxisTitle: String(localized: .statsChartsEmploymentTitle),
+      points: filteredData.map { month in
+        StatsCategoryChartDescriptor.Point(
+          category: month.fullMonth,
+          value: month.averagePercentage,
+          label: "\(month.fullMonth), \(Self.formatPercent(month.averagePercentage))"
+        )
+      },
+      formatValue: { Self.formatPercent($0) }
+    )
   }
 
   // MARK: - Body
@@ -99,6 +120,8 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
         ) {
           if selectedMonth == month.month {
             TooltipView(monthData: month)
+          } else if differentiateWithoutColor, month.monthNumber == currentMonth, month.year == currentYear {
+            StatsBarHighlightMarker()
           }
         }
       }
@@ -160,6 +183,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
     }
     .chartYScale(domain: 0...100)
     .chartLegend(.hidden)
+    .accessibilityChartDescriptor(chartDescriptor)
     .frame(height: 200)  // swiftlint:disable:this no_magic_numbers
   }
 
@@ -172,14 +196,15 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
       return .tidexBlue
     }
 
-    // Months included in the average are highlighted.
+    // Months included in the average keep the neutral fill and get the green outline drawn by
+    // `CompletedAverageOutlineOverlay`, so the state does not depend on hue or on a faint tint.
     if data.isIncludedInCompletedAverage(month) {
-      return .tidexBlue.opacity(0.16)  // swiftlint:disable:this no_magic_numbers
+      return .tidexBorder
     }
 
     // Current month is highlighted, but not treated as part of the average.
     let isCurrentMonth = month.monthNumber == currentMonth && month.year == currentYear  // swiftlint:disable:this explicit_type_interface line_length
-    return isCurrentMonth ? .tidexBlue : .tidexBlue.opacity(0.16)  // swiftlint:disable:this no_magic_numbers
+    return isCurrentMonth ? .tidexBlue : .tidexBorder
   }
 
   private func axisLabelColor(  // swiftlint:disable:this type_contents_order
@@ -191,7 +216,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
       return .tidexEmploymentAccent
     }
     if isCurrentMonth || isSelected {
-      return .tidexBlue
+      return .tidexBlueText
     }
     return .tidexTextSecondary
   }
@@ -277,7 +302,7 @@ private struct TooltipView: View {
       HStack(spacing: Spacing.xxs) {
         Text(EmploymentPercentageChart.formatPercent(monthData.averagePercentage))
           .font(.tidexMonoBody)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
 
         Text(.statsChartsEmploymentEmployment)
           .font(.tidexLabel)
@@ -327,11 +352,16 @@ private struct InfoPopoverButton: View {
     Button {
       showPopover.toggle()
     } label: {
-      Image(systemName: "info.circle")  // swiftlint:disable:this accessibility_label_for_image
+      Image(systemName: "info.circle")
         .font(.tidexBody)
         .foregroundColor(.tidexTextMuted)
+        // 44pt hit area that doesn't add height to the header.
+        .padding(Spacing.md)
+        .contentShape(Rectangle())
+        .padding(-Spacing.md)
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(Text(.statsAccessibilityEmploymentInfo))
     .popover(isPresented: popoverBinding) {
       Text(message)
         .font(.tidexSubheadline)

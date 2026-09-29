@@ -16,6 +16,7 @@ enum SharingDeepLinkNavigationPathResolver {
 struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order type_body_length line_length
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.userCurrency) private var currency
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   /// Binding to the selected tab for navigation
   @Binding var selectedTab: MainTabView.Tab
@@ -798,7 +799,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
 
   private func refreshChatMetadata() {
     guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
-      withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+      withAnimation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12)) {
         unreadChatUserIds = []
         unreadChatCountsByUserId = [:]
         chatPreviewsByUserId = [:]
@@ -846,7 +847,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       typingResetTasks[userId] = nil
     }
 
-    withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+    withAnimation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12)) {
       unreadChatCountsByUserId = nextUnreadChatCountsByUserId
       unreadChatUserIds = Set(nextUnreadChatCountsByUserId.keys)
       chatPreviewsByUserId = nextChatPreviewsByUserId
@@ -871,7 +872,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
 
   private func refreshFeedPlacements() async {
     guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
-      withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+      withAnimation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12)) {
         bottomedChatUserIds = []
       }
       return
@@ -880,7 +881,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     let nextBottomedUserIds = await friendsMessagesRepository.getActiveBottomedFriendIds(
       for: viewerUserId
     )
-    withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+    withAnimation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12)) {
       bottomedChatUserIds = nextBottomedUserIds
     }
   }
@@ -940,14 +941,23 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     typingResetTasks[normalizedUserId]?.cancel()
 
     if isTyping {
-      _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+      if !typingUserIds.contains(normalizedUserId),
+        let typingSharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
+          Self.normalizedIdentifier($0.id) == normalizedUserId
+        })
+      {
+        AccessibilityNotification.Announcement(
+          String(localized: .friendsAccessibilityTyping(typingSharer.firstNameOnly))
+        ).post()
+      }
+      _ = withAnimation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12)) {
         typingUserIds.insert(normalizedUserId)
       }
 
       typingResetTasks[normalizedUserId] = Task { @MainActor in
         try? await Task.sleep(for: Self.typingIndicatorTimeout)
         guard !Task.isCancelled else { return }
-        _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+        _ = withAnimation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12)) {
           typingUserIds.remove(normalizedUserId)
         }
         typingResetTasks[normalizedUserId] = nil
@@ -956,7 +966,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       typingResetTasks[normalizedUserId] = Task { @MainActor in
         try? await Task.sleep(for: Self.typingStopGraceDelay)
         guard !Task.isCancelled else { return }
-        _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+        _ = withAnimation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12)) {
           typingUserIds.remove(normalizedUserId)
         }
         typingResetTasks[normalizedUserId] = nil
@@ -1144,7 +1154,7 @@ private struct SharedShiftsDetailView: View {
           } label: {
             superimposeToggleLabel
               .font(.tidexFootnoteMedium)
-              .foregroundColor(viewModel.isSuperimposing ? .tidexBlue : .tidexTextMuted)
+              .foregroundColor(viewModel.isSuperimposing ? .tidexBlueText : .tidexTextMuted)
           }
         }
 

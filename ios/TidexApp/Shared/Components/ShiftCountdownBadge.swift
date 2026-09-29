@@ -13,6 +13,8 @@ struct ShiftCountdownBadge: View {
   let status: ShiftPreviewStatus
   var finalCountdownSeconds: Int?
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   var body: some View {
     if let finalCountdownSeconds, status == .active, finalCountdownSeconds > 0 {
       Text("\(finalCountdownSeconds)")
@@ -26,8 +28,8 @@ struct ShiftCountdownBadge: View {
             .fill(Color.tidexSuccess.opacity(0.2))
         )
         .foregroundColor(.tidexSuccess)
-        .contentTransition(.numericText())
-        .animation(.default, value: finalCountdownSeconds)
+        .contentTransition(reduceMotion ? .identity : .numericText())
+        .animation(reduceMotion ? nil : .default, value: finalCountdownSeconds)
     } else {
       Text(text)
         .font(.tidexCaption)
@@ -39,8 +41,8 @@ struct ShiftCountdownBadge: View {
             .fill(backgroundColor)
         )
         .foregroundColor(textColor)
-        .contentTransition(.numericText())
-        .animation(.default, value: text)
+        .contentTransition(reduceMotion ? .identity : .numericText())
+        .animation(reduceMotion ? nil : .default, value: text)
     }
   }
 
@@ -63,7 +65,7 @@ struct ShiftCountdownBadge: View {
       return .tidexSuccess
 
     case .upcoming:
-      return .tidexBlue
+      return .tidexBlueText
 
     case .past:
       return .tidexTextMuted

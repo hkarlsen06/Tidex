@@ -4,6 +4,8 @@ import SwiftUI
 /// Step 1: Enter email/phone -> Step 2: OTP verification (phone only) -> Step 3: New password
 internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_length
   @State private var viewModel: ResetPasswordViewModel
+  @ScaledMetric(relativeTo: .title) private var iconSize: CGFloat = 36
+  @ScaledMetric(relativeTo: .title) private var successIconSize: CGFloat = 48
   var onNavigateToLogin: (() -> Void)?
 
   init(
@@ -91,11 +93,12 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
       ZStack {
         Circle()
           .fill(Color.tidexBlue.opacity(0.1))
-          .frame(width: 80, height: 80)
+          .frame(width: iconSize * 2.2, height: iconSize * 2.2)
 
         Image(systemName: "key.fill")
-          .font(.system(size: 36))
-          .foregroundColor(.tidexBlue)
+          .font(.system(size: iconSize))
+          .foregroundColor(.tidexBlueText)
+          .accessibilityHidden(true)
       }
 
       // Title
@@ -114,6 +117,8 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         Text(.resetPasswordTitle)
           .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.center)
+          .accessibilityAddTraits(.isHeader)
 
         Text(.resetPasswordSubtitle)
           .font(.tidexSubheadline)
@@ -141,6 +146,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
             .foregroundColor(.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xxs)
+            .announcesToVoiceOver(emailError)
         }
 
         // Hint text
@@ -170,6 +176,8 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         Text(.otpTitle)
           .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.center)
+          .accessibilityAddTraits(.isHeader)
 
         Text(otpSubtitle)
           .font(.tidexSubheadline)
@@ -203,7 +211,10 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         }) {
           Text(.otpResendCode)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
+            .multilineTextAlignment(.center)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(viewModel.isLoading)
@@ -222,6 +233,8 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         Text(.resetPasswordNewPasswordTitle)
           .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.center)
+          .accessibilityAddTraits(.isHeader)
 
         Text(.resetPasswordNewPasswordSubtitle)
           .font(.tidexSubheadline)
@@ -258,6 +271,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
             .foregroundColor(.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xxs)
+            .announcesToVoiceOver(newPasswordError)
         }
 
         if let confirmError = viewModel.fieldErrors.confirmPassword {
@@ -266,6 +280,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
             .foregroundColor(.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xxs)
+            .announcesToVoiceOver(confirmError)
         }
 
         // Password hint
@@ -298,11 +313,12 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
       ZStack {
         Circle()
           .fill(Color.tidexSuccess.opacity(0.1))
-          .frame(width: 80, height: 80)
+          .frame(width: iconSize * 2.2, height: iconSize * 2.2)
 
         Image(systemName: "checkmark.circle.fill")
-          .font(.system(size: 48))
+          .font(.system(size: successIconSize))
           .foregroundColor(.tidexSuccess)
+          .accessibilityHidden(true)
       }
 
       // Instructions
@@ -310,6 +326,8 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         Text(.resetPasswordSuccessTitle)
           .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.center)
+          .accessibilityAddTraits(.isHeader)
 
         Text(successMessage)
           .font(.tidexSubheadline)
@@ -343,10 +361,13 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
       HStack(spacing: Spacing.xxs) {
         Image(systemName: "chevron.left")
           .font(.tidexCaption)
+          .accessibilityHidden(true)
         Text(.commonBack)
           .font(.tidexSubheadline)
       }
       .foregroundColor(.tidexTextSecondary)
+      .frame(minHeight: 44)
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
@@ -360,10 +381,13 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
       HStack(spacing: Spacing.xxs) {
         Image(systemName: "chevron.left")
           .font(.tidexCaption)
+          .accessibilityHidden(true)
         Text(.resetPasswordBackToLogin)
           .font(.tidexSubheadline)
       }
       .foregroundColor(.tidexTextSecondary)
+      .frame(minHeight: 44)
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }

@@ -55,7 +55,7 @@ struct MixedDaySheet: View {
             dismiss()
           }
           .font(.tidexButton)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         }
       }
     }

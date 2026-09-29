@@ -7,6 +7,7 @@ import SwiftUI
 /// Three pulsing dots indicator, similar to iMessage typing indicator.
 struct TypingIndicatorView: View {
   var background: Color = .tidexSurfacePrimary
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var dotScales: [Bool] = [false, false, false]
 
   var body: some View {
@@ -15,15 +16,18 @@ struct TypingIndicatorView: View {
         Circle()
           .fill(Color.tidexTextMuted)
           .frame(width: 7, height: 7)
-          .scaleEffect(dotScales[index] ? 1.0 : 0.5)
-          .opacity(dotScales[index] ? 1.0 : 0.4)
+          .scaleEffect(reduceMotion || dotScales[index] ? 1.0 : 0.5)
+          .opacity(reduceMotion || dotScales[index] ? 1.0 : 0.4)
       }
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.msm)
     .background(background)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(.commonAccessibilityTyping))
     .onAppear {
+      guard !reduceMotion else { return }
       for index in 0..<3 {
         withAnimation(
           .easeInOut(duration: 0.5)

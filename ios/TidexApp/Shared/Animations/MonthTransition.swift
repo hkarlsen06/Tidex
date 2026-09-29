@@ -187,6 +187,8 @@ struct MonthYearPickerSheet: View {
 
   @State private var selectedYear: Int
   @State private var selectedMonth: Int
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @ScaledMetric(relativeTo: .body) private var yearWheelWidth: CGFloat = 112
 
   // Year range: 5 years back to 5 years forward
   private var yearRange: [Int] {
@@ -228,23 +230,33 @@ struct MonthYearPickerSheet: View {
   }
 
   var body: some View {
-    VStack(spacing: Spacing.md) {
-      sheetActions
-      selectedPeriodHeader
-      pickerWheels
+    // The fixed-height sheet only fits the default text size. At accessibility sizes it opens
+    // full height and scrolls.
+    ScrollView {
+      VStack(spacing: Spacing.md) {
+        sheetActions
+        selectedPeriodHeader
+        pickerWheels
+      }
+      .padding(.horizontal, Spacing.md)
+      .padding(.top, Spacing.xl)
+      .padding(.bottom, Spacing.xl)
+      .frame(maxWidth: .infinity, alignment: .top)
     }
-    .padding(.horizontal, Spacing.md)
-    .padding(.top, Spacing.xl)
-    .padding(.bottom, Spacing.xl)
+    .scrollBounceBehavior(.basedOnSize)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(Color.tidexBackground)
     .presentationBackground(Color.tidexBackground)
-    .presentationDetents([.height(342)])
+    .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.height(342)])
     .presentationDragIndicator(.visible)
   }
 
   private var sheetActions: some View {
-    HStack(spacing: Spacing.sm) {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.sm))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+    return layout {
       Button {
         isPresented = false
       } label: {
@@ -252,7 +264,9 @@ struct MonthYearPickerSheet: View {
       }
       .buttonStyle(MonthPickerActionButtonStyle())
 
-      Spacer(minLength: Spacing.xxs)
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer(minLength: Spacing.xxs)
+      }
 
       Button {
         onSelect(realMonth.year, realMonth.month)
@@ -263,7 +277,9 @@ struct MonthYearPickerSheet: View {
       .buttonStyle(MonthPickerCurrentButtonStyle(isSelected: isShowingCurrentMonth))
       .disabled(isShowingCurrentMonth)
 
-      Spacer(minLength: Spacing.xxs)
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer(minLength: Spacing.xxs)
+      }
 
       Button {
         onSelect(selectedYear, selectedMonth)
@@ -276,7 +292,11 @@ struct MonthYearPickerSheet: View {
   }
 
   private var selectedPeriodHeader: some View {
-    HStack(spacing: Spacing.xs) {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xs))
+    return layout {
       Text(selectedMonthName)
       Text(String(selectedYear))
     }
@@ -309,7 +329,7 @@ struct MonthYearPickerSheet: View {
           }
         }
         .pickerStyle(.wheel)
-        .frame(width: 112)
+        .frame(width: yearWheelWidth)
         .clipped()
       }
       .frame(height: 174)
@@ -322,14 +342,17 @@ struct MonthYearPickerSheet: View {
 
 private struct MonthPickerActionButtonStyle: ButtonStyle {
   var isProminent = false
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.body.weight(isProminent ? .semibold : .regular))
-      .foregroundColor(.tidexBlue)
-      .lineLimit(1)
-      .minimumScaleFactor(0.82)
+      .foregroundColor(.tidexBlueText)
+      .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+      .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.82)
+      .multilineTextAlignment(.center)
       .frame(minWidth: 72, minHeight: 44)
+      .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
       .padding(.horizontal, Spacing.xs)
       .background(Color.tidexSurfacePrimary, in: Capsule())
       .overlay(
@@ -342,14 +365,17 @@ private struct MonthPickerActionButtonStyle: ButtonStyle {
 
 private struct MonthPickerCurrentButtonStyle: ButtonStyle {
   let isSelected: Bool
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.body.weight(.medium))
-      .foregroundColor(isSelected ? .tidexTextSecondary : .tidexBlue)
-      .lineLimit(1)
-      .minimumScaleFactor(0.82)
+      .foregroundColor(isSelected ? .tidexTextSecondary : .tidexBlueText)
+      .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+      .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.82)
+      .multilineTextAlignment(.center)
       .frame(minWidth: 104, minHeight: 44)
+      .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
       .padding(.horizontal, Spacing.xs)
       .background(
         isSelected ? Color.tidexSurfaceSecondary : Color.tidexBlue.opacity(0.08),
@@ -466,7 +492,10 @@ struct AnimatedMonthHeader: View {
         Haptics.play(.light)
         showMonthPicker()
       }
-      .accessibilityAddTraits(.isButton)
+      .accessibilityElement(children: .combine)
+      .accessibilityAddTraits([.isButton, .isHeader])
+      .accessibilityHint(Text(.commonAccessibilityMonthPickerHint))
+      .accessibilityAction(named: Text(.commonThisMonth)) { jumpToCurrentMonth() }
       .accessibilityIdentifier("month-header.title")
 
       // Next button
@@ -508,7 +537,10 @@ struct AnimatedMonthHeader: View {
         Haptics.play(.light)
         showMonthPicker()
       }
-      .accessibilityAddTraits(.isButton)
+      .accessibilityElement(children: .combine)
+      .accessibilityAddTraits([.isButton, .isHeader])
+      .accessibilityHint(Text(.commonAccessibilityMonthPickerHint))
+      .accessibilityAction(named: Text(.commonThisMonth)) { jumpToCurrentMonth() }
       .accessibilityIdentifier("month-header.title")
     }
     .frame(maxWidth: .infinity)
@@ -625,7 +657,7 @@ struct AnimatedMonthHeader: View {
     } label: {
       Image(systemName: icon)
         .font(.system(size: navIconSize, weight: .semibold))
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .accessibilityLabel(Text(label))
         .frame(width: navPillVisualSize, height: navPillVisualSize)
         .background(Color.tidexBlue.opacity(0.1))
@@ -648,7 +680,7 @@ struct AnimatedMonthHeader: View {
     } label: {
       Image(systemName: icon)
         .font(.system(size: navIconSize, weight: .semibold))
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .accessibilityLabel(Text(label))
         .frame(width: navTapTargetSize, height: navTapTargetSize)
         .contentShape(Rectangle())

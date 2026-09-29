@@ -12,6 +12,7 @@ import SwiftUI
 /// Slides up from the bottom when a screenshot is detected in the shifts tab
 struct ScreenshotSharePromptOverlay: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   let onDismiss: () -> Void
   let onUseShareButton: () -> Void
 
@@ -31,6 +32,7 @@ struct ScreenshotSharePromptOverlay: View {
           .onTapGesture {
             dismiss()
           }
+          .accessibilityHidden(true)
 
         // Overlay card
         VStack(spacing: 0) {
@@ -44,6 +46,7 @@ struct ScreenshotSharePromptOverlay: View {
           // Toolbar buttons preview - showing where share button is
           toolbarPreview
             .padding(.bottom, Spacing.md)
+            .accessibilityHidden(true)
 
           // Title
           Text(.screenshotShareTitle)
@@ -64,7 +67,7 @@ struct ScreenshotSharePromptOverlay: View {
             .padding(.bottom, Spacing.mlg)
 
           // Side-by-side buttons
-          HStack(spacing: Spacing.sm) {
+          buttonLayout {
             // Dismiss button - secondary action
             Button {
               dismiss()
@@ -72,7 +75,7 @@ struct ScreenshotSharePromptOverlay: View {
               Text(.screenshotShareDismiss)
                 .font(.tidexBodyMedium)
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .frame(minHeight: 52)
                 .background(Color.tidexSurfacePrimary)
                 .foregroundColor(.tidexTextPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
@@ -91,7 +94,7 @@ struct ScreenshotSharePromptOverlay: View {
               Text(.screenshotShareUseButton)
                 .font(.tidexHeadline)
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .frame(minHeight: 52)
                 .background(Color.tidexBrandPrimary)
                 .foregroundColor(.tidexTextOnBrand)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
@@ -119,7 +122,7 @@ struct ScreenshotSharePromptOverlay: View {
               if value.translation.height > 80 || value.predictedEndTranslation.height > 200 {
                 dismiss()
               } else {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
                   dragOffset = 0
                 }
               }
@@ -128,6 +131,9 @@ struct ScreenshotSharePromptOverlay: View {
       }
       .ignoresSafeArea(edges: .bottom)
     }
+    // The prompt covers the screen, so VoiceOver stays inside it and can dismiss it with the escape gesture.
+    .accessibilityAddTraits(.isModal)
+    .accessibilityAction(.escape) { dismiss() }
     .animation(
       reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: showContent
     )
@@ -138,6 +144,13 @@ struct ScreenshotSharePromptOverlay: View {
       showContent = true
       Haptics.play(.warning)
     }
+  }
+
+  /// The two buttons stack at accessibility text sizes so each label keeps the full width.
+  private var buttonLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.sm))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
   }
 
   // MARK: - Toolbar Preview
@@ -151,7 +164,7 @@ struct ScreenshotSharePromptOverlay: View {
         VStack(spacing: Spacing.xxxs) {
           Image(systemName: "square.and.arrow.up")
             .font(.tidexBodyLarge)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .frame(width: 48, height: 48)
             .glassEffectID("screenshotPrompt.shareButton", in: glassNamespace)
             .tidexGlass(shape: .circle, interactive: true)
@@ -159,7 +172,7 @@ struct ScreenshotSharePromptOverlay: View {
           // Pointer arrow
           Image(systemName: "arrowtriangle.up.fill")
             .font(.system(size: 10))
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
         }
 
         // Selection button - dimmed with liquid glass
@@ -186,9 +199,11 @@ struct ScreenshotSharePromptOverlay: View {
 // MARK: - Button Style
 
 private struct PromptButtonStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1.0)
       .opacity(configuration.isPressed ? 0.9 : 1.0)
       .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
   }

@@ -276,9 +276,15 @@ struct CalendarMonthGrid<DayContent: View>: View {
         dayContent(dayInfo)
           .frame(maxWidth: .infinity)
           .aspectRatio(CalendarGridHelper.cellAspectRatio, contentMode: .fit)
+          // Days of the neighbouring months are dimmed filler, so VoiceOver skips them.
+          .accessibilityHidden(dayInfo.isOutsideMonth)
       }
     }
     .id(monthGridIdentity)
+    // Seven columns can't widen, so text stops growing at the largest non-accessibility size,
+    // as in the system Calendar month view. Set here, above the cells, so their @ScaledMetric
+    // sizes stop too. Larger text uses the list view and the VoiceOver label.
+    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
   }
 
   private var monthGridIdentity: String {
@@ -286,5 +292,22 @@ struct CalendarMonthGrid<DayContent: View>: View {
       return "calendar-grid-empty-\(days.count)"
     }
     return "\(firstDate)-\(lastDate)-\(days.count)"
+  }
+}
+
+extension View {
+  /// Applies a day cell's VoiceOver setup to days of the shown month only. A trailing
+  /// `.accessibilityHidden` doesn't remove a cell that is its own element, so filler days from
+  /// the neighbouring months skip that setup and are hidden instead.
+  @ViewBuilder
+  func calendarDayAccessibility<Accessible: View>(
+    isHidden: Bool,
+    @ViewBuilder _ accessible: (Self) -> Accessible
+  ) -> some View {
+    if isHidden {
+      accessibilityHidden(true)
+    } else {
+      accessible(self)
+    }
   }
 }

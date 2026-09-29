@@ -8,6 +8,7 @@ internal struct WeekHeaderView: View {
   internal let totalGrossTextOverride: String?
 
   @Environment(\.userCurrency) private var currency: String
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize: DynamicTypeSize
 
   // MARK: - Computed Properties
 
@@ -18,7 +19,7 @@ internal struct WeekHeaderView: View {
   // MARK: - Body
 
   internal var body: some View {
-    HStack(alignment: .center, spacing: 0) {
+    layout {
       // Week label with number
       HStack(spacing: Spacing.xxs) {
         Text(weekLabel)
@@ -30,15 +31,33 @@ internal struct WeekHeaderView: View {
           .foregroundColor(.tidexTextPrimary)
       }
 
-      Spacer()
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
 
       // Total earnings for the week
-      Text(totalGrossTextOverride ?? formatCurrency(totalGross))
+      Text(totalText)
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextPrimary)
     }
     .padding(.horizontal, Spacing.xxs)
     .padding(.vertical, Spacing.xs)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      Text(.shiftsAccessibilityWeekTotal("\(weekLabel) \(weekNumber)", totalText))
+    )
+    .accessibilityAddTraits(.isHeader)
+  }
+
+  private var totalText: String {
+    totalGrossTextOverride ?? formatCurrency(totalGross)
+  }
+
+  /// Stacks the week and its total at accessibility text sizes so neither is squeezed.
+  private var layout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout(alignment: .center, spacing: 0))
   }
 
   internal init(weekNumber: Int, totalGross: Double, totalGrossTextOverride: String? = nil) {

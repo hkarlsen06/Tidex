@@ -4,6 +4,7 @@ import SwiftUI
 
 /// Card for editing a job's pay settings: currency, pay period, payroll day, and half-tax month
 struct GlobalPaySettingsCard: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   let jobId: String?
   let currency: String
   let payrollDay: Int
@@ -102,7 +103,7 @@ struct GlobalPaySettingsCard: View {
           Text(CurrencyConfig.get(selectedCurrency).label)
             .font(.tidexBody)
             .foregroundStyle(Color.tidexTextSecondary)
-            .lineLimit(1)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
           Image(systemName: canChangeCurrency ? "chevron.right" : "lock.fill")
             .font(.tidexCaption)
@@ -235,6 +236,7 @@ private struct CurrencyPickerSheet: View {
           .font(.tidexFootnoteStrong)
           .foregroundColor(.tidexTextMuted)
           .textCase(.uppercase)
+          .accessibilityAddTraits(.isHeader)
         Spacer()
       }
       .padding(.horizontal, Spacing.mlg)
@@ -261,7 +263,8 @@ private struct CurrencyRow: View {
         if isSelected {
           Image(systemName: "checkmark")
             .font(.tidexButton)
-            .foregroundColor(.tidexBrandPrimary)
+            .foregroundColor(.tidexBlueText)
+            .accessibilityHidden(true)
         }
       }
       .contentShape(Rectangle())
@@ -270,6 +273,7 @@ private struct CurrencyRow: View {
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.clear)
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
 

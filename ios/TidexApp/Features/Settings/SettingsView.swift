@@ -9,6 +9,8 @@ struct SettingsView: View {
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.dismiss) private var dismiss
   @Environment(\.layoutDirection) private var layoutDirection
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   private let initialDestination: SettingsDestination?
   private let sheetPresentationDetent: Binding<PresentationDetent>?
   private let directPayManagerCompactDetent: PresentationDetent
@@ -334,7 +336,7 @@ extension SettingsView {
             Text(profileEmail)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
-              .lineLimit(1)
+              .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
               .truncationMode(.middle)
           }
         }
@@ -1014,6 +1016,7 @@ extension SettingsView {
             Text(payChooserError)
               .font(.tidexFootnote)
               .foregroundColor(.tidexError)
+              .announcesToVoiceOver(payChooserError)
           }
         }
       }
@@ -1057,10 +1060,10 @@ extension SettingsView {
       } label: {
         Label {
           Text(.settingsPayAddJobCta)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
         } icon: {
           Image(systemName: "plus.circle.fill")
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
         }
         .font(.tidexBodyMedium)
       }
@@ -1119,7 +1122,7 @@ extension SettingsView {
         isExpanded: Binding(
           get: { showArchivedPayJobs },
           set: { isVisible in
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86)) {
               showArchivedPayJobs = isVisible
               applyPayChooserDetent(archivedVisible: isVisible)
             }
@@ -1209,7 +1212,6 @@ extension SettingsView {
         fallbackBadgeColor: .tidexBlue,
         lineLimit: 2
       )
-      .opacity(0.72)
 
       Spacer(minLength: Spacing.sm)
 

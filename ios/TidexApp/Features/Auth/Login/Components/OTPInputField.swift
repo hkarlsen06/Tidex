@@ -9,8 +9,17 @@ internal struct DigitBox: View {
   private let cursorHeight: CGFloat = 24
   private let activeBorderWidth: CGFloat = 2
   private let inactiveBorderWidth: CGFloat = 1
-  private let boxWidth: CGFloat = 48
-  private let boxHeight: CGFloat = 56
+  @ScaledMetric(relativeTo: .title2) private var scaledBoxWidth: CGFloat = 48
+  @ScaledMetric(relativeTo: .title2) private var scaledBoxHeight: CGFloat = 56
+
+  // Capped so three boxes still fit in a row at the largest text sizes.
+  private var boxWidth: CGFloat {
+    min(scaledBoxWidth, 96)  // swiftlint:disable:this no_magic_numbers
+  }
+
+  private var boxHeight: CGFloat {
+    min(scaledBoxHeight, 112)  // swiftlint:disable:this no_magic_numbers
+  }
 
   private let digit: String?
   private let isCurrentPosition: Bool
@@ -81,31 +90,27 @@ internal struct OTPInputField: View {
   internal var onComplete: (() -> Void)?
   internal var autoFocus: Bool = true
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @FocusState private var isFocused: Bool
   @State private var cursorVisible: Bool = true
   @State private var cursorTimer: Timer?
 
   private let digitCount: Int = 6
   private let cursorBlinkInterval: TimeInterval = 0.5
-  private let textFieldHeight: CGFloat = 56
 
   internal var body: some View {
     VStack(spacing: Spacing.xs) {
-      ZStack {
-        digitBoxes
-        hiddenTextField
-      }
-      .onTapGesture {
-        isFocused = true
-        Haptics.play(.light)
-      }
-      .accessibilityAddTraits(.isButton)
+      // The text field covers the boxes, so tapping anywhere on them opens the keyboard.
+      digitBoxes
+        .overlay { hiddenTextField }
 
       // Error message
       if let error, !error.isEmpty {
         Text(error)
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
+          .multilineTextAlignment(.center)
+          .announcesToVoiceOver(error)
           .transition(.opacity.combined(with: .move(edge: .top)))
       }
     }
@@ -129,9 +134,26 @@ internal struct OTPInputField: View {
     }
   }
 
+  /// The six boxes sit in one row and split into two rows of three when large text makes them too wide.
+  @ViewBuilder
   private var digitBoxes: some View {
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        VStack(spacing: Spacing.xs) {
+          digitRow(indices: 0..<3)  // swiftlint:disable:this no_magic_numbers
+          digitRow(indices: 3..<6)  // swiftlint:disable:this no_magic_numbers
+        }
+      } else {
+        digitRow(indices: 0..<digitCount)
+      }
+    }
+    // The boxes only draw the code. The text field below is the one element VoiceOver reads.
+    .accessibilityHidden(true)
+  }
+
+  private func digitRow(indices: Range<Int>) -> some View {
     HStack(spacing: Spacing.xs) {
-      ForEach(0..<digitCount, id: \.self) { index in
+      ForEach(indices, id: \.self) { index in
         DigitBox(
           digit: getDigit(at: index),
           isCurrentPosition: index == code.count && isFocused,
@@ -151,8 +173,7 @@ internal struct OTPInputField: View {
       .foregroundColor(.clear)
       .tint(.clear)
       .accentColor(.clear)
-      .frame(maxWidth: .infinity)
-      .frame(height: textFieldHeight)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
       .accessibilityLabel(Text(.securityPasswordOtpLabel))
       .onChange(of: code) { _, newValue in
         handleCodeChange(newValue)

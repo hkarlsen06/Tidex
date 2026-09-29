@@ -36,7 +36,7 @@ enum AdminTab: String, CaseIterable, Identifiable, Hashable {
 
   var tint: Color {
     switch self {
-    case .feedback: return .tidexBlue
+    case .feedback: return .tidexBlueText
     case .reports: return .tidexError
     case .users: return .tidexPurple
     case .shares: return .tidexSuccess
@@ -48,6 +48,7 @@ enum AdminTab: String, CaseIterable, Identifiable, Hashable {
 
 /// Admin home. Shows what needs attention and links to each admin tool.
 struct AdminSettingsView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   var initialTab: AdminTab?
   var initialReportId: String?
 
@@ -142,7 +143,8 @@ struct AdminSettingsView: View {
             .foregroundStyle(tab == .reports ? Color.tidexTextOnDanger : Color.tidexTextOnBrand)
             .padding(.horizontal, Spacing.xs)
             .padding(.vertical, Spacing.micro)
-            .background(tab.tint, in: Capsule())
+            // The feedback tint is the light text blue, so its badge fills with the brand blue.
+            .background(tab == .feedback ? Color.tidexBlue : tab.tint, in: Capsule())
         }
       } label: {
         Label {
@@ -169,7 +171,7 @@ struct AdminSettingsView: View {
     async let reports: AdminReportsPage? = try? AdminAPI.reports(status: .open, limit: 1)
     async let chart: AdminActiveUsersChart? = try? AdminAPI.activeUsersChart()
     let (usersPage, feedbackItems, reportsPage, chartData) = await (users, feedback, reports, chart)
-    withAnimation {
+    withAnimation(reduceMotion ? nil : .default) {
       activeUsers = chartData
       summary = Summary(
         users: usersPage?.totalCount,
@@ -201,6 +203,7 @@ private struct AdminDestination: View {
 
 /// A number with an icon and caption, shown in a row of three on the admin home and user screens.
 struct AdminStatTile: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let title: String
   let value: Int?
   let icon: String
@@ -214,7 +217,7 @@ struct AdminStatTile: View {
         .accessibilityHidden(true)
       Group {
         if let value {
-          Text(value, format: .number).contentTransition(.numericText())
+          Text(value, format: .number).contentTransition(reduceMotion ? .identity : .numericText())
         } else {
           Text(verbatim: "–")
         }
@@ -224,7 +227,6 @@ struct AdminStatTile: View {
       Text(title)
         .font(.tidexCaptionRegular)
         .foregroundStyle(Color.tidexTextSecondary)
-        .lineLimit(1)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.sm)
@@ -287,7 +289,7 @@ struct AdminUserSearchRows: View {
           AdminUserLabel(user: user)
           Spacer()
           Image(systemName: "plus.circle.fill")
-            .foregroundStyle(Color.tidexBlue)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityHidden(true)
         }
       }

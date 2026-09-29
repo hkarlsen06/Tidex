@@ -5,6 +5,7 @@ import SwiftUI
 struct StatsView: View {
   // swiftlint:disable:previous explicit_acl explicit_top_level_acl file_types_order type_body_length
   @Environment(AppCoordinator.self) private var coordinator  // swiftlint:disable:this type_contents_order
+  @ScaledMetric(relativeTo: .largeTitle) private var errorIconSize: CGFloat = 48  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers type_contents_order
 
   @State private var viewModel = StatsViewModel()  // swiftlint:disable:this explicit_type_interface
   @State private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()  // swiftlint:disable:this explicit_type_interface line_length
@@ -237,11 +238,12 @@ struct StatsView: View {
         Image(systemName: "line.3.horizontal.decrease.circle")
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
-          .accessibilityHidden(true)
         Text(.jobsFilterTitle)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
       }
+      // The button below carries the same title as its label.
+      .accessibilityHidden(true)
 
       Spacer()
 
@@ -252,6 +254,10 @@ struct StatsView: View {
         statsJobFilterMenuLabel(selectedJob: selectedJob)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(Text(.jobsFilterTitle))
+      .accessibilityValue(
+        Text(verbatim: selectedJob?.name ?? viewModel.selectedJobName ?? String(localized: .jobsFilterAll))
+      )
       .confirmationDialog(
         String(localized: .jobsFilterTitle),
         isPresented: $isJobFilterDialogPresented,
@@ -391,7 +397,7 @@ struct StatsView: View {
   private func errorView(error _: Error) -> some View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
-        .font(.system(size: 48))  // swiftlint:disable:this no_magic_numbers
+        .font(.system(size: errorIconSize))
         .foregroundColor(.tidexTextMuted)
         .accessibilityHidden(true)
 
@@ -417,6 +423,7 @@ struct StatsView: View {
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding()
+    .announcesToVoiceOver(String(localized: .statsErrorsCouldNotUpdate))
   }
 }
 
@@ -426,6 +433,7 @@ private struct StatsOverviewLedger: View {
   let onEarningsTap: () -> Void
 
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
 
   private var mainDisplayValue: Double {
     stats.tax.enabled ? stats.currentMonth.totalEarningsNet : stats.currentMonth.totalEarnings
@@ -464,10 +472,11 @@ private struct StatsOverviewLedger: View {
             animateOnAppear: false,
             animateChanges: false
           )
-          .font(.tidexAmountDisplay)
+          // At accessibility sizes the amount uses a smaller base font and wraps instead of shrinking.
+          .font(dynamicTypeSize.isAccessibilitySize ? .tidexAmountLarge : .tidexAmountDisplay)
           .foregroundColor(.tidexTextPrimary)
-          .minimumScaleFactor(0.45)  // swiftlint:disable:this no_magic_numbers
-          .lineLimit(1)
+          .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.45)  // swiftlint:disable:this line_length no_magic_numbers
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
           if stats.tax.enabled {
             Text(String(localized: .statsAfterTax).lowercased())
@@ -475,6 +484,8 @@ private struct StatsOverviewLedger: View {
               .foregroundColor(.tidexTextSecondary)
           }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
 
         Spacer(minLength: Spacing.sm)
 
@@ -483,7 +494,7 @@ private struct StatsOverviewLedger: View {
             Image(systemName: "info.circle")
               .font(.tidexTitle2)
               .foregroundColor(.tidexTextMuted)
-              .frame(width: 44, height: 44)  // swiftlint:disable:this no_magic_numbers
+              .frame(minWidth: 44, minHeight: 44)  // swiftlint:disable:this no_magic_numbers
               .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
@@ -506,24 +517,35 @@ private struct StatsOverviewLedger: View {
     }
   }
 
+  @ViewBuilder
   private var metricStrip: some View {
-    HStack(spacing: 0) {
-      StatsLedgerMetric(
-        label: .statsHours,
-        value: formatHours(stats.currentMonth.totalHours),
-        systemImage: "clock"
-      )
+    let hoursMetric = StatsLedgerMetric(  // swiftlint:disable:this explicit_type_interface
+      label: .statsHours,
+      value: formatHours(stats.currentMonth.totalHours),
+      systemImage: "clock"
+    )
+    let shiftsMetric = StatsLedgerMetric(  // swiftlint:disable:this explicit_type_interface
+      label: .statsShifts,
+      value: "\(stats.currentMonth.shiftCount)",
+      systemImage: "calendar"
+    )
 
-      Rectangle()
-        .fill(Color.tidexBorderSubtle.opacity(0.55))  // swiftlint:disable:this no_magic_numbers
-        .frame(width: 1, height: 44)  // swiftlint:disable:this no_magic_numbers
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        hoursMetric
+        shiftsMetric
+      }
+    } else {
+      HStack(spacing: 0) {
+        hoursMetric
 
-      StatsLedgerMetric(
-        label: .statsShifts,
-        value: "\(stats.currentMonth.shiftCount)",
-        systemImage: "calendar"
-      )
-      .padding(.leading, Spacing.md)
+        Rectangle()
+          .fill(Color.tidexBorderSubtle.opacity(0.55))  // swiftlint:disable:this no_magic_numbers
+          .frame(width: 1, height: 44)  // swiftlint:disable:this no_magic_numbers
+
+        shiftsMetric
+          .padding(.leading, Spacing.md)
+      }
     }
   }
 
@@ -541,12 +563,15 @@ private struct StatsLedgerMetric: View {
   let value: String
   let systemImage: String
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
+
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.xxs) {
       HStack(spacing: Spacing.xxs) {
-        Image(systemName: systemImage)  // swiftlint:disable:this accessibility_label_for_image
+        Image(systemName: systemImage)
           .font(.tidexCaptionStrong)
           .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
 
         Text(label)
           .font(.tidexCaptionStrong)
@@ -556,17 +581,20 @@ private struct StatsLedgerMetric: View {
       Text(value)
         .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)  // swiftlint:disable:this no_magic_numbers
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)  // swiftlint:disable:this no_magic_numbers
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, Spacing.xxs)
+    .accessibilityElement(children: .combine)
   }
 }
 
 private struct StatsLedgerValueRow: View {
   let label: LocalizedStringResource
   let value: String
+
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
 
   var body: some View {
     HStack(spacing: Spacing.sm) {
@@ -579,10 +607,11 @@ private struct StatsLedgerValueRow: View {
       Text(value)
         .font(.tidexMonoLabel)
         .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.75)  // swiftlint:disable:this no_magic_numbers
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.75)  // swiftlint:disable:this no_magic_numbers
     }
     .padding(.vertical, Spacing.xxxs)
+    .accessibilityElement(children: .combine)
   }
 }
 

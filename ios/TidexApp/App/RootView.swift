@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 import UIKit
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable accessibility_label_for_image anonymous_argument_in_multiline_closure closure_body_length
+// swiftlint:disable anonymous_argument_in_multiline_closure closure_body_length
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
@@ -182,7 +182,7 @@ private struct RootContent: View {
                   .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                   .padding(.horizontal, Spacing.md)
                   .padding(.top, 8)
-                  .transition(.move(edge: .top).combined(with: .opacity))
+                  .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                   .zIndex(10)
                 }
               }
@@ -269,12 +269,15 @@ private struct RootContent: View {
 
   private func showChatToast(_ payload: InAppChatToastPayload) {
     chatToastDismissTask?.cancel()
-    withAnimation(.spring(duration: 0.32, bounce: 0.14)) {
+    withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.32, bounce: 0.14)) {
       activeChatToast = payload
     }
 
     chatToastDismissTask = Task { @MainActor in
-      try? await Task.sleep(for: .seconds(6))
+      // Give VoiceOver and Switch Control users more time to reach the toast.
+      let assistiveTechnologyRunning =
+        UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning
+      try? await Task.sleep(for: .seconds(assistiveTechnologyRunning ? 20 : 6))
       guard !Task.isCancelled else { return }
       dismissChatToast()
     }
@@ -283,7 +286,7 @@ private struct RootContent: View {
   private func dismissChatToast() {
     chatToastDismissTask?.cancel()
     chatToastDismissTask = nil
-    withAnimation(.spring(duration: 0.28, bounce: 0.08)) {
+    withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.28, bounce: 0.08)) {
       activeChatToast = nil
     }
   }
@@ -352,11 +355,13 @@ struct LoadingView: View {
         .resizable()
         .scaledToFit()
         .frame(width: 150, height: 150)
+        .accessibilityHidden(true)
 
       ProgressView()
         .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
         .scaleEffect(1.2)
         .offset(y: 105)
+        .accessibilityLabel(Text(.commonLoading))
     }
     .ignoresSafeArea()
     .onAppear {

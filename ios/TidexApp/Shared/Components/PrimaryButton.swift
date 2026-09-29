@@ -44,6 +44,7 @@ struct PrimaryButton: View {
     }
     .buttonStyle(SnappyPrimaryButtonStyle(reduceMotion: reduceMotion))
     .accessibilityLabel(title)
+    .accessibilityValue(isLoading ? Text(.commonLoading) : Text(verbatim: ""))
     .disabled(isDisabled || isLoading)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isLoading)
   }

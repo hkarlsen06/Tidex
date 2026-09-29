@@ -12,8 +12,24 @@ struct ScreenshotNotificationBubble: View {
   let showNotifiedIcon: Bool
   let bellShakeTrigger: Bool
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  /// What VoiceOver reads when the bubble appears or the friend has been notified.
+  private var spokenText: String {
+    let taken = String(localized: .sharingScreenshotTaken)
+    guard showNotifiedIcon else { return taken }
+    return "\(taken). \(String(localized: .sharingScreenshotNotified(notifiedName)))"
+  }
+
+  private var layout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xs))
+  }
+
   var body: some View {
-    HStack(spacing: Spacing.xs) {
+    layout {
       Image(systemName: "camera.viewfinder")
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
@@ -29,11 +45,12 @@ struct ScreenshotNotificationBubble: View {
         Text(.sharingScreenshotNotified(notifiedName))
           .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextSecondary)
-          .lineLimit(1)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
           .transition(.opacity)
       }
     }
     .accessibilityElement(children: .combine)
+    .announcesToVoiceOver(spokenText)
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
@@ -41,10 +58,25 @@ struct ScreenshotNotificationBubble: View {
     .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
   }
 
+  @ViewBuilder
   private var notifiedBell: some View {
+    if reduceMotion {
+      bellImage
+        .transition(.opacity)
+        .accessibilityHidden(true)
+    } else {
+      shakingBell
+    }
+  }
+
+  private var bellImage: some View {
     Image(systemName: "bell.and.waves.left.and.right")
       .font(.tidexCaption)
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
+  }
+
+  private var shakingBell: some View {
+    bellImage
       .keyframeAnimator(initialValue: BellShake(), trigger: bellShakeTrigger) {
         content, value in
         content.rotationEffect(.degrees(value.angle), anchor: .top)

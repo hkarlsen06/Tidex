@@ -69,6 +69,7 @@ struct JobBasicsOnboardingScreen: View {
         .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.leading)
+        .accessibilityAddTraits(.isHeader)
         .frame(maxWidth: .infinity, alignment: .leading)
 
       Text(.onboardingJobBasicsSubtitle)
@@ -135,10 +136,13 @@ struct JobBasicsOnboardingScreen: View {
         HStack(spacing: Spacing.xxs) {
           Image(systemName: "chevron.left")
             .font(.tidexButton)
+            .accessibilityHidden(true)
           Text(.commonBack)
             .font(.tidexBody)
         }
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
 
@@ -161,8 +165,9 @@ struct JobBasicsOnboardingScreen: View {
         prompt: Text(
           String(localized: .onboardingJobBasicsNamePlaceholder)
         )
-        .foregroundColor(.tidexTextMuted.opacity(0.62))
+        .foregroundColor(.tidexTextMuted)
       )
+      .accessibilityLabel(Text(.settingsPayAddJobName))
       .font(.tidexBody)
       .foregroundColor(.tidexTextPrimary)
       .textInputAutocapitalization(.words)

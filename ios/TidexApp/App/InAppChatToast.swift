@@ -1,5 +1,5 @@
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable accessibility_label_for_image closure_body_length conditional_returns_on_newline
+// swiftlint:disable closure_body_length conditional_returns_on_newline
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable discouraged_none_name explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
@@ -76,6 +76,8 @@ struct InAppChatToastView: View {
   let onTap: () -> Void
   let onDismiss: () -> Void
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   private var senderInitials: String {
     let parts = payload.senderName
       .split(separator: " ")
@@ -101,12 +103,12 @@ struct InAppChatToastView: View {
             Text(payload.senderName)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
-              .lineLimit(1)
+              .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
             Text(payload.previewText)
               .font(.tidexSubheadline)
               .foregroundColor(.tidexTextSecondary)
-              .lineLimit(2)
+              .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
               .truncationMode(.tail)
           }
 
@@ -120,10 +122,12 @@ struct InAppChatToastView: View {
         Image(systemName: "xmark")
           .font(.tidexFootnoteStrong)
           .foregroundColor(.tidexTextMuted)
-          .frame(width: 36, height: 36)
+          .accessibilityHidden(true)
+          .frame(width: 44, height: 44)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(Text(.commonDismiss))
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.sm)
@@ -134,5 +138,6 @@ struct InAppChatToastView: View {
     )
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
     .shadow(color: Color.black.opacity(0.14), radius: 18, y: 6)
+    .announcesToVoiceOver("\(payload.senderName): \(payload.previewText)")
   }
 }

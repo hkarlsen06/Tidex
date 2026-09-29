@@ -8,11 +8,17 @@ struct AccordionSectionView<Content: View>: View {
   let isExpanded: Bool
   let isComplete: Bool
   let onContinue: (() -> Void)?
+  /// Called when the collapsed header is activated. Nil makes the header plain text.
+  var onHeaderTap: (() -> Void)?
+  /// A locked section cannot be opened yet.
+  var isLocked: Bool = false
   @ViewBuilder let content: () -> Content
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(spacing: 0) {
-      header
+      headerContainer
 
       // Content (when expanded)
       if isExpanded {
@@ -25,6 +31,33 @@ struct AccordionSectionView<Content: View>: View {
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .stroke(isExpanded ? Color.tidexBrandPrimary.opacity(0.3) : Color.tidexBorder, lineWidth: 1)
     )
+  }
+
+  /// A collapsed header is a button. An open header is a plain heading that reports its state.
+  @ViewBuilder
+  private var headerContainer: some View {
+    if let onHeaderTap, !isExpanded {
+      Button(action: onHeaderTap) {
+        header
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .disabled(isLocked)
+      .accessibilityValue(stateText)
+    } else {
+      header
+        .accessibilityValue(stateText)
+    }
+  }
+
+  private var stateText: Text {
+    if isExpanded {
+      return Text(.shiftsAccessibilityExpanded)
+    }
+    if isComplete {
+      return Text(.onboardingAccessibilitySectionComplete)
+    }
+    return Text(.shiftsAccessibilityCollapsed)
   }
 
   private var header: some View {
@@ -46,19 +79,24 @@ struct AccordionSectionView<Content: View>: View {
       // Status indicator
       if isComplete {
         Image(systemName: "checkmark.circle.fill")
-          .font(.system(size: 20))
+          .font(.title3)
           .foregroundColor(.tidexSuccess)
+          .accessibilityHidden(true)
       } else if isExpanded {
         Image(systemName: "chevron.up")
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
+          .accessibilityHidden(true)
       } else {
         Image(systemName: "chevron.down")
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
+          .accessibilityHidden(true)
       }
     }
     .padding(Spacing.md)
+    .accessibilityElement(children: .combine)
+    .accessibilityAddTraits(.isHeader)
   }
 
   private var expandedContent: some View {
@@ -73,6 +111,7 @@ struct AccordionSectionView<Content: View>: View {
           Text(.commonContinue)
             .font(.tidexLabelStrong)
             .foregroundColor(.tidexTextOnBrand)
+            .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.xs)
             .frame(minHeight: 44)
@@ -84,7 +123,7 @@ struct AccordionSectionView<Content: View>: View {
     }
     .padding(.horizontal, Spacing.md)
     .padding(.bottom, Spacing.md)
-    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
   }
 }
 

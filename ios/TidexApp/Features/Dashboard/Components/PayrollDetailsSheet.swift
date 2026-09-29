@@ -23,6 +23,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
   @Environment(\.dismiss) private var dismiss  // swiftlint:disable:this explicit_type_interface
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
   @State private var expandedSupplementJobIds: Set<String> = []
   @State private var expandedPostDeductionJobIds: Set<String> = []
   @State private var expandedAdjustmentSectionIds: Set<String> = []
@@ -248,30 +250,38 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
   private var workplaceDivider: some View {
     RoundedRectangle(cornerRadius: 1)
-      .fill(Color.tidexBorder.opacity(0.85))  // swiftlint:disable:this no_magic_numbers
+      .fill(Color.tidexBorder)
       .frame(height: 2)  // swiftlint:disable:this no_magic_numbers
       .padding(.vertical, Spacing.xs)
   }
 
   @ViewBuilder
-  private func jobBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {  // swiftlint:disable:this function_body_length line_length
+  private func jobBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length
     VStack(spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
-      HStack(spacing: Spacing.xs) {
+      let headerLayout =  // swiftlint:disable:this explicit_type_interface
+        dynamicTypeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+        : AnyLayout(HStackLayout(spacing: Spacing.xs))
+      headerLayout {
         WorkplaceNameText(
           name: breakdown.title,
           colorHex: breakdown.colorHex,
           font: .tidexBodyMedium,
           fallbackBadgeColor: .tidexBlue,
+          lineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 1,
           badgeHorizontalPadding: Spacing.xs,
           badgeVerticalPadding: 1
         )
+        .accessibilityAddTraits(.isHeader)
 
-        Spacer()
+        if !dynamicTypeSize.isAccessibilitySize {
+          Spacer()
+        }
 
         Text(ShiftCardFormatter.dateParts(for: breakdown.payoutDate).dayMonth)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextMuted)
-          .lineLimit(1)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
       }
 
       if let periodText = earningsPeriodText(for: breakdown) {
@@ -286,6 +296,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         label: String(localized: .shiftsBasePay),
         value: formatCurrency(breakdown.basePay, currency: breakdown.currency)
       )
+      .accessibilityElement(children: .combine)
 
       if breakdown.supplementPay > 0 {
         supplementBreakdownSection(breakdown)
@@ -313,6 +324,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           label: String(localized: .dashboardPayrollDetailsEstimatedTax),
           value: "−\(formatCurrency(tax, currency: breakdown.currency))"
         )
+        .accessibilityElement(children: .combine)
       }
 
       if breakdown.taxEnabled, !directPayoutAdjustments(for: breakdown).isEmpty {
@@ -334,6 +346,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         value: formatCurrency(displayAmount(for: breakdown), currency: breakdown.currency),
         isHighlighted: true
       )
+      .accessibilityElement(children: .combine)
 
       if !breakdown.taxEnabled {
         Text(.settingsPayReviewTaxOff)
@@ -365,7 +378,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
       .accessibilityIdentifier("payroll-details.pay-settings")
     }
   }
@@ -381,7 +394,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       let isExpanded = expandedAdjustmentSectionIds.contains(sectionId)  // swiftlint:disable:this explicit_type_interface line_length
 
       Button {
-        withAnimation(.easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
           if isExpanded {
             expandedAdjustmentSectionIds.remove(sectionId)
           } else {
@@ -397,19 +410,19 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         )
       }
       .buttonStyle(.plain)
+      .accessibilityValue(expansionValue(isExpanded))
 
       if isExpanded {
         ForEach(adjustments) { adjustment in
-          adjustmentCard(adjustment, currency: breakdown.currency)  // swiftlint:disable:this accessibility_trait_for_button line_length
-            .onTapGesture {
-              adjustmentFormContext = PayrollAdjustmentFormContext(
-                breakdown: breakdown,
-                jobOptions: displayedBreakdowns.map {
-                  PayrollAdjustmentJobOption(id: $0.id, title: $0.title)  // swiftlint:disable:this anonymous_argument_in_multiline_closure line_length
-                },
-                adjustment: adjustment
-              )
-            }
+          adjustmentCard(adjustment, currency: breakdown.currency) {
+            adjustmentFormContext = PayrollAdjustmentFormContext(
+              breakdown: breakdown,
+              jobOptions: displayedBreakdowns.map {
+                PayrollAdjustmentJobOption(id: $0.id, title: $0.title)  // swiftlint:disable:this anonymous_argument_in_multiline_closure line_length
+              },
+              adjustment: adjustment
+            )
+          }
         }
 
         if showsAddButton {
@@ -423,8 +436,9 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
             )
           } label: {
             HStack(spacing: Spacing.xxxs) {
-              Image(systemName: "plus")  // swiftlint:disable:this accessibility_label_for_image
+              Image(systemName: "plus")
                 .font(.tidexFootnote)
+                .accessibilityHidden(true)
               Text(.dashboardPayrollDetailsAddAdjustment)
                 .font(.tidexLabel)
             }
@@ -479,10 +493,11 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
-      Image(systemName: "chevron.down")  // swiftlint:disable:this accessibility_label_for_image
+      Image(systemName: "chevron.down")
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
         .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
+        .accessibilityHidden(true)
 
       Spacer()
 
@@ -491,6 +506,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .foregroundColor(.tidexTextPrimary)
     }
     .contentShape(Rectangle())
+    .accessibilityElement(children: .combine)
   }
 
   private func supplementBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {
@@ -501,7 +517,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       if canExpand {
         Button {
-          withAnimation(.easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
+          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
             if isExpanded {
               expandedSupplementJobIds.remove(breakdown.id)
             } else {
@@ -512,6 +528,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           supplementTotalRow(breakdown, showsChevron: true, isExpanded: isExpanded)
         }
         .buttonStyle(.plain)
+        .accessibilityValue(expansionValue(isExpanded))
         .accessibilityIdentifier("payroll-details.supplements")
       } else {
         supplementTotalRow(breakdown, showsChevron: false, isExpanded: false)
@@ -539,10 +556,11 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       .foregroundColor(.tidexTextSecondary)
 
       if showsChevron {
-        Image(systemName: "chevron.down")  // swiftlint:disable:this accessibility_label_for_image
+        Image(systemName: "chevron.down")
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
           .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
+          .accessibilityHidden(true)
       }
 
       Spacer()
@@ -552,6 +570,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .foregroundColor(.tidexTextPrimary)
     }
     .contentShape(Rectangle())
+    .accessibilityElement(children: .combine)
   }
 
   private func supplementBreakdownCard(
@@ -576,7 +595,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       if canExpand {
         Button {
-          withAnimation(.easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
+          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
             if isExpanded {
               expandedPostDeductionJobIds.remove(breakdown.id)
             } else {
@@ -587,6 +606,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           postDeductionTotalRow(breakdown, showsChevron: true, isExpanded: isExpanded)
         }
         .buttonStyle(.plain)
+        .accessibilityValue(expansionValue(isExpanded))
       } else {
         postDeductionTotalRow(breakdown, showsChevron: false, isExpanded: false)
       }
@@ -610,10 +630,11 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .foregroundColor(.tidexTextSecondary)
 
       if showsChevron {
-        Image(systemName: "chevron.down")  // swiftlint:disable:this accessibility_label_for_image
+        Image(systemName: "chevron.down")
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
           .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
+          .accessibilityHidden(true)
       }
 
       Spacer()
@@ -623,6 +644,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .foregroundColor(.tidexTextPrimary)
     }
     .contentShape(Rectangle())
+    .accessibilityElement(children: .combine)
   }
 
   @ViewBuilder
@@ -664,31 +686,52 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     }
   }
 
-  private func adjustmentCard(_ adjustment: PayrollAdjustment, currency: String) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      EarningsBreakdownDetailCard {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
-          Text(adjustmentSubtitle(adjustment))
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextPrimary)
-            .lineLimit(1)
+  private func expansionValue(_ isExpanded: Bool) -> Text {
+    isExpanded ? Text(.dashboardAccessibilityExpanded) : Text(.dashboardAccessibilityCollapsed)
+  }
 
-          Spacer(minLength: Spacing.sm)
+  private func adjustmentCard(
+    _ adjustment: PayrollAdjustment,
+    currency: String,
+    onEdit: @escaping () -> Void
+  ) -> some View {
+    let isLargeText = dynamicTypeSize.isAccessibilitySize  // swiftlint:disable:this explicit_type_interface
+    let headerLayout =  // swiftlint:disable:this explicit_type_interface
+      isLargeText
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: Spacing.sm))
+    return VStack(alignment: .leading, spacing: Spacing.xs) {
+      Button(action: onEdit) {
+        EarningsBreakdownDetailCard {
+          headerLayout {
+            Text(adjustmentSubtitle(adjustment))
+              .font(.tidexLabelStrong)
+              .foregroundColor(.tidexTextPrimary)
+              .lineLimit(isLargeText ? nil : 1)
 
-          Text(formatCurrency(adjustment.amount, currency: currency))
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextPrimary)
-            .lineLimit(1)
-            .layoutPriority(1)
-        }
+            if !isLargeText {
+              Spacer(minLength: Spacing.sm)
+            }
 
-        Text(adjustment.description)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-          .multilineTextAlignment(.leading)
-          .lineLimit(3)  // swiftlint:disable:this no_magic_numbers
+            Text(formatCurrency(adjustment.amount, currency: currency))
+              .font(.tidexLabelStrong)
+              .foregroundColor(.tidexTextPrimary)
+              .lineLimit(isLargeText ? nil : 1)
+              .layoutPriority(1)
+          }
           .frame(maxWidth: .infinity, alignment: .leading)
+
+          Text(adjustment.description)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
+            .multilineTextAlignment(.leading)
+            .lineLimit(isLargeText ? nil : 3)  // swiftlint:disable:this no_magic_numbers
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .contentShape(Rectangle())
       }
+      .buttonStyle(.plain)
+      .accessibilityHint(Text(.dashboardPayrollDetailsEditAdjustment))
 
       curatedAdjustmentLink(adjustment)
     }
@@ -728,7 +771,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   private func curatedAdjustmentText(_ text: String) -> some View {
     Text(text)
       .font(.tidexFootnote)
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
       .multilineTextAlignment(.leading)
       .frame(maxWidth: .infinity, alignment: .leading)
       .fixedSize(horizontal: false, vertical: true)
@@ -748,6 +791,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       valueColor: valueColor,
       isHighlighted: isHighlighted
     )
+    .accessibilityElement(children: .combine)
   }
 
   private func displayAmount(for breakdown: PayrollCardJobBreakdown) -> Double {
@@ -839,6 +883,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .font(.tidexLabel)
         .foregroundColor(.tidexTextPrimary)
     }
+    .accessibilityElement(children: .combine)
   }
 
   private func formatHoursValue(_ hours: Double) -> String {
@@ -897,10 +942,11 @@ private struct PayrollAdjustmentCuratedSheet: View {
             Link(destination: linkURL) {
               HStack(spacing: Spacing.xxs) {
                 Text(displayLinkTitle)
-                  .foregroundColor(.tidexBlue)
-                Image(systemName: "arrow.up.right")  // swiftlint:disable:this accessibility_label_for_image
+                  .foregroundColor(.tidexBlueText)
+                Image(systemName: "arrow.up.right")
                   .font(.tidexFootnote)
                   .foregroundColor(.tidexTextPrimary)
+                  .accessibilityHidden(true)
               }
               .font(.tidexLabel)
               .padding(.vertical, Spacing.xs)
@@ -1091,6 +1137,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
             Section {
               Text(errorMessage)
                 .foregroundColor(.tidexError)
+                .announcesToVoiceOver(errorMessage)
             }
           }
 
@@ -1223,14 +1270,16 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
           .foregroundColor(.tidexTextPrimary)
         Spacer()
         if category == option {
-          Image(systemName: "checkmark")  // swiftlint:disable:this accessibility_label_for_image
+          Image(systemName: "checkmark")
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
+            .accessibilityHidden(true)
         }
       }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(category == option ? .isSelected : [])
   }
 
   private func label(for taxTreatment: PayrollAdjustmentTaxTreatment) -> String {
@@ -1270,14 +1319,16 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
         Spacer()
 
         if taxTreatment == option {
-          Image(systemName: "checkmark")  // swiftlint:disable:this accessibility_label_for_image
+          Image(systemName: "checkmark")
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
+            .accessibilityHidden(true)
         }
       }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(taxTreatment == option ? .isSelected : [])
   }
 
   private func normalizedNote() -> String? {

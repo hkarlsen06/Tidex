@@ -46,6 +46,9 @@ struct FriendsThreadView: View {
   @Environment(\.openURL) private var openURL
   @Environment(\.dismiss) private var dismiss
   @Environment(\.isSceneCaptured) private var isSceneCaptured
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @ScaledMetric(relativeTo: .body) private var chevronIconSize: CGFloat = 17
+  @ScaledMetric(relativeTo: .title2) private var emptyStateIconSize: CGFloat = 26
 
   private let route: FriendChatRoute
   @State private var viewModel: FriendsThreadViewModel
@@ -229,6 +232,12 @@ struct FriendsThreadView: View {
           )
         }
       }
+      .onChange(of: viewModel.counterpartIsTyping) { _, isTyping in
+        guard isTyping else { return }
+        AccessibilityNotification.Announcement(
+          String(localized: .friendsAccessibilityTyping(firstName(from: counterpartDisplayName)))
+        ).post()
+      }
       .onChange(of: isPinnedToBottom) { _, newValue in
         guard newValue else { return }
         unreadIncomingCount = 0
@@ -332,9 +341,10 @@ struct FriendsThreadView: View {
             .onTapGesture {
               dismissScreenshotBubble()
             }
+            .accessibilityAddTraits(.isButton)
             .transition(
               .asymmetric(
-                insertion: .scale.combined(with: .opacity),
+                insertion: reduceMotion ? .opacity : .scale.combined(with: .opacity),
                 removal: .opacity
               )
             )
@@ -653,10 +663,12 @@ struct FriendsThreadView: View {
         }
         .padding(.top, Spacing.xs)
         .padding(.bottom, Spacing.xs)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .transition(
+          MotionTokens.mirroredMoveTransition(edge: .bottom, reduceMotion: reduceMotion)
+        )
       }
-      .animation(.spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
-      .animation(.spring(duration: 0.28, bounce: 0.18), value: isPinnedToBottom)
+      .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
+      .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: isPinnedToBottom)
     }
   }
 
@@ -671,6 +683,7 @@ struct FriendsThreadView: View {
   {
     if exyteMessage.id == FriendsThreadExyteMessageFactory.typingIndicatorMessageID {
       FriendsChatTypingRow(
+        counterpartName: firstName(from: counterpartDisplayName),
         counterpartAvatarUrl: counterpartAvatarUrl,
         counterpartInitials: FriendsChatMessageGrouping.initials(from: counterpartDisplayName),
         joinsPrevious: projection.typingIndicatorJoinsPrevious
@@ -731,9 +744,39 @@ struct FriendsThreadView: View {
       onOpenShiftSnapshot: { openShiftSnapshot($0) },
       onReplySwipe: canReply(to: message) ? { viewModel.setReplyTarget(message) } : nil,
       timestampRevealOffset: $timestampRevealOffset,
-      messageFrame: messageFrame
+      messageFrame: messageFrame,
+      accessibilitySenderName: rowProjection.isCurrentUser
+        ? String(localized: .friendsChatPreviewYou) : firstName(from: senderName),
+      accessibilityActions: messageAccessibilityActions(for: exyteMessage, message: message)
     )
     .id(exyteMessage.id)
+  }
+
+  /// The long-press menu and the quick reactions as VoiceOver and Voice Control actions.
+  private func messageAccessibilityActions(
+    for exyteMessage: ExyteChat.Message,
+    message: FriendMessage
+  ) -> [FriendsChatAccessibilityAction] {
+    var actions = FriendsThreadMessageMenuAction.menuItems(for: exyteMessage)
+      .filter { $0 != .reply || canReply(to: message) }
+      .map { menuAction in
+        FriendsChatAccessibilityAction(name: menuAction.title()) {
+          handleMessageMenuAction(menuAction, { _, _ in }, exyteMessage)
+        }
+      }
+
+    if message.canReact {
+      for emoji in reactionPaletteStore.displayEmojis {
+        actions.append(
+          FriendsChatAccessibilityAction(
+            name: String(localized: .friendsAccessibilityReactWith(emoji))
+          ) {
+            handleReactionSelection(emoji, forMessageId: message.id)
+          })
+      }
+    }
+
+    return actions
   }
 
   private func retry(_ message: FriendMessage) {
@@ -798,7 +841,9 @@ struct FriendsThreadView: View {
     handleBackgroundTimestampRevealChanged(value)
 
     guard timestampRevealOffset != 0 else { return }
-    withAnimation(.easeOut(duration: Self.timestampRevealResetAnimationDuration)) {
+    withAnimation(
+      reduceMotion ? nil : .easeOut(duration: Self.timestampRevealResetAnimationDuration)
+    ) {
       timestampRevealOffset = 0
     }
   }
@@ -838,8 +883,9 @@ struct FriendsThreadView: View {
   private var emptyState: some View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "message")
-        .font(.system(size: 26, weight: .semibold))
-        .foregroundColor(.tidexBlue)
+        .font(.system(size: emptyStateIconSize, weight: .semibold))
+        .foregroundColor(.tidexBlueText)
+        .accessibilityHidden(true)
         .padding(14)
         .background(
           Circle()
@@ -891,23 +937,25 @@ struct FriendsThreadView: View {
     } label: {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "chevron.down")
-          .font(.system(size: 17, weight: .semibold))
-          .frame(width: 20, height: 20)
+          .font(.system(size: chevronIconSize, weight: .semibold))
+          .frame(width: chevronIconSize + 3, height: chevronIconSize + 3)
           .accessibilityLabel(Text(.friendsChatScrollToLatest))
 
         if showsNewMessagesPill {
           Text(.friendsChatNewMessages)
             .font(.tidexFootnoteMedium)
-            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .trailing)))
+            .transition(
+              reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95, anchor: .trailing))
+            )
 
           if unreadIncomingCount > 0 {
             Text("\(min(unreadIncomingCount, 99))")
               .font(.tidexMicro.weight(.semibold))
-              .foregroundColor(.white)
+              .foregroundColor(.tidexTextOnBrand)
               .padding(.horizontal, 6)
               .padding(.vertical, 3)
               .background(Capsule().fill(Color.tidexBrandPrimary))
-              .transition(.opacity.combined(with: .scale(scale: 0.9)))
+              .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9)))
           }
         }
       }
@@ -918,7 +966,7 @@ struct FriendsThreadView: View {
       .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.12), interactive: true)
     }
     .buttonStyle(.plain)
-    .animation(.spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
+    .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
     .accessibilityIdentifier(AccessibilityID.unreadPill)
   }
 
@@ -1006,13 +1054,13 @@ struct FriendsThreadView: View {
     ChatTheme(
       colors: .init(
         mainBG: .clear,
-        mainTint: .tidexBlue,
+        mainTint: .tidexBlueText,
         mainText: .tidexTextPrimary,
         mainCaptionText: .tidexTextSecondary,
         messageMyBG: .tidexBrandPrimary,
-        messageReadStatus: .tidexBlue,
+        messageReadStatus: .tidexBlueText,
         messageMyText: .tidexTextOnBrand,
-        messageMyTimeText: .tidexTextOnBrand.opacity(0.72),
+        messageMyTimeText: .tidexTextOnBrand,
         messageFriendBG: .tidexSurfacePrimary,
         messageFriendText: .tidexTextPrimary,
         messageFriendTimeText: .tidexTextMuted,
@@ -1157,7 +1205,7 @@ struct FriendsThreadView: View {
       return
 
     case .appendedIncoming:
-      break
+      announceLatestIncomingMessage()
     }
 
     let appendOutcome = FriendsThreadIncomingAppendResolver.resolve(
@@ -1180,6 +1228,20 @@ struct FriendsThreadView: View {
     Task {
       await viewModel.markVisibleMessagesReadIfNeeded()
     }
+  }
+
+  /// Reads a new message aloud, since VoiceOver focus stays where the user left it.
+  private func announceLatestIncomingMessage() {
+    guard let latest = viewModel.messages.last, latest.senderUserId != viewModel.viewerUserId
+    else {
+      return
+    }
+
+    let header = String(
+      localized: .friendsAccessibilityNewMessage(firstName(from: counterpartDisplayName)))
+    AccessibilityNotification.Announcement(
+      FriendsChatMessageAccessibility.join([header, latest.previewText])
+    ).post()
   }
 
   private func requestScrollToBottom(presentedMessageID: String? = nil) {
@@ -1374,7 +1436,7 @@ struct FriendsThreadView: View {
     #else
       showScreenshotNotifiedIcon = false
 
-      withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+      withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7)) {
         showScreenshotBubble = true
       }
 
@@ -1382,12 +1444,14 @@ struct FriendsThreadView: View {
         try await ScreenshotNotificationService.shared.reportChatScreenshot(
           threadId: viewModel.route.threadId
         )
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.6)) {
           showScreenshotNotifiedIcon = true
         }
         Haptics.play(.success)
         try? await Task.sleep(for: .seconds(0.3))
-        screenshotBellShakeTrigger.toggle()
+        if !reduceMotion {
+          screenshotBellShakeTrigger.toggle()
+        }
       } catch {
         // Keep the bubble visible, but don't interrupt chat on notification failure.
       }
@@ -1527,8 +1591,10 @@ struct FriendsThreadView: View {
 
 private struct FriendsChatTypingRow: View {
   private static let avatarSize = AvatarView.Size.small
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var dotScales: [Bool] = [false, false, false]
 
+  let counterpartName: String
   let counterpartAvatarUrl: String?
   let counterpartInitials: String
   let joinsPrevious: Bool
@@ -1569,12 +1635,13 @@ private struct FriendsChatTypingRow: View {
               Circle()
                 .fill(Color.tidexTextMuted)
                 .frame(width: 7, height: 7)
-                .scaleEffect(dotScales[index] ? 1.0 : 0.5)
-                .opacity(dotScales[index] ? 1.0 : 0.4)
+                .scaleEffect(reduceMotion || dotScales[index] ? 1.0 : 0.5)
+                .opacity(reduceMotion || dotScales[index] ? 1.0 : 0.4)
             }
           }
           .padding(.vertical, Spacing.xxxs)
           .onAppear {
+            guard !reduceMotion else { return }
             for index in 0..<3 {
               withAnimation(
                 .easeInOut(duration: 0.5)
@@ -1592,6 +1659,8 @@ private struct FriendsChatTypingRow: View {
     }
     .padding(.top, Spacing.xxs)
     .padding(.bottom, Spacing.xs)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(.friendsAccessibilityTyping(counterpartName)))
   }
 }
 
@@ -1656,6 +1725,8 @@ final class FriendsChatReactionPaletteStore {
 private struct FriendsThreadDateSeparator: View {
   let date: Date
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   var body: some View {
     HStack(spacing: Spacing.sm) {
       Rectangle()
@@ -1665,7 +1736,9 @@ private struct FriendsThreadDateSeparator: View {
       Text(separatorText)
         .font(.tidexMicro)
         .foregroundColor(.tidexTextMuted)
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
+        .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       Rectangle()
         .fill(Color.tidexSeparator)

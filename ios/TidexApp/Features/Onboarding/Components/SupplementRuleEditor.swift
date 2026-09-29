@@ -8,6 +8,8 @@ struct SupplementRuleEditor: View {
   let onSave: (OnboardingSupplementRule) -> Void
   let onCancel: () -> Void
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var editedRule: OnboardingSupplementRule
   @State private var currentStep: EditorStep = .days
   @State private var hasSelectedType: Bool = false
@@ -118,26 +120,42 @@ struct SupplementRuleEditor: View {
         // Time range (visible after days selected)
         if currentStep >= .time {
           timeSection
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
 
         // Type toggle (visible after times set)
         if currentStep >= .type {
           typeSection
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
 
         // Value input (visible after type selected)
         if currentStep >= .value {
           valueSection
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
       }
       .padding(Spacing.lg)
       .padding(.bottom, Spacing.bottomScrollMargin)
     }
     .frame(minHeight: minHeight)
-    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: currentStep)
+    .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8), value: currentStep)
+    .onChange(of: currentStep) { _, step in
+      // New sections appear below the focused control, so tell VoiceOver which one was added.
+      switch step {
+      case .days:
+        break
+
+      case .time:
+        AccessibilityNotification.Announcement(String(localized: .onboardingSupplementsTimeLabel)).post()
+
+      case .type:
+        AccessibilityNotification.Announcement(String(localized: .onboardingSupplementsTypeLabel)).post()
+
+      case .value:
+        AccessibilityNotification.Announcement(String(localized: .onboardingSupplementsValueLabel)).post()
+      }
+    }
   }
 
   /// Save button at bottom
@@ -205,7 +223,7 @@ struct SupplementRuleEditor: View {
     guard canAdvanceToNextStep else { return }
 
     Haptics.play(.light)
-    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+    withAnimation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.85)) {
       switch currentStep {
       case .days:
         // Pre-filled default times are valid, so allow moving straight to type.
@@ -254,7 +272,7 @@ struct SupplementRuleEditor: View {
           isSelected: hasSelectedType && editedRule.type == .fixed,
           action: {
             Haptics.play(.light)
-            withAnimation {
+            withAnimation(reduceMotion ? nil : .default) {
               editedRule.type = .fixed
               hasSelectedType = true
               if currentStep == .type {
@@ -270,7 +288,7 @@ struct SupplementRuleEditor: View {
           isSelected: hasSelectedType && editedRule.type == .percent,
           action: {
             Haptics.play(.light)
-            withAnimation {
+            withAnimation(reduceMotion ? nil : .default) {
               editedRule.type = .percent
               hasSelectedType = true
               if currentStep == .type {
@@ -294,34 +312,10 @@ extension SupplementRuleEditor {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: Spacing.xs) {
-        ForEach(1...7, id: \.self) { day in
-          DayButton(
-            day: day,
-            isSelected: editedRule.days.contains(day),
-            action: {
-              Haptics.play(.light)
-              withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                if editedRule.days.contains(day) {
-                  editedRule.days.remove(day)
-                } else {
-                  editedRule.days.insert(day)
-                }
-
-                // Advance to time step if we have at least one day
-                if !editedRule.days.isEmpty, currentStep == .days {
-                  withAnimation {
-                    currentStep = .time
-                  }
-                }
-              }
-            }
-          )
-        }
-      }
+      dayButtonRow
 
       // Quick select buttons
-      HStack(spacing: Spacing.xs) {
+      quickSelectLayout {
         QuickSelectButton(title: String(localized: .onboardingSupplementsWeekdays)) {
           editedRule.days = Set([1, 2, 3, 4, 5])
           advanceIfNeeded()
@@ -340,9 +334,60 @@ extension SupplementRuleEditor {
     }
   }
 
+  /// The seven day buttons sit in one row, and wrap into a grid when large text makes them too wide.
+  @ViewBuilder
+  private var dayButtonRow: some View {
+    if dynamicTypeSize.isAccessibilitySize {
+      LazyVGrid(
+        columns: [GridItem(.adaptive(minimum: 44), spacing: Spacing.xs)],
+        alignment: .leading,
+        spacing: Spacing.xs
+      ) {
+        dayButtons
+      }
+    } else {
+      HStack(spacing: Spacing.xs) {
+        dayButtons
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var dayButtons: some View {
+    ForEach(1...7, id: \.self) { day in
+      DayButton(
+        day: day,
+        isSelected: editedRule.days.contains(day),
+        action: {
+          Haptics.play(.light)
+          withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.8)) {
+            if editedRule.days.contains(day) {
+              editedRule.days.remove(day)
+            } else {
+              editedRule.days.insert(day)
+            }
+
+            // Advance to time step if we have at least one day
+            if !editedRule.days.isEmpty, currentStep == .days {
+              withAnimation(reduceMotion ? nil : .default) {
+                currentStep = .time
+              }
+            }
+          }
+        }
+      )
+    }
+  }
+
+  private var quickSelectLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xs))
+  }
+
   private func advanceIfNeeded() {
     if currentStep == .days, !editedRule.days.isEmpty {
-      withAnimation {
+      withAnimation(reduceMotion ? nil : .default) {
         currentStep = .time
       }
     }
@@ -395,7 +440,7 @@ extension SupplementRuleEditor {
       !editedRule.toTime.isEmpty
     else { return }
 
-    withAnimation {
+    withAnimation(reduceMotion ? nil : .default) {
       currentStep = .type
     }
   }

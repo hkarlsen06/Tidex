@@ -5,6 +5,7 @@ import SwiftUI
 /// Section for configuring tax deduction settings
 struct TaxDeductionSection: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @ScaledMetric(relativeTo: .subheadline) private var presetMinimumWidth: CGFloat = 52
   @ScaledMetric(relativeTo: .headline) private var percentageInputWidth: CGFloat = 64
   @Binding var enabled: Bool
@@ -88,7 +89,7 @@ struct TaxDeductionSection: View {
 
   /// Slider with value display
   private var percentageSliderRow: some View {
-    HStack(spacing: Spacing.sm) {
+    sliderRowLayout {
       // Tappable value display
       if showingPercentageInput {
         percentageTextField
@@ -98,12 +99,25 @@ struct TaxDeductionSection: View {
 
       Slider(value: $percentage, in: 0...50, step: 1)
         .tint(.tidexBlue)
-        .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
+        // A different name from the value button, so Voice Control can tell them apart.
+        .accessibilityLabel(Text(.settingsAccessibilityTaxPercentageSlider))
         .accessibilityValue(FormatterCache.percentagePoints(percentage))
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+  }
+
+  private var sliderRowLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.sm))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+  }
+
+  /// The number as it is drawn on screen, for Voice Control.
+  private var visiblePercentageLabel: String {
+    let number = percentage.formatted(.number.precision(.fractionLength(0...1)).locale(.appLocale))
+    return "\(number)%"
   }
 
   private var percentageTextField: some View {
@@ -123,7 +137,7 @@ struct TaxDeductionSection: View {
       format: .number.precision(.fractionLength(0...1)).locale(.appLocale)
     )
     .font(.tidexTitle2)
-    .foregroundColor(.tidexBlue)
+    .foregroundColor(.tidexBlueText)
     .keyboardType(.decimalPad)
     .multilineTextAlignment(.trailing)
     .focused($isPercentageInputFocused)
@@ -136,7 +150,7 @@ struct TaxDeductionSection: View {
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-        .stroke(Color.tidexBlue, lineWidth: 1)
+        .stroke(Color.tidexBlueText, lineWidth: 1)
     )
     .onChange(of: percentage) { _, newValue in
       let clamped = min(max(newValue, 0), 100)
@@ -171,8 +185,8 @@ struct TaxDeductionSection: View {
           percentage, format: .number.precision(.fractionLength(0...1)).locale(.appLocale)
         )
         .font(.tidexTitle2)
-        .foregroundColor(.tidexBlue)
-        .contentTransition(.numericText())
+        .foregroundColor(.tidexBlueText)
+        .contentTransition(reduceMotion ? .identity : .numericText())
 
         Text("%")
           .font(.tidexLabel)
@@ -184,6 +198,8 @@ struct TaxDeductionSection: View {
     .buttonStyle(.plain)
     .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
     .accessibilityValue(FormatterCache.percentagePoints(percentage))
+    // The visible text is the number, so Voice Control users can say what they see.
+    .accessibilityInputLabels([Text(visiblePercentageLabel), Text(.settingsPayEditorTaxPercentage)])
   }
 }
 
@@ -196,7 +212,14 @@ private struct QuickPercentageButton: View {
 
   var body: some View {
     Button(action: action) {
-      Text("\(value)%")
+      HStack(spacing: Spacing.micro) {
+        if isSelected {
+          Image(systemName: "checkmark")
+            .font(.tidexMicro.weight(.bold))
+            .accessibilityHidden(true)
+        }
+        Text("\(value)%")
+      }
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
         .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
         .frame(maxWidth: .infinity)

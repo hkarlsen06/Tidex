@@ -5,6 +5,7 @@ import SwiftUI
 /// Password, connected accounts, passkeys and two-factor authentication
 struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var viewModel = SecuritySettingsViewModel()
   /// Connected account waiting for the user to confirm the disconnect
   @State private var pendingDisconnect: ConnectedAccount?
@@ -149,7 +150,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       }
     } icon: {
       Image(systemName: icon)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
     }
   }
 
@@ -160,18 +161,25 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       .accessibilityHidden(true)
   }
 
+  /// Text and the trailing control share a line at normal sizes and stack at accessibility sizes.
+  private var rowLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+  }
+
   private func addRow(title: String, isLoading: Bool, action: @escaping () -> Void) -> some View {
     Button(action: action) {
       Label {
         Text(title)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       } icon: {
         if isLoading {
           ProgressView()
             .controlSize(.small)
         } else {
           Image(systemName: "plus.circle.fill")
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
         }
       }
     }
@@ -190,7 +198,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       Button {
         viewModel.showPasswordForm = true
       } label: {
-        HStack(spacing: Spacing.sm) {
+        rowLayout {
           detailLabel(
             icon: "lock.fill",
             title: String(localized: .securityPasswordTitle),
@@ -199,12 +207,14 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
               : String(localized: .securityPasswordNoPassword)
           )
 
-          Spacer(minLength: Spacing.sm)
+          if !dynamicTypeSize.isAccessibilitySize {
+            Spacer(minLength: Spacing.sm)
+          }
 
           if !viewModel.hasPassword {
             Text(.securityPasswordSet)
               .font(.tidexLabel)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexBlueText)
           }
 
           disclosureChevron
@@ -292,7 +302,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   /// Tapping connects an account, or asks to disconnect a connected one.
   /// The last remaining sign-in method is shown without an action.
   @ViewBuilder
-  private func connectionRow(  // swiftlint:disable:this function_parameter_count
+  private func connectionRow(  // swiftlint:disable:this function_parameter_count function_body_length
     id: String,
     icon: String,
     title: String,
@@ -303,14 +313,16 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     onConnect: (() -> Void)? = nil
   ) -> some View {
     let isBusy = viewModel.isConnectingProvider && busyProviderId == id
-    let content = HStack(spacing: Spacing.sm) {
+    let content = rowLayout {
       detailLabel(
         icon: icon,
         title: title,
         detail: isConnected ? connectedText : notConnectedText
       )
 
-      Spacer(minLength: Spacing.sm)
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer(minLength: Spacing.sm)
+      }
 
       if isBusy {
         ProgressView()
@@ -322,7 +334,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       } else {
         Text(.securityConnectionsConnect)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
     }
     .contentShape(Rectangle())
@@ -342,6 +354,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
         content
       }
       .disabled(viewModel.isConnectingProvider || viewModel.isOfflineLimited)
+      .accessibilityHint(isConnected ? Text(.settingsAccessibilityDisconnectHint) : Text(verbatim: ""))
     }
   }
 
@@ -376,14 +389,16 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   }
 
   private func passkeyRow(_ passkey: PasskeyAuthService.Passkey) -> some View {
-    HStack(spacing: Spacing.sm) {
+    rowLayout {
       detailLabel(
         icon: "person.badge.key.fill",
         title: passkey.displayName,
         detail: String(localized: .securityMfaAddedOn(passkey.formattedCreatedAt))
       )
 
-      Spacer(minLength: Spacing.sm)
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer(minLength: Spacing.sm)
+      }
 
       if viewModel.isRenamingPasskey, viewModel.passkeyToRename?.id == passkey.id {
         ProgressView()
@@ -500,6 +515,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     if let error = viewModel.errorMessage {
       Text(error)
         .foregroundColor(.tidexError)
+        .announcesToVoiceOver(error)
     } else {
       Text(text)
     }
@@ -509,6 +525,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   private func codeField(_ placeholder: String, text: Binding<String>, maxLength: Int) -> some View
   {
     TextField(placeholder, text: text)
+      .accessibilityLabel(Text(.settingsAccessibilityVerificationCode))
       .font(.tidexMonoTitle)
       .multilineTextAlignment(.center)
       .keyboardType(.numberPad)
@@ -638,14 +655,16 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
         Text(secret)
           .font(.tidexMonoCaptionRegular)
           .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
           .truncationMode(.middle)
           .textSelection(.enabled)
+          .speechSpellsOutCharacters()
 
         Spacer(minLength: Spacing.sm)
 
         Button {
           UIPasteboard.general.string = secret
+          AccessibilityNotification.Announcement(String(localized: .settingsAccessibilityCopied)).post()
         } label: {
           Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
             .labelStyle(.iconOnly)
@@ -688,12 +707,12 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
         VStack(spacing: Spacing.xs) {
           Image(systemName: "qrcode")
             .font(.system(size: 60))
-            .foregroundColor(.tidexTextMuted)
+            .foregroundColor(.tidexLightTextPrimary)
             .accessibilityHidden(true)
 
           Text(.securityMfaUseSecretBelow)
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundColor(.tidexLightTextPrimary)
             .multilineTextAlignment(.center)
         }
       }
@@ -703,7 +722,8 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   private func qrCodeSection(_ totpUri: String) -> some View {
     Section {
       qrCodeImage(totpUri)
-        .frame(width: 184, height: 184)
+        .frame(width: 184)
+        .frame(minHeight: 184)
         .padding(Spacing.xs)
         // QR scanners need dark modules on a light background in both appearances.
         .background(Color.white, in: RoundedRectangle(cornerRadius: CornerRadius.lg))

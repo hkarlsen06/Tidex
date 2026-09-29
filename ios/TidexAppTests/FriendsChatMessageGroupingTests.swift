@@ -301,3 +301,40 @@ final class FriendsChatMessageGroupingTests: XCTestCase {
     )
   }
 }
+
+final class FriendsChatMessageAccessibilityTests: XCTestCase {
+  func testJoinSkipsEmptyAndMissingParts() {
+    let label = FriendsChatMessageAccessibility.join(["Anna", nil, "  ", "See you at 9", ""])
+
+    XCTAssertEqual(label, "Anna, See you at 9")
+  }
+
+  func testDetailsLabelKeepsTimeStatusEditedAndReactionsInOrder() {
+    let label = FriendsChatMessageAccessibility.detailsLabel(
+      time: "10:32",
+      status: .read,
+      isEdited: true,
+      reactions: [
+        FriendMessageReaction(emoji: "👍", count: 2, viewerHasReacted: false),
+        FriendMessageReaction(emoji: "❤️", count: 1, viewerHasReacted: true),
+      ]
+    )
+
+    XCTAssertEqual(
+      label,
+      [
+        "10:32",
+        String(localized: .friendsChatStatusRead),
+        String(localized: .friendsChatEdited),
+        String(localized: .friendsAccessibilityReactions("👍 2, ❤️")),
+      ].joined(separator: ", ")
+    )
+  }
+
+  func testDetailsLabelIsJustTheTimeForIncomingMessagesWithoutExtras() {
+    let label = FriendsChatMessageAccessibility.detailsLabel(
+      time: "10:32", status: nil, isEdited: false, reactions: [])
+
+    XCTAssertEqual(label, "10:32")
+  }
+}

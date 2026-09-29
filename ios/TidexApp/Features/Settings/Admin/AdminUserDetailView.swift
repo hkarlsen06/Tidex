@@ -155,14 +155,14 @@ struct AdminUserDetailView: View {
         Button(user.isBanned ? "Unban user" : "Ban user", systemImage: "nosign") {
           confirmBan = true
         }
-        .foregroundStyle(user.isBanned ? Color.tidexBlue : Color.tidexError)
+        .foregroundStyle(user.isBanned ? Color.tidexBlueText : Color.tidexError)
       }
       if canToggleAdmin {
         Button(user.isAdmin ? "Revoke admin" : "Grant admin", systemImage: "shield.lefthalf.filled")
         {
           confirmAdmin = true
         }
-        .foregroundStyle(user.isAdmin ? Color.tidexError : Color.tidexBlue)
+        .foregroundStyle(user.isAdmin ? Color.tidexError : Color.tidexBlueText)
       }
     }
   }

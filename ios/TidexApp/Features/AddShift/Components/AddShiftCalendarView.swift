@@ -58,16 +58,7 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
     let days = daysInMonth()
 
     CalendarMonthGrid(days: days, monthTransitionPhase: monthTransitionPhase) { dayInfo in
-      AddShiftCalendarDayCell(
-        dayInfo: dayInfo,
-        isToday: dayInfo.dateISO == todayISO(),
-        isSelected: dayInfo.dateISO.map { resolvedSelectedDates.contains($0) } ?? false,
-        hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
-        existingHours: dayInfo.dateISO.flatMap { viewModel.existingShiftHours[$0] },
-        previewEarnings: dayInfo.dateISO.flatMap { resolvedPreviewEarnings[$0] },
-        showSelectionCheckmark: showSelectionCheckmark,
-        selectionEmphasis: selectionEmphasis
-      )
+      dayCell(dayInfo)
     }
     .overlay {
       GeometryReader { geometry in
@@ -77,11 +68,7 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
               let dateISO = CalendarDragSelection.dateISO(
                 at: location, gridSize: geometry.size, days: days)
             else { return }
-            if let onToggleDateOverride {
-              onToggleDateOverride(dateISO)
-            } else {
-              viewModel.toggleDate(dateISO)
-            }
+            toggleDate(dateISO)
           },
           // Event ranges use their own tap semantics, so only shift dates support drag selection.
           onDragSelect: onToggleDateOverride != nil
@@ -92,6 +79,66 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
         )
       }
     }
+  }
+
+  private func toggleDate(_ dateISO: String) {
+    if let onToggleDateOverride {
+      onToggleDateOverride(dateISO)
+    } else {
+      viewModel.toggleDate(dateISO)
+    }
+  }
+
+  // MARK: - Day Cell
+
+  private func dayCell(_ dayInfo: CalendarDayInfo) -> some View {
+    let dateISO = dayInfo.dateISO
+    let isToday = dateISO == todayISO()
+    let isSelected = dateISO.map { resolvedSelectedDates.contains($0) } ?? false
+    let hasConflict = dateISO.map { viewModel.conflictDates.contains($0) } ?? false
+    let existingHours = dateISO.flatMap { viewModel.existingShiftHours[$0] }
+    let previewEarnings = dateISO.flatMap { resolvedPreviewEarnings[$0] }
+
+    return AddShiftCalendarDayCell(
+      dayInfo: dayInfo,
+      isToday: isToday,
+      isSelected: isSelected,
+      hasConflict: hasConflict,
+      existingHours: existingHours,
+      previewEarnings: previewEarnings,
+      showSelectionCheckmark: showSelectionCheckmark,
+      selectionEmphasis: selectionEmphasis
+    )
+    // The tap overlay handles pointer taps. VoiceOver and Voice Control use this action instead.
+    .calendarDayAccessibility(isHidden: dateISO == nil || dayInfo.isOutsideMonth) { cell in
+      cell
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+          Text(
+            verbatim: AddShiftCalendarAccessibility.label(
+              dateText: dateISO.flatMap(Self.spokenDate) ?? "",
+              todayText: isToday ? String(localized: .commonToday) : nil,
+              existingShiftText: existingHours.map {
+                "\(String(localized: .shiftsAccessibilityExistingShift)), "
+                  + CalendarGridHelper.timeRangeAccessibilityText(
+                    start: $0.start, end: $0.end, crossesMidnight: $0.crossesMidnight)
+              },
+              earningsText: previewEarnings.map(CalendarGridHelper.earningsAccessibilityText),
+              conflictText: hasConflict ? String(localized: .shiftsAccessibilityConflict) : nil
+            )
+          )
+        )
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction(.default) {
+          guard let dateISO, !dayInfo.isOutsideMonth else { return }
+          toggleDate(dateISO)
+        }
+    }
+  }
+
+  private static func spokenDate(_ dateISO: String) -> String? {
+    Date.fromISODateString(dateISO)?.formatted(
+      .dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
   }
 
   // MARK: - Drag Selection
@@ -222,6 +269,25 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
   }
 }
 
+// MARK: - Accessibility
+
+/// Builds the spoken label for a day in the add-shift calendar.
+enum AddShiftCalendarAccessibility {
+  /// Joins the date with whichever details apply, in the order they are read.
+  static func label(
+    dateText: String,
+    todayText: String?,
+    existingShiftText: String?,
+    earningsText: String?,
+    conflictText: String?
+  ) -> String {
+    [dateText, todayText, existingShiftText, earningsText, conflictText]
+      .compactMap { $0 }
+      .filter { !$0.isEmpty }
+      .joined(separator: ", ")
+  }
+}
+
 // MARK: - Day Cell
 
 /// Add-shift specific calendar day cell that wraps CalendarDayCell
@@ -255,7 +321,8 @@ private struct AddShiftCalendarDayCell: View {
       borderColor: borderColor,
       borderWidth: isSelected ? selectionBorderWidth : 0,
       dayNumberColor: dayNumberColor,
-      showsTodayBadge: isToday && !dayInfo.isOutsideMonth
+      showsTodayBadge: isToday && !dayInfo.isOutsideMonth,
+      marker: hasConflict && !dayInfo.isOutsideMonth ? .conflict : nil
     )
   }
 
@@ -297,7 +364,7 @@ private struct AddShiftCalendarDayCell: View {
     if isSelected, let earnings = previewEarnings {
       return .earningsBreakdown(
         earnings,
-        color: hasConflict ? .tidexWarning : .tidexBlue,
+        color: hasConflict ? .tidexWarning : .tidexBlueText,
         beforeTaxColor: .tidexTextMuted
       )
     }
@@ -317,7 +384,7 @@ private struct AddShiftCalendarDayCell: View {
         // Selected but no preview earnings yet (need times)
         Image(systemName: "checkmark")
           .font(.tidexButton)
-          .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
+          .foregroundColor(hasConflict ? .tidexWarning : .tidexBlueText)
           .padding(.top, Spacing.xs)
       }
 

@@ -16,6 +16,7 @@ struct JobPaySetupSheet: View {
   }
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   let job: Job
   let initialCurrency: String
@@ -75,6 +76,10 @@ struct JobPaySetupSheet: View {
       onboardingData.payrollDay = payrollDay
     }
     .interactiveDismissDisabled(isSaving)
+    // Steps replace each other in place, so tell VoiceOver the screen changed.
+    .onChange(of: step) { _, _ in
+      AccessibilityNotification.ScreenChanged().post()
+    }
     .alert(
       String(localized: .commonError),
       isPresented: Binding(
@@ -150,15 +155,15 @@ struct JobPaySetupSheet: View {
       dismiss()
     }
     .font(.tidexBodyMedium)
-    .foregroundColor(.tidexBlue)
-    .lineLimit(1)
+    .foregroundColor(.tidexBlueText)
+    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
     .frame(minWidth: 44, minHeight: 44)
-    .background(.thinMaterial, in: Capsule())
+    .background(Color.tidexSurfacePrimary, in: Capsule())
     .overlay(
       Capsule()
-        .stroke(Color.tidexBorder.opacity(0.75), lineWidth: 1)
+        .stroke(Color.tidexBorder, lineWidth: 1)
     )
     .contentShape(Capsule())
     .shadow(color: .tidexDarkBackgroundColor.opacity(0.16), radius: 8, x: 0, y: 3)
@@ -174,15 +179,16 @@ struct JobPaySetupSheet: View {
 
       VStack(spacing: Spacing.sm) {
         ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
         Text(.commonLoading)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundColor(.tidexTextPrimary)
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary.opacity(0.9))
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
+    // Keeps VoiceOver on the saving message instead of the controls behind it.
+    .accessibilityAddTraits(.isModal)
   }
 
   private func submit() async {
@@ -248,6 +254,7 @@ private struct JobPayScheduleSetupScreen: View {
                 .padding(.top, Spacing.sm)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .adaptiveContentWidth()
+                .announcesToVoiceOver(saveError)
             }
 
             Spacer()
@@ -267,8 +274,7 @@ private struct JobPayScheduleSetupScreen: View {
         onCancel()
       }
       .font(.tidexBody)
-      .foregroundColor(.tidexBlue)
-      .lineLimit(1)
+      .foregroundColor(.tidexBlueText)
       .frame(minWidth: 44, minHeight: 44, alignment: .leading)
       .contentShape(Rectangle())
       .disabled(isSaving)
@@ -284,13 +290,14 @@ private struct JobPayScheduleSetupScreen: View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "calendar.badge.clock")
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .accessibilityHidden(true)
 
       Text(.settingsPaySetupScheduleTitle)
         .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       WorkplaceNameText(
         name: job.name,

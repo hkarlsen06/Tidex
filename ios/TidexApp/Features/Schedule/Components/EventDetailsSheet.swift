@@ -65,6 +65,7 @@ struct EventDetailsSheet: View {
   var startInEditMode: Bool = false
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   @State private var isEditing = false
   @State private var editedNote = ""
@@ -242,7 +243,7 @@ struct EventDetailsSheet: View {
       if isEditing {
         Button(String(localized: .commonCancel)) {
           resetDraft()
-          withAnimation(.easeInOut(duration: 0.2)) {
+          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
             isEditing = false
           }
         }
@@ -265,14 +266,14 @@ struct EventDetailsSheet: View {
           triggerSave()
         }
         .font(.tidexButton)
-        .foregroundColor(canSave ? .tidexBlue : .tidexTextMuted)
+        .foregroundColor(canSave ? .tidexBlueText : .tidexTextMuted)
         .disabled(!canSave || isSaving)
       } else {
         Button(String(localized: .commonDone)) {
           dismiss()
         }
         .font(.tidexButton)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
       }
     }
   }
@@ -441,7 +442,7 @@ struct EventDetailsSheet: View {
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.lg)
           .stroke(
-            isTitleFieldFocused ? Color.tidexBlue.opacity(0.45) : Color.tidexBorder, lineWidth: 1)
+            isTitleFieldFocused ? Color.tidexBlue : Color.tidexBorder, lineWidth: 1)
       )
     }
     .contentShape(Rectangle())
@@ -505,6 +506,7 @@ struct EventDetailsSheet: View {
       Text(.addShiftEventAllDay)
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
+        .accessibilityHidden(true)
 
       Spacer(minLength: Spacing.sm)
 
@@ -523,7 +525,7 @@ struct EventDetailsSheet: View {
         .foregroundColor(.tidexTextMuted)
 
       DatePicker(
-        "",
+        title,
         selection: selection,
         displayedComponents: .date
       )
@@ -539,6 +541,7 @@ struct EventDetailsSheet: View {
     HStack(spacing: Spacing.xxxs) {
       Image(systemName: "arrow.left.and.right")
         .font(.tidexMicro)
+        .accessibilityHidden(true)
       Text(editorRangeSummaryText)
         .font(.tidexMicro)
         .fixedSize(horizontal: false, vertical: true)
@@ -576,6 +579,7 @@ struct EventDetailsSheet: View {
     Text(message)
       .font(.tidexSubheadline)
       .foregroundColor(.tidexError)
+      .announcesToVoiceOver(message)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.md)
       .background(
@@ -588,7 +592,7 @@ struct EventDetailsSheet: View {
     focusedTimeField = nil
     isTitleFieldFocused = false
 
-    withAnimation(.easeInOut(duration: 0.2)) {
+    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
       isEditing = true
     }
   }

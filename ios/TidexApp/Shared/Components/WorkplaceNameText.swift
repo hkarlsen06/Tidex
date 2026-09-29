@@ -24,6 +24,12 @@ struct WorkplaceNameText: View {
   var badgeHorizontalPadding: CGFloat = Spacing.xs
   var badgeVerticalPadding: CGFloat = Spacing.xxxs
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  /// A workplace name is essential text, so it wraps instead of truncating at accessibility sizes.
+  private var effectiveLineLimit: Int? {
+    dynamicTypeSize.isAccessibilitySize ? nil : lineLimit
+  }
 
   var body: some View {
     if let badgeColor = resolvedBadgeColor {
@@ -31,7 +37,7 @@ struct WorkplaceNameText: View {
         .font(font)
         .foregroundColor(badgeForegroundColor(for: badgeColor))
         .multilineTextAlignment(multilineTextAlignment)
-        .lineLimit(lineLimit)
+        .lineLimit(effectiveLineLimit)
         .truncationMode(.tail)
         .padding(.horizontal, badgeHorizontalPadding)
         .padding(.vertical, badgeVerticalPadding)
@@ -45,7 +51,7 @@ struct WorkplaceNameText: View {
         .font(font)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(multilineTextAlignment)
-        .lineLimit(lineLimit)
+        .lineLimit(effectiveLineLimit)
         .truncationMode(.tail)
         .frame(maxWidth: maxTextWidth, alignment: maxTextAlignment)
     }
@@ -65,14 +71,9 @@ struct WorkplaceNameText: View {
     let resolvedColor = badgeColor.resolvedColor(
       with: UITraitCollection(userInterfaceStyle: userInterfaceStyle))
     let luminance = Self.relativeLuminance(for: resolvedColor)
-    let contrastWithWhite = Self.contrastRatio(luminance, 1)
-    let contrastWithBlack = Self.contrastRatio(luminance, 0)
-
-    if Self.shouldPreferWhiteBadgeText(for: resolvedColor, contrastWithWhite: contrastWithWhite) {
-      return .tidexTextOnBrand
-    }
-
-    return contrastWithWhite >= contrastWithBlack ? .tidexTextOnBrand : .tidexLightTextPrimary
+    // Pure black, not tidexLightTextPrimary: only white-or-black keeps every curated color at 4.5:1.
+    return Self.contrastRatio(luminance, 1) >= Self.contrastRatio(luminance, 0)
+      ? .tidexTextOnBrand : .black
   }
 
   private var userInterfaceStyle: UIUserInterfaceStyle {
@@ -98,29 +99,6 @@ struct WorkplaceNameText: View {
     return 0.2126 * linearizedSRGB(red)
       + 0.7152 * linearizedSRGB(green)
       + 0.0722 * linearizedSRGB(blue)
-  }
-
-  private static func shouldPreferWhiteBadgeText(
-    for color: UIColor,
-    contrastWithWhite: CGFloat
-  ) -> Bool {
-    var hue: CGFloat = 0
-    var saturation: CGFloat = 0
-    var brightness: CGFloat = 0
-    var alpha: CGFloat = 0
-
-    guard color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-    else {
-      return false
-    }
-
-    let isRedOrRose = hue <= 0.08 || hue >= 0.88
-    let isBlueOrPurple = hue >= 0.55 && hue <= 0.88
-    return alpha > 0.1
-      && brightness >= 0.35
-      && saturation >= 0.45
-      && contrastWithWhite >= 2.2
-      && (isRedOrRose || isBlueOrPurple)
   }
 
   private static func linearizedSRGB(_ component: CGFloat) -> CGFloat {
@@ -209,8 +187,8 @@ struct WorkplaceColorCarousel: View {
               .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(.settingsPayAddJobColorLabel))
-            .accessibilityValue(Text(hex))
+            .accessibilityLabel(WorkplaceColor.accessibilityName(for: hex))
+            .accessibilityInputLabels([WorkplaceColor.accessibilityName(for: hex)])
             .accessibilityAddTraits(isSelected ? .isSelected : [])
           }
         }
@@ -219,6 +197,7 @@ struct WorkplaceColorCarousel: View {
       }
     }
     .accessibilityElement(children: .contain)
+    .accessibilityLabel(Text(.settingsPayAddJobColorLabel))
   }
 
   private var selectedRing: some View {
@@ -272,6 +251,39 @@ enum WorkplaceColor {
     "#0891B2",
     "#BE123C",
   ]
+
+  /// Spoken names of the curated swatches. Voice Control needs distinct names, so hex codes won't do.
+  private static let swatchNames: [String: LocalizedStringResource] = [
+    "#3B82F6": .commonAccessibilityColorBlue,
+    "#22C55E": .commonAccessibilityColorGreen,
+    "#EF4444": .commonAccessibilityColorRed,
+    "#F59E0B": .commonAccessibilityColorAmber,
+    "#A855F7": .commonAccessibilityColorPurple,
+    "#14B8A6": .commonAccessibilityColorTeal,
+    "#EC4899": .commonAccessibilityColorPink,
+    "#06B6D4": .commonAccessibilityColorCyan,
+    "#6366F1": .commonAccessibilityColorIndigo,
+    "#8B5CF6": .commonAccessibilityColorViolet,
+    "#10B981": .commonAccessibilityColorEmerald,
+    "#84CC16": .commonAccessibilityColorLime,
+    "#F97316": .commonAccessibilityColorOrange,
+    "#EAB308": .commonAccessibilityColorYellow,
+    "#F43F5E": .commonAccessibilityColorRose,
+    "#D946EF": .commonAccessibilityColorFuchsia,
+    "#0EA5E9": .commonAccessibilityColorSkyBlue,
+    "#2563EB": .commonAccessibilityColorRoyalBlue,
+    "#16A34A": .commonAccessibilityColorForestGreen,
+    "#DC2626": .commonAccessibilityColorDarkRed,
+    "#EA580C": .commonAccessibilityColorBurntOrange,
+    "#7C3AED": .commonAccessibilityColorDeepViolet,
+    "#0891B2": .commonAccessibilityColorDarkCyan,
+    "#BE123C": .commonAccessibilityColorCrimson,
+  ]
+
+  static func accessibilityName(for hex: String) -> Text {
+    guard let name = swatchNames[hex.uppercased()] else { return Text(verbatim: hex) }
+    return Text(name)
+  }
 
   static func hexToUIColor(_ hex: String?) -> UIColor? {
     guard var hex else { return nil }

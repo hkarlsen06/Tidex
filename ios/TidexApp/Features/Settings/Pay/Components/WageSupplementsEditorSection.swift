@@ -10,12 +10,16 @@ struct SupplementsEditorSection: View {
   let onAdd: () -> Void
   let onEdit: (OnboardingSupplementRule) -> Void
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       HStack {
         Text(.settingsPayEditorSupplementsTitle)
           .font(.tidexButton)
           .foregroundColor(.tidexTextPrimary)
+          .accessibilityAddTraits(.isHeader)
 
         Spacer()
 
@@ -23,7 +27,7 @@ struct SupplementsEditorSection: View {
           Button(action: onAdd) {
             Image(systemName: "plus")
               .font(.tidexBodyMedium)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexBlueText)
               .frame(minWidth: 44, minHeight: 44)
           }
           .accessibilityLabel(Text(.supplementsAddRule))
@@ -67,7 +71,7 @@ struct SupplementsEditorSection: View {
 
   @ViewBuilder
   private func presetSupplementRow(_ rule: SupplementRule) -> some View {
-    HStack {
+    rowLayout {
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(formatDays(rule.days))
           .font(.tidexLabel)
@@ -78,20 +82,30 @@ struct SupplementsEditorSection: View {
           .foregroundColor(.tidexTextSecondary)
       }
 
-      Spacer()
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
 
       Text(formatRuleValue(rule))
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBrandPrimary)
+        .foregroundColor(.tidexBlueText)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.xs)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+    .accessibilityElement(children: .combine)
+  }
+
+  private var rowLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout())
   }
 
   @ViewBuilder
   private func customSupplementRow(_ rule: OnboardingSupplementRule) -> some View {
-    HStack {
+    rowLayout {
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(rule.daysDescription)
           .font(.tidexLabel)
@@ -102,16 +116,21 @@ struct SupplementsEditorSection: View {
           .foregroundColor(.tidexTextSecondary)
       }
 
-      Spacer()
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
 
       Text(rule.valueDescription(locale: Locale.current, currency: currency))
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBrandPrimary)
+        .foregroundColor(.tidexBlueText)
 
-      editButton(for: rule)
+      HStack(spacing: 0) {
+        editButton(for: rule)
 
-      deleteButton(for: rule)
+        deleteButton(for: rule)
+      }
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.xs)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
@@ -124,6 +143,8 @@ struct SupplementsEditorSection: View {
       Image(systemName: "pencil")
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
     }
     .accessibilityLabel(
       Text(.supplementsEditRuleAccessibility("\(rule.daysDescription), \(rule.timeDescription)")))
@@ -131,13 +152,15 @@ struct SupplementsEditorSection: View {
 
   private func deleteButton(for rule: OnboardingSupplementRule) -> some View {
     Button(action: {
-      withAnimation {
+      withAnimation(reduceMotion ? nil : .default) {
         supplements.removeAll { $0.id == rule.id }
       }
     }) {
       Image(systemName: "trash")
         .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
     }
     .accessibilityLabel(
       Text(

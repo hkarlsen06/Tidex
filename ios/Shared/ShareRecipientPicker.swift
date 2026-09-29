@@ -1,7 +1,5 @@
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable accessibility_label_for_image
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable accessibility_trait_for_button explicit_acl explicit_top_level_acl
+// swiftlint:disable explicit_acl explicit_top_level_acl
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable explicit_type_interface no_magic_numbers
 import SwiftUI
@@ -33,11 +31,8 @@ import SwiftUI
       ScrollView {
         LazyVStack(spacing: 10) {
           ForEach(recipients) { recipient in
-            ShareRecipientCard(
-              recipient: recipient,
-              isSelected: selectionState.selectedRecipientID == recipient.id
-            )
-            .onTapGesture {
+            let isSelected = selectionState.selectedRecipientID == recipient.id
+            Button {
               withAnimation(.easeInOut(duration: 0.16)) {
                 if onRecipientTap == nil {
                   selectionState.toggleSelection(recipientID: recipient.id)
@@ -47,7 +42,11 @@ import SwiftUI
               }
 
               onRecipientTap?(recipient)
+            } label: {
+              ShareRecipientCard(recipient: recipient, isSelected: isSelected)
             }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
           }
         }
         .padding(.bottom, 12)
@@ -62,6 +61,7 @@ import SwiftUI
     var body: some View {
       HStack(spacing: 12) {
         avatarView
+          .accessibilityHidden(true)
 
         VStack(alignment: .leading, spacing: 4) {
           Text(recipient.displayName)
@@ -71,7 +71,7 @@ import SwiftUI
           if let statusText = recipient.statusText {
             Text(statusText)
               .font(.footnote)
-              .foregroundStyle(.secondary)
+              .foregroundStyle(SharedPalette.textSecondary)
           }
         }
 
@@ -79,8 +79,12 @@ import SwiftUI
 
         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
           .font(.system(size: 24, weight: .semibold))
-          .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+          .foregroundStyle(isSelected ? SharedPalette.blueText : SharedPalette.textSecondary)
+          .accessibilityHidden(true)
       }
+      // Name and status read as one element. The avatar is decorative and the selected
+      // state comes from the button's `isSelected` trait.
+      .accessibilityElement(children: .combine)
       .padding(.horizontal, 14)
       .padding(.vertical, 12)
       .background(
@@ -125,7 +129,8 @@ import SwiftUI
 
         Text(initials(from: recipient.displayName))
           .font(.subheadline.weight(.semibold))
-          .foregroundStyle(Color.accentColor)
+          .foregroundStyle(SharedPalette.blueText)
+          .accessibilityHidden(true)
       }
     }
 

@@ -22,6 +22,7 @@ struct RecurringShiftsSettingsView: View {
                 .foregroundColor(.tidexError)
             }
             .font(.tidexSubheadline)
+            .announcesToVoiceOver(errorMessage)
           }
         }
 
@@ -97,6 +98,9 @@ struct RecurringShiftsSettingsView: View {
       details.append(String(localized: .settingsRecurringShiftsExcludedCount(exclusionCount)))
     }
 
+    let timeRange = String(
+      localized: .calendarAccessibilityTimeRange(recurring.cleanStartTime, recurring.cleanEndTime))
+
     return Button {
       recurringShiftToEdit = recurring
     } label: {
@@ -112,6 +116,10 @@ struct RecurringShiftsSettingsView: View {
       }
       .padding(.vertical, Spacing.xxxs)
     }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: timeRange))
+    .accessibilityValue(Text(verbatim: details.joined(separator: ", ")))
+    .accessibilityInputLabels([Text(verbatim: timeRange), Text(verbatim: recurring.cleanStartTime)])
   }
 
   private func loadRecurringShifts() async {

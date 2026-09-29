@@ -248,6 +248,8 @@ struct SharerListView: View {
   var openingThreadUserId: String?
   var onAddFriend: (() -> Void)?
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   private var sortedVisibleSharers: [SharedUser] {
     ordering.visibleSharers(visible: sharers, hidden: hiddenSharers)
   }
@@ -297,10 +299,10 @@ struct SharerListView: View {
       }
     }
     .padding(.horizontal, Spacing.md)
-    .animation(.spring(duration: 0.4, bounce: 0.15), value: isLoadingPreviews)
-    .animation(.spring(duration: 0.35, bounce: 0.12), value: unreadChatUserIds)
-    .animation(.spring(duration: 0.35, bounce: 0.12), value: typingUserIds)
-    .animation(.spring(duration: 0.35, bounce: 0.12), value: bottomedUserIds)
+    .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.15), value: isLoadingPreviews)
+    .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12), value: unreadChatUserIds)
+    .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12), value: typingUserIds)
+    .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.12), value: bottomedUserIds)
   }
 
   @ViewBuilder

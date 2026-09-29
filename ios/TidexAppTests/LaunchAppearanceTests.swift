@@ -45,11 +45,30 @@ final class SemanticColorContrastTests: XCTestCase {
       ContrastPair(foreground: "TidexTextOnDanger", background: "TidexError"),
       ContrastPair(foreground: "TidexTextOnSuccess", background: "TidexSuccess"),
     ]
+    // Blue, status and purple colors drawn as text or icons on the three surfaces.
+    let coloredTextPairs = ["TidexBlueText", "TidexError", "TidexSuccess", "TidexWarning", "TidexPurple"]
+      .flatMap { foreground in
+        ["TidexBackground", "TidexSurfacePrimary", "TidexSurfaceSecondary"].map {
+          ContrastPair(foreground: foreground, background: $0)
+        }
+      }
 
     assertContrast(
-      pairs,
+      pairs + coloredTextPairs,
       minimumRatio: Self.minimumTextContrast
     )
+  }
+
+  /// Increase Contrast variants must stay readable, and the text ones must reach 7:1.
+  func testIncreaseContrastVariantsMeetEnhancedContrast() {
+    let surfaces = ["TidexBackground", "TidexSurfacePrimary", "TidexSurfaceSecondary"]
+    let textPairs = ["TidexTextSecondary", "TidexTextMuted", "TidexBlueText"].flatMap { foreground in
+      surfaces.map { ContrastPair(foreground: foreground, background: $0) }
+    }
+    let borderPairs = surfaces.map { ContrastPair(foreground: "TidexBorder", background: $0) }
+
+    assertContrast(textPairs, minimumRatio: 7.0, contrast: .high)
+    assertContrast(borderPairs, minimumRatio: 4.5, contrast: .high)
   }
 
   func testSurfaceBoundaryColorsMeetWCAGNonTextContrast() {
@@ -68,19 +87,42 @@ final class SemanticColorContrastTests: XCTestCase {
     )
   }
 
-  private func assertContrast(_ pairs: [ContrastPair], minimumRatio: Double) {
+  /// WorkplaceNameText draws badge text in white or black, whichever contrasts more.
+  func testWorkplacePaletteBadgesHaveReadableWhiteOrBlackText() {
+    for hex in WorkplaceColor.curatedHexPalette {
+      guard let badge = WorkplaceColor.hexToUIColor(hex) else {
+        XCTFail("Invalid palette color \(hex)")
+        continue
+      }
+      let best = max(badge.contrastRatio(against: .white), badge.contrastRatio(against: .black))
+
+      XCTAssertGreaterThanOrEqual(best, Self.minimumTextContrast, "\(hex) badge text contrast \(best)")
+    }
+  }
+
+  private func assertContrast(
+    _ pairs: [ContrastPair],
+    minimumRatio: Double,
+    contrast: UIAccessibilityContrast = .normal
+  ) {
     for colorScheme in [UIUserInterfaceStyle.light, .dark] {
-      let traitCollection = UITraitCollection(userInterfaceStyle: colorScheme)
+      let traitCollection = UITraitCollection { traits in
+        traits.userInterfaceStyle = colorScheme
+        traits.accessibilityContrast = contrast
+      }
 
       for pair in pairs {
         let foreground = resolvedColor(named: pair.foreground, compatibleWith: traitCollection)
         let background = resolvedColor(named: pair.background, compatibleWith: traitCollection)
         let ratio = foreground.contrastRatio(against: background)
 
+        let contrastName = contrast == .high ? "high" : "normal"
+
         XCTAssertGreaterThanOrEqual(
           ratio,
           minimumRatio,
-          "\(pair.foreground) on \(pair.background) in \(colorScheme.name) mode has contrast \(ratio)"
+          "\(pair.foreground) on \(pair.background) in \(colorScheme.name) mode "
+            + "(\(contrastName) contrast) has contrast \(ratio)"
         )
       }
     }

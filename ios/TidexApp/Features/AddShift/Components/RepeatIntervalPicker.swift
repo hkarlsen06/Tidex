@@ -6,9 +6,14 @@ internal struct RepeatIntervalPicker: View {
   private static let maxRepeatInterval: Int = 8
 
   @Binding internal var interval: Int  // 0-8 (0 = weekly, 1 = biweekly, etc.)
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   internal var body: some View {
-    HStack(spacing: Spacing.xs) {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xs))
+    return layout {
       Text(.addShiftRepeat)
         .font(.tidexBody)
         .foregroundColor(.tidexTextPrimary)
@@ -28,11 +33,11 @@ internal struct RepeatIntervalPicker: View {
         HStack(spacing: Spacing.xxs) {
           Text(ordinalLabel(interval))
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
 
           Image(systemName: "chevron.up.chevron.down")
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .accessibilityHidden(true)
         }
         .padding(.horizontal, Spacing.sm)
@@ -40,8 +45,12 @@ internal struct RepeatIntervalPicker: View {
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       }
+      .accessibilityLabel(Text(.addShiftRepeat))
+      .accessibilityValue(Text(verbatim: ordinalLabel(interval)))
 
-      Spacer()
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
     }
     .padding(.vertical, Spacing.xs)
   }

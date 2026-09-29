@@ -10,6 +10,8 @@ struct SupplementValueSection: View {
   @State private var showingValueInput = false
   @State private var valueInputText = ""
   @FocusState private var isValueInputFocused: Bool
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @ScaledMetric(relativeTo: .title2) private var inputWidth: CGFloat = 80
 
   private var currencyConfig: CurrencyOption {
     CurrencyConfig.get(currency)
@@ -25,26 +27,51 @@ struct SupplementValueSection: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      // Quick value buttons
-      HStack(spacing: Spacing.xs) {
-        ForEach(quickValues, id: \.self) { value in
-          QuickValueButton(
-            value: value,
-            type: rule.type,
-            isSelected: rule.value == value,
-            action: {
-              Haptics.play(.light)
-              withAnimation {
-                rule.value = value
-              }
-            }
-          )
-        }
-      }
+      // Quick value buttons. They wrap into a grid when large text makes the row too wide.
+      quickValueButtons
 
       // Slider for fine-tuning
       valueEditor
     }
+  }
+
+  @ViewBuilder
+  private var quickValueButtons: some View {
+    if dynamicTypeSize.isAccessibilitySize {
+      LazyVGrid(
+        columns: [GridItem(.adaptive(minimum: 88), spacing: Spacing.xs)],
+        alignment: .leading,
+        spacing: Spacing.xs
+      ) {
+        quickValueItems
+      }
+    } else {
+      HStack(spacing: Spacing.xs) {
+        quickValueItems
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var quickValueItems: some View {
+    ForEach(quickValues, id: \.self) { value in
+      QuickValueButton(
+        value: value,
+        type: rule.type,
+        isSelected: rule.value == value,
+        action: {
+          Haptics.play(.light)
+          withAnimation {
+            rule.value = value
+          }
+        }
+      )
+    }
+  }
+
+  /// What VoiceOver reads for the amount, for example "45 kr/t".
+  private var spokenValue: String {
+    "\(formatValueWithDecimals(rule.value)) \(unitSuffix)"
   }
 
   private var valueEditor: some View {
@@ -73,6 +100,8 @@ struct SupplementValueSection: View {
         }
       )
       .tint(.tidexBlue)
+      .accessibilityLabel(Text(.onboardingSupplementsValueLabel))
+      .accessibilityValue(Text(spokenValue))
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
@@ -93,11 +122,12 @@ struct SupplementValueSection: View {
   private var valueTextField: some View {
     TextField("", text: $valueInputText)
       .font(.tidexLargeTitle)
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
       .keyboardType(.decimalPad)
       .multilineTextAlignment(.leading)
       .focused($isValueInputFocused)
-      .frame(width: 80)
+      .accessibilityLabel(Text(.onboardingSupplementsValueLabel))
+      .frame(width: inputWidth)
       .padding(.horizontal, Spacing.xxs)
       .padding(.vertical, Spacing.micro)
       .background(Color.tidexBlue.opacity(0.15))
@@ -134,7 +164,7 @@ struct SupplementValueSection: View {
     }) {
       Text(formatValueWithDecimals(rule.value))
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .contentTransition(.numericText())
         .padding(.horizontal, Spacing.xxs)
         .padding(.vertical, Spacing.micro)
@@ -142,6 +172,10 @@ struct SupplementValueSection: View {
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(
+      Text(verbatim: "\(String(localized: .onboardingSupplementsValueLabel)), \(spokenValue)")
+    )
+    .accessibilityInputLabels([formatValueWithDecimals(rule.value)])
   }
 
   private func formatValueWithDecimals(_ value: Double) -> String {

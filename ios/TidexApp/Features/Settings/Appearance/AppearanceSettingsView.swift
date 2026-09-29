@@ -2,8 +2,9 @@ import SwiftUI
 
 /// Appearance settings view
 /// Theme, calendar colors, dashboard controls and the startup tab.
-struct AppearanceSettingsView: View {
+struct AppearanceSettingsView: View {  // swiftlint:disable:this type_body_length
   @Environment(\.colorScheme) private var systemColorScheme
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var viewModel = AppearanceSettingsViewModel()
 
   var body: some View {
@@ -28,11 +29,18 @@ struct AppearanceSettingsView: View {
     }
   }
 
+  /// Tiles sit side by side, and stack once the text is too large for three columns.
+  private var tileLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .center, spacing: Spacing.md))
+      : AnyLayout(HStackLayout(alignment: .top, spacing: Spacing.sm))
+  }
+
   // MARK: - Theme
 
   private var themeSection: some View {
     Section {
-      HStack(alignment: .top, spacing: Spacing.sm) {
+      tileLayout {
         ForEach(AppTheme.allCases, id: \.self) { theme in
           choiceTile(
             title: themeTitle(theme),
@@ -135,7 +143,7 @@ struct AppearanceSettingsView: View {
 
   private var calendarContentColorSection: some View {
     Section {
-      HStack(alignment: .top, spacing: Spacing.sm) {
+      tileLayout {
         ForEach(CalendarContentColorStyle.allCases, id: \.self) { style in
           choiceTile(
             title: calendarContentColorTitle(style),
@@ -211,7 +219,7 @@ struct AppearanceSettingsView: View {
           .overlay {
             RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
               .strokeBorder(
-                isSelected ? Color.tidexBlue : Color.tidexBorder,
+                isSelected ? Color.tidexBlueText : Color.tidexBorder,
                 lineWidth: isSelected ? 2 : 1
               )
           }
@@ -224,7 +232,7 @@ struct AppearanceSettingsView: View {
 
         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
           .font(.tidexBody)
-          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
+          .foregroundColor(isSelected ? .tidexBlueText : .tidexTextMuted)
       }
       .frame(maxWidth: .infinity)
       .contentShape(Rectangle())

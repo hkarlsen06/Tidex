@@ -37,6 +37,13 @@ struct AvatarView: View {
   }
 
   var body: some View {
+    // The name always sits next to the avatar, so VoiceOver skips it instead of spelling the initials.
+    avatar
+      .accessibilityHidden(true)
+  }
+
+  @ViewBuilder
+  private var avatar: some View {
     if let urlString = url, let imageUrl = URL(string: urlString) {
       CachedAsyncImage(
         url: imageUrl,
@@ -63,7 +70,7 @@ struct AvatarView: View {
       .overlay(
         Text(initials)
           .font(.system(size: fontSize, weight: .semibold))
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       )
   }
 

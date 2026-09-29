@@ -15,8 +15,12 @@ internal struct AcceptTermsView: View {
   @State private var error: String?
 
   private let verticalSpacerLength: CGFloat = 60
-  private let iconBackgroundSize: CGFloat = 80
-  private let documentIconSize: CGFloat = 36
+  @ScaledMetric(relativeTo: .title) private var documentIconSize: CGFloat = 36
+
+  private var iconBackgroundSize: CGFloat {
+    documentIconSize * 2.2
+  }
+
   private let linkIconWidth: CGFloat = 20
   private let iconBackgroundOpacity: Double = 0.1
 
@@ -82,7 +86,7 @@ internal struct AcceptTermsView: View {
 
         Image(systemName: "doc.text.fill")
           .font(.system(size: documentIconSize))
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
           .accessibilityHidden(true)
       }
 
@@ -105,6 +109,7 @@ internal struct AcceptTermsView: View {
       .font(.tidexTitle)
       .foregroundColor(.tidexTextPrimary)
       .multilineTextAlignment(.center)
+      .accessibilityAddTraits(.isHeader)
 
       Text(
         isUpdate
@@ -168,6 +173,9 @@ internal struct AcceptTermsView: View {
         Text(.acceptTermsDeclineButton)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
+          .multilineTextAlignment(.center)
+          .frame(minHeight: 44)
+          .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .disabled(isProcessing)

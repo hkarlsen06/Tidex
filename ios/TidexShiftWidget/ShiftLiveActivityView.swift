@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-private let tidexBlue = WidgetPalette.blue
+private let tidexBlue = WidgetPalette.blueText
 
 // MARK: - Before Tax Helper
 
@@ -35,6 +35,11 @@ private func isTemporaryClockActivity(_ attributes: ShiftActivityAttributes) -> 
     && attributes.totalGrossEstimate == 0
     && attributes.hourlyWage == 0
     && attributes.supplementRatePerHour == 0
+}
+
+/// "08:00 to 16:00", so VoiceOver reads a range and not a dash.
+private func spokenTimeRange(_ attributes: ShiftActivityAttributes) -> String {
+  WidgetAccessibility.timeRange(attributes.startTime, attributes.endTime)
 }
 
 private func temporaryStartedLabel() -> String {
@@ -77,6 +82,7 @@ struct LockScreenLiveActivityView: View {
           Image(systemName: "clock.fill")
             .font(.system(size: 14))
             .foregroundColor(tidexBlue)
+            .accessibilityHidden(true)
           shiftTimerText(context.attributes)
             .font(.system(size: 20, weight: .bold, design: .rounded))
             .monospacedDigit()
@@ -93,8 +99,10 @@ struct LockScreenLiveActivityView: View {
           Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
             .font(.system(size: 15, weight: .medium))
             .foregroundColor(.secondary)
+            .accessibilityLabel(Text(verbatim: spokenTimeRange(context.attributes)))
         }
       }
+      .accessibilityElement(children: .combine)
 
       Spacer()
 
@@ -119,6 +127,7 @@ struct LockScreenLiveActivityView: View {
           }
         }
       }
+      .accessibilityElement(children: .combine)
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
@@ -135,6 +144,7 @@ struct CompactLeadingView: View {
       Image(systemName: "clock.fill")
         .font(.system(size: 12))
         .foregroundColor(tidexBlue)
+        .accessibilityHidden(true)
       // SwiftUI timer automatically counts down
       shiftTimerText(context.attributes)
         .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -205,6 +215,7 @@ struct ExpandedView: View {
           Image(systemName: "clock.fill")
             .font(.system(size: 12))
             .foregroundColor(tidexBlue)
+            .accessibilityHidden(true)
           shiftTimerText(context.attributes)
             .font(.system(size: 16, weight: .bold, design: .rounded))
             .monospacedDigit()
@@ -219,8 +230,10 @@ struct ExpandedView: View {
           Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(.secondary)
+            .accessibilityLabel(Text(verbatim: spokenTimeRange(context.attributes)))
         }
       }
+      .accessibilityElement(children: .combine)
 
       Spacer()
 
@@ -245,6 +258,7 @@ struct ExpandedView: View {
           }
         }
       }
+      .accessibilityElement(children: .combine)
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 8)
@@ -258,6 +272,7 @@ struct MinimalView: View {
     Image(systemName: "briefcase.fill")
       .font(.system(size: 14))
       .foregroundColor(tidexBlue)
+      .accessibilityLabel(Text(.widgetAccessibilityActiveShift))
   }
 }
 
@@ -268,6 +283,8 @@ struct ShiftLiveActivity: Widget {
     ActivityConfiguration(for: ShiftActivityAttributes.self) { context in
       // Lock Screen presentation
       LockScreenLiveActivityView(context: context)
+        // The tint is always dark, so the text colors must not follow a Light system appearance.
+        .environment(\.colorScheme, .dark)
         .activityBackgroundTint(Color.black.opacity(0.8))
         .activitySystemActionForegroundColor(Color.white)
     } dynamicIsland: { context in

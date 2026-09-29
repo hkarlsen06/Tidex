@@ -8,6 +8,7 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
   let focusYear: Int  // swiftlint:disable:this explicit_acl
 
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor  // swiftlint:disable:this explicit_type_interface line_length
 
   /// Currently selected month (for tooltip)
   @State private var selectedMonth: String?
@@ -48,6 +49,24 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
     return Array(data[firstIdx...lastIdx])
   }
 
+  private var chartDescriptor: StatsCategoryChartDescriptor {
+    let total = data.reduce(0) { $0 + $1.earnings }  // swiftlint:disable:this explicit_type_interface
+    return StatsCategoryChartDescriptor(
+      title: String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))),
+      summary: String(localized: .statsAccessibilityChartTotal(CurrencyConfig.format(total, currency: currency))),
+      categoryAxisTitle: String(localized: .commonMonth),
+      valueAxisTitle: String(localized: .shiftsEarningsSection),
+      points: trimmedData.map { month in
+        StatsCategoryChartDescriptor.Point(
+          category: month.fullMonth,
+          value: month.earnings,
+          label: "\(month.fullMonth), \(CurrencyConfig.format(month.earnings, currency: currency))"
+        )
+      },
+      formatValue: { CurrencyConfig.format($0, currency: currency) }
+    )
+  }
+
   // MARK: - Body
 
   var body: some View {  // swiftlint:disable:this explicit_acl
@@ -72,6 +91,8 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
           ) {
             if selectedMonth == month.month {
               YearlyTooltipView(monthData: month, currency: currency)
+            } else if differentiateWithoutColor, isCurrentYear, month.monthNumber == currentMonthNumber {
+              StatsBarHighlightMarker()
             }
           }
         }
@@ -100,7 +121,7 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
                 let isEmphasized = isCurrentMonthLabel || isSelected  // swiftlint:disable:this explicit_type_interface
                 Text(label)
                   .font(isEmphasized ? .tidexCaptionStrong : .tidexCaptionRegular)
-                  .foregroundColor(isEmphasized ? .tidexBlue : .tidexTextSecondary)
+                  .foregroundColor(isEmphasized ? .tidexBlueText : .tidexTextSecondary)
               }
             }
           }
@@ -122,6 +143,7 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
       }
       .chartYScale(domain: .automatic(includesZero: true))
       .chartLegend(.hidden)
+      .accessibilityChartDescriptor(chartDescriptor)
       .frame(height: 200)  // swiftlint:disable:this no_magic_numbers
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -158,7 +180,7 @@ private struct YearlyTooltipView: View {
 
       Text(CurrencyConfig.format(monthData.earnings, currency: currency))
         .font(.tidexMonoBody)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)

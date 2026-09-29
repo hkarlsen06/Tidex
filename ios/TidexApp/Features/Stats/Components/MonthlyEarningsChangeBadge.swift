@@ -76,6 +76,8 @@ enum MonthlyEarningsChange {  // swiftlint:disable:this explicit_acl explicit_to
 struct MonthlyEarningsChangeBadge: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
   let percentageChange: Double  // swiftlint:disable:this explicit_acl
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
+
   private var wholePercent: Double {
     percentageChange.rounded()
   }
@@ -100,8 +102,8 @@ struct MonthlyEarningsChangeBadge: View {  // swiftlint:disable:this explicit_ac
 
       Text(.statsChangeVsPreviousMonth(MonthlyEarningsChange.percentText(percentageChange)))
         .font(.tidexFootnoteMedium)
-        .lineLimit(1)
-        .minimumScaleFactor(0.8)  // swiftlint:disable:this no_magic_numbers
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.8)  // swiftlint:disable:this no_magic_numbers
     }
     .foregroundColor(tint)
     .padding(.horizontal, Spacing.xs)

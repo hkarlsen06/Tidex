@@ -13,6 +13,7 @@ struct EventReminderEditorSection: View {
   let isEditable: Bool
   let showsPastEventHint: Bool
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var showTimePickerSheet = false
   @State private var editingTimeIndex: Int?
   @State private var pickerHours = 1
@@ -71,7 +72,7 @@ struct EventReminderEditorSection: View {
           )
         }
       }
-      .presentationDetents([.medium])
+      .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium])
     }
     .sensoryFeedback(.impact(weight: .light), trigger: showTimePickerSheet) { _, isShowing in
       isShowing
@@ -106,8 +107,9 @@ struct EventReminderEditorSection: View {
           HStack(spacing: Spacing.sm) {
             Image(systemName: "bell.fill")
               .font(.tidexBody)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexBlueText)
               .frame(width: 24)
+              .accessibilityHidden(true)
 
             Text(reminderLabel(for: minutes))
               .font(.tidexSubheadline)
@@ -119,6 +121,7 @@ struct EventReminderEditorSection: View {
               Image(systemName: "pencil")
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextMuted)
+                .accessibilityHidden(true)
             }
           }
         }
@@ -136,11 +139,12 @@ struct EventReminderEditorSection: View {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "plus.circle.fill")
           .font(.tidexBody)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
+          .accessibilityHidden(true)
 
         Text(.notificationsRemindersAddTime)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
     }
     .buttonStyle(.plain)

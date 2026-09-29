@@ -65,6 +65,7 @@ struct CustomPauseWindowsEditorSheet: View {
   let onCancel: () -> Void
 
   @Environment(\.dismiss) private var dismiss
+  @ScaledMetric(relativeTo: .largeTitle) private var emptyIconSize: CGFloat = 28
 
   @State private var drafts: [PauseWindowDraft] = []
   @State private var hadCustomPauseWindows = false
@@ -131,6 +132,7 @@ struct CustomPauseWindowsEditorSheet: View {
               .font(.tidexFootnote)
               .foregroundColor(.tidexError)
               .frame(maxWidth: .infinity, alignment: .leading)
+              .announcesToVoiceOver(validationMessage)
           }
 
           Spacer()
@@ -164,8 +166,9 @@ struct CustomPauseWindowsEditorSheet: View {
   private var emptyState: some View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "pause.circle")
-        .font(.system(size: 28))
+        .font(.system(size: emptyIconSize))
         .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
 
       Text(.shiftsPauseEditorEmptyState)
         .font(.tidexBody)
@@ -176,6 +179,15 @@ struct CustomPauseWindowsEditorSheet: View {
     .padding(Spacing.xl)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+  }
+
+  /// Spoken name of a pause window, for example "12:00 to 12:30".
+  private func pauseDescription(_ draft: PauseWindowDraft) -> String {
+    guard let start = draft.startTime, let end = draft.endTime else {
+      return String(localized: .settingsPayEditorBreakTitle)
+    }
+    return String(
+      localized: .calendarAccessibilityTimeRange(start.toHourMinuteString(), end.toHourMinuteString()))
   }
 
   private var draftsList: some View {
@@ -189,9 +201,12 @@ struct CustomPauseWindowsEditorSheet: View {
             } label: {
               Image(systemName: "trash")
                 .font(.tidexFootnote)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .foregroundColor(.tidexError)
+            .accessibilityLabel(Text(.shiftsAccessibilityDeleteItem(pauseDescription(draft))))
           }
 
           PauseWindowTimeInputs(
@@ -233,7 +248,7 @@ struct CustomPauseWindowsEditorSheet: View {
         Image(systemName: "plus")
           .foregroundColor(.tidexTextPrimary)
         Text(.shiftsPauseEditorAddWindow)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
       .font(.tidexLabelStrong)
       .frame(maxWidth: .infinity)
@@ -276,6 +291,7 @@ private struct PauseWindowTimeInputs: View {
   @Binding var endTime: Date?
 
   @State private var focusController = TimeInputFocusController()
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   private var startLabel: String {
     String(localized: .commonStart)
@@ -285,8 +301,14 @@ private struct PauseWindowTimeInputs: View {
     String(localized: .commonEnd)
   }
 
+  /// The two inputs stack at accessibility text sizes, where two columns can't fit.
+  private var layout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.sm)) : AnyLayout(HStackLayout(spacing: Spacing.sm))
+  }
+
   var body: some View {
-    HStack(spacing: Spacing.sm) {
+    layout {
       NumericTimeInput(
         time: $startTime,
         label: startLabel,

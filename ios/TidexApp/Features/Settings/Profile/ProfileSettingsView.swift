@@ -9,6 +9,7 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSetting
 struct ProfileSettingsView: View {
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var viewModel: ProfileSettingsViewModel
 
   private let onOpenSecurity: () -> Void
@@ -243,7 +244,7 @@ extension ProfileSettingsView {
         Text(usernameDisplayText)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
-          .lineLimit(1)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
       }
     }
   }

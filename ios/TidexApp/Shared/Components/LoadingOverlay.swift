@@ -42,6 +42,11 @@ struct LoadingOverlay: View {
       .accessibilityLabel(message.map { Text($0) } ?? Text(isSuccess ? .commonDone : .commonLoading))
     }
     .accessibilityAddTraits(.isModal)
+    .onChange(of: isSuccess) { _, newValue in
+      if newValue {
+        AccessibilityNotification.Announcement(String(localized: .commonDone)).post()
+      }
+    }
   }
 
   /// Fixed-size slot so the card doesn't jump when the spinner turns into a checkmark.

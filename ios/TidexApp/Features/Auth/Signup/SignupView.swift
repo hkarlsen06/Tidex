@@ -64,7 +64,6 @@ struct SignupView: View {
         .frame(minHeight: geometry.size.height)
       }
       .scrollBounceBehavior(.basedOnSize)
-      .scrollDisabled(!viewModel.showEmailForm)
     }
   }
 
@@ -152,11 +151,11 @@ struct SignupView: View {
 
   private func revealEmailButton(scrollProxy: ScrollViewProxy) -> some View {
     Button {
-      withAnimation(.easeInOut(duration: 0.2)) {
+      MotionTokens.animate(.feedback, reduceMotion: reduceMotion) {
         viewModel.showEmailForm = true
       }
       DispatchQueue.main.async {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        MotionTokens.animate(.feedback, reduceMotion: reduceMotion) {
           scrollProxy.scrollTo(ScrollTarget.bottom, anchor: .bottom)
         }
       }
@@ -164,12 +163,17 @@ struct SignupView: View {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "envelope")
           .font(.tidexBody)
+          .accessibilityHidden(true)
         Text(.signupEmailReveal)
           .font(.tidexBodyMedium)
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
       }
       .foregroundColor(.tidexTextSecondary)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.xs)
       .frame(maxWidth: .infinity)
-      .frame(height: 50)
+      .frame(minHeight: 50)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
@@ -222,11 +226,12 @@ struct SignupView: View {
     }) {
       Text(.signupLogin)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
-        .lineLimit(1)
-        .minimumScaleFactor(0.86)
+        .foregroundColor(.tidexBlueText)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, Spacing.xxs)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -237,12 +242,14 @@ private struct SignupEntranceStepModifier: ViewModifier {
   let isVisible: Bool
   let delay: TimeInterval
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   func body(content: Content) -> some View {
     content
       .opacity(isVisible ? 1 : 0)
       .offset(y: isVisible ? 0 : 22)
       .animation(
-        .spring(response: 0.30, dampingFraction: 0.86).delay(delay),
+        reduceMotion ? nil : .spring(response: 0.30, dampingFraction: 0.86).delay(delay),
         value: isVisible
       )
   }
@@ -259,10 +266,18 @@ extension View {
 /// Email, password, and name form for signup with native iOS styling
 struct SignupForm: View {
   @Bindable var viewModel: SignupViewModel
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  /// The name fields share a row and stack when large text would squeeze them.
+  private var nameFieldsLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.sm))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+  }
 
   var body: some View {
     VStack(spacing: Spacing.md) {
-      HStack(spacing: Spacing.sm) {
+      nameFieldsLayout {
         nameField(
           placeholder: String(localized: .signupFirstNamePlaceholder),
           text: $viewModel.firstName,
@@ -352,6 +367,7 @@ struct SignupForm: View {
         .foregroundColor(.tidexError)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.xxs)
+        .announcesToVoiceOver(message)
     }
   }
 }

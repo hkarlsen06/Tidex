@@ -71,7 +71,7 @@ struct DataSettingsView: View {
     } header: {
       Text(.dataExportPeriodLabel)
     }
-    .tint(.tidexBlue)
+    .tint(.tidexBlueText)
   }
 
   private func presetLabel(_ preset: ExportPeriodPreset) -> String {
@@ -151,7 +151,7 @@ struct DataSettingsView: View {
           }
         } icon: {
           Image(systemName: icon)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
         }
 
         Spacer(minLength: Spacing.xs)
@@ -160,7 +160,7 @@ struct DataSettingsView: View {
           ProgressView()
         } else {
           Image(systemName: "square.and.arrow.down")
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .accessibilityHidden(true)
         }
       }
@@ -177,7 +177,7 @@ struct DataSettingsView: View {
         Label {
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.dataExportShare)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexBlueText)
 
             Text(url.lastPathComponent)
               .font(.tidexFootnote)
@@ -185,9 +185,10 @@ struct DataSettingsView: View {
           }
         } icon: {
           Image(systemName: "square.and.arrow.up")
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
         }
       }
+      .announcesToVoiceOver(String(localized: .dataExportReadyToShare))
     } header: {
       Text(.dataExportReadyToShare)
     }

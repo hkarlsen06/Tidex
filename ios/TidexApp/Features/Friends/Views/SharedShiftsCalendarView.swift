@@ -6,6 +6,9 @@ import UIKit
 internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type_body_length
   private let appearanceManager = AppearanceManager.shared
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   let shifts: [ShiftWithComputations]
   let jobs: [SharedJob]
   let year: Int
@@ -178,7 +181,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       if isSuperimposing {
         superimposeLegend
           .padding(.bottom, Spacing.sm)
-          .transition(.move(edge: .top).combined(with: .opacity))
+          .transition(MotionTokens.mirroredMoveTransition(edge: .top, reduceMotion: reduceMotion))
       }
 
       // Header: Month name + Year and Total
@@ -197,8 +200,9 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
         actionBar(metrics: metrics)
       }
     }
-    .animation(.spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
-    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count)
+    .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count)
     .onAppear {
       toggleHaptic.prepare()
       syncSelectedEarnings(with: metrics)
@@ -267,8 +271,15 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     }
   }
 
+  /// Side by side, or stacked at accessibility sizes where two buttons don't fit in a row.
+  private var selectionBarLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xxs))
+  }
+
   private func singleSelectionBar(metrics: CalendarMetrics) -> some View {
-    HStack(spacing: Spacing.xxs) {
+    selectionBarLayout {
       Button {
         toggleHaptic.impactOccurred()
         if let selectedShift = selectedShift(metrics: metrics) {
@@ -278,12 +289,13 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "info.circle")
             .font(.tidexLabel)
+            .accessibilityHidden(true)
           Text(.shiftsDetails)
             .font(.tidexLabelStrong)
         }
         .foregroundColor(.tidexTextPrimary)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .background(
           Capsule().fill(.clear)
             .tidexGlass(shape: .capsule, interactive: selectedShift(metrics: metrics) != nil)
@@ -299,12 +311,13 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "xmark")
             .font(.tidexLabel)
+            .accessibilityHidden(true)
           Text(.commonCancel)
             .font(.tidexLabelStrong)
         }
         .foregroundColor(.tidexTextPrimary)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .background(
           Capsule().fill(.clear)
             .tidexGlass(shape: .capsule, interactive: true)
@@ -318,16 +331,19 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   }
 
   private var multiSelectionBar: some View {
-    HStack(spacing: Spacing.xxs) {
+    selectionBarLayout {
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: "checkmark.circle")
           .font(.tidexLabel)
+          .accessibilityHidden(true)
         Text("\(selectedDates.count)")
           .font(.tidexLabelStrong)
       }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(Text(.commonAccessibilitySelectedCount(selectedDates.count)))
       .foregroundColor(.tidexTextPrimary)
       .frame(maxWidth: .infinity)
-      .frame(height: 44)
+      .frame(minHeight: 44)
       .background(
         Capsule().fill(.clear)
           .tidexGlass(shape: .capsule, interactive: false)
@@ -340,12 +356,13 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "xmark")
             .font(.tidexLabel)
+            .accessibilityHidden(true)
           Text(.commonCancel)
             .font(.tidexLabelStrong)
         }
         .foregroundColor(.tidexTextPrimary)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .background(
           Capsule().fill(.clear)
             .tidexGlass(shape: .capsule, interactive: true)
@@ -412,7 +429,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     VStack(alignment: .leading, spacing: Spacing.xxs) {
       superimposeLegendRow(
         icon: "person.2.fill",
-        iconColor: .tidexBlue,
+        iconColor: .tidexBlueText,
         description: Text(.sharingSuperimposeLegendBoth)
       )
       superimposeLegendRow(
@@ -421,7 +438,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
         description: Text(.sharingSuperimposeLegendOnlyYou)
       )
       superimposeLegendRow(
-        icon: "person.fill",
+        icon: "person.crop.circle.fill",
         iconColor: Self.friendIndicatorColor,
         description: Text(.sharingSuperimposeLegendOnlyFriend(friendFirstName))
       )
@@ -439,7 +456,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       Image(systemName: icon)
         .font(.tidexFootnote.weight(.semibold))
         .foregroundColor(iconColor)
-        .frame(width: Spacing.iconSize, alignment: .leading)
+        .frame(minWidth: Spacing.iconSize, alignment: .leading)
+        .accessibilityHidden(true)
 
       description
         .font(.tidexFootnote)
@@ -518,15 +536,18 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       )
     }
     // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      dayAccessibilityLabel(
-        dayInfo: dayInfo, friendShifts: shiftsOnDay, userShifts: indicators.userShifts,
-        showOverlap: indicators.showOverlap, metrics: metrics)
-    )
-    .accessibilityAddTraits(
-      shiftsOnDay.isEmpty ? [] : isSelected ? [.isButton, .isSelected] : .isButton
-    )
+    .calendarDayAccessibility(isHidden: dayInfo.isOutsideMonth) { cell in
+      cell
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+          dayAccessibilityLabel(
+            dayInfo: dayInfo, friendShifts: shiftsOnDay, userShifts: indicators.userShifts,
+            showOverlap: indicators.showOverlap, metrics: metrics)
+        )
+        .accessibilityAddTraits(
+          shiftsOnDay.isEmpty ? [] : isSelected ? [.isButton, .isSelected] : .isButton
+        )
+    }
   }
 
   /// Overlap and single-user indicators for a day while superimposing.
@@ -619,6 +640,13 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     }
     if !friendShifts.isEmpty {
       parts.append(String(localized: .calendarAccessibilityFriendShift(friendFirstName)))
+      // Job colors only show in the cell, so the job names go in the spoken label.
+      if jobs.count > 1 {
+        let jobNames = jobs.reduce(into: [String]()) { names, job in
+          if friendShifts.contains(where: { $0.shift.job_id == job.id }) { names.append(job.name) }
+        }
+        parts += jobNames
+      }
       // Superimpose mode hides the friend's times and pay in the cell, so VoiceOver does too.
       if !isSuperimposing {
         parts += friendShifts.map { shift in

@@ -3,6 +3,7 @@ import SwiftUI
 /// Feedback settings view
 /// Allows users to submit feedback and view their feedback history with responses
 struct FeedbackSettingsView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var viewModel = FeedbackSettingsViewModel()
 
   var body: some View {
@@ -46,12 +47,13 @@ struct FeedbackSettingsView: View {
         Image(systemName: "checkmark.circle.fill")
           .foregroundColor(.tidexSuccess)
       }
+      .announcesToVoiceOver(String(localized: .feedbackSuccess))
 
       Button {
         viewModel.resetSuccess()
       } label: {
         Text(.feedbackSubmitAnother)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
     }
   }
@@ -66,6 +68,7 @@ struct FeedbackSettingsView: View {
         axis: .vertical
       )
       .lineLimit(6...)
+      .accessibilityLabel(Text(.feedbackTitle))
       .font(.tidexBody)
       .foregroundColor(.tidexTextPrimary)
       .disabled(viewModel.isSubmitting)
@@ -77,9 +80,21 @@ struct FeedbackSettingsView: View {
 
         Spacer()
 
-        Text(viewModel.characterCountText)
-          .foregroundColor(viewModel.isOverLimit ? .tidexError : .tidexTextMuted)
-          .monospacedDigit()
+        HStack(spacing: Spacing.xxs) {
+          if viewModel.isOverLimit {
+            Image(systemName: "exclamationmark.circle.fill")
+              .accessibilityHidden(true)
+          }
+          Text(viewModel.characterCountText)
+            .monospacedDigit()
+        }
+        .foregroundColor(viewModel.isOverLimit ? .tidexError : .tidexTextMuted)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+          viewModel.isOverLimit
+            ? Text(.settingsAccessibilityFeedbackOverLimit(viewModel.characterCountText))
+            : Text(verbatim: viewModel.characterCountText)
+        )
       }
     }
   }
@@ -94,7 +109,7 @@ struct FeedbackSettingsView: View {
         HStack(spacing: Spacing.xs) {
           Text(viewModel.isSubmitting ? .feedbackSending : .feedbackSubmit)
             .font(.tidexButton)
-            .foregroundColor(viewModel.canSubmit ? .tidexBlue : .tidexTextMuted)
+            .foregroundColor(viewModel.canSubmit ? .tidexBlueText : .tidexTextMuted)
 
           if viewModel.isSubmitting {
             ProgressView()
@@ -115,7 +130,7 @@ struct FeedbackSettingsView: View {
           isExpanded: Binding(
             get: { viewModel.expandedItemId == item.id },
             set: { _ in
-              withAnimation(.easeInOut(duration: 0.2)) {
+              withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
                 viewModel.toggleExpanded(item.id)
               }
             }
@@ -134,21 +149,16 @@ struct FeedbackSettingsView: View {
 
   private func feedbackHistoryLabel(_ item: FeedbackItem) -> some View {
     VStack(alignment: .leading, spacing: Spacing.xxs) {
-      HStack(spacing: Spacing.xs) {
-        Text(
-          "\(String(localized: .feedbackHistorySubmittedOn)) \(item.formattedDate(locale: Locale.current))"
-        )
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
-
-        Label {
-          Text(item.response != nil ? .feedbackHistoryRespondedOn : .feedbackHistoryNoResponse)
-        } icon: {
-          Image(systemName: item.response != nil ? "checkmark.circle.fill" : "clock")
+      ViewThatFits(in: .horizontal) {
+        HStack(spacing: Spacing.xs) {
+          historyDate(item)
+          historyStatus(item)
         }
-        .labelStyle(.titleAndIcon)
-        .font(.tidexMicro)
-        .foregroundColor(item.response != nil ? .tidexSuccess : .tidexTextMuted)
+
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+          historyDate(item)
+          historyStatus(item)
+        }
       }
 
       Text(item.message)
@@ -156,6 +166,25 @@ struct FeedbackSettingsView: View {
         .foregroundColor(.tidexTextPrimary)
         .lineLimit(1)
     }
+  }
+
+  private func historyDate(_ item: FeedbackItem) -> some View {
+    Text(
+      "\(String(localized: .feedbackHistorySubmittedOn)) \(item.formattedDate(locale: Locale.current))"
+    )
+    .font(.tidexCaptionRegular)
+    .foregroundColor(.tidexTextMuted)
+  }
+
+  private func historyStatus(_ item: FeedbackItem) -> some View {
+    Label {
+      Text(item.response != nil ? .feedbackHistoryRespondedOn : .feedbackHistoryNoResponse)
+    } icon: {
+      Image(systemName: item.response != nil ? "checkmark.circle.fill" : "clock")
+    }
+    .labelStyle(.titleAndIcon)
+    .font(.tidexMicro)
+    .foregroundColor(item.response != nil ? .tidexSuccess : .tidexTextMuted)
   }
 
   @ViewBuilder

@@ -36,6 +36,7 @@ struct StepItem: View {
   let isDimmedForFocus: Bool
   let titleFocusTrigger: Int
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var showCheckPulse = false
 
   // Stagger delays: 0ms, 120ms, 240ms
@@ -47,8 +48,6 @@ struct StepItem: View {
   private let connectorHeight: CGFloat = 20
 
   var body: some View {
-    let emphasisOpacity = isDimmedForFocus ? 0.5 : 1.0
-    let descriptionOpacity = isDimmedForFocus ? 0.42 : 0.9
     let iconBackgroundOpacity = isDimmedForFocus ? 0.1 : 0.2
 
     HStack(alignment: .top, spacing: Spacing.md) {
@@ -71,9 +70,9 @@ struct StepItem: View {
 
           Image(systemName: icon)
             .font(.tidexHeadline)
-            .foregroundColor(.tidexBlue)
-            .opacity(emphasisOpacity)
+            .foregroundColor(.tidexBlueText)
         }
+        .accessibilityHidden(true)
 
         // Connector line below icon
         if showConnector {
@@ -94,7 +93,6 @@ struct StepItem: View {
         Text(title)
           .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
-          .opacity(emphasisOpacity)
           .overlay(alignment: .bottomLeading) {
             GeometryReader { geometry in
               StepTitleFocusIndicator(
@@ -111,23 +109,23 @@ struct StepItem: View {
         Text(description)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
-          .opacity(descriptionOpacity)
       }
       .frame(minHeight: iconSize, alignment: .center)
 
       Spacer(minLength: 0)
     }
+    .accessibilityElement(children: .combine)
+    .saturation(isDimmedForFocus ? HowItWorksScreen.dimmedSaturation : 1)
     .opacity(isVisible ? 1 : 0)
     .offset(y: isVisible ? 0 : 20)
     .animation(
-      .spring(response: 0.4, dampingFraction: 0.8)
-        .delay(entranceDelay),
+      reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8).delay(entranceDelay),
       value: isVisible
     )
     .animation(.easeInOut(duration: 0.26), value: isDimmedForFocus)
     .onChange(of: isVisible) { _, visible in
       // Trigger checkmark pulse for active step after entrance
-      if visible, progressState == .active {
+      if visible, progressState == .active, !reduceMotion {
         DispatchQueue.main.asyncAfter(deadline: .now() + entranceDelay + 0.3) {
           withAnimation(.easeOut(duration: 0.6)) {
             showCheckPulse = true

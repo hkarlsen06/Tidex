@@ -8,6 +8,18 @@ internal enum WidgetPalette {
   /// TidexBlue (#2563EB), the same in light and dark mode
   internal static let blue: Color = .init(red: 0.145, green: 0.388, blue: 0.922)
 
+  /// TidexBlueText (light #1D4ED8, dark #7AA0F3). Use for blue text; `blue` is only a fill.
+  internal static let blueText: Color = adaptive(
+    light: UIColor(red: 0.114, green: 0.306, blue: 0.847, alpha: 1),
+    dark: UIColor(red: 0.478, green: 0.627, blue: 0.953, alpha: 1)
+  )
+
+  /// TidexSuccess (light #0F703C, dark #22C55E). Use for green text and indicators.
+  internal static let success: Color = adaptive(
+    light: UIColor(red: 0.059, green: 0.439, blue: 0.235, alpha: 1),
+    dark: UIColor(red: 0.133, green: 0.773, blue: 0.369, alpha: 1)
+  )
+
   /// TidexBackground
   internal static let background: Color = adaptive(
     light: UIColor(red: 0.961, green: 0.961, blue: 0.953, alpha: 1),

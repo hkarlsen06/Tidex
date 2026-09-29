@@ -11,9 +11,10 @@ struct PreAuthAddShiftSimulatorScreen: View {
   let onSkip: () -> Void
   let onBaselineReady: (_ baselineTotals: CalendarHeaderTotals?, _ currency: String) -> Void
   let isPreloaded: Bool
+  let onBack: () -> Void
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var viewModel: PreAuthAddShiftSimulatorViewModel
   @State private var focusedTimeField: TimeInputField?
   @State private var relaxFocusInAddStage = false
@@ -31,7 +32,8 @@ struct PreAuthAddShiftSimulatorScreen: View {
     onSkip: @escaping () -> Void,
     onBaselineReady:
       @escaping (_ baselineTotals: CalendarHeaderTotals?, _ currency: String) -> Void,
-    isPreloaded: Bool = false
+    isPreloaded: Bool = false,
+    onBack: @escaping () -> Void = {}
   ) {
     self.initialCurrency = initialCurrency
     self.onCurrencyChanged = onCurrencyChanged
@@ -39,6 +41,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
     self.onSkip = onSkip
     self.onBaselineReady = onBaselineReady
     self.isPreloaded = isPreloaded
+    self.onBack = onBack
     _viewModel = State(
       wrappedValue: PreAuthAddShiftSimulatorViewModel(initialCurrency: initialCurrency))
   }
@@ -110,7 +113,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
       if shouldShowTotalsAcknowledgement {
         totalsAcknowledgementButton
           .padding(.bottom, MonthPickerLayout.bottomPadding + Spacing.sm)
-          .transition(.opacity.combined(with: .scale(scale: 0.94)))
+          .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94)))
           .zIndex(3)
       }
     }
@@ -131,6 +134,8 @@ struct PreAuthAddShiftSimulatorScreen: View {
       guard !isPreloaded else { return }
       scheduleFocusRelaxIfNeeded()
       triggerHintShimmer()
+      // The hint and the totals button change without moving VoiceOver focus, so say what to do next.
+      AccessibilityNotification.Announcement(simulatorHint).post()
     }
     .onChange(of: initialCurrency) { _, newCurrency in
       syncCurrencyFromParent(newCurrency)
@@ -169,7 +174,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
     guard focusStage == .totals else { return }
 
     Haptics.play(.light)
-    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+    withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86)) {
       hasAcknowledgedTotals = true
     }
   }
@@ -222,9 +227,9 @@ extension PreAuthAddShiftSimulatorScreen {
       VStack(alignment: .center, spacing: Spacing.sm) {
         Text(simulatorSubtitle)
           .font(.tidexBody.weight(.bold))
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
           .multilineTextAlignment(.center)
-          .lineLimit(2)
+          .accessibilityAddTraits(.isHeader)
           .fixedSize(horizontal: false, vertical: true)
           .frame(maxWidth: .infinity, alignment: .center)
           .layoutPriority(1)
@@ -243,14 +248,14 @@ extension PreAuthAddShiftSimulatorScreen {
 
       Spacer(minLength: 0)
     }
+    .scrollsOnOverflow()
   }
 
   private var calendarAndTimes: some View {
     VStack(spacing: 0) {
       AddShiftCalendarView(viewModel: viewModel)
         .simulatorFocusStyle(
-          isFocused: !shouldDimNonFocusedSections || focusStage == .calendar,
-          reduceTransparency: reduceTransparency
+          isFocused: !shouldDimNonFocusedSections || focusStage == .calendar
         )
 
       TimeRangePicker(
@@ -261,32 +266,40 @@ extension PreAuthAddShiftSimulatorScreen {
       )
       .padding(.top, Spacing.sm)
       .simulatorFocusStyle(
-        isFocused: !shouldDimNonFocusedSections || focusStage == .times,
-        reduceTransparency: reduceTransparency
+        isFocused: !shouldDimNonFocusedSections || focusStage == .times
       )
     }
   }
 
   @ViewBuilder
   private var topHeader: some View {
-    ZStack(alignment: .center) {
-      HStack(spacing: Spacing.sm) {
-        skipButton
-
-        Spacer(minLength: 0)
-
-        toolbarTotals
-      }
-
-      OnboardingCurrencyCapsuleSelector(
-        selectedCurrency: Binding(
-          get: { viewModel.currency },
-          set: { selectedCurrency in
-            handleCurrencySelection(selectedCurrency)
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+          HStack(spacing: Spacing.sm) {
+            backButton
+            skipButton
+            Spacer(minLength: 0)
+            currencySelector
           }
-        )
-      )
-      .fixedSize(horizontal: true, vertical: false)
+
+          toolbarTotals
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+      } else {
+        ZStack(alignment: .center) {
+          HStack(spacing: Spacing.sm) {
+            backButton
+            skipButton
+
+            Spacer(minLength: 0)
+
+            toolbarTotals
+          }
+
+          currencySelector
+        }
+      }
     }
     .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
     .padding(.horizontal, isIPhone ? Spacing.sm : Spacing.md)
@@ -296,20 +309,52 @@ extension PreAuthAddShiftSimulatorScreen {
     .background(Color.tidexBackground)
   }
 
+  private var currencySelector: some View {
+    OnboardingCurrencyCapsuleSelector(
+      selectedCurrency: Binding(
+        get: { viewModel.currency },
+        set: { selectedCurrency in
+          handleCurrencySelection(selectedCurrency)
+        }
+      )
+    )
+    .fixedSize(horizontal: true, vertical: false)
+  }
+
+  private var backButton: some View {
+    headerPillButton(systemName: "chevron.left", label: Text(.commonBack)) {
+      onBack()
+    }
+  }
+
   private var skipButton: some View {
+    headerPillButton(systemName: "forward.end.fill", label: Text(.onboardingSkip)) {
+      onSkip()
+    }
+  }
+
+  /// Icon pill with a 44pt touch target. The label is the spoken and Voice Control name.
+  private func headerPillButton(
+    systemName: String,
+    label: Text,
+    action: @escaping () -> Void
+  ) -> some View {
     Button {
       Haptics.play(.light)
-      onSkip()
+      action()
     } label: {
-      Image(systemName: "forward.end.fill")
-        .font(.system(size: 15, weight: .semibold))
+      Image(systemName: systemName)
+        .font(.footnote.weight(.semibold))
         .foregroundColor(.tidexTextSecondary)
+        .accessibilityHidden(true)
         .frame(width: 46, height: 34)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
     }
     .buttonStyle(SnappyButtonStyle())
-    .accessibilityLabel(Text(.onboardingSkip))
+    .accessibilityLabel(label)
   }
 
   private var toolbarTotals: some View {
@@ -320,8 +365,7 @@ extension PreAuthAddShiftSimulatorScreen {
     )
     .fixedSize(horizontal: true, vertical: false)
     .simulatorFocusStyle(
-      isFocused: !shouldDimNonFocusedSections || focusStage == .totals,
-      reduceTransparency: reduceTransparency
+      isFocused: !shouldDimNonFocusedSections || focusStage == .totals
     )
     .scaleEffect(focusStage == .totals ? 1.03 : 1.0)
     .overlay(alignment: .bottomTrailing) {
@@ -360,9 +404,9 @@ extension PreAuthAddShiftSimulatorScreen {
         )
         .opacity(0.65)
         .allowsHitTesting(false)
+        .accessibilityHidden(true)
         .simulatorFocusStyle(
-          isFocused: !shouldDimNonFocusedSections,
-          reduceTransparency: reduceTransparency
+          isFocused: !shouldDimNonFocusedSections
         )
 
         Button {
@@ -370,7 +414,8 @@ extension PreAuthAddShiftSimulatorScreen {
         } label: {
           Image(systemName: "plus")
             .font(.tidexHeadline)
-            .foregroundColor(isAddButtonEnabled ? .tidexBlue : .tidexTextMuted)
+            .foregroundColor(isAddButtonEnabled ? .tidexBlueText : .tidexTextMuted)
+            .accessibilityHidden(true)
             .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
             .contentShape(Rectangle())
         }
@@ -385,9 +430,9 @@ extension PreAuthAddShiftSimulatorScreen {
         )
         .opacity(isAddButtonEnabled ? 1.0 : 0.6)
         .accessibilityLabel(Text(.tabsAdd))
+        .accessibilityHint(Text(simulatorHint))
         .simulatorFocusStyle(
-          isFocused: !shouldDimNonFocusedSections || focusStage == .add,
-          reduceTransparency: reduceTransparency
+          isFocused: !shouldDimNonFocusedSections || focusStage == .add
         )
         .scaleEffect(focusStage == .add ? 1.02 : 1.0)
       }
@@ -408,8 +453,8 @@ extension PreAuthAddShiftSimulatorScreen {
         String(localized: .onboardingAddSimulatorAcknowledgeTotals)
       )
       .font(.tidexBodyMedium)
-      .foregroundColor(.tidexBlue)
-      .lineLimit(1)
+      .foregroundColor(.tidexBlueText)
+      .multilineTextAlignment(.center)
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.xxxs)
     }
@@ -426,4 +471,4 @@ extension PreAuthAddShiftSimulatorScreen {
     onSkip: {},
     onBaselineReady: { _, _ in }
   )
-}
+}  // swiftlint:disable:this file_length

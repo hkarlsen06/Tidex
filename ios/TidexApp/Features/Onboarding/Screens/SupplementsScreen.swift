@@ -7,6 +7,7 @@ struct SupplementsScreen: View {
   let onContinue: () -> Void
   var onBack: (() -> Void)?  // swiftlint:disable:this explicit_acl
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var showingRuleEditor = false
   @State private var editingRule: OnboardingSupplementRule?
 
@@ -109,10 +110,13 @@ struct SupplementsScreen: View {
         HStack(spacing: Spacing.xxs) {
           Image(systemName: "chevron.left")
             .font(.tidexButton)
+            .accessibilityHidden(true)
           Text(.commonBack)
             .font(.tidexBody)
         }
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       Spacer()
@@ -128,6 +132,7 @@ struct SupplementsScreen: View {
         .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       Text(.onboardingSupplementsSubtitle)
         .font(.tidexBody)
@@ -150,7 +155,7 @@ struct SupplementsScreen: View {
             showingRuleEditor = true
           },
           onDelete: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
               data.supplementRules.removeAll { $0.id == rule.id }
             }
           }
@@ -169,13 +174,16 @@ struct SupplementsScreen: View {
     }) {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "plus.circle.fill")
-          .font(.system(size: 20))
+          .font(.title3)
+          .accessibilityHidden(true)
         Text(.onboardingSupplementsAddRule)
           .font(.tidexBodyMedium)
+          .multilineTextAlignment(.center)
       }
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
       .frame(maxWidth: .infinity)
-      .frame(height: 56)
+      .padding(.vertical, Spacing.xs)
+      .frame(minHeight: 56)
       .background(Color.tidexBlue.opacity(0.08))
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       .overlay(
@@ -198,6 +206,10 @@ private struct SupplementRuleCard: View {
   let onEdit: () -> Void
   let onDelete: () -> Void
 
+  private var ruleSummary: String {
+    "\(rule.spokenDaysDescription), \(rule.timeDescription)"
+  }
+
   var body: some View {
     HStack(spacing: Spacing.sm) {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -213,12 +225,14 @@ private struct SupplementRuleCard: View {
           Text("•")
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextMuted)
+            .accessibilityHidden(true)
 
           Text(rule.valueDescription(locale: locale, currency: currency))
             .font(.tidexLabel)
             .foregroundColor(.tidexSuccess)
         }
       }
+      .accessibilityElement(children: .combine)
 
       Spacer()
 
@@ -229,7 +243,8 @@ private struct SupplementRuleCard: View {
       }) {
         Image(systemName: "pencil")
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
+          .accessibilityHidden(true)
           .frame(width: 36, height: 36)
           .background(Color.tidexBlue.opacity(0.1))
           .clipShape(Circle())
@@ -241,6 +256,7 @@ private struct SupplementRuleCard: View {
           .frame(minWidth: 44, minHeight: 44)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(Text(.supplementsEditRuleAccessibility(ruleSummary)))
 
       // Delete button
       Button(action: {
@@ -250,6 +266,7 @@ private struct SupplementRuleCard: View {
         Image(systemName: "trash")
           .font(.tidexSubheadline)
           .foregroundColor(.tidexError)
+          .accessibilityHidden(true)
           .frame(width: 36, height: 36)
           .background(Color.tidexError.opacity(0.1))
           .clipShape(Circle())
@@ -257,6 +274,7 @@ private struct SupplementRuleCard: View {
           .frame(minWidth: 44, minHeight: 44)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(Text(.supplementsDeleteRuleAccessibility(ruleSummary)))
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)

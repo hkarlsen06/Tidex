@@ -22,6 +22,7 @@ struct AddJobPayDetailsCard: View {
   let onApplyPaydayInput: () -> Void
 
   private let payrollDayOptions = [1, 10, 15, 20, 25, 31]
+  @ScaledMetric(relativeTo: .headline) private var paydayInputWidth: CGFloat = 44
 
   private var isCustomPayday: Bool {
     !payrollDayOptions.contains(payrollDay)
@@ -39,7 +40,7 @@ struct AddJobPayDetailsCard: View {
         if isCustomPayday, !showingPaydayInput {
           Text(String(localized: .onboardingSettingsPaydayCustomValue(payrollDay)))
             .font(.tidexFootnote)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
         }
       }
 
@@ -88,18 +89,19 @@ struct AddJobPayDetailsCard: View {
 
   private var paydayTextField: some View {
     TextField("", text: $paydayInputText)
+      .accessibilityLabel(Text(.settingsPayAddJobPayrollDay))
       .font(.tidexButton)
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
       .keyboardType(.numberPad)
       .multilineTextAlignment(.center)
       .focused(isPaydayInputFocused)
-      .frame(width: 44)
+      .frame(width: paydayInputWidth)
       .frame(minHeight: 44)
       .background(Color.tidexBlue.opacity(0.15))
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-          .stroke(Color.tidexBlue, lineWidth: 1)
+          .stroke(Color.tidexBlueText, lineWidth: 1)
       )
       .onChange(of: isPaydayInputFocused.wrappedValue) { _, focused in
         if !focused {
@@ -132,7 +134,7 @@ struct AddJobPayDetailsCard: View {
         Text(.onboardingSettingsPaydayOther)
       }
       .font(isCustomPayday ? .tidexLabelStrong : .tidexLabel)
-      .foregroundColor(isCustomPayday ? .white : .tidexTextSecondary)
+      .foregroundColor(isCustomPayday ? .tidexTextOnBrand : .tidexTextSecondary)
       .frame(minWidth: 56, minHeight: 44)
       .padding(.horizontal, Spacing.xs)
       .background(
@@ -142,6 +144,7 @@ struct AddJobPayDetailsCard: View {
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isCustomPayday ? .isSelected : [])
   }
 }
 
@@ -153,13 +156,26 @@ private struct AddJobPaydayButton: View {
 
   var body: some View {
     Button(action: action) {
-      Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
+      HStack(spacing: Spacing.micro) {
+        if isSelected {
+          Image(systemName: "checkmark")
+            .font(.tidexMicro.weight(.bold))
+            .accessibilityHidden(true)
+        }
+        Text(dayText)
+      }
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
         .frame(minWidth: 56, minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(Text(.settingsAccessibilityPaydayOption(dayText)))
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  private var dayText: String {
+    isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)"
   }
 }

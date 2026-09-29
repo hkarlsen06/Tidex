@@ -58,27 +58,36 @@ struct CalendarHeaderRow: View {
   var secondaryCurrency: String?
 
   @Environment(\.userCurrency) private var userCurrency
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   @State private var lastDisplayedPrimary: Double = 0
   @State private var lastDisplayedSecondary: Double = 0
 
   var body: some View {
     if let totals {
-      HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+      // At accessibility text sizes the two amounts stack, so neither truncates.
+      let layout =
+        dynamicTypeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xxs))
+        : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: Spacing.xs))
+      layout {
         // Holds the line height while no amount is shown.
         Text(verbatim: " ")
           .font(.tidexHeadline)
           .frame(width: 0)
           .hidden()
+          .accessibilityHidden(true)
 
         primaryAmountText(totals.primary)
 
-        Spacer(minLength: Spacing.xs)
+        if !dynamicTypeSize.isAccessibilitySize {
+          Spacer(minLength: Spacing.xs)
+        }
 
         if let secondary = totals.secondary {
           secondaryAmountText(secondary, isAfterTax: totals.primaryIsAfterTax)
             .userCurrency(secondaryCurrency ?? userCurrency)
-            .lineLimit(1)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         }
       }
       .padding(.horizontal, Spacing.xxs)
@@ -95,6 +104,9 @@ struct CalendarHeaderRow: View {
       )
       .font(.tidexHeadline)
       .foregroundColor(.tidexTextPrimary)
+      .accessibilityLabel(
+        Text(.commonAccessibilityTotalAmount(CurrencyConfig.format(amount, currency: userCurrency)))
+      )
       .onChange(of: amount) { _, newValue in
         lastDisplayedPrimary = newValue
       }
@@ -107,6 +119,7 @@ struct CalendarHeaderRow: View {
       Text("—")
         .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
+        .accessibilityHidden(true)
     }
   }
 
@@ -147,15 +160,21 @@ struct CalendarHeaderRow: View {
     case .selection:
       HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
         if let selectionCount {
-          Text(verbatim: "(\(selectionCount))")
-            .foregroundColor(.tidexTextMuted)
+          selectionCountText(selectionCount)
         }
         amountText
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
       .font(.tidexFootnote)
       .accessibilityElement(children: .combine)
     }
+  }
+
+  /// "(3)" on screen, "3 selected" for VoiceOver.
+  private func selectionCountText(_ count: Int) -> some View {
+    Text(verbatim: "(\(count))")
+      .foregroundColor(.tidexTextMuted)
+      .accessibilityLabel(Text(.commonAccessibilitySelectedCount(count)))
   }
 
   private func animatedAmount(_ amount: Double, animateFrom: Double?) -> some View {

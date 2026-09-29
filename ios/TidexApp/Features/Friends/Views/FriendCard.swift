@@ -157,8 +157,12 @@ struct FriendCard: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .combine)
-    .accessibilityAddTraits(.isButton)
+    .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     .accessibilityHint(Text(.friendsChatMessageAction))
+    // The long press and the avatar tap open the profile, so assistive tech gets an action.
+    .accessibilityAction(named: Text(.friendsAccessibilityViewProfile)) {
+      onProfileRequested?()
+    }
   }
 
   /// During a shift the photo shrinks inside the progress ring, so the avatar keeps its size.
@@ -189,12 +193,31 @@ struct FriendCard: View {
     }
   }
 
+  @ViewBuilder
   private func nameRow(at now: Date) -> some View {
+    // Long names and the message time need their own lines at accessibility text sizes.
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
+        nameAndBadge
+        messageMeta(at: now)
+      }
+    } else {
+      HStack(spacing: Spacing.xxxs) {
+        nameAndBadge
+
+        Spacer(minLength: Spacing.xxs)
+
+        messageMeta(at: now)
+      }
+    }
+  }
+
+  private var nameAndBadge: some View {
     HStack(spacing: Spacing.xxxs) {
       Text(sharer.displayName)
         .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
       if unreadMessageCount > 0 {
         Text(verbatim: unreadMessageCount > 9 ? "9+" : "\(unreadMessageCount)")
@@ -204,31 +227,43 @@ struct FriendCard: View {
           .padding(.horizontal, Spacing.xxxs)
           .frame(minWidth: 20, minHeight: 20)
           .background(Color.tidexBlue, in: Capsule())
-      }
-
-      Spacer(minLength: Spacing.xxs)
-
-      if !isTyping, let messagePreview {
-        HStack(spacing: Spacing.micro) {
-          Image(systemName: messagePreview.metaSymbol)
-            .imageScale(.small)
-            .accessibilityLabel(Text(messagePreview.metaLabel))
-
-          Text(messagePreview.metaText(at: now))
-            .monospacedDigit()
-        }
-        .font(.tidexCaptionRegular)
-        .foregroundColor(messagePreview.metaColor)
-        .lineLimit(1)
-        .fixedSize()
+          .accessibilityLabel(Text(.friendsAccessibilityUnreadCount(unreadMessageCount)))
       }
     }
+  }
+
+  @ViewBuilder
+  private func messageMeta(at now: Date) -> some View {
+    if !isTyping, let messagePreview {
+      HStack(spacing: Spacing.micro) {
+        Image(systemName: messagePreview.metaSymbol)
+          .imageScale(.small)
+          .accessibilityLabel(Text(messagePreview.metaLabel))
+
+        Text(messagePreview.metaText(at: now))
+          .monospacedDigit()
+          .accessibilityLabel(Text(spokenTimestamp(of: messagePreview, at: now)))
+      }
+      .font(.tidexCaptionRegular)
+      .foregroundColor(messagePreview.metaColor)
+      .lineLimit(1)
+      .fixedSize()
+    }
+  }
+
+  /// The compact "5m" text reads as "5 meters" aloud, so VoiceOver gets the spelled-out form.
+  private func spokenTimestamp(of preview: FriendCardMessagePreview, at now: Date) -> String {
+    guard now.timeIntervalSince(preview.timestamp) >= 60 else { return preview.metaText(at: now) }
+    let formatter = RelativeDateTimeFormatter()
+    formatter.locale = Locale.appLocale
+    formatter.unitsStyle = .full
+    return formatter.localizedString(for: preview.timestamp, relativeTo: now)
   }
 
   private func statusColor(_ status: ShiftPreviewStatus) -> Color {
     switch status {
     case .active: .tidexSuccess
-    case .upcoming: .tidexBlue
+    case .upcoming: .tidexBlueText
     case .past: .tidexTextMuted
     }
   }
@@ -276,9 +311,35 @@ extension FriendCard {
         shiftTileLabel(at: now)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(shiftTileAccessibilityLabel(at: now))
+      .accessibilityInputLabels(shiftTileInputLabels(at: now))
+      .accessibilityHint(Text(.friendsAccessibilityOpensCalendar))
     } else {
       shiftTileLabel(at: now)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(shiftTileAccessibilityLabel(at: now))
     }
+  }
+
+  /// Names the friend, since every card has a shift tile, then reads the status and times.
+  private func shiftTileAccessibilityLabel(at now: Date) -> String {
+    var parts = [String(localized: .friendsAccessibilityShiftsFor(sharer.firstNameOnly))]
+    if let timing = shiftTiming, let shift = preview?.shift, !isRefreshing {
+      parts.append(timing.statusText(at: now, compact: false))
+      parts.append(
+        CalendarGridHelper.shiftTimesAccessibilityText(
+          startTime: shift.start_time, endTime: shift.end_time))
+    }
+    return parts.joined(separator: ", ")
+  }
+
+  /// Voice Control matches the visible text, which differs from the spoken label.
+  private func shiftTileInputLabels(at now: Date) -> [String] {
+    var labels = [String(localized: .tabsShifts)]
+    if let timing = shiftTiming, !isRefreshing {
+      labels.append(timing.statusText(at: now, compact: true))
+    }
+    return labels
   }
 
   /// Status over stacked start and end times, like the calendar day cell. The times fill a row
@@ -300,9 +361,9 @@ extension FriendCard {
         }
       }
     }
-    .foregroundColor(.tidexBlue)
+    .foregroundColor(.tidexBlueText)
     .monospacedDigit()
-    .lineLimit(1)
+    .lineLimit(isStacked ? nil : 1)
     // A fixed width keeps the shift column aligned across cards. The full card height keeps the
     // hairline the same length on every card. A shift keeps to the bottom so its rows line up
     // with the conversation, and the calendar entry sits in the middle.
@@ -322,7 +383,7 @@ extension FriendCard {
       Text(timing.statusText(at: now, compact: true))
         .font(.tidexCaptionStrong)
         .foregroundColor(statusColor(timing.status(at: now)))
-        .minimumScaleFactor(0.7)
+        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)
         .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 0 : statusBaselineOffset)
     }
   }
@@ -369,11 +430,14 @@ extension FriendCard {
 struct FriendsListEmptyState: View {
   var onAddFriend: (() -> Void)?
 
+  @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 48
+
   var body: some View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "person.2.slash")
-        .font(.system(size: 48))
+        .font(.system(size: iconSize))
         .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
 
       Text(.sharingNoSharers)
         .font(.tidexBodyMedium)
@@ -390,6 +454,7 @@ struct FriendsListEmptyState: View {
           HStack(spacing: Spacing.xxxs) {
             Image(systemName: "plus")
               .font(.tidexLabelStrong)
+              .accessibilityHidden(true)
             Text(.sharingAddFriend)
               .font(.tidexLabelStrong)
           }

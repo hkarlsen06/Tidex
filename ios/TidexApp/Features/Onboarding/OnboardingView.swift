@@ -7,6 +7,7 @@ struct OnboardingView: View {
   var onNavigateToLogin: () -> Void = {}
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var currentPage = 0
   @State private var simulatorBaselineTotals: CalendarHeaderTotals?
   @State private var preAuthCurrency: String = {
@@ -141,6 +142,12 @@ struct OnboardingView: View {
     }
   }
 
+  private func goBackToPreviousPage() {
+    MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
+      currentPage = max(currentPage - 1, 0)
+    }
+  }
+
   private func completeAndNavigateToSignup() {
     guard !isCompletingPreAuth else { return }
 
@@ -253,7 +260,10 @@ extension OnboardingView {
         simulatorBaselineTotals = baselineTotals
         preAuthCurrency = currency
       },
-      isPreloaded: false
+      isPreloaded: false,
+      onBack: {
+        goBackToPreviousPage()
+      }
     )
   }
 
@@ -307,8 +317,9 @@ extension OnboardingView {
           Text(.onboardingHowTitle)
             .font(.tidexScreenTitle)
             .foregroundColor(.tidexTextPrimary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.72)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.72)
+            .accessibilityAddTraits(.isHeader)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
 
@@ -348,6 +359,8 @@ extension OnboardingView {
 
       if currentPage == 0 {
         loginButton
+      } else if currentPage == howItWorksPage {
+        backButton
       }
     }
     .padding(.horizontal, Spacing.lg)
@@ -379,36 +392,61 @@ extension OnboardingView {
     }
   }
 
+  @ViewBuilder
   private var firstPageActionRow: some View {
-    GeometryReader { geometry in
-      let availableWidth = max(0, geometry.size.width - Spacing.sm)
-      let skipWidth = availableWidth / 5
-      let continueWidth = availableWidth - skipWidth
-
-      HStack(spacing: Spacing.sm) {
-        Button {
-          Haptics.play(.light)
-          completeAndNavigateToSignup()
-        } label: {
-          Image(systemName: "forward.end.fill")
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundColor(.tidexTextSecondary)
-            .frame(width: skipWidth)
-            .frame(height: 54)
-            .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
-        }
-        .buttonStyle(SnappyButtonStyle())
-        .accessibilityLabel(Text(.onboardingSkip))
-
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(spacing: Spacing.sm) {
         OnboardingButton(
           title: String(localized: .commonContinue),
           action: advanceToNextPage
         )
-        .frame(width: continueWidth)
+        skipButton(showsTitle: true)
       }
+    } else {
+      GeometryReader { geometry in
+        let availableWidth = max(0, geometry.size.width - Spacing.sm)
+        let skipWidth = availableWidth / 5
+        let continueWidth = availableWidth - skipWidth
+
+        HStack(spacing: Spacing.sm) {
+          skipButton(showsTitle: false)
+            .frame(width: skipWidth)
+
+          OnboardingButton(
+            title: String(localized: .commonContinue),
+            action: advanceToNextPage
+          )
+          .frame(width: continueWidth)
+        }
+      }
+      .frame(height: 54)
     }
-    .frame(height: 54)
+  }
+
+  private func skipButton(showsTitle: Bool) -> some View {
+    Button {
+      Haptics.play(.light)
+      completeAndNavigateToSignup()
+    } label: {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "forward.end.fill")
+          .font(.body.weight(.semibold))
+          .accessibilityHidden(true)
+        if showsTitle {
+          Text(.onboardingSkip)
+            .font(.tidexHeadline)
+            .multilineTextAlignment(.center)
+        }
+      }
+      .foregroundColor(.tidexTextSecondary)
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, showsTitle ? Spacing.xs : 0)
+      .frame(minHeight: 54)
+      .background(Color.tidexSurfaceSecondary)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+    }
+    .buttonStyle(SnappyButtonStyle())
+    .accessibilityLabel(Text(.onboardingSkip))
   }
 
   /// Lets returning users go straight to login instead of through the intro.
@@ -419,11 +457,29 @@ extension OnboardingView {
     } label: {
       Text(.onboardingGetstartedLogin)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
-        .lineLimit(1)
-        .minimumScaleFactor(0.86)
+        .foregroundColor(.tidexBlueText)
+        .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .padding(.vertical, Spacing.xxs)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+  }
+
+  /// Steps back to the previous page without needing a swipe.
+  private var backButton: some View {
+    Button {
+      Haptics.play(.light)
+      goBackToPreviousPage()
+    } label: {
+      Text(.commonBack)
+        .font(.tidexLabelStrong)
+        .foregroundColor(.tidexBlueText)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.xxs)
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -434,4 +490,4 @@ extension OnboardingView {
   OnboardingView(
     onNavigateToSignup: {}
   )
-}
+}  // swiftlint:disable:this file_length

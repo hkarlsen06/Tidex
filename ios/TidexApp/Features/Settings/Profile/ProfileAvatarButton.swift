@@ -44,7 +44,7 @@ struct ProfileAvatarButton: View {
         .overlay {
           if viewModel.isUploadingAvatar {
             RoundedRectangle(cornerRadius: CornerRadius.xxl)
-              .fill(Color.tidexTextPrimary.opacity(0.28))
+              .fill(Color.black.opacity(0.45))
 
             ProgressView()
               .tint(.white)
@@ -71,6 +71,17 @@ struct ProfileAvatarButton: View {
     .disabled(isDisabled)
     .accessibilityLabel(Text(.profilePersonalInfoProfilePicture))
     .accessibilityHint(Text(uploadButtonText))
+    .onChange(of: viewModel.isUploadingAvatar) { _, isUploading in
+      if isUploading {
+        AccessibilityNotification.Announcement(
+          String(localized: .profilePersonalInfoUploadingImage)
+        ).post()
+      } else if viewModel.errorMessage == nil {
+        AccessibilityNotification.Announcement(
+          String(localized: .settingsAccessibilityProfilePictureUpdated)
+        ).post()
+      }
+    }
     .confirmationDialog(
       String(localized: .profilePersonalInfoProfilePicture),
       isPresented: $showAvatarActionDialog,

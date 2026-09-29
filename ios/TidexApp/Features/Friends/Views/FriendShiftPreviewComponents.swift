@@ -124,6 +124,8 @@ private struct CompactFriendShiftPreviewTextRow: View {
   let showEarnings: Bool
   let currency: String?
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   private var formattedDate: String {
     guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
     return date.formatted(.dateTime.weekday(.wide).day().month(.abbreviated).calendar(.gregorian))
@@ -144,41 +146,58 @@ private struct CompactFriendShiftPreviewTextRow: View {
   }
 
   var body: some View {
+    // At accessibility sizes the date, time and status stack, so none of them truncates.
+    let isStacked = dynamicTypeSize.isAccessibilitySize
+    let layout =
+      isStacked
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(alignment: .top, spacing: Spacing.md))
+
     TimelineView(.periodic(from: .now, by: 1)) { context in
-      HStack(alignment: .top, spacing: Spacing.md) {
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(formattedDate)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-            .lineLimit(1)
+      layout {
+        dateColumn(isStacked: isStacked)
 
-          Text(formattedTimeRange)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
-            .lineLimit(1)
-            .environment(\.layoutDirection, .leftToRight)
+        if !isStacked {
+          Spacer(minLength: Spacing.xs)
         }
 
-        Spacer(minLength: Spacing.xs)
-
-        VStack(alignment: .trailing, spacing: Spacing.micro) {
-          Text(statusText(at: context.date))
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-
-          if showEarnings {
-            Text(formattedEarnings)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
-              .lineLimit(1)
-              .fixedSize(horizontal: true, vertical: false)
-          }
-        }
+        statusColumn(at: context.date, isStacked: isStacked)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.vertical, Spacing.xxs)
+    }
+  }
+
+  private func dateColumn(isStacked: Bool) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.micro) {
+      Text(formattedDate)
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
+        .lineLimit(isStacked ? nil : 1)
+
+      Text(formattedTimeRange)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextMuted)
+        .lineLimit(isStacked ? nil : 1)
+        .environment(\.layoutDirection, .leftToRight)
+    }
+  }
+
+  private func statusColumn(at now: Date, isStacked: Bool) -> some View {
+    VStack(alignment: isStacked ? .leading : .trailing, spacing: Spacing.micro) {
+      Text(statusText(at: now))
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
+        .lineLimit(isStacked ? nil : 1)
+        .fixedSize(horizontal: !isStacked, vertical: isStacked)
+
+      if showEarnings {
+        Text(formattedEarnings)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+          .lineLimit(isStacked ? nil : 1)
+          .fixedSize(horizontal: !isStacked, vertical: isStacked)
+      }
     }
   }
 

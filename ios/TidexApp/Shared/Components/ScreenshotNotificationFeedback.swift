@@ -17,18 +17,22 @@ final class ScreenshotNotificationFeedback {
 
   func showBubble() {
     showsNotifiedIcon = false
-    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+    let reduceMotion = UIAccessibility.isReduceMotionEnabled
+    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7)) {
       showsBubble = true
     }
   }
 
   func markSent() async {
-    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+    let reduceMotion = UIAccessibility.isReduceMotionEnabled
+    withAnimation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.6)) {
       showsNotifiedIcon = true
     }
     Haptics.play(.success)
     try? await Task.sleep(for: .seconds(0.3))
-    bellShakeTrigger.toggle()
+    if !UIAccessibility.isReduceMotionEnabled {
+      bellShakeTrigger.toggle()
+    }
   }
 
   func dismiss() {

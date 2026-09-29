@@ -18,6 +18,7 @@ struct SingleShiftContent: View {
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "info.circle")
             .font(.tidexMicro)
+            .accessibilityHidden(true)
           Text(.addShiftSingleTimeScopeHint)
             .font(.tidexMicro)
             .fixedSize(horizontal: false, vertical: true)
@@ -129,8 +130,8 @@ struct FullWidthBackSwipeBlocker: UIViewRepresentable {
 
 /// Content of the add screen: mode body, submit error and the bottom controls.
 struct AddShiftScreenContent: View {
-  /// Space kept free for the two rows of bottom controls.
-  private static let bottomControlsInset: CGFloat =
+  /// Space kept free for the two rows of bottom controls at regular text sizes.
+  private static let minimumControlsInset: CGFloat =
     MonthPickerLayout.height * 2 + Spacing.xs + MonthPickerLayout.bottomPadding
 
   let viewModel: AddShiftViewModel
@@ -141,6 +142,14 @@ struct AddShiftScreenContent: View {
   let onBackgroundTap: () -> Void
   let onStartFresh: () -> Void
   let onSave: () -> Void
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// Height of the bottom controls, which grow with the text size.
+  @State private var measuredControlsHeight: CGFloat = 0
+
+  private var bottomControlsInset: CGFloat {
+    max(Self.minimumControlsInset, measuredControlsHeight)
+  }
 
   private var isIPhone: Bool {
     UIDevice.current.userInterfaceIdiom == .phone
@@ -165,6 +174,11 @@ struct AddShiftScreenContent: View {
             onStartFresh: onStartFresh,
             onSave: onSave
           )
+          .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+          } action: { height in
+            measuredControlsHeight = height
+          }
           .transition(.opacity)
         }
       }
@@ -179,8 +193,8 @@ struct AddShiftScreenContent: View {
           focusedTimeField: $focusedTimeField,
           scrollProxy: scrollProxy,
           keyboardHeight: keyboardHeight,
-          availableHeight: geometry.size.height - Self.bottomControlsInset,
-          bottomControlsInset: Self.bottomControlsInset
+          availableHeight: geometry.size.height - bottomControlsInset,
+          bottomControlsInset: bottomControlsInset
         )
         .onTapGesture(perform: onBackgroundTap)
       }
@@ -210,8 +224,8 @@ struct AddShiftScreenContent: View {
       )
       .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
       .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-      .padding(.bottom, Self.bottomControlsInset + Spacing.xs)
-      .transition(.move(edge: .bottom).combined(with: .opacity))
+      .padding(.bottom, bottomControlsInset + Spacing.xs)
+      .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
     }
   }
 }

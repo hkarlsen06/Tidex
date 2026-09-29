@@ -53,6 +53,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
 
   @Environment(\.layoutDirection) private var layoutDirection  // swiftlint:disable:this explicit_type_interface
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
@@ -146,12 +147,13 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
             .foregroundColor(.tidexTextPrimary)
           Text("·")
             .foregroundColor(.tidexTextMuted)
+            .accessibilityHidden(true)
           Text(dateParts.dayMonth)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextMuted)
-            .contentTransition(.numericText())
+            .contentTransition(reduceMotion ? .identity : .numericText())
         }
-        .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)  // swiftlint:disable:this line_length no_magic_numbers
+        .animation(reduceMotion ? nil : .spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)  // swiftlint:disable:this line_length no_magic_numbers
       } leadingBottom: {
         // Row 2: Time range
         timeRangeLabel
@@ -161,7 +163,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
           if showIncreaseHighlight {
             Text("+")
               .font(.tidexTitle)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexBlueText)
           }
           CurrencyCountUpText(
             amount: displayAmount,
@@ -175,13 +177,14 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
             )
           )
           .font(.tidexTitle)
-          .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
+          .foregroundColor(showIncreaseHighlight ? .tidexBlueText : .tidexTextPrimary)
         }
       } trailingBottom: {
         if showFooter, let text = displayedFooterText {
           if isBestShift {
             HStack(spacing: Spacing.xxxs) {
-              Image(systemName: "star.fill")  // swiftlint:disable:this accessibility_label_for_image
+              Image(systemName: "star.fill")
+                .accessibilityHidden(true)
               Text(text)
             }
             .font(.tidexLabel)
@@ -228,7 +231,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
       .clipShape(cardShape)
       .onChange(of: displayedProgress) { _, newValue in
         // Animate to new progress value
-        withAnimation(.linear(duration: 1.0)) {
+        withAnimation(reduceMotion ? nil : .linear(duration: 1.0)) {
           animatedProgress = newValue ?? 0
         }
       }
@@ -244,7 +247,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
 
         // Animate from 0 to current progress on appear (matches CSS animation)
         if hasProgress(displayedProgress) {
-          withAnimation(.linear(duration: 1.0)) {
+          withAnimation(reduceMotion ? nil : .linear(duration: 1.0)) {
             animatedProgress = displayedProgress ?? 0
           }
         }
@@ -286,8 +289,8 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
     }
     .font(.tidexSubheadline)
     .foregroundColor(.tidexTextPrimary)
-    .lineLimit(1)
-    .fixedSize(horizontal: true, vertical: false)
+    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+    .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
     .environment(\.layoutDirection, .leftToRight)
   }
 
@@ -303,15 +306,16 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
         .fill(Color.tidexTextMuted.opacity(0.22))  // swiftlint:disable:this no_magic_numbers
         .frame(width: 38, height: 12)  // swiftlint:disable:this no_magic_numbers
     }
-    .lineLimit(1)
-    .fixedSize(horizontal: true, vertical: false)
+    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+    .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
     .environment(\.layoutDirection, .leftToRight)
   }
 
   private var clockIcon: some View {
-    Image(systemName: "clock")  // swiftlint:disable:this accessibility_label_for_image
+    Image(systemName: "clock")
       .font(.tidexSubheadline)
       .foregroundColor(.tidexTextMuted)
+      .accessibilityHidden(true)
   }
 
   private var cardBorderColor: Color {
@@ -357,7 +361,7 @@ private struct LiveTypingDots: View {
           .fill(Color.tidexTextMuted)
           .frame(width: 3, height: 3)  // swiftlint:disable:this no_magic_numbers
           .scaleEffect(reduceMotion ? 1.0 : (isActive ? 1.0 : 0.55))  // swiftlint:disable:this no_magic_numbers
-          .opacity(reduceMotion ? 0.65 : (isActive ? 1.0 : 0.35))  // swiftlint:disable:this no_magic_numbers
+          .opacity(reduceMotion ? 1.0 : (isActive ? 1.0 : 0.35))  // swiftlint:disable:this no_magic_numbers
           .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: activeDotIndex)  // swiftlint:disable:this line_length no_magic_numbers
       }
     }

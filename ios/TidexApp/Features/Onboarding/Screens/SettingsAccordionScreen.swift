@@ -9,7 +9,10 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
   var showsPayday: Bool = true
   var continueTitle: String = String(localized: .commonContinue)
   @ScaledMetric(relativeTo: .subheadline) private var taxPresetMinimumWidth: CGFloat = 64
+  @ScaledMetric(relativeTo: .headline) private var taxInputWidth: CGFloat = 60
+  @ScaledMetric(relativeTo: .headline) private var paydayInputWidth: CGFloat = 44
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentSection: SettingsSection? = .breakDeduction
   @State private var completedSections: Set<SettingsSection> = []
   @State private var showingTaxInput = false
@@ -51,11 +54,11 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
           .padding(.horizontal, Spacing.lg)
           .padding(.bottom, Spacing.xl)
           .adaptiveContentWidth()
-          .transition(.opacity.combined(with: .move(edge: .bottom)))
+          .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
       }
-      .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentSection)
-      .animation(.spring(response: 0.35, dampingFraction: 0.85), value: completedSections)
+      .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: currentSection)
+      .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: completedSections)
     }
   }
 
@@ -104,10 +107,11 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         HStack(spacing: Spacing.xxs) {
           Image(systemName: "chevron.left")
             .font(.tidexButton)
+            .accessibilityHidden(true)
           Text(.commonBack)
             .font(.tidexBody)
         }
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .frame(minHeight: 44)
       }
       .buttonStyle(.plain)
@@ -124,6 +128,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         .font(.tidexLargeTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       Text(.onboardingSettingsSubtitle)
         .font(.tidexBody)
@@ -150,6 +155,9 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       isComplete: completedSections.contains(.breakDeduction),
       onContinue: {
         completeSection(.breakDeduction)
+      },
+      onHeaderTap: {
+        openSection(.breakDeduction)
       }
     ) {
       VStack(alignment: .leading, spacing: Spacing.md) {
@@ -174,14 +182,6 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         }
       }
     }
-    .onTapGesture {
-      // Allow tapping if not current section (to expand/edit)
-      if currentSection != .breakDeduction {
-        withAnimation {
-          currentSection = .breakDeduction
-        }
-      }
-    }
   }
 
   private var breakSummary: String {
@@ -202,19 +202,13 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       isComplete: completedSections.contains(.tax),
       onContinue: {
         completeSection(.tax)
-      }
+      },
+      onHeaderTap: {
+        openSection(.tax)
+      },
+      isLocked: !completedSections.contains(.breakDeduction)
     ) {
       taxContent
-    }
-    .onTapGesture {
-      // Allow tapping if: already completed (to edit) OR unlocked and not yet completed
-      if currentSection != .tax,
-        completedSections.contains(.tax) || completedSections.contains(.breakDeduction)
-      {
-        withAnimation {
-          currentSection = .tax
-        }
-      }
     }
     .opacity(completedSections.contains(.breakDeduction) || currentSection == .tax ? 1 : 0.5)
   }
@@ -268,6 +262,8 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         }
       )
       .tint(.tidexBlue)
+      .accessibilityLabel(Text(.onboardingSettingsTaxPercentage))
+      .accessibilityValue(Text(verbatim: "\(formatTaxValue(data.taxPercentage))%"))
     }
   }
 
@@ -282,7 +278,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
           value: preset,
           isSelected: data.taxPercentage == preset,
           action: {
-            withAnimation {
+            withAnimation(reduceMotion ? nil : .default) {
               data.taxPercentage = preset
             }
           }
@@ -305,11 +301,12 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
   private var taxTextField: some View {
     TextField("", text: $taxInputText)
       .font(.tidexTitle2)
-      .foregroundColor(.tidexBlue)
+      .foregroundColor(.tidexBlueText)
       .keyboardType(.decimalPad)
       .multilineTextAlignment(.leading)
       .focused($isTaxInputFocused)
-      .frame(width: 60)
+      .accessibilityLabel(Text(.onboardingSettingsTaxPercentage))
+      .frame(width: taxInputWidth)
       .padding(.horizontal, Spacing.xxs)
       .padding(.vertical, Spacing.micro)
       .background(Color.tidexBlue.opacity(0.15))
@@ -347,13 +344,17 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       taxValueLabel
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(
+      Text(verbatim: "\(String(localized: .onboardingSettingsTaxPercentage)), \(formatTaxValue(data.taxPercentage))%")
+    )
+    .accessibilityInputLabels([formatTaxValue(data.taxPercentage)])
   }
 
   private var taxValueLabel: some View {
     HStack(spacing: Spacing.micro) {
       Text(formatTaxValue(data.taxPercentage))
         .font(.tidexTitle2)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .contentTransition(.numericText())
       Text("%")
         .font(.tidexLabel)
@@ -383,19 +384,13 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       isComplete: completedSections.contains(.payday),
       onContinue: {
         completeSection(.payday)
-      }
+      },
+      onHeaderTap: {
+        openSection(.payday)
+      },
+      isLocked: !completedSections.contains(.tax)
     ) {
       paydayContent
-    }
-    .onTapGesture {
-      // Allow tapping if: already completed (to edit) OR unlocked and not yet completed
-      if currentSection != .payday,
-        completedSections.contains(.payday) || completedSections.contains(.tax)
-      {
-        withAnimation {
-          currentSection = .payday
-        }
-      }
     }
     .opacity(completedSections.contains(.tax) || currentSection == .payday ? 1 : 0.5)
   }
@@ -427,7 +422,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       if !payrollDayOptions.contains(data.payrollDay), !showingPaydayInput {
         Text(String(localized: .onboardingSettingsPaydayCustomValue(data.payrollDay)))
           .font(.tidexFootnote)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
     }
   }
@@ -441,7 +436,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
           isSelected: data.payrollDay == day && !showingPaydayInput,
           action: {
             showingPaydayInput = false
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
               data.payrollDay = day
             }
           }
@@ -462,11 +457,12 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     HStack(spacing: Spacing.xxs) {
       TextField("", text: $paydayInputText)
         .font(.tidexButton)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .keyboardType(.numberPad)
         .multilineTextAlignment(.center)
         .focused($isPaydayInputFocused)
-        .frame(width: 44)
+        .accessibilityLabel(Text(.onboardingSettingsPaydayTitle))
+        .frame(width: paydayInputWidth)
         .frame(minHeight: 44)
         .background(Color.tidexBlue.opacity(0.15))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
@@ -505,10 +501,11 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       HStack(spacing: Spacing.xxs) {
         Image(systemName: "pencil")
           .font(.tidexCaptionRegular)
+          .accessibilityHidden(true)
         Text(.onboardingSettingsPaydayOther)
       }
       .font(isCustomDay ? .tidexLabelStrong : .tidexLabel)
-      .foregroundColor(isCustomDay ? .white : .tidexTextSecondary)
+      .foregroundColor(isCustomDay ? .tidexTextOnBrand : .tidexTextSecondary)
       .frame(minWidth: 56, minHeight: 44)
       .padding(.horizontal, Spacing.xs)
       .background(isCustomDay ? Color.tidexBrandPrimary : Color.tidexBackground)
@@ -519,6 +516,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       )
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isCustomDay ? .isSelected : [])
   }
 
   private var paydaySummary: String {
@@ -530,8 +528,28 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
 
   // MARK: - Helpers
 
+  /// Opens a collapsed section. A section opens once the one before it is complete, or when it is done already.
+  private func openSection(_ section: SettingsSection) {
+    guard currentSection != section else { return }
+    let isUnlocked: Bool
+    switch section {
+    case .breakDeduction:
+      isUnlocked = true
+
+    case .tax:
+      isUnlocked = completedSections.contains(.tax) || completedSections.contains(.breakDeduction)
+
+    case .payday:
+      isUnlocked = completedSections.contains(.payday) || completedSections.contains(.tax)
+    }
+    guard isUnlocked else { return }
+    withAnimation(reduceMotion ? nil : .default) {
+      currentSection = section
+    }
+  }
+
   private func completeSection(_ section: SettingsSection) {
-    withAnimation {
+    withAnimation(reduceMotion ? nil : .default) {
       completedSections.insert(section)
 
       // Move to next section
@@ -622,7 +640,7 @@ private struct PaydayButton: View {
     }) {
       Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
         .frame(minWidth: 56, minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
@@ -632,6 +650,7 @@ private struct PaydayButton: View {
         )
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
 

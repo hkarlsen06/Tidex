@@ -19,6 +19,13 @@ struct TermsAgreementView: View {
       .fixedSize(horizontal: false, vertical: true)
       .multilineTextAlignment(.center)
       .frame(maxWidth: .infinity, alignment: .center)
+      // The links are also actions, so VoiceOver and Voice Control do not need the links rotor.
+      .accessibilityAction(named: Text(.acceptTermsViewTerms)) {
+        if let termsURL { openURL(termsURL, prefersInApp: true) }
+      }
+      .accessibilityAction(named: Text(.acceptTermsViewPrivacy)) {
+        if let privacyURL { openURL(privacyURL, prefersInApp: true) }
+      }
       .environment(
         \.openURL,
         OpenURLAction { url in
@@ -42,7 +49,7 @@ struct TermsAgreementView: View {
 
     // Terms link
     var termsPart = AttributedString(termsLinkText)
-    termsPart.foregroundColor = .tidexBlue
+    termsPart.foregroundColor = .tidexBlueText
     termsPart.underlineStyle = .single
     if let url = termsURL {
       termsPart.link = url
@@ -55,7 +62,7 @@ struct TermsAgreementView: View {
 
     // Privacy link
     var privacyPart = AttributedString(privacyLinkText)
-    privacyPart.foregroundColor = .tidexBlue
+    privacyPart.foregroundColor = .tidexBlueText
     privacyPart.underlineStyle = .single
     if let url = privacyURL {
       privacyPart.link = url

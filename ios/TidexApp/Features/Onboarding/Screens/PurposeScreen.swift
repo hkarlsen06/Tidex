@@ -30,7 +30,8 @@ struct PurposeScreen: View {
           .padding(.bottom, Spacing.xl)
           .adaptiveContentWidth()
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .frame(maxWidth: .infinity)
+      .scrollsOnOverflow()
     }
   }
 
@@ -41,6 +42,7 @@ struct PurposeScreen: View {
         .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       Text(.onboardingPostAuthPurposeSubtitle)
         .font(.tidexBody)
@@ -146,8 +148,10 @@ struct PurposeScreen: View {
         Text(.onboardingPostAuthPurposeFriendsOptionTitle)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)
-          .frame(height: 54)
+          .padding(.vertical, Spacing.xs)
+          .frame(minHeight: 54)
           .background(Color.tidexSurfaceSecondary)
           .overlay {
             RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)

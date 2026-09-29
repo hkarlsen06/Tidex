@@ -125,7 +125,7 @@ struct ShareableShiftCard: View {
       // Section header
       HStack {
         Image(systemName: "clock")
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         Text(.shiftsTimeSection)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextSecondary)
@@ -170,7 +170,7 @@ struct ShareableShiftCard: View {
       // Section header
       HStack {
         Image(systemName: "creditcard")
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         Text(.shiftsEarningsSection)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextSecondary)
@@ -246,7 +246,7 @@ struct ShareableShiftCard: View {
           if hasCustomSupplements {
             Text(.shiftsCustomized)
               .font(.tidexMicro)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexBlueText)
               .padding(.horizontal, Spacing.xs)
               .padding(.vertical, 3)
               .background(

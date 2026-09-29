@@ -129,6 +129,7 @@ internal struct CalendarImportView: View {
   internal var onImported: (Set<String>) -> Void = { _ in }
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var model: CalendarImportModel = CalendarImportModel()
 
   private static let systemHelp: [(name: String, text: LocalizedStringResource)] = [
@@ -139,7 +140,7 @@ internal struct CalendarImportView: View {
   ]
 
   internal var body: some View {
-    NavigationStack {
+    NavigationStack {  // swiftlint:disable:this closure_body_length
       Form {
         Group {
           linkSection
@@ -149,6 +150,7 @@ internal struct CalendarImportView: View {
               Text(errorMessage)
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexError)
+                .announcesToVoiceOver(errorMessage)
             }
           }
 
@@ -171,6 +173,11 @@ internal struct CalendarImportView: View {
         }
       }
       .disabled(model.isWorking)
+      .onChange(of: model.isWorking) { _, isWorking in
+        if isWorking {
+          AccessibilityNotification.Announcement(String(localized: .commonLoading)).post()
+        }
+      }
     }
     .onAppear {
       model.loadJobs()
@@ -215,6 +222,7 @@ internal struct CalendarImportView: View {
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
         }
+        .accessibilityElement(children: .combine)
       }
     } header: {
       Text(.calendarImportHelpHeader)
@@ -247,16 +255,21 @@ internal struct CalendarImportView: View {
           )
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
-          HStack(spacing: Spacing.xs) {
+          let detailLayout =
+            dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(spacing: Spacing.xs))
+          detailLayout {
             Text(shift.start..<shift.end, format: .interval.hour().minute())
             if let title = shift.title {
               Text(verbatim: title)
-                .lineLimit(1)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             }
           }
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
         }
+        .accessibilityElement(children: .combine)
       }
     } header: {
       Text(.calendarImportShiftsHeader)

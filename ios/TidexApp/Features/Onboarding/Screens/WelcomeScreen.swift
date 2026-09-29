@@ -6,6 +6,9 @@ import UIKit
 struct WelcomeScreen: View {
   let currency: String
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   // Entrance animation states - animate once, then stillness
   @State private var showCard = false
   @State private var showHeadline = false
@@ -19,6 +22,11 @@ struct WelcomeScreen: View {
   private var heroSubtitleFont: Font {
     let size = UIFontMetrics(forTextStyle: .body).scaledValue(for: 17)
     return .system(size: size, weight: .regular, design: .default)
+  }
+
+  /// From this size on the title wraps naturally instead of shrinking on two fixed lines.
+  private var usesFlowingTitle: Bool {
+    dynamicTypeSize >= .xxLarge
   }
 
   private var titleLines: [String] {
@@ -50,12 +58,15 @@ struct WelcomeScreen: View {
       let isIPadLandscape =
         UIDevice.current.userInterfaceIdiom == .pad && geometry.size.width > geometry.size.height
 
-      heroContent(isIPadLandscape: isIPadLandscape)
-        .frame(maxWidth: .infinity)
-        .position(
-          x: geometry.size.width / 2,
-          y: geometry.size.height * 0.44
-        )
+      // The hero sits at 44% of the height. It scrolls when large text makes it taller than the page.
+      ScrollView {
+        heroContent(isIPadLandscape: isIPadLandscape)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.lg)
+          .padding(.bottom, geometry.size.height * 0.12)
+          .frame(minHeight: geometry.size.height)
+      }
+      .scrollBounceBehavior(.basedOnSize)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .onAppear {
@@ -80,7 +91,7 @@ struct WelcomeScreen: View {
 
       ghostedPaycheckPreview
         .opacity(showCard ? 1 : 0)
-        .offset(y: showCard ? 0 : 14)
+        .offset(y: showCard || reduceMotion ? 0 : 14)
         .padding(.top, Spacing.huge + Spacing.xl)
     }
     .frame(maxWidth: .infinity)
@@ -109,7 +120,7 @@ struct WelcomeScreen: View {
         // Large "amount" - the visual hook (locale-aware)
         Text(ghostedAmountText)
           .font(.tidexAmountLarge)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
 
         Spacer().frame(height: 8)
 
@@ -171,6 +182,37 @@ struct WelcomeScreen: View {
     }
     .opacity(0.9)
     .blur(radius: 0.5)
+    .accessibilityHidden(true)
+  }
+
+  private func heroTitle(
+    horizontalAlignment: HorizontalAlignment,
+    frameAlignment: Alignment,
+    textAlignment: TextAlignment
+  ) -> some View {
+    Group {
+      if usesFlowingTitle {
+        Text(.onboardingWelcomeTitle)
+          .font(heroTitleFont)
+          .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(textAlignment)
+          .frame(maxWidth: .infinity, alignment: frameAlignment)
+      } else {
+        VStack(alignment: horizontalAlignment, spacing: -10) {
+          ForEach(Array(titleLines.enumerated()), id: \.offset) { _, line in
+            Text(line)
+              .font(heroTitleFont)
+              .foregroundColor(.tidexTextPrimary)
+              .lineLimit(1)
+              .minimumScaleFactor(0.78)
+              .frame(maxWidth: .infinity, alignment: frameAlignment)
+          }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(.onboardingWelcomeTitle))
+      }
+    }
+    .accessibilityAddTraits(.isHeader)
   }
 
   @ViewBuilder
@@ -180,29 +222,24 @@ struct WelcomeScreen: View {
     let textAlignment: TextAlignment = isIPadLandscape ? .center : .leading
 
     VStack(spacing: Spacing.sm) {
-      VStack(alignment: horizontalAlignment, spacing: -10) {
-        ForEach(Array(titleLines.enumerated()), id: \.offset) { _, line in
-          Text(line)
-            .font(heroTitleFont)
-            .foregroundColor(.tidexTextPrimary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.78)
-            .frame(maxWidth: .infinity, alignment: frameAlignment)
-        }
-      }
+      heroTitle(
+        horizontalAlignment: horizontalAlignment,
+        frameAlignment: frameAlignment,
+        textAlignment: textAlignment
+      )
       .opacity(showHeadline ? 1 : 0)
-      .offset(y: showHeadline ? 0 : 8)
+      .offset(y: showHeadline || reduceMotion ? 0 : 8)
 
       Text(.onboardingWelcomeSubtitle)
         .font(heroSubtitleFont)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(textAlignment)
         .lineSpacing(2)
-        .lineLimit(3)
+        .lineLimit(usesFlowingTitle ? nil : 3)
         .frame(maxWidth: .infinity, alignment: frameAlignment)
         .fixedSize(horizontal: false, vertical: true)
         .opacity(showSubheadline ? 1 : 0)
-        .offset(y: showSubheadline ? 0 : 6)
+        .offset(y: showSubheadline || reduceMotion ? 0 : 6)
     }
     .frame(maxWidth: 350, alignment: frameAlignment)
     .frame(maxWidth: .infinity, alignment: frameAlignment)

@@ -7,7 +7,7 @@ struct AdminUserStatTiles: View {
   var body: some View {
     Section {
       HStack(spacing: Spacing.xs) {
-        AdminStatTile(title: "Shifts", value: stats?.shiftCount, icon: "calendar", tint: .tidexBlue)
+        AdminStatTile(title: "Shifts", value: stats?.shiftCount, icon: "calendar", tint: .tidexBlueText)
         AdminStatTile(
           title: "Last 30 days", value: stats?.shiftsLast30Days, icon: "clock", tint: .tidexSuccess)
         AdminStatTile(

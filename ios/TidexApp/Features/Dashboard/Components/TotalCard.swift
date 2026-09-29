@@ -24,8 +24,16 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
 
   private let amountAnimationDuration: Double = 0.8  // swiftlint:disable:this type_contents_order
+
+  /// Row heights that keep the skeleton and the loaded card the same size at regular text sizes.
+  /// They scale with Dynamic Type, and accessibility sizes drop them so the rows can grow freely.
+  @ScaledMetric(relativeTo: .subheadline) private var captionRowHeight: CGFloat = 20  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers type_contents_order
+  @ScaledMetric(relativeTo: .largeTitle) private var amountRowHeight: CGFloat = 88  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers type_contents_order
+  @ScaledMetric(relativeTo: .body) private var subtitleRowHeight: CGFloat = 24  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers type_contents_order
+  @ScaledMetric(relativeTo: .footnote) private var comparisonRowHeight: CGFloat = 32  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers type_contents_order
 
   // MARK: - Computed Properties
 
@@ -113,18 +121,18 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   var body: some View {  // swiftlint:disable:this explicit_acl
     VStack(spacing: Spacing.xxs) {
       captionRow
-        .frame(height: usesFixedTypographyFrames ? 20 : nil)  // swiftlint:disable:this no_magic_numbers
+        .frame(height: usesFixedTypographyFrames ? captionRowHeight : nil)
 
       mainAmountDisplay
-        .frame(height: usesFixedTypographyFrames ? 88 : nil)  // swiftlint:disable:this no_magic_numbers
+        .frame(height: usesFixedTypographyFrames ? amountRowHeight : nil)
 
       // The subtitle qualifies the amount, so it sits directly below it.
       subtitleContent
-        .frame(height: usesFixedTypographyFrames ? 24 : nil)  // swiftlint:disable:this no_magic_numbers
+        .frame(height: usesFixedTypographyFrames ? subtitleRowHeight : nil)
         .padding(.bottom, Spacing.xs)
 
       comparisonRow
-        .frame(height: usesFixedTypographyFrames ? 32 : nil)  // swiftlint:disable:this no_magic_numbers
+        .frame(height: usesFixedTypographyFrames ? comparisonRowHeight : nil)
     }
     .frame(maxWidth: .infinity)
     .padding(.horizontal, isElevated ? Spacing.lg : 0)
@@ -180,7 +188,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       }
       .font(.tidexLabel)
       .foregroundColor(.tidexTextSecondary)
-      .lineLimit(1)
+      .lineLimit(usesFixedTypographyFrames ? 1 : nil)
+      .multilineTextAlignment(.center)
     } else {
       Color.clear
     }
@@ -210,10 +219,12 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         animateOnAppear: false,
         animateChanges: true
       )
-      .font(usesFixedTypographyFrames ? .tidexHeroAmount : .tidexAmountDisplay)
+      // At accessibility sizes the amount uses a smaller base font and wraps instead of shrinking.
+      .font(usesFixedTypographyFrames ? .tidexHeroAmount : .tidexAmountLarge)
       .foregroundColor(.tidexTextPrimary)
-      .minimumScaleFactor(0.4)  // swiftlint:disable:this no_magic_numbers
-      .lineLimit(1)
+      .minimumScaleFactor(usesFixedTypographyFrames ? 0.4 : 1)  // swiftlint:disable:this no_magic_numbers
+      .lineLimit(usesFixedTypographyFrames ? 1 : nil)
+      .multilineTextAlignment(.center)
     }
   }
 
@@ -240,8 +251,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     text
       .font(.tidexBody)
       .foregroundColor(.tidexTextSecondary)
-      .contentTransition(.numericText(value: Double(count)))
-      .animation(.spring(duration: amountAnimationDuration, bounce: 0), value: count)
+      .contentTransition(reduceMotion ? .identity : .numericText(value: Double(count)))
+      .animation(reduceMotion ? nil : .spring(duration: amountAnimationDuration, bounce: 0), value: count)
   }
 
 }

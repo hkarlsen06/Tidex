@@ -37,11 +37,7 @@ extension Color {
     tidexTextReversedByTheme
   }
 
-  /// Purple color for Max tier branding
-  /// HSlocalized(258, 70%, 60%) - vibrant purple
-  static var tidexPurple: Color {
-    Color(hue: 258 / 360, saturation: 0.70, brightness: 0.75)
-  }
+  // tidexPurple comes from the TidexPurple color asset (light #6239BF, dark #A58CDD).
 
   /// Employment analytics accent - green with stronger contrast on dark chart surfaces.
   static var tidexEmploymentAccent: Color {

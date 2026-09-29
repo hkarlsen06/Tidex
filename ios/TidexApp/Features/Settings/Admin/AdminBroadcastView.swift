@@ -97,6 +97,7 @@ struct AdminBroadcastDraft {
 }
 
 struct AdminBroadcastView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var draft: AdminBroadcastDraft
   @State private var audienceSize: Int?
   @State private var history: [AdminBroadcast] = []
@@ -171,7 +172,7 @@ struct AdminBroadcastView: View {
       .pickerStyle(.segmented)
       LabeledContent("Recipients") {
         if let recipientCount {
-          Text(recipientCount, format: .number).contentTransition(.numericText())
+          Text(recipientCount, format: .number).contentTransition(reduceMotion ? .identity : .numericText())
         } else {
           ProgressView().controlSize(.small)
         }

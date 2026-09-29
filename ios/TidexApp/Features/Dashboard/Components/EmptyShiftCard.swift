@@ -111,8 +111,8 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
     Label {
       Text(.dashboardAddShiftButton)
         .font(.tidexLabelStrong)
-        .lineLimit(1)
-        .minimumScaleFactor(0.85)  // swiftlint:disable:this no_magic_numbers
+        .lineLimit(usesFixedCardHeight ? 1 : nil)
+        .minimumScaleFactor(usesFixedCardHeight ? 0.85 : 1)  // swiftlint:disable:this no_magic_numbers
     } icon: {
       Image(systemName: "plus")
         .font(.tidexLabelStrong)

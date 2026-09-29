@@ -4,6 +4,7 @@ import SwiftUI
 /// Displays a 6-digit code input for TOTP verification
 struct MFAVerifyView: View {
   @State private var viewModel: MFAVerifyViewModel
+  @ScaledMetric(relativeTo: .title) private var iconSize: CGFloat = 36
 
   init(factor: AuthService.MFAFactor, coordinator: AppCoordinator) {
     _viewModel = State(
@@ -61,6 +62,7 @@ struct MFAVerifyView: View {
 
       Spacer()
     }
+    .scrollsOnOverflow()
     .background(Color.tidexBackground)
     .loadingWithSuccess(viewModel.isLoading, isSuccess: viewModel.isVerificationComplete)
     .onTapGesture {
@@ -80,11 +82,12 @@ struct MFAVerifyView: View {
       ZStack {
         Circle()
           .fill(Color.tidexBlue.opacity(0.1))
-          .frame(width: 80, height: 80)
+          .frame(width: iconSize * 2.2, height: iconSize * 2.2)
 
         Image(systemName: "lock.shield.fill")
-          .font(.system(size: 36))
-          .foregroundColor(.tidexBlue)
+          .font(.system(size: iconSize))
+          .foregroundColor(.tidexBlueText)
+          .accessibilityHidden(true)
       }
 
       // Title
@@ -101,6 +104,8 @@ struct MFAVerifyView: View {
       Text(.mfaTitle)
         .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       Text(.mfaSubtitle)
         .font(.tidexSubheadline)
@@ -129,10 +134,13 @@ struct MFAVerifyView: View {
       HStack(spacing: Spacing.xxs) {
         Image(systemName: "chevron.left")
           .font(.tidexCaption)
+          .accessibilityHidden(true)
         Text(.mfaBackToLogin)
           .font(.tidexSubheadline)
       }
       .foregroundColor(.tidexTextSecondary)
+      .frame(minHeight: 44)
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }

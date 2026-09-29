@@ -8,6 +8,11 @@ struct SharedShiftRow: View {
   let currency: String
 
   @Environment(\.layoutDirection) private var layoutDirection
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  private var isStacked: Bool {
+    dynamicTypeSize.isAccessibilitySize
+  }
 
   // MARK: - Computed Properties
 
@@ -22,7 +27,13 @@ struct SharedShiftRow: View {
   // MARK: - Body
 
   var body: some View {
-    HStack(alignment: .center, spacing: Spacing.md) {
+    // Date, times and amount stack at accessibility sizes, where fixed-width rows would clip.
+    let layout =
+      isStacked
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(alignment: .center, spacing: Spacing.md))
+
+    layout {
       // Left side: date and time info
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         // Day name and date
@@ -32,11 +43,12 @@ struct SharedShiftRow: View {
             .foregroundColor(.tidexTextPrimary)
           Text("·")
             .foregroundColor(.tidexTextMuted)
+            .accessibilityHidden(true)
           Text(dateParts.dayMonth)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextMuted)
         }
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: !isStacked, vertical: false)
 
         // Time range and hours
         HStack(spacing: Spacing.xs) {
@@ -49,7 +61,9 @@ struct SharedShiftRow: View {
         .environment(\.layoutDirection, .leftToRight)
       }
 
-      Spacer()
+      if !isStacked {
+        Spacer()
+      }
 
       // Right side: earnings or hidden indicator
       if showEarnings {
@@ -60,6 +74,7 @@ struct SharedShiftRow: View {
     }
     .padding(.horizontal, Spacing.mlg)
     .padding(.vertical, Spacing.mlg)
+    .accessibilityElement(children: .combine)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)
@@ -75,14 +90,14 @@ struct SharedShiftRow: View {
 
   @ViewBuilder
   private var earningsView: some View {
-    VStack(alignment: .trailing, spacing: Spacing.micro) {
+    VStack(alignment: isStacked ? .leading : .trailing, spacing: Spacing.micro) {
       let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
       Text(formatCurrency(displayAmount))
         .font(.tidexTitle)
         .tracking(-0.5)
         .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1)
-        .fixedSize(horizontal: true, vertical: false)
+        .lineLimit(isStacked ? nil : 1)
+        .fixedSize(horizontal: !isStacked, vertical: false)
 
       // Show gross - tax breakdown if tax enabled
       if shift.taxEnabled, shift.taxAmount > 0 {
@@ -93,11 +108,11 @@ struct SharedShiftRow: View {
         }
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
-        .lineLimit(1)
-        .fixedSize(horizontal: true, vertical: false)
+        .lineLimit(isStacked ? nil : 1)
+        .fixedSize(horizontal: !isStacked, vertical: false)
       }
     }
-    .fixedSize(horizontal: true, vertical: false)
+    .fixedSize(horizontal: !isStacked, vertical: false)
     .layoutPriority(2)
   }
 
@@ -105,6 +120,7 @@ struct SharedShiftRow: View {
     HStack(spacing: Spacing.xxxs) {
       Image(systemName: "eye.slash.fill")
         .font(.tidexSubheadline)
+        .accessibilityHidden(true)
       Text(.sharingHidden)
         .font(.tidexLabel)
     }
@@ -149,8 +165,8 @@ struct SharedShiftRow: View {
     Text(timeRangeText)
       .font(.tidexSubheadline)
       .foregroundColor(.tidexTextPrimary)
-      .lineLimit(1)
-      .minimumScaleFactor(0.85)
+      .lineLimit(isStacked ? nil : 1)
+      .minimumScaleFactor(isStacked ? 1 : 0.85)
       .environment(\.layoutDirection, .leftToRight)
   }
 
@@ -158,6 +174,7 @@ struct SharedShiftRow: View {
     Image(systemName: "clock")
       .font(.tidexFootnote)
       .foregroundColor(.tidexTextMuted)
+      .accessibilityHidden(true)
   }
 
 }

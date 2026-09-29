@@ -22,9 +22,11 @@ struct OnboardingButton: View {
     } label: {
       Text(title)
         .font(.tidexHeadline)
+        .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .frame(height: 54)
-        .foregroundColor(style == .primary ? .white : .tidexBlue)
+        .padding(.vertical, Spacing.xs)
+        .frame(minHeight: 54)
+        .foregroundColor(style == .primary ? .tidexTextOnBrand : .tidexBlueText)
         .background(
           Group {
             if style == .primary {
@@ -62,4 +64,17 @@ private struct SnappyOnboardingButtonStyle: ButtonStyle {
   .padding(.horizontal, Spacing.lg)
   .frame(maxHeight: .infinity)
   .background(Color.tidexBackground)
+}
+
+extension View {
+  /// Keeps the layout unchanged when it fits and lets it scroll when large text makes it overflow.
+  /// The content is at least as tall as the available space, so spacers still fill the page.
+  func scrollsOnOverflow(alignment: Alignment = .center) -> some View {
+    GeometryReader { proxy in
+      ScrollView {
+        frame(minHeight: proxy.size.height, alignment: alignment)
+      }
+      .scrollBounceBehavior(.basedOnSize)
+    }
+  }
 }

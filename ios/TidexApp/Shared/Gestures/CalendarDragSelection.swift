@@ -64,7 +64,12 @@ struct CalendarDragSelection: Equatable {
     let columnCount = CalendarGridHelper.columnCount
     let spacing = CalendarGridHelper.cellSpacing
     let cellWidth = (gridSize.width - spacing * CGFloat(columnCount - 1)) / CGFloat(columnCount)
-    let cellHeight = cellWidth / CalendarGridHelper.cellAspectRatio
+    // Rows are as tall as the grid says, so cells that grow with text size still map correctly.
+    let rowCount = (days.count + columnCount - 1) / columnCount
+    let cellHeight =
+      gridSize.height > 0 && rowCount > 0
+      ? (gridSize.height - spacing * CGFloat(rowCount - 1)) / CGFloat(rowCount)
+      : cellWidth / CalendarGridHelper.cellAspectRatio
     guard cellWidth > 0, location.x >= 0, location.y >= 0 else { return nil }
 
     let column = Int(location.x / (cellWidth + spacing))

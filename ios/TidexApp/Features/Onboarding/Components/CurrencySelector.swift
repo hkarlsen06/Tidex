@@ -13,6 +13,7 @@ struct CurrencySelector: View {
       Text(.onboardingCurrencyLabel)
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
+        .accessibilityHidden(true)
 
       // Selector button
       Button(action: {
@@ -29,6 +30,7 @@ struct CurrencySelector: View {
           Image(systemName: "chevron.down")
             .font(.tidexLabelStrong)
             .foregroundColor(.tidexTextMuted)
+            .accessibilityHidden(true)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
@@ -40,6 +42,9 @@ struct CurrencySelector: View {
         )
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(Text(.onboardingCurrencyLabel))
+      .accessibilityValue(Text(CurrencyConfig.get(selectedCurrency).label))
+      .accessibilityInputLabels([CurrencyConfig.get(selectedCurrency).label])
     }
     .sheet(isPresented: $showingPicker) {
       OnboardingCurrencyPickerSheet(
@@ -72,6 +77,7 @@ struct OnboardingCurrencyCapsuleSelector: View {
         Image(systemName: "chevron.down")
           .font(.caption.weight(.semibold))
           .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
       }
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.xs)
@@ -79,6 +85,8 @@ struct OnboardingCurrencyCapsuleSelector: View {
     .buttonStyle(.plain)
     .tidexGlass(shape: .capsule, interactive: true)
     .accessibilityLabel(Text(.onboardingCurrencyTitle))
+    .accessibilityValue(Text(CurrencyConfig.get(selectedCurrency).label))
+    .accessibilityInputLabels([CurrencyConfig.get(selectedCurrency).value])
     .sheet(isPresented: $showingPicker) {
       OnboardingCurrencyPickerSheet(
         selectedCurrency: $selectedCurrency,
@@ -138,6 +146,7 @@ struct OnboardingCurrencyPickerSheet: View {
                 .font(.tidexFootnoteStrong)
                 .foregroundColor(.tidexTextMuted)
                 .textCase(.uppercase)
+                .accessibilityAddTraits(.isHeader)
               Spacer()
             }
             .padding(.horizontal, Spacing.mlg)
@@ -170,7 +179,8 @@ private struct CurrencyRow: View {
         if isSelected {
           Image(systemName: "checkmark")
             .font(.tidexButton)
-            .foregroundColor(.tidexBrandPrimary)
+            .foregroundColor(.tidexBlueText)
+            .accessibilityHidden(true)
         }
       }
       .contentShape(Rectangle())
@@ -179,6 +189,7 @@ private struct CurrencyRow: View {
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.clear)
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
 

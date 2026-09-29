@@ -123,7 +123,7 @@ private struct SummaryHeader: View {
             if isIndefinite {
               Image(systemName: "infinity")
                 .font(.tidexHeadline)
-                .foregroundColor(.tidexBlue)
+                .foregroundColor(.tidexBlueText)
             }
           }
 
@@ -249,7 +249,13 @@ private struct ProjectedShiftRow: View {
     .padding(Spacing.md)
     .background(hasConflict ? Color.tidexWarning.opacity(0.05) : Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .opacity(hasConflict ? 0.6 : 1.0)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      Text(
+        verbatim: hasConflict
+          ? "\(formattedDate), \(timeRangeText), \(String(localized: .shiftsAccessibilityPreviewSkipped))"
+          : "\(formattedDate), \(timeRangeText)")
+    )
   }
 }
 
@@ -271,7 +277,7 @@ private struct MoreShiftsIndicator: View {
       if isIndefinite {
         Image(systemName: "infinity")
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
 
       Text(displayText)

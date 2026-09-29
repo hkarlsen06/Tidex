@@ -1877,7 +1877,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         case .liveEdge:
           .top
         }
-      let animated = scrollRequest.kind == .reply
+      let animated = scrollRequest.kind == .reply && !UIAccessibility.isReduceMotionEnabled
 
       tableView.layoutIfNeeded()
 

@@ -117,6 +117,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   // MARK: - Edit Mode State
 
@@ -538,7 +540,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           showingSendToChatSheet = true
         }
       )
-      .presentationDetents([.height(250)])
+      .presentationDetents([.height(250), .large])
       .presentationDragIndicator(.visible)
     }
     .sheet(isPresented: $showingImageShareOptions) {
@@ -546,7 +548,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         earningsImage: renderShiftImage(includeEarnings: true),
         hiddenEarningsImage: renderShiftImage(includeEarnings: false)
       )
-      .presentationDetents([.height(260)])
+      .presentationDetents([.height(260), .large])
       .presentationDragIndicator(.visible)
     }
     .sheet(isPresented: $showingSupplementsEditor) {
@@ -792,7 +794,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           saveChanges()
         }
         .font(.tidexButton)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .disabled(isSaving || !hasChanges)
         .opacity(isSaving || !hasChanges ? 0.5 : 1)
       } else {
@@ -800,7 +802,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           dismiss()
         }
         .font(.tidexButton)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
       }
     }
   }
@@ -884,7 +886,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     initializeEditState()
     errorMessage = nil
     isNoteFieldFocused = false
-    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
       isEditing = false
     }
   }
@@ -895,7 +897,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     errorMessage = nil
     focusedTimeField = nil
 
-    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
       isEditing = true
     }
 
@@ -972,7 +974,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           editedNote = trimmedEditedNote ?? ""
           noteWasEdited = false
           isNoteFieldFocused = false
-          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+          withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
             isEditing = false
           }
         } else {
@@ -1047,7 +1049,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
             colorHex: jobColorHex,
             font: .tidexFootnoteMedium,
             fallbackBadgeColor: .tidexBlue,
-            maxTextWidth: 160
+            lineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 1,
+            maxTextWidth: dynamicTypeSize.isAccessibilitySize ? nil : 160
           )
         }
       }
@@ -1055,8 +1058,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       Text(formattedTimeRange)
         .font(.tidexAmountLarge)
         .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)
         .environment(\.layoutDirection, .leftToRight)
 
       HStack(spacing: Spacing.sm) {
@@ -1282,7 +1285,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           .foregroundColor(.tidexTextSecondary)
         Spacer()
         DatePicker(
-          "",
+          String(localized: .shiftsDate),
           selection: $editedDate,
           displayedComponents: .date
         )
@@ -1389,11 +1392,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       Image(systemName: "exclamationmark.triangle.fill")
         .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
+        .accessibilityHidden(true)
       Text(message)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexError)
       Spacer()
     }
+    .announcesToVoiceOver(message)
     .padding(Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.lg)
@@ -1437,7 +1442,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           .foregroundColor(.tidexTextPrimary)
         Text(title)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
       .padding(.vertical, Spacing.xs)
       .frame(maxWidth: .infinity)
@@ -1457,7 +1462,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           systemImage: "pencil",
           style: .primary
         ) {
-          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+          withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
             isEditing = true
           }
         }
@@ -1517,7 +1522,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       if canExpand {
         Button {
           impactHaptic.impactOccurred()
-          withAnimation(.easeInOut(duration: 0.18)) {
+          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
             isBreakDeductionExpanded.toggle()
           }
         } label: {
@@ -1525,7 +1530,10 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         }
         .buttonStyle(.plain)
         .accessibilityLabel(breakDeductionLabel)
-        .accessibilityValue("−\(formatCurrency(breakdown.totalAmount))")
+        .accessibilityValue(
+          expansionValue(
+            "−\(formatCurrency(breakdown.totalAmount))", isExpanded: isBreakDeductionExpanded)
+        )
         .accessibilityHint(Text(.shiftsBreakDeductionExpandAccessibilityHint))
       } else {
         breakDeductionTotalRow(breakdown, showsChevron: false)
@@ -1675,7 +1683,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       if canExpand {
         Button {
           impactHaptic.impactOccurred()
-          withAnimation(.easeInOut(duration: 0.18)) {
+          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
             isSupplementBreakdownExpanded.toggle()
           }
         } label: {
@@ -1683,7 +1691,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(.shiftsTotalSupplement))
-        .accessibilityValue(formatCurrency(displayedSupplementPay))
+        .accessibilityValue(
+          expansionValue(
+            formatCurrency(displayedSupplementPay), isExpanded: isSupplementBreakdownExpanded)
+        )
+        .accessibilityHint(Text(.shiftsAccessibilityExpandHint))
       } else {
         supplementTotalRow(showsChevron: false)
       }
@@ -1714,7 +1726,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         if hasCustomSupplements {
           Text(.shiftsCustomized)
             .font(.tidexMicro)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .padding(.horizontal, Spacing.xs)
             .padding(.vertical, 3)
             .background(
@@ -1742,7 +1754,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       if canExpand {
         Button {
           impactHaptic.impactOccurred()
-          withAnimation(.easeInOut(duration: 0.18)) {
+          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
             isOvertimeBreakdownExpanded.toggle()
           }
         } label: {
@@ -1750,7 +1762,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(.shiftsOvertimeLabel))
-        .accessibilityValue(formatCurrency(displayedOvertimePay))
+        .accessibilityValue(
+          expansionValue(
+            formatCurrency(displayedOvertimePay), isExpanded: isOvertimeBreakdownExpanded)
+        )
+        .accessibilityHint(Text(.shiftsAccessibilityExpandHint))
       } else {
         overtimeTotalRow(showsChevron: false)
       }
@@ -1806,6 +1822,15 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       hoursAndRate: "\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))",
       amount: formatCurrency(segment.amount)
     )
+  }
+
+  /// Spoken amount followed by whether the row's details are showing.
+  private func expansionValue(_ amount: String, isExpanded: Bool) -> Text {
+    let state =
+      isExpanded
+      ? String(localized: .shiftsAccessibilityExpanded)
+      : String(localized: .shiftsAccessibilityCollapsed)
+    return Text(verbatim: "\(amount), \(state)")
   }
 
   /// Format hours value (e.g., "2.50 t")
@@ -1960,23 +1985,23 @@ private struct ShareOptionsSheet: View {
   let hiddenEarningsImage: UIImage?
 
   var body: some View {
-    VStack(spacing: Spacing.mlg) {
-      // Title
-      Text(.shiftsShareTitle)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
-        .padding(.top, Spacing.md)
+    ScrollView {
+      VStack(spacing: Spacing.mlg) {
+        // Title
+        Text(.shiftsShareTitle)
+          .font(.tidexHeadline)
+          .foregroundColor(.tidexTextPrimary)
+          .padding(.top, Spacing.md)
 
-      VStack(spacing: Spacing.sm) {
-        shareLinkRow(image: earningsImage, systemImage: "eye", label: .shiftsShareShowEarnings)
-        shareLinkRow(
-          image: hiddenEarningsImage, systemImage: "eye.slash", label: .shiftsShareHideEarnings)
+        VStack(spacing: Spacing.sm) {
+          shareLinkRow(image: earningsImage, systemImage: "eye", label: .shiftsShareShowEarnings)
+          shareLinkRow(
+            image: hiddenEarningsImage, systemImage: "eye.slash", label: .shiftsShareHideEarnings)
+        }
+        .padding(.horizontal, Spacing.mlg)
       }
-      .padding(.horizontal, Spacing.mlg)
-
-      Spacer()
+      .frame(maxWidth: .infinity)
     }
-    .frame(maxWidth: .infinity)
     .background(Color.tidexBackground)
   }
 
@@ -1993,7 +2018,7 @@ private struct ShareOptionsSheet: View {
           Image(systemName: systemImage)
             .font(.tidexTitle2)
             .foregroundColor(.tidexTextSecondary)
-            .frame(width: 28)
+            .frame(minWidth: 28)
             .accessibilityHidden(true)
           Text(label)
             .font(.tidexBodyMedium)
@@ -2028,58 +2053,60 @@ struct ShareDestinationSheet: View {
   }
 
   var body: some View {
-    VStack(spacing: Spacing.mlg) {
-      Text(title)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
-        .padding(.top, Spacing.md)
+    ScrollView {
+      VStack(spacing: Spacing.mlg) {
+        Text(title)
+          .font(.tidexHeadline)
+          .foregroundColor(.tidexTextPrimary)
+          .padding(.top, Spacing.md)
 
-      VStack(spacing: Spacing.sm) {
-        Button(action: onShareInChat) {
-          HStack(spacing: Spacing.msm) {
-            Image(systemName: "bubble.left.and.text.bubble.right")
-              .font(.tidexTitle2)
-              .foregroundColor(.tidexTextSecondary)
-              .frame(width: 28)
-            Text(.friendsChatSendToChat)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-            Spacer()
+        VStack(spacing: Spacing.sm) {
+          Button(action: onShareInChat) {
+            HStack(spacing: Spacing.msm) {
+              Image(systemName: "bubble.left.and.text.bubble.right")
+                .font(.tidexTitle2)
+                .foregroundColor(.tidexTextSecondary)
+                .frame(minWidth: 28)
+                .accessibilityHidden(true)
+              Text(.friendsChatSendToChat)
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexTextPrimary)
+              Spacer()
+            }
+            .padding(.horizontal, Spacing.mlg)
+            .padding(.vertical, 18)
+            .background(
+              RoundedRectangle(cornerRadius: CornerRadius.xl)
+                .fill(Color.tidexSurfacePrimary)
+            )
           }
-          .padding(.horizontal, Spacing.mlg)
-          .padding(.vertical, 18)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.xl)
-              .fill(Color.tidexSurfacePrimary)
-          )
-        }
-        .buttonStyle(.plain)
+          .buttonStyle(.plain)
 
-        Button(action: onShareAsImage) {
-          HStack(spacing: Spacing.msm) {
-            Image(systemName: "photo.on.rectangle")
-              .font(.tidexTitle2)
-              .foregroundColor(.tidexTextSecondary)
-              .frame(width: 28)
-            Text(.shiftsShareAsImage)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-            Spacer()
+          Button(action: onShareAsImage) {
+            HStack(spacing: Spacing.msm) {
+              Image(systemName: "photo.on.rectangle")
+                .font(.tidexTitle2)
+                .foregroundColor(.tidexTextSecondary)
+                .frame(minWidth: 28)
+                .accessibilityHidden(true)
+              Text(.shiftsShareAsImage)
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexTextPrimary)
+              Spacer()
+            }
+            .padding(.horizontal, Spacing.mlg)
+            .padding(.vertical, 18)
+            .background(
+              RoundedRectangle(cornerRadius: CornerRadius.xl)
+                .fill(Color.tidexSurfacePrimary)
+            )
           }
-          .padding(.horizontal, Spacing.mlg)
-          .padding(.vertical, 18)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.xl)
-              .fill(Color.tidexSurfacePrimary)
-          )
+          .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.mlg)
       }
-      .padding(.horizontal, Spacing.mlg)
-
-      Spacer()
+      .frame(maxWidth: .infinity)
     }
-    .frame(maxWidth: .infinity)
     .background(Color.tidexBackground)
   }
 }

@@ -21,6 +21,9 @@ struct CalendarCellStyle {
   let borderWidth: CGFloat
   let dayNumberColor: Color
   let showsTodayBadge: Bool
+  /// Symbol that repeats a highlight state (conflict, new, opened from a widget) that the colors
+  /// alone would carry.
+  var marker: CalendarCellMarker?
 
   static let `default` = Self(
     backgroundColor: .tidexSurfacePrimary,
@@ -48,6 +51,28 @@ struct CalendarCellStyle {
       dayNumberColor: .tidexTextPrimary,
       showsTodayBadge: false
     )
+  }
+}
+
+// MARK: - Calendar Cell Marker
+
+/// A small symbol in the corner of a calendar cell, so a highlight is not shown by color alone.
+enum CalendarCellMarker: Equatable {
+  case conflict
+  case newlyAdded
+  case deepLink
+
+  var systemImage: String {
+    switch self {
+    case .conflict:
+      return "exclamationmark.triangle.fill"
+
+    case .newlyAdded:
+      return "plus.circle.fill"
+
+    case .deepLink:
+      return "scope"
+    }
   }
 }
 
@@ -87,13 +112,13 @@ enum CalendarCellContent: Equatable {
 /// Handles week number, day number, background, border, and content
 struct CalendarDayCell<Content: View>: View {
   @ScaledMetric(relativeTo: .caption) private var metricDynamicTypeScale: CGFloat = 1
+  @ScaledMetric(relativeTo: .body) private var defaultTopRowHeight: CGFloat = 17
+  @ScaledMetric(relativeTo: .body) private var todayTopRowHeight: CGFloat = 20
 
   let dayInfo: CalendarDayInfo
   let style: CalendarCellStyle
   let content: CalendarCellContent
   private let topCornerInset: CGFloat = 1
-  private let defaultTopRowHeight: CGFloat = 17
-  private let todayTopRowHeight: CGFloat = 20
   private let leadingMarkerLeadingInset: CGFloat = 3
   private let dayNumberTrailingInset: CGFloat = 2
   private let todayBadgeCornerRadius: CGFloat = CornerRadius.sm
@@ -115,6 +140,10 @@ struct CalendarDayCell<Content: View>: View {
   var showSingleUserIndicator: Bool = false
   /// Tint color for the single-person indicator (a neutral identity color, not a status color)
   var singleUserIndicatorColor: Color = .tidexTextPrimary
+  /// SF Symbol for the single-person indicator. When nil, "only you" (the default color) shows
+  /// `person.fill` and any other color, "only the friend", shows `person.crop.circle.fill`, so the
+  /// two are told apart by shape and not by color alone.
+  var singleUserIndicatorSymbol: String?
   /// Shows a small event-presence indicator in the cell.
   var showEventIndicator: Bool = false
   /// Number of events on this day. Controls how many segments the bottom indicator shows.
@@ -130,6 +159,7 @@ struct CalendarDayCell<Content: View>: View {
     showOverlapIndicator: Bool = false,
     showSingleUserIndicator: Bool = false,
     singleUserIndicatorColor: Color = .tidexTextPrimary,
+    singleUserIndicatorSymbol: String? = nil,
     showEventIndicator: Bool = false,
     eventIndicatorCount: Int = 0,
     @ViewBuilder customContent: @escaping () -> Content
@@ -140,6 +170,7 @@ struct CalendarDayCell<Content: View>: View {
     self.showOverlapIndicator = showOverlapIndicator
     self.showSingleUserIndicator = showSingleUserIndicator
     self.singleUserIndicatorColor = singleUserIndicatorColor
+    self.singleUserIndicatorSymbol = singleUserIndicatorSymbol
     self.showEventIndicator = showEventIndicator
     self.eventIndicatorCount = eventIndicatorCount
     self.customContent = customContent
@@ -180,6 +211,16 @@ struct CalendarDayCell<Content: View>: View {
         todayBadgeView
       }
     }
+    .overlay(alignment: .bottomTrailing) {
+      if let marker = style.marker {
+        Image(systemName: marker.systemImage)
+          .font(.tidexMicro)
+          .imageScale(.small)
+          .foregroundColor(.tidexTextPrimary)
+          .padding(2)
+          .accessibilityHidden(true)
+      }
+    }
     .overlay(alignment: .bottom) {
       if displayedEventIndicatorSegmentCount > 0 {
         HStack(spacing: eventIndicatorSegmentSpacing) {
@@ -209,15 +250,20 @@ struct CalendarDayCell<Content: View>: View {
         Image(systemName: "person.2.fill")
           .font(.tidexMicro)
           .imageScale(.small)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       } else if showSingleUserIndicator {
-        Image(systemName: "person.fill")
+        Image(systemName: resolvedSingleUserSymbol)
           .font(.tidexMicro)
           .imageScale(.small)
           .foregroundColor(singleUserIndicatorColor)
       }
     }
     .fixedSize()
+  }
+
+  private var resolvedSingleUserSymbol: String {
+    if let singleUserIndicatorSymbol { return singleUserIndicatorSymbol }
+    return singleUserIndicatorColor == .tidexTextPrimary ? "person.fill" : "person.crop.circle.fill"
   }
 
   private var leadingMarkerSlot: some View {
@@ -475,6 +521,7 @@ extension CalendarDayCell where Content == EmptyView {
     showOverlapIndicator: Bool = false,
     showSingleUserIndicator: Bool = false,
     singleUserIndicatorColor: Color = .tidexTextPrimary,
+    singleUserIndicatorSymbol: String? = nil,
     showEventIndicator: Bool = false,
     eventIndicatorCount: Int = 0
   ) {
@@ -484,6 +531,7 @@ extension CalendarDayCell where Content == EmptyView {
     self.showOverlapIndicator = showOverlapIndicator
     self.showSingleUserIndicator = showSingleUserIndicator
     self.singleUserIndicatorColor = singleUserIndicatorColor
+    self.singleUserIndicatorSymbol = singleUserIndicatorSymbol
     self.showEventIndicator = showEventIndicator
     self.eventIndicatorCount = eventIndicatorCount
     self.customContent = nil

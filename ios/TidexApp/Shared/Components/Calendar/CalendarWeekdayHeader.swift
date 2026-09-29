@@ -19,6 +19,10 @@ struct CalendarWeekdayHeader: View {
           .frame(maxWidth: .infinity)
       }
     }
+    // Each day cell speaks its full date, so the two-letter headers would only repeat it.
+    .accessibilityHidden(true)
+    // Matches the capped text size of the day cells below.
+    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
   }
 
   private var weekdaySymbols: [String] {

@@ -14,6 +14,7 @@ struct ReminderTimePickerSheet: View {
   let onSave: () -> Void
   let onDelete: (() -> Void)?
   let onCancel: () -> Void
+  @ScaledMetric(relativeTo: .body) private var wheelHeight: CGFloat = 180
 
   private var totalMinutes: Int {
     (hours * 60) + minutes
@@ -43,21 +44,22 @@ struct ReminderTimePickerSheet: View {
 
   var body: some View {
     NavigationStack {
-      VStack(spacing: Spacing.md) {
-        pickerSection
+      ScrollView {
+        VStack(spacing: Spacing.md) {
+          pickerSection
 
-        // Preview label
-        previewLabel
-
-        Spacer()
-
+          // Preview label
+          previewLabel
+        }
+        .padding(.top, Spacing.lg)
+      }
+      .safeAreaInset(edge: .bottom) {
         // Delete button (only when editing)
         if isEditing, let onDelete {
           deleteButton(action: onDelete)
+            .padding(.bottom, Spacing.lg)
         }
       }
-      .padding(.top, Spacing.lg)
-      .padding(.bottom, Spacing.lg)
       .background(Color.tidexBackground)
       .navigationTitle(
         isEditing
@@ -96,7 +98,7 @@ struct ReminderTimePickerSheet: View {
       // Dual wheel picker
       HStack(spacing: 0) {
         // Hours picker (0-48)
-        Picker("", selection: $hours) {
+        Picker(String(localized: .settingsAccessibilityHours), selection: $hours) {
           ForEach(0...48, id: \.self) { hour in
             Text("\(hour) \(String(localized: .commonHoursShort))")
               .tag(hour)
@@ -107,7 +109,7 @@ struct ReminderTimePickerSheet: View {
         .clipped()
 
         // Minutes picker (0-59)
-        Picker("", selection: $minutes) {
+        Picker(String(localized: .settingsAccessibilityMinutes), selection: $minutes) {
           ForEach(0..<60, id: \.self) { minute in
             Text("\(minute) \(String(localized: .commonMinShort))")
               .tag(minute)
@@ -117,7 +119,7 @@ struct ReminderTimePickerSheet: View {
         .frame(maxWidth: .infinity)
         .clipped()
       }
-      .frame(height: 180)
+      .frame(height: wheelHeight)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(CornerRadius.lg)
@@ -129,7 +131,8 @@ struct ReminderTimePickerSheet: View {
   private var previewLabel: some View {
     HStack(spacing: Spacing.xs) {
       Image(systemName: canSave ? "bell.fill" : "bell.slash")
-        .foregroundColor(canSave ? .tidexBlue : .tidexTextMuted)
+        .foregroundColor(canSave ? .tidexBlueText : .tidexTextMuted)
+        .accessibilityHidden(true)
 
       Text(formatPreview())
         .font(.tidexLabel)
@@ -170,12 +173,13 @@ struct ReminderTimePickerSheet: View {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "trash")
           .font(.tidexBody)
+          .accessibilityHidden(true)
         Text(.commonDelete)
           .font(.tidexButton)
       }
       .foregroundColor(.tidexTextOnDanger)
       .frame(maxWidth: .infinity)
-      .frame(height: Spacing.buttonHeight)
+      .frame(minHeight: Spacing.buttonHeight)
       .background(Color.tidexError)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }

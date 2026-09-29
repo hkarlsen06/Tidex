@@ -41,6 +41,7 @@ struct SyncStatusIndicator: View {
           .accessibilityHidden(true)
           .font(.tidexLabel)
           .foregroundColor(.tidexWarning)
+          .accessibilityHidden(true)
 
         if let lastSync {
           Text(String(localized: .syncFailedWithLastSync(formatRelativeTime(lastSync))))
@@ -55,7 +56,7 @@ struct SyncStatusIndicator: View {
         Button(action: onRetry) {
           Text(.commonRetry)
             .font(.tidexFootnoteStrong)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
         }
         .buttonStyle(.plain)
       }
@@ -74,6 +75,7 @@ struct SyncStatusIndicator: View {
           .accessibilityHidden(true)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
 
         Text(.syncOffline)
           .font(.tidexFootnoteMedium)

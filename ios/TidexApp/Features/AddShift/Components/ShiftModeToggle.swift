@@ -16,7 +16,6 @@ struct ShiftModeToggle: View {
     let shadowOpacity: Double
   }
 
-  private static let toolbarIconFontSize: CGFloat = 14
   private static let toolbarHorizontalPadding: CGFloat = 10
   private static let toolbarVerticalPadding: CGFloat = 6
   private static let toolbarOuterPadding: CGFloat = 2
@@ -29,7 +28,9 @@ struct ShiftModeToggle: View {
   let style: Style
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Namespace private var namespace
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 16
+  @ScaledMetric(relativeTo: .footnote) private var toolbarIconFontSize: CGFloat = 14
   private let buttonSpacing: CGFloat = 8
 
   init(mode: Binding<AddShiftMode>, style: Style = .toolbar) {
@@ -52,7 +53,7 @@ struct ShiftModeToggle: View {
 
   private var modeButtonMetrics: ModeButtonMetrics {
     ModeButtonMetrics(
-      iconFontSize: style == .toolbar ? Self.toolbarIconFontSize : iconSize,
+      iconFontSize: style == .toolbar ? toolbarIconFontSize : iconSize,
       horizontalPadding: style == .toolbar ? Self.toolbarHorizontalPadding : Spacing.md,
       verticalPadding: style == .toolbar ? Self.toolbarVerticalPadding : Spacing.sm,
       shadowRadius: style == .toolbar ? 0 : Self.standardShadowRadius,
@@ -111,12 +112,15 @@ struct ShiftModeToggle: View {
     isSelected: Bool,
     metrics: ModeButtonMetrics
   ) -> some View {
-    let selectedForeground: Color = style == .toolbar ? .tidexBlue : .white
+    let selectedForeground: Color = style == .toolbar ? .tidexBlueText : .tidexTextOnBrand
+    // The toolbar has no room for the name at accessibility sizes, so a capsule marks the
+    // selected mode there instead.
+    let showsName = isSelected && !(style == .toolbar && dynamicTypeSize.isAccessibilitySize)
 
     // Show the selected mode's name next to its icon.
     return HStack(spacing: Spacing.xxs) {
       Image(systemName: iconName(for: modeOption))
-      if isSelected {
+      if showsName {
         Text(localizedTitle(for: modeOption))
           .lineLimit(1)
       }
@@ -125,6 +129,12 @@ struct ShiftModeToggle: View {
     .foregroundStyle(isSelected ? selectedForeground : .tidexTextSecondary)
     .padding(.horizontal, metrics.horizontalPadding)
     .padding(.vertical, metrics.verticalPadding)
+    .frame(minHeight: style == .toolbar ? 44 : nil)
+    .background {
+      if isSelected, !showsName {
+        Capsule().fill(Color.tidexBlue.opacity(0.15))
+      }
+    }
     .contentShape(Capsule())
   }
 

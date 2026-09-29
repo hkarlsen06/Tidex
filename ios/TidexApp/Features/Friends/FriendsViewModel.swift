@@ -455,7 +455,7 @@ final class SharingViewModel: MonthNavigable {
       .filter { !blockedUserIds.contains($0.key) }
 
     if animatePreviewReveal {
-      withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+      withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(duration: 0.4, bounce: 0.15)) {
         shiftPreviews = freshPreviewMap
       }
     } else {
@@ -919,7 +919,7 @@ final class SharingViewModel: MonthNavigable {
 
   /// Toggle superimpose mode and load user shifts if needed
   func toggleSuperimpose() {
-    withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+    withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(duration: 0.4, bounce: 0.15)) {
       isSuperimposing.toggle()
     }
     Task {

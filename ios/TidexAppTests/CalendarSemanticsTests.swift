@@ -139,3 +139,135 @@ internal final class CalendarSemanticsTests: XCTestCase {
     // Required by SwiftLint for XCTestCase subclasses.
   }
 }
+
+final class RecurringAnchorCellAccessibilityTests: XCTestCase {
+  private func label(
+    isToday: Bool = false,
+    isAnchor: Bool = false,
+    isProjected: Bool = false,
+    hasConflict: Bool = false,
+    hasExistingShift: Bool = false,
+    hours: HoursData? = nil
+  ) -> String {
+    RecurringAnchorCellAccessibility.label(
+      dateISO: "2026-03-16",
+      isToday: isToday,
+      isAnchor: isAnchor,
+      isProjected: isProjected,
+      hasConflict: hasConflict,
+      hasExistingShift: hasExistingShift,
+      hours: hours
+    )
+  }
+
+  private func parts(of label: String) -> [String] {
+    label.components(separatedBy: ", ")
+  }
+
+  func testPlainDayIsOnlyTheDate() {
+    let plain = label()
+
+    XCTAssertEqual(plain, RecurringAnchorCellAccessibility.dateText(dateISO: "2026-03-16"))
+    XCTAssertTrue(plain.contains("16"))
+  }
+
+  func testAnchorAddsOnePart() {
+    XCTAssertEqual(parts(of: label(isAnchor: true)).count, parts(of: label()).count + 1)
+  }
+
+  func testAnchorWinsOverProjected() {
+    XCTAssertEqual(label(isAnchor: true, isProjected: true), label(isAnchor: true))
+  }
+
+  func testConflictIsSpokenAfterTheDayState() {
+    let conflicted = label(isProjected: true, hasConflict: true)
+
+    XCTAssertEqual(parts(of: conflicted).count, parts(of: label()).count + 2)
+    XCTAssertTrue(conflicted.hasPrefix(label(isProjected: true)))
+  }
+
+  func testExistingHoursReplaceTheGenericExistingShiftText() {
+    let hours = HoursData(start: "09:00", end: "17:00", crossesMidnight: false)
+    let withHours = label(hasExistingShift: true, hours: hours)
+
+    XCTAssertTrue(withHours.contains("09:00"))
+    XCTAssertTrue(withHours.contains("17:00"))
+    XCTAssertEqual(parts(of: withHours).count, parts(of: label()).count + 1)
+  }
+
+  func testInvalidDateFallsBackToTheRawString() {
+    let invalid = RecurringAnchorCellAccessibility.label(
+      dateISO: "not-a-date", isToday: false, isAnchor: false, isProjected: false,
+      hasConflict: false, hasExistingShift: false, hours: nil)
+
+    XCTAssertEqual(invalid, "not-a-date")
+  }
+}
+
+final class CalendarDragSelectionHitTestTests: XCTestCase {
+  // swiftlint:disable:next number_separator
+  private let days = CalendarGridHelper.daysInMonth(year: 2026, month: 3)
+  private let width: CGFloat = 370
+
+  private var cellWidth: CGFloat {
+    let spacing = CalendarGridHelper.cellSpacing
+    let columns = CGFloat(CalendarGridHelper.columnCount)
+    return (width - spacing * (columns - 1)) / columns
+  }
+
+  /// A grid whose rows are `cellHeight` tall, like the grid at an accessibility text size.
+  private func gridSize(cellHeight: CGFloat) -> CGSize {
+    let rows = CGFloat(days.count / CalendarGridHelper.columnCount)
+    return CGSize(
+      width: width, height: rows * cellHeight + (rows - 1) * CalendarGridHelper.cellSpacing)
+  }
+
+  private func center(row: Int, column: Int, cellHeight: CGFloat) -> CGPoint {
+    let spacing = CalendarGridHelper.cellSpacing
+    return CGPoint(
+      x: CGFloat(column) * (cellWidth + spacing) + cellWidth / 2,
+      y: CGFloat(row) * (cellHeight + spacing) + cellHeight / 2
+    )
+  }
+
+  func testDefaultCellHeightMapsToTheDayUnderThePoint() {
+    let cellHeight = cellWidth / CalendarGridHelper.cellAspectRatio
+    let row = 2
+    let column = 3
+
+    let result = CalendarDragSelection.dateISO(
+      at: center(row: row, column: column, cellHeight: cellHeight),
+      gridSize: gridSize(cellHeight: cellHeight),
+      days: days
+    )
+
+    XCTAssertEqual(result, days[row * CalendarGridHelper.columnCount + column].dateISO)
+  }
+
+  func testTallerCellsMapToTheDayUnderThePoint() {
+    let cellHeight = cellWidth / CalendarGridHelper.cellAspectRatio * 1.6
+    let row = 4
+    let column = 1
+
+    let result = CalendarDragSelection.dateISO(
+      at: center(row: row, column: column, cellHeight: cellHeight),
+      gridSize: gridSize(cellHeight: cellHeight),
+      days: days
+    )
+
+    XCTAssertEqual(result, days[row * CalendarGridHelper.columnCount + column].dateISO)
+  }
+
+  func testGapBetweenRowsMapsToNoDay() {
+    let cellHeight = cellWidth * 1.5
+    let gapY = cellHeight + CalendarGridHelper.cellSpacing / 2
+
+    let result = CalendarDragSelection.dateISO(
+      at: CGPoint(x: cellWidth / 2, y: gapY),
+      gridSize: gridSize(cellHeight: cellHeight),
+      days: days
+    )
+
+    XCTAssertNil(result)
+  }
+}

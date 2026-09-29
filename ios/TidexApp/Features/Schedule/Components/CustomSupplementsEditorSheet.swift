@@ -123,6 +123,7 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
   let onCancel: () -> Void
 
   @Environment(\.dismiss) private var dismiss
+  @ScaledMetric(relativeTo: .largeTitle) private var emptyIconSize: CGFloat = 40
 
   /// Current list of supplement rules (with IDs for list management)
   @State private var rules: [CustomSupplementRuleWithId] = []
@@ -307,6 +308,7 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
       Image(systemName: "info.circle")
         .font(.tidexBody)
         .foregroundColor(.tidexTextSecondary)
+        .accessibilityHidden(true)
 
       Text(.supplementsEditorHint)
         .font(.tidexSubheadline)
@@ -325,8 +327,9 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
   private var emptyState: some View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "plus.circle.dashed")
-        .font(.system(size: 40))
+        .font(.system(size: emptyIconSize))
         .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
 
       Text(.supplementsNoRules)
         .font(.tidexLabel)
@@ -374,7 +377,7 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
           .foregroundColor(.tidexTextPrimary)
         Text(.supplementsAddRule)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)

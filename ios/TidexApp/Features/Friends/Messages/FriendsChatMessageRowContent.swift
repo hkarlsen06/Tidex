@@ -294,7 +294,7 @@ private struct FriendsChatLinkedMessageText: View {
   }
 
   private var linkColor: Color {
-    isCurrentUser ? .tidexTextOnBrand : .tidexBlue
+    isCurrentUser ? .tidexTextOnBrand : .tidexBlueText
   }
 }
 
@@ -331,7 +331,12 @@ struct FriendsChatMessageRowContent: View {
   let onReplySwipe: (() -> Void)?
   @Binding var timestampRevealOffset: CGFloat
   let messageFrame: Binding<CGRect>?
+  /// Name VoiceOver reads for the sender ("You" for the user's own messages). Omitted when nil.
+  var accessibilitySenderName: String?
+  /// Reply, copy, edit, forward, delete, report and quick reactions, as VoiceOver actions.
+  var accessibilityActions: [FriendsChatAccessibilityAction] = []
 
+  @Environment(\.openURL) private var openURL
   @State private var replySwipeOffset: CGFloat = 0
   @State private var activeReplySwipePayloadId: String?
   @State private var hasTriggeredReplySwipeHaptic: Bool = false
@@ -512,7 +517,7 @@ struct FriendsChatMessageRowContent: View {
           isCurrentUser: isCurrentUser,
           groupContext: payloadGroupContext(
             at: layout.imagePayloadStartIndex + index, layout: layout),
-          canOpenAttachment: messageFrame == nil,
+          canOpenAttachment: canOpenAttachment,
           canReact: message.canReact,
           isHighlighted: false,
           onOpenImageAttachment: onOpenImageAttachment,
@@ -521,6 +526,12 @@ struct FriendsChatMessageRowContent: View {
           onPrepareReaction: onPrepareImageReaction
         )
       }
+      .chatMessageAccessibility(
+        label: imageAccessibilityLabel(index: index, layout: layout),
+        isImage: true,
+        actions: messageAccessibilityActions,
+        onActivate: canOpenAttachment ? { onOpenImageAttachment(attachment) } : nil
+      )
       .friendsChatMessageFrame(
         !layout.hasMessageText && layout.shiftSnapshot == nil
           && index == layout.imageAttachments.count - 1
@@ -572,6 +583,11 @@ struct FriendsChatMessageRowContent: View {
           } : nil
       )
     }
+    .chatMessageAccessibility(
+      label: shiftAccessibilityLabel(shiftSnapshot, layout: layout),
+      actions: messageAccessibilityActions,
+      onActivate: messageFrame == nil ? { onOpenShiftSnapshot(shiftSnapshot) } : nil
+    )
     .friendsChatMessageFrame(
       layout.hasMessageText || !layout.imageAttachments.isEmpty ? nil : messageFrame
     )
@@ -602,6 +618,10 @@ struct FriendsChatMessageRowContent: View {
     } reaction: {
       reactionStrip(for: message.reactions)
     }
+    .chatMessageAccessibility(
+      label: textAccessibilityLabel(fallbackPreviewText),
+      actions: messageAccessibilityActions
+    )
     .highPriorityGesture(messageMenuDoubleTapGesture)
   }
 
@@ -621,7 +641,87 @@ struct FriendsChatMessageRowContent: View {
     } reaction: {
       reactionStrip(for: message.reactions)
     }
+    .chatMessageAccessibility(
+      label: textAccessibilityLabel(visibleMessageText),
+      actions: messageAccessibilityActions
+    )
     .highPriorityGesture(messageMenuDoubleTapGesture)
+  }
+
+  // MARK: - VoiceOver
+
+  private var canOpenAttachment: Bool {
+    messageFrame == nil
+  }
+
+  private var messageReactions: [FriendMessageReaction] {
+    message.reactions + message.attachments.flatMap(\.reactions)
+  }
+
+  /// Time, delivery state, edit mark and reactions. Only the last payload of a message says them.
+  private var accessibilityDetails: String {
+    FriendsChatMessageAccessibility.detailsLabel(
+      time: message.createdAt.toHourMinuteString(),
+      status: inlineMetadataStatus,
+      isEdited: message.editedAt != nil,
+      reactions: messageReactions
+    )
+  }
+
+  private func textAccessibilityLabel(_ text: String) -> String {
+    FriendsChatMessageAccessibility.join([accessibilitySenderName, text, accessibilityDetails])
+  }
+
+  private func imageAccessibilityLabel(index: Int, layout: PayloadLayout) -> String {
+    let photo = FriendsChatMessageAccessibility.photoLabel(
+      senderName: accessibilitySenderName,
+      isCurrentUser: isCurrentUser && accessibilitySenderName != nil,
+      index: index,
+      count: layout.imageAttachments.count
+    )
+    let isLastPayload =
+      index == layout.imageAttachments.count - 1 && !layout.hasMessageText
+      && !layout.showsFallbackBubble && layout.shiftSnapshot == nil
+    return FriendsChatMessageAccessibility.join([photo, isLastPayload ? accessibilityDetails : nil])
+  }
+
+  private func shiftAccessibilityLabel(_ snapshot: FriendShiftSnapshot, layout: PayloadLayout)
+    -> String
+  {
+    let isLastPayload = !layout.hasMessageText && !layout.showsFallbackBubble
+    return FriendsChatMessageAccessibility.join([
+      accessibilitySenderName,
+      FriendsChatMessageAccessibility.shiftSummary(snapshot),
+      isLastPayload ? accessibilityDetails : nil,
+    ])
+  }
+
+  /// Every payload of a message carries the same actions, so they work wherever VoiceOver focus is.
+  private var messageAccessibilityActions: [FriendsChatAccessibilityAction] {
+    guard messageFrame == nil else { return [] }
+    var actions = accessibilityActions
+    // The links sit inside the combined element, so VoiceOver's Links rotor can't reach them.
+    if !visibleMessageText.isEmpty {
+      for link in FriendsChatMessageLinkifier.links(in: visibleMessageText) {
+        actions.append(
+          FriendsChatAccessibilityAction(
+            name: String(localized: .friendsAccessibilityOpenLink(link.text))
+          ) {
+            if AppDeepLinkResolver.resolve(link.url) != nil {
+              AppCoordinator.shared.handleDeepLink(link.url)
+            } else {
+              openURL(link.url)
+            }
+          })
+      }
+    }
+    if message.canReact {
+      actions.append(
+        FriendsChatAccessibilityAction(name: String(localized: .friendsAccessibilityReact)) {
+          onShowReactionMenu(nil)
+        })
+    }
+    return actions
   }
 
   private var metadataRow: some View {
@@ -654,6 +754,8 @@ struct FriendsChatMessageRowContent: View {
     Text(.friendsChatEdited)
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
+      // The message label already says it was edited.
+      .accessibilityHidden(true)
   }
 
   private var shouldHighlightWholeMessage: Bool {
@@ -743,6 +845,8 @@ struct FriendsChatMessageRowContent: View {
         .opacity(timestampRevealOpacity)
     }
     .allowsHitTesting(false)
+    // The time only shows while swiping, so VoiceOver gets it from the message label instead.
+    .accessibilityHidden(true)
   }
 
   private var timestampRevealOpacity: Double {
@@ -1020,34 +1124,38 @@ struct FriendsChatMessageRowContent: View {
           .minimumScaleFactor(0.9)
           .fixedSize(horizontal: true, vertical: false)
       }
+      // The message label already says the delivery state.
+      .accessibilityHidden(true)
 
     case .delivered:
       HStack(spacing: 3) {
         Image(systemName: "checkmark")
-          .font(.system(size: 11, weight: .semibold))
+          .font(.tidexMicro.weight(.semibold))
           .accessibilityHidden(true)
 
         Text(.friendsChatStatusDelivered)
           .lineLimit(1)
           .fixedSize(horizontal: true, vertical: false)
       }
+      .accessibilityHidden(true)
 
     case .read:
       HStack(spacing: 3) {
         Image(systemName: "checkmark.circle.fill")
-          .font(.system(size: 11, weight: .semibold))
-          .foregroundColor(.tidexBlue)
+          .font(.tidexMicro.weight(.semibold))
+          .foregroundColor(.tidexBlueText)
           .accessibilityHidden(true)
 
         Text(.friendsChatStatusRead)
           .lineLimit(1)
           .fixedSize(horizontal: true, vertical: false)
       }
+      .accessibilityHidden(true)
 
     case .failed:
       HStack(spacing: 4) {
         Image(systemName: "exclamationmark.circle.fill")
-          .font(.system(size: 11, weight: .semibold))
+          .font(.tidexMicro.weight(.semibold))
           .foregroundColor(.tidexError)
           .accessibilityHidden(true)
 
@@ -1056,12 +1164,14 @@ struct FriendsChatMessageRowContent: View {
           .lineLimit(1)
           .minimumScaleFactor(0.9)
           .fixedSize(horizontal: true, vertical: false)
+          // The message label says "Failed". The Retry button stays reachable for Voice Control.
+          .accessibilityHidden(true)
 
         Button {
           onRetry()
         } label: {
           Text(.commonRetry)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
         }
@@ -1103,6 +1213,8 @@ struct FriendsChatMessageRowContent: View {
             y: -Self.reactionVerticalOffset
           )
           .zIndex(2)
+          // Reactions are in the message label, and the React action opens the picker.
+          .accessibilityHidden(messageFrame == nil)
       }
     }
   }
@@ -1166,6 +1278,7 @@ struct FriendsChatMessageRowContent: View {
         cornerRadius: CornerRadius.md
       )
       .padding(.top, 2)
+      .accessibilityHidden(true)
     } else {
       Color.clear
         .frame(width: Self.avatarSize, height: Self.avatarSize)
@@ -1436,6 +1549,8 @@ extension View {
 private struct FriendsChatDateSeparator: View {
   let date: Date
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   var body: some View {
     HStack(spacing: Spacing.sm) {
       Rectangle()
@@ -1445,7 +1560,9 @@ private struct FriendsChatDateSeparator: View {
       Text(separatorText)
         .font(.tidexMicro)
         .foregroundColor(.tidexTextMuted)
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
+        .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
 
       Rectangle()
         .fill(Color.tidexSeparator)
@@ -1523,6 +1640,12 @@ private struct FriendsChatMessageReplyPreview: View {
     }
     .buttonStyle(.plain)
     .frame(maxWidth: maxWidth, alignment: isCurrentUser ? .trailing : .leading)
+    .accessibilityLabel(
+      FriendsChatMessageAccessibility.join([
+        "\(String(localized: .friendsChatReplyTo)) \(preview.senderName)", preview.snippet,
+      ])
+    )
+    .accessibilityHint(Text(.friendsAccessibilityOpenRepliedMessage))
   }
 
   private var replyBackgroundColor: Color {
@@ -1534,16 +1657,16 @@ private struct FriendsChatMessageReplyPreview: View {
 
   private var textColor: Color {
     if isCurrentUser {
-      return Color.tidexTextOnBrand.opacity(0.88)
+      return Color.tidexTextOnBrand
     }
     return .tidexTextMuted
   }
 
   private var accentColor: Color {
     if isCurrentUser {
-      return Color.white.opacity(0.78)
+      return Color.tidexTextOnBrand
     }
-    return Color.tidexBlue.opacity(0.7)
+    return Color.tidexBlueText
   }
 
   private var borderColor: Color {
@@ -1608,6 +1731,7 @@ struct FriendsChatReplyPreviewContent: View {
           Image(systemName: iconSystemName)
             .font(.tidexCaptionRegular)
             .foregroundColor(textColor)
+            .accessibilityHidden(true)
         }
 
         snippetLabel(preview.snippet)
@@ -1725,6 +1849,7 @@ struct ChatShiftSnapshotCard: View {
           }
           onTap()
         }
+        .accessibilityAddTraits(.isButton)
     } else {
       cardContent
     }
@@ -2611,6 +2736,7 @@ struct FriendsChatImageAttachmentCard: View {
           Image(systemName: "photo")
             .font(.system(size: placeholderSymbolSize, weight: .medium))
             .foregroundColor(.tidexTextMuted)
+            .accessibilityLabel(Text(.friendsChatPreviewImage))
         }
       } else {
         placeholder {
@@ -2632,6 +2758,7 @@ struct FriendsChatImageAttachmentCard: View {
     if let onTap {
       imageContent(image)
         .onTapGesture(perform: onTap)
+        .accessibilityAddTraits(.isButton)
     } else {
       imageContent(image)
     }
@@ -2641,6 +2768,8 @@ struct FriendsChatImageAttachmentCard: View {
     Image(uiImage: image)
       .resizable()
       .scaledToFill()
+      .accessibilityLabel(Text(.friendsChatPreviewImage))
+      .accessibilityAddTraits(.isImage)
       .frame(width: imageFrameSize.width, height: imageFrameSize.height)
       .clipShape(imageShape)
       .overlay {
@@ -2804,7 +2933,7 @@ struct FriendsChatImageGalleryOverlay: View {
           )
       }
       .buttonStyle(.plain)
-      .accessibilityLabel(Text(.commonCancel))
+      .accessibilityLabel(Text(.commonDismiss))
     }
     .padding(.vertical, Spacing.xs)
   }
@@ -2813,6 +2942,9 @@ struct FriendsChatImageGalleryOverlay: View {
   private var pageIndicator: some View {
     if let selectedIndex, attachments.count > 1 {
       Text("\(selectedIndex + 1) / \(attachments.count)")
+        .accessibilityLabel(
+          Text(.friendsAccessibilityPosition(selectedIndex + 1, attachments.count))
+        )
         .font(.tidexFootnoteMedium)
         .foregroundColor(.white.opacity(0.88))
         .padding(.horizontal, Spacing.sm)
@@ -2925,7 +3057,7 @@ struct FriendsChatImageGalleryUnavailableOverlay: View {
           )
       }
       .buttonStyle(.plain)
-      .accessibilityLabel(Text(.commonCancel))
+      .accessibilityLabel(Text(.commonDismiss))
       .padding(.top, Spacing.mlg)
       .padding(.horizontal, Spacing.mlg)
     }
@@ -2971,6 +3103,8 @@ private struct FriendsChatImageGalleryPage: View {
           isActive: isSelected,
           onZoomStateChanged: onZoomStateChanged
         )
+        .accessibilityLabel(Text(.friendsChatPreviewImage))
+        .accessibilityAddTraits(.isImage)
       } else if loader.isLoading {
         ProgressView()
           .tint(.white.opacity(0.8))
@@ -2978,6 +3112,7 @@ private struct FriendsChatImageGalleryPage: View {
         Image(systemName: "photo")
           .font(.system(size: 28, weight: .medium))
           .foregroundColor(.white.opacity(0.6))
+          .accessibilityLabel(Text(.friendsChatPreviewImage))
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

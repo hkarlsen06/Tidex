@@ -35,6 +35,46 @@ enum RecurringAnchorSelection {
   }
 }
 
+/// Spoken label for a day in the anchor calendar: the date, then what the day is.
+enum RecurringAnchorCellAccessibility {
+  static func dateText(dateISO: String) -> String {
+    guard let date = Date.fromISODateString(dateISO) else { return dateISO }
+    return date.formatted(
+      .dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
+  }
+
+  static func label(
+    dateISO: String,
+    isToday: Bool,
+    isAnchor: Bool,
+    isProjected: Bool,
+    hasConflict: Bool,
+    hasExistingShift: Bool,
+    hours: HoursData?
+  ) -> String {
+    var parts = [dateText(dateISO: dateISO)]
+    if isToday {
+      parts.append(String(localized: .commonToday))
+    }
+    if isAnchor {
+      parts.append(String(localized: .commonAccessibilityAnchorDay))
+    } else if isProjected {
+      parts.append(String(localized: .commonAccessibilityRepeatDay))
+    }
+    if let hours {
+      parts.append(
+        CalendarGridHelper.timeRangeAccessibilityText(
+          start: hours.start, end: hours.end, crossesMidnight: hours.crossesMidnight))
+    } else if hasExistingShift {
+      parts.append(String(localized: .shiftsAccessibilityExistingShift))
+    }
+    if hasConflict {
+      parts.append(String(localized: .shiftsAccessibilityConflict))
+    }
+    return parts.joined(separator: ", ")
+  }
+}
+
 struct RecurringAnchorCalendar: View {
   let displayMonth: Date
   let selectedDays: SelectedDays
@@ -100,30 +140,49 @@ struct RecurringAnchorCalendar: View {
       let hours = dateISO.flatMap { existingShiftHours[$0] }
       let earnings = isAnchor ? dateISO.flatMap(anchorEarnings) : nil
 
-      CalendarDayCell(
-        dayInfo: dayInfo,
-        style: cellStyle(
-          isAnchor: isAnchor,
-          isProjected: isProjected,
-          hasConflict: hasConflict,
-          hasExistingShift: hasExistingShift,
-          isToday: isToday,
-          isOutsideMonth: dayInfo.isOutsideMonth
-        ),
-        content: cellContent(
-          isAnchor: isAnchor,
-          isProjected: isProjected,
-          hasConflict: hasConflict,
-          anchorEarnings: earnings,
-          existingHours: hours,
-          isOutsideMonth: dayInfo.isOutsideMonth
-        )
-      )
-      .contentShape(Rectangle())
-      .onTapGesture {
+      Button {
         if let dateISO, !dayInfo.isOutsideMonth {
           onToggleAnchorDate(dateISO)
         }
+      } label: {
+        CalendarDayCell(
+          dayInfo: dayInfo,
+          style: cellStyle(
+            isAnchor: isAnchor,
+            isProjected: isProjected,
+            hasConflict: hasConflict,
+            hasExistingShift: hasExistingShift,
+            isToday: isToday,
+            isOutsideMonth: dayInfo.isOutsideMonth
+          ),
+          content: cellContent(
+            isAnchor: isAnchor,
+            isProjected: isProjected,
+            hasConflict: hasConflict,
+            anchorEarnings: earnings,
+            existingHours: hours,
+            isOutsideMonth: dayInfo.isOutsideMonth
+          )
+        )
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .calendarDayAccessibility(isHidden: dayInfo.isOutsideMonth) { cell in
+        cell
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel(
+            Text(
+              verbatim: dateISO.map {
+                RecurringAnchorCellAccessibility.label(
+                  dateISO: $0, isToday: isToday, isAnchor: isAnchor, isProjected: isProjected,
+                  hasConflict: hasConflict, hasExistingShift: hasExistingShift, hours: hours)
+              } ?? ""
+            )
+          )
+          .accessibilityInputLabels(
+            [Text(verbatim: dateISO.map { RecurringAnchorCellAccessibility.dateText(dateISO: $0) } ?? "")]
+          )
+          .accessibilityAddTraits(isAnchor ? [.isButton, .isSelected] : .isButton)
       }
     }
   }
@@ -151,8 +210,9 @@ struct RecurringAnchorCalendar: View {
           ? Color.tidexWarning.opacity(0.15) : Color.tidexBlue.opacity(0.15),
         borderColor: hasConflict ? .tidexWarning : .tidexBlue,
         borderWidth: 2,
-        dayNumberColor: hasConflict ? .tidexWarning : .tidexBlue,
-        showsTodayBadge: false
+        dayNumberColor: hasConflict ? .tidexWarning : .tidexBlueText,
+        showsTodayBadge: false,
+        marker: hasConflict ? .conflict : nil
       )
     }
     if isToday, !isOutsideMonth {
@@ -189,7 +249,7 @@ struct RecurringAnchorCalendar: View {
         return .earningsBreakdown(
           anchorEarnings,
           color: .white,
-          beforeTaxColor: .white.opacity(0.75)
+          beforeTaxColor: .white
         )
       }
       return .starIcon(color: .white)

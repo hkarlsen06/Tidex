@@ -49,6 +49,7 @@ internal struct NextShiftCountdownText: View {
       Text(countdownText(at: context.date))
         .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
+        .accessibilityAddTraits(.updatesFrequently)
     }
   }
 

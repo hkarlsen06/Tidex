@@ -272,6 +272,7 @@ struct SendAttachmentToChatSheet: View {
   let onCompleted: (SendShiftToChatResult) -> Void
 
   @Environment(\.dismiss) private var dismiss
+  @ScaledMetric(relativeTo: .largeTitle) private var emptyIconSize: CGFloat = 32
   @State private var viewModel: SendAttachmentToChatViewModel
 
   @MainActor
@@ -313,7 +314,7 @@ struct SendAttachmentToChatSheet: View {
           Button(String(localized: .commonCancel)) {
             dismiss()
           }
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         }
 
         ToolbarItem(placement: .topBarTrailing) {
@@ -341,8 +342,9 @@ struct SendAttachmentToChatSheet: View {
     } else if viewModel.recipients.isEmpty {
       VStack(spacing: Spacing.md) {
         Image(systemName: "person.2.slash")
-          .font(.system(size: 32, weight: .medium))
+          .font(.system(size: emptyIconSize, weight: .medium))
           .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
 
         Text(.friendsChatSendToChatEmptyTitle)
           .font(.tidexHeadline)
@@ -366,6 +368,7 @@ struct SendAttachmentToChatSheet: View {
           Text(errorMessage)
             .font(.tidexFootnote)
             .foregroundColor(.tidexError)
+            .announcesToVoiceOver(errorMessage)
         }
 
         ShareRecipientPickerList(

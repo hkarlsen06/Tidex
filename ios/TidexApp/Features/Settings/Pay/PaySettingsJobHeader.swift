@@ -29,7 +29,7 @@ struct PaySettingsJobHeader: View {
             Image(systemName: "checkmark.circle.fill")
           }
           .font(.tidexFootnote)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         } else if !isConfigured {
           Label {
             Text(.settingsPaySetupRequiredBadge)

@@ -331,9 +331,17 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
 
   /// Human-readable summary of days
   var daysDescription: String {
+    describeDays { OnboardingWeekday.initial(for: $0) }
+  }
+
+  /// Same as `daysDescription`, but with full weekday names for VoiceOver.
+  var spokenDaysDescription: String {
+    describeDays { OnboardingWeekday.name(for: $0) }
+  }
+
+  private func describeDays(dayLabel: (Int) -> String) -> String {
     if days.isEmpty { return "" }
 
-    let dayNames = ["M", "T", "O", "T", "F", "L", "S"]
     let sortedDays = Array(days).sorted()
 
     // Check for consecutive ranges
@@ -347,7 +355,7 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
       return String(localized: .onboardingSupplementsAllDaysLong)
     }
 
-    return sortedDays.map { dayNames[$0 - 1] }.joined(separator: ", ")
+    return sortedDays.map(dayLabel).joined(separator: ", ")
   }
 
   /// Human-readable time range
@@ -429,5 +437,27 @@ struct TariffLevel: Identifiable {
       guard let rate = tariffVersion.rate(forLevel: level) else { return nil }
       return Self(level: level, rate: rate)
     }
+  }
+}
+
+/// Weekday labels that follow the app language. Days are numbered 1 (Monday) to 7 (Sunday).
+enum OnboardingWeekday {
+  private static var calendar: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.locale = .appLocale
+    return calendar
+  }
+
+  /// Symbol arrays start on Sunday, so Sunday (7) maps to index 0.
+  private static func symbolIndex(for day: Int) -> Int {
+    day % 7  // swiftlint:disable:this no_magic_numbers
+  }
+
+  static func initial(for day: Int) -> String {
+    calendar.veryShortStandaloneWeekdaySymbols[symbolIndex(for: day)]
+  }
+
+  static func name(for day: Int) -> String {
+    calendar.standaloneWeekdaySymbols[symbolIndex(for: day)]
   }
 }

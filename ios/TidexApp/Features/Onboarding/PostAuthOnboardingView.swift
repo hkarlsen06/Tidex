@@ -362,6 +362,7 @@ extension PostAuthOnboardingView {
       Image(systemName: "xmark")
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextPrimary)
+        .accessibilityHidden(true)
         .frame(width: 36, height: 36)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(Circle())
@@ -369,9 +370,11 @@ extension PostAuthOnboardingView {
           Circle()
             .stroke(Color.tidexBorder, lineWidth: 1)
         )
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
     }
-    .padding(.top, 12)
-    .padding(.trailing, Spacing.lg)
+    .padding(.top, 8)  // swiftlint:disable:this no_magic_numbers
+    .padding(.trailing, Spacing.lg - 4)  // swiftlint:disable:this no_magic_numbers
     .accessibilityLabel(String(localized: .commonCancel))
   }
 }

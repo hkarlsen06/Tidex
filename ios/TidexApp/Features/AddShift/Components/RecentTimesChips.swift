@@ -135,7 +135,7 @@ private struct RecentTimeChip: View {
       Text(timeRangeText)
         .font(.tidexMonoCaption)
         .fixedSize(horizontal: true, vertical: false)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexBlue)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexBlueText)
         .environment(\.layoutDirection, .leftToRight)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
@@ -145,6 +145,12 @@ private struct RecentTimeChip: View {
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(
+      Text(
+        verbatim: CalendarGridHelper.shiftTimesAccessibilityText(
+          startTime: range.startTime, endTime: range.endTime))
+    )
+    .accessibilityInputLabels([Text(verbatim: timeRangeText)])
     .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }

@@ -19,6 +19,7 @@ struct CurrencyCountUpText: View {
   let animateFrom: Double?
 
   @Environment(\.userCurrency) private var currency
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   /// Track the displayed amount for animation
   @State private var displayedAmount: Double?
@@ -49,7 +50,7 @@ struct CurrencyCountUpText: View {
 
   var body: some View {
     Text(formattedText)
-      .contentTransition(.numericText(value: displayedAmount ?? amount))
+      .contentTransition(reduceMotion ? .identity : .numericText(value: displayedAmount ?? amount))
       .accessibilityLabel(CurrencyConfig.format(amount, currency: currency))
       .onAppear {
         if !hasAppeared {
@@ -60,7 +61,7 @@ struct CurrencyCountUpText: View {
             displayedAmount = startValue
             // Only animate if we're not already at the target
             if startValue != amount {
-              withAnimation(.spring(duration: duration, bounce: 0).delay(0.05)) {
+              withAnimation(reduceMotion ? nil : .spring(duration: duration, bounce: 0).delay(0.05)) {
                 displayedAmount = amount
               }
             }
@@ -80,7 +81,7 @@ struct CurrencyCountUpText: View {
         }
 
         if animateChanges {
-          withAnimation(.spring(duration: duration, bounce: 0)) {
+          withAnimation(reduceMotion ? nil : .spring(duration: duration, bounce: 0)) {
             displayedAmount = newValue
           }
         } else {

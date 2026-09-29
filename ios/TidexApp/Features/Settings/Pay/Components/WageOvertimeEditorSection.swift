@@ -49,6 +49,7 @@ struct OvertimeEditorSection: View {
       )
       .keyboardType(.decimalPad)
       .textFieldStyle(.roundedBorder)
+      .accessibilityLabel(Text(.settingsPayEditorOvertimeThreshold))
     }
   }
 
@@ -72,6 +73,7 @@ struct OvertimeEditorSection: View {
 }
 
 private struct OvertimeRuleRow: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @Binding var rule: OvertimeRuleDraft
   let onDelete: () -> Void
 
@@ -94,33 +96,69 @@ private struct OvertimeRuleRow: View {
   }
 
   private var dayButtons: some View {
-    HStack(spacing: Spacing.xs) {
-      ForEach(1...7, id: \.self) { day in
-        Button {
-          if rule.days.contains(day) {
-            rule.days.remove(day)
-          } else {
-            rule.days.insert(day)
-          }
-        } label: {
-          Text(dayShortName(day))
-            .font(.tidexCaption)
-            .foregroundColor(rule.days.contains(day) ? .tidexTextOnBrand : .tidexTextSecondary)
-            .frame(width: 30, height: 28)
-            .background(
-              rule.days.contains(day)
-                ? Color.tidexBrandPrimary
-                : Color.tidexSurfaceSecondary
-            )
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+    ViewThatFits(in: .horizontal) {
+      HStack(spacing: Spacing.xs) {
+        ForEach(1...7, id: \.self) { day in
+          dayButton(day)
         }
-        .buttonStyle(.plain)
+      }
+
+      // Names that no longer fit on one line wrap to a grid of larger targets.
+      LazyVGrid(
+        columns: [GridItem(.adaptive(minimum: 72), spacing: Spacing.xs)],
+        alignment: .leading,
+        spacing: Spacing.xs
+      ) {
+        ForEach(1...7, id: \.self) { day in
+          dayButton(day)
+        }
       }
     }
   }
 
+  private func dayButton(_ day: Int) -> some View {
+    let isSelected = rule.days.contains(day)
+    return Button {
+      if isSelected {
+        rule.days.remove(day)
+      } else {
+        rule.days.insert(day)
+      }
+    } label: {
+      HStack(spacing: Spacing.micro) {
+        if isSelected {
+          Image(systemName: "checkmark")
+            .font(.tidexMicro.weight(.bold))
+            .accessibilityHidden(true)
+        }
+        Text(dayShortName(day))
+          .font(.tidexCaption)
+      }
+      .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+      .frame(minWidth: 30, minHeight: 28)
+      .padding(.horizontal, Spacing.micro)
+      .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
+          .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
+      )
+      // The chip stays compact. The tap area reaches 44pt.
+      .frame(maxWidth: .infinity, minHeight: 44)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  private var timeFieldsLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xs))
+  }
+
   private var timeFields: some View {
-    HStack(spacing: Spacing.xs) {
+    timeFieldsLayout {
       TextField(String(localized: .settingsPayEditorOvertimeFrom), text: $rule.from)
         .textInputAutocapitalization(.never)
         .keyboardType(.numbersAndPunctuation)
@@ -142,11 +180,19 @@ private struct OvertimeRuleRow: View {
       Button(action: onDelete) {
         Image(systemName: "trash")
           .foregroundColor(.tidexError)
+          .frame(minWidth: 44, minHeight: 44)
+          .contentShape(Rectangle())
           .accessibilityHidden(true)
       }
-      .accessibilityLabel(Text(.commonDelete))
+      .accessibilityLabel(Text(.settingsAccessibilityDeleteOvertimeRule(ruleSummary)))
       .buttonStyle(.plain)
     }
+  }
+
+  /// The days and hours the rule covers, used to name the rule for VoiceOver.
+  private var ruleSummary: String {
+    let days = rule.days.sorted().map(dayShortName).joined(separator: ", ")
+    return "\(days) \(String(localized: .calendarAccessibilityTimeRange(rule.from, rule.to)))"
   }
 
   private func dayShortName(_ day: Int) -> String {

@@ -91,6 +91,36 @@ struct ShiftRowCard: View {
       .onTapGesture {
         onTap?()
       }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(Text(verbatim: accessibilityDescription))
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction(.default) {
+        onTap?()
+      }
+  }
+
+  /// One spoken summary instead of a fragment per text label.
+  private var accessibilityDescription: String {
+    var parts = ["\(dateParts.weekday) \(dateParts.dayMonth)"]
+    if isToday {
+      parts.append(String(localized: .commonToday))
+    }
+    parts.append(
+      CalendarGridHelper.shiftTimesAccessibilityText(
+        startTime: shift.startTime, endTime: shift.endTime))
+    let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
+    let payLabel = String(localized: shift.taxEnabled ? .shiftsNetPay : .shiftsGrossPay)
+    parts.append("\(payLabel) \(amountTextOverride ?? formatCurrency(displayAmount))")
+    if excludedFromTotal {
+      parts.append(String(localized: .shiftsExcludedFromTotal))
+    }
+    if hasConflict {
+      parts.append(String(localized: .shiftsAccessibilityConflict))
+    }
+    if shouldRenderJobBadge, let jobName {
+      parts.append(String(localized: .shiftsAccessibilityWorkplace(jobName)))
+    }
+    return parts.joined(separator: ", ")
   }
 
   /// The card's visual content (extracted for cleaner code)
@@ -113,7 +143,7 @@ struct ShiftRowCard: View {
         if isToday {
           Text(.commonToday)
             .font(.tidexMicro)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .padding(.horizontal, Spacing.xs)
             .padding(.vertical, Spacing.micro)
             .background(Color.tidexBlue.opacity(0.12))
@@ -142,12 +172,13 @@ struct ShiftRowCard: View {
           colorHex: jobColorHex,
           font: .tidexCaptionRegular,
           fallbackBadgeColor: .tidexBlue,
+          lineLimit: usesFixedCardHeight ? 1 : nil,
           badgeHorizontalPadding: Spacing.xs,
           badgeVerticalPadding: 2
         )
-        .lineLimit(1)
         .truncationMode(.tail)
-        .frame(maxWidth: maxJobBadgeWidth, alignment: .trailing)
+        .frame(
+          maxWidth: usesFixedCardHeight ? maxJobBadgeWidth : .infinity, alignment: .trailing)
       } else if showBreakdown {
         // Breakdown (gross - tax) when tax enabled
         HStack(spacing: Spacing.xxs) {

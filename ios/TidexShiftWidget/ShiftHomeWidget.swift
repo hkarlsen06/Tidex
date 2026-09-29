@@ -93,7 +93,7 @@ internal struct ShiftHomeWidgetView: View {
       return .primary  // Will receive user's tint via widgetAccentable
 
     default:
-      return WidgetPalette.blue
+      return WidgetPalette.blueText
     }
   }
 
@@ -147,6 +147,9 @@ internal struct ShiftHomeWidgetView: View {
         emptyStateLayout
       }
     }
+    // One spoken summary, so the two times are not read as unlabeled numbers.
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: entry.accessibilitySummary))
   }
 
   // MARK: - Empty State Layout

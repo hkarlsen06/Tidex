@@ -29,10 +29,11 @@ struct AuthHeroVisual: View {
       .accessibilityLabel(Text(verbatim: "Tidex"))
 
     if let onLogoTap {
-      content
-        .onTapGesture(perform: onLogoTap)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint(Text(.authRestartPreAuthOnboarding))
+      Button(action: onLogoTap) {
+        content
+      }
+      .buttonStyle(.plain)
+      .accessibilityHint(Text(.authRestartPreAuthOnboarding))
     } else {
       content
         .accessibilityHidden(true)
@@ -79,12 +80,11 @@ struct AuthHeroVisual: View {
     }
 
     if let onLogoTap {
+      // Sighted users can tap the card too. The logo is the one control VoiceOver and Voice Control see.
       card
         .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
         .onTapGesture(perform: onLogoTap)
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint(Text(.authRestartPreAuthOnboarding))
+        .accessibilityHidden(true)
     } else {
       card.accessibilityHidden(true)
     }

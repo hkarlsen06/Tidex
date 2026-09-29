@@ -119,6 +119,7 @@ struct NumericTimeInput: View {
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
           .fixedSize(horizontal: false, vertical: true)
+          .announcesToVoiceOver(String(localized: .addShiftTimeInputInvalid))
       }
     }
     .padding(.horizontal, Spacing.sm)

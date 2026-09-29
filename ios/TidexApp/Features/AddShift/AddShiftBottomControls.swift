@@ -8,10 +8,17 @@ struct AddShiftBottomControls: View {
   let onStartFresh: () -> Void
   let onSave: () -> Void
   private let addShiftCoordinator = AddShiftCoordinator.shared
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  /// The job picker and Add button stack at accessibility text sizes so neither is squeezed.
+  private var primaryRowLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.xs)) : AnyLayout(HStackLayout(spacing: Spacing.xs))
+  }
 
   var body: some View {
     VStack(spacing: Spacing.xs) {
-      HStack(spacing: Spacing.xs) {
+      primaryRowLayout {
         if viewModel.mode != .events {
           jobPickerButton
         }
@@ -23,7 +30,7 @@ struct AddShiftBottomControls: View {
 
         SharedMonthPicker()
           .frame(maxWidth: .infinity)
-          .frame(height: MonthPickerLayout.height)
+          .frame(minHeight: MonthPickerLayout.height)
           .tidexGlass(
             shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
             interactive: true
@@ -46,13 +53,16 @@ struct AddShiftBottomControls: View {
           .frame(width: Spacing.xsm, height: Spacing.xsm)
           .accessibilityHidden(true)
 
-        Text(viewModel.selectedJob?.name ?? String(localized: .settingsPayChooseJobTitle))
+        Text(jobPickerTitle)
           .font(.tidexButton)
           .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
           .truncationMode(.tail)
-          .frame(maxWidth: Self.jobPickerMaxNameWidth, alignment: .leading)
-          .fixedSize(horizontal: true, vertical: false)
+          .frame(
+            maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : Self.jobPickerMaxNameWidth,
+            alignment: .leading
+          )
+          .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
 
         Image(systemName: "chevron.up.chevron.down")
           .font(.tidexCaption)
@@ -60,7 +70,7 @@ struct AddShiftBottomControls: View {
           .accessibilityHidden(true)
       }
       .padding(.horizontal, Spacing.md)
-      .frame(height: MonthPickerLayout.height)
+      .frame(minHeight: MonthPickerLayout.height)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -68,7 +78,13 @@ struct AddShiftBottomControls: View {
       shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
       interactive: true
     )
+    .accessibilityLabel(Text(verbatim: jobPickerTitle))
+    .accessibilityHint(Text(.shiftsAccessibilityChangeJobHint))
     .accessibilityIdentifier("add-shift.job-picker")
+  }
+
+  private var jobPickerTitle: String {
+    viewModel.selectedJob?.name ?? String(localized: .settingsPayChooseJobTitle)
   }
 
   private var selectedJobColor: Color {
@@ -88,7 +104,7 @@ struct AddShiftBottomControls: View {
       Image(systemName: "arrow.uturn.backward.circle.fill")
         .font(.tidexHeadline)
         .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
-        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+        .frame(minWidth: MonthPickerLayout.height, minHeight: MonthPickerLayout.height)
         .contentShape(Rectangle())
         .accessibilityHidden(true)
     }
@@ -101,14 +117,22 @@ struct AddShiftBottomControls: View {
     .accessibilityLabel(Text(.addShiftStartFreshConfirmAction))
   }
 
+  private var saveButtonHint: Text {
+    guard !addShiftCoordinator.canSubmit else { return Text(verbatim: "") }
+    let message: LocalizedStringResource =
+      addShiftCoordinator.submitBlockers.first?.requirementMessage
+      ?? .addShiftSubmitRequirementsGeneric
+    return Text(message)
+  }
+
   private var saveButton: some View {
     Button {
       onSave()
     } label: {
       Label(String(localized: .addShiftSubmitButton), systemImage: "plus")
         .font(.tidexButton)
-        .lineLimit(1)
-        .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+        .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlueText : .tidexTextMuted)
         // Keep the width while saving so the month picker doesn't jump.
         .opacity(addShiftCoordinator.isLoading ? 0 : 1)
         .overlay {
@@ -118,10 +142,9 @@ struct AddShiftBottomControls: View {
               .scaleEffect(MonthPickerLayout.progressIndicatorScale)
           }
         }
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(.horizontal, Spacing.md)
         .frame(maxWidth: .infinity)
-        .frame(height: MonthPickerLayout.height)
+        .frame(minHeight: MonthPickerLayout.height)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -130,11 +153,8 @@ struct AddShiftBottomControls: View {
       shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
       interactive: true
     )
-    .opacity(
-      addShiftCoordinator.canSubmit
-        ? MonthPickerLayout.enabledOpacity
-        : MonthPickerLayout.disabledOpacity
-    )
+    // The button stays active when it can't submit, so it explains what is missing instead.
+    .accessibilityHint(saveButtonHint)
     .accessibilityIdentifier("add-shift.save")
   }
 }

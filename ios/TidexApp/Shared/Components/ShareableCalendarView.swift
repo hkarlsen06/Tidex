@@ -293,7 +293,7 @@ struct CalendarShareOptionsSheet: View {
         HStack(spacing: Spacing.msm) {
           Image(systemName: systemImage)
             .font(.tidexBodyLarge)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .frame(width: 28)
           Text(label)
             .font(.tidexBodyMedium)

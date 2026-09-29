@@ -40,7 +40,7 @@ struct WageHistoryTimelineView: View {
     }) {
       Label(.settingsPayTimelineAddChange, systemImage: "plus")
         .font(.tidexBodyMedium)
-        .foregroundStyle(Color.tidexBlue)
+        .foregroundStyle(Color.tidexBlueText)
         .padding(.horizontal, Spacing.md)
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
         .contentShape(Rectangle())

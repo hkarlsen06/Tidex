@@ -180,6 +180,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   // View mode toggle (calendar vs list) - persisted across app launches
   @AppStorage("shiftsViewMode") private var showListView: Bool = false
+  @ScaledMetric(relativeTo: .largeTitle) private var errorIconSize: CGFloat = 48
   @State private var selectedListJobId: String?
   @State private var filteredListShiftsCache: [ShiftWithComputations] = []
   @State private var shiftListItemsCache: [ShiftListItem] = []
@@ -713,6 +714,20 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         }
         // Disable animations during view mode transition to prevent lag
         .animation(.none, value: showListView)
+        // The month grid can't reflow at accessibility text sizes, so start in the list.
+        // Only a first launch or a switch into these sizes changes the saved choice.
+        .onAppear {
+          if dynamicTypeSize.isAccessibilitySize,
+            UserDefaults.standard.object(forKey: "shiftsViewMode") == nil
+          {
+            showListView = true
+          }
+        }
+        .onChange(of: dynamicTypeSize) { oldSize, newSize in
+          if newSize.isAccessibilitySize, !oldSize.isAccessibilitySize {
+            showListView = true
+          }
+        }
         // Listen for "use share button" from the screenshot prompt overlay (hosted in MainTabView)
         .onReceive(NotificationCenter.default.publisher(for: .screenshotPromptUseShareButton)) {
           _ in
@@ -817,7 +832,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               showingSendToChatSheet = true
             }
           )
-          .presentationDetents([.height(250)])
+          .presentationDetents([.height(250), .large])
           .presentationDragIndicator(.visible)
         }
         // Calendar share options sheet
@@ -827,7 +842,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             earningsImage: renderCalendarImage(includeEarnings: true),
             hiddenEarningsImage: renderCalendarImage(includeEarnings: false)
           )
-          .presentationDetents([.height(260)])
+          .presentationDetents([.height(260), .large])
           .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingSendToChatSheet) {
@@ -1102,6 +1117,8 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       NotificationCenter.default.postShiftsDidChange(
         context: .affecting(isoDate: shift.shiftDate)
       )
+      AccessibilityNotification.Announcement(String(localized: .shiftsAccessibilityShiftsDeleted))
+        .post()
 
       shiftToDelete = nil
     } catch {
@@ -1254,6 +1271,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
                 viewModel.clearSelection()
               }
             }
+            .accessibilityHidden(true)
 
           // Calendar content - centered
           VStack {  // swiftlint:disable:this closure_body_length
@@ -1469,7 +1487,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             Section {
               ForEach(weekGroup.items) { item in
                 listItemRow(item: item)
-                  .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
                   .id(item.id)
               }
             } header: {
@@ -1479,7 +1496,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               )
               .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
               .listRowBackground(Color.clear)
-              .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
             }
           }
         }
@@ -1521,6 +1537,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
                 viewModel.clearSelection()
               }
             }
+            .accessibilityHidden(true)
 
           // Calendar content - centered between toolbar and month picker
           VStack {  // swiftlint:disable:this closure_body_length
@@ -1866,7 +1883,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         scrollToTodayWhenCurrentMonthLoads = false
         // Wait for the list rows of the new month before scrolling.
         Task { @MainActor in
-          withAnimation { scrollToTodayItem(using: proxy) }
+          withAnimation(reduceMotion ? nil : .default) { scrollToTodayItem(using: proxy) }
         }
       }
     }
@@ -1887,7 +1904,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       Section {
         ForEach(weekGroup.items) { item in
           listItemRow(item: item)
-            .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
             .id(item.id)
         }
       } header: {
@@ -1897,7 +1913,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         )
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
         .listRowBackground(Color.clear)
-        .opacity(weekGroup.isOutsideMonth ? 0.4 : 1.0)
       }
     }
   }
@@ -1911,9 +1926,9 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       // The current month is still loading; scroll once it is shown.
       scrollToTodayWhenCurrentMonthLoads = true
     } else if scrollToToday {
-      withAnimation { scrollToTodayItem(using: proxy) }
+      withAnimation(reduceMotion ? nil : .default) { scrollToTodayItem(using: proxy) }
     } else if let firstId = weekGroupsWithPlaceholder.first?.items.first?.id {
-      withAnimation { proxy.scrollTo(firstId, anchor: .top) }
+      withAnimation(reduceMotion ? nil : .default) { proxy.scrollTo(firstId, anchor: .top) }
     }
   }
 
@@ -2080,13 +2095,10 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             Capsule().strokeBorder(Color.tidexTextPrimary, lineWidth: 2)
           }
         }
-        // Grey out the other jobs while one job is selected.
-        .grayscale(selectedListJobId != nil && !isSelected ? 1 : 0)
-        .opacity(selectedListJobId != nil && !isSelected ? 0.6 : 1)
       } else {
         Text(title)
           .font(.tidexFootnoteStrong)
-          .foregroundColor(isSelected ? .white : .tidexTextPrimary)
+          .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextPrimary)
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xs)
           .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
@@ -2162,7 +2174,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   private func errorView(error: Error) -> some View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
-        .font(.system(size: 48))
+        .font(.system(size: errorIconSize))
         .foregroundColor(.tidexWarning)
         .accessibilityHidden(true)
 
@@ -2174,13 +2186,14 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
+        .announcesToVoiceOver(error.localizedDescription)
 
       Button {
         Task { await viewModel.loadShifts() }
       } label: {
         Text(.commonRetry)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))

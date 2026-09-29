@@ -7,6 +7,8 @@ struct OAuthButtonsView: View {
   var onPasskeyTap: (() -> Void)?
   var isLoading: Bool = false
 
+  @ScaledMetric(relativeTo: .body) private var iconFontSize: CGFloat = 19
+
   var body: some View {
     VStack(spacing: Spacing.sm) {
       if let onPasskeyTap {
@@ -16,7 +18,7 @@ struct OAuthButtonsView: View {
           isLoading: isLoading
         ) {
           Image(systemName: "person.badge.key.fill")
-            .font(.system(size: 19, weight: .medium))
+            .font(.system(size: iconFontSize, weight: .medium))
         }
       }
 
@@ -26,7 +28,7 @@ struct OAuthButtonsView: View {
         isLoading: isLoading
       ) {
         Image(systemName: "apple.logo")
-          .font(.system(size: 19, weight: .medium))
+          .font(.system(size: iconFontSize, weight: .medium))
       }
 
       OAuthProviderButton(
@@ -49,6 +51,7 @@ private struct OAuthProviderButton<Icon: View>: View {
   @ViewBuilder let icon: () -> Icon
 
   @Environment(\.colorScheme) private var colorScheme
+  @ScaledMetric(relativeTo: .body) private var iconFrame: CGFloat = 19
 
   private var isIPad: Bool {
     UIDevice.current.userInterfaceIdiom == .pad
@@ -61,7 +64,8 @@ private struct OAuthProviderButton<Icon: View>: View {
     } label: {
       HStack(spacing: Spacing.sm) {
         icon()
-          .frame(width: 19, height: 19)
+          .frame(width: iconFrame, height: iconFrame)
+          .accessibilityHidden(true)
 
         Text(title)
           .font(.tidexButton)

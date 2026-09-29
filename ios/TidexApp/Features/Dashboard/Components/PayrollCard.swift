@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Card displaying previous month's earnings and payroll information
 /// Design matches NextPayrollCard from the Next.js app
-struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   let payrollDate: Date  // swiftlint:disable:this explicit_acl
   let label: String  // swiftlint:disable:this explicit_acl
   var labelColorHex: String?  // swiftlint:disable:this explicit_acl
@@ -27,6 +27,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
 
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
   @Environment(\.colorScheme) private var colorScheme  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
@@ -79,33 +80,37 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
         loadingDatePlaceholder
       } else if isPayrollToday {
         HStack(spacing: Spacing.xxxs) {
-          Image(systemName: "banknote")  // swiftlint:disable:this accessibility_label_for_image
+          Image(systemName: "banknote")
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
+            .accessibilityHidden(true)
           Text(.dashboardToday)
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
-          Image(systemName: "party.popper.fill")  // swiftlint:disable:this accessibility_label_for_image
+          Image(systemName: "party.popper.fill")
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
+            .accessibilityHidden(true)
         }
       } else {
         HStack(spacing: Spacing.xxs) {
-          Image(systemName: "banknote")  // swiftlint:disable:this accessibility_label_for_image
+          Image(systemName: "banknote")
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
+            .accessibilityHidden(true)
           Text(dateParts.weekday)
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
           Text("·")
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextMuted)
+            .accessibilityHidden(true)
           Text(dateParts.dayMonth)
             .font(.tidexLabel)
             .foregroundColor(.tidexTextMuted)
-            .contentTransition(.numericText())
+            .contentTransition(reduceMotion ? .identity : .numericText())
         }
-        .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)  // swiftlint:disable:this line_length no_magic_numbers
+        .animation(reduceMotion ? nil : .spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)  // swiftlint:disable:this line_length no_magic_numbers
       }
     } trailingTop: {  // swiftlint:disable:this closure_body_length
       // Right side: amount
@@ -150,7 +155,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
       } else if showPayout {
         TimelineView(.periodic(from: .now, by: 1)) { context in
           Text(payrollCountdownText(at: context.date))
-            .contentTransition(.numericText())
+            .contentTransition(reduceMotion ? .identity : .numericText())
         }
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
@@ -205,7 +210,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
         return
       }
       // Animate to new progress value
-      withAnimation(.linear(duration: 1.0)) {
+      withAnimation(reduceMotion ? nil : .linear(duration: 1.0)) {
         animatedProgress = newValue ?? 0
       }
     }
@@ -213,7 +218,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
       if newValue {
         animatedProgress = 0
       } else {
-        withAnimation(.linear(duration: 1.0)) {
+        withAnimation(reduceMotion ? nil : .linear(duration: 1.0)) {
           animatedProgress = progress ?? 0
         }
       }
@@ -235,7 +240,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
 
       // Animate from zero on appear so card re-mounts during month navigation
       // keep the same fill animation behavior as live month-to-month updates.
-      withAnimation(.linear(duration: 1.0)) {
+      withAnimation(reduceMotion ? nil : .linear(duration: 1.0)) {
         animatedProgress = progress
       }
     }
@@ -265,23 +270,29 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
         colorHex: labelColorHex,
         font: labelIsWorkplace ? .tidexCaptionRegular : .tidexBodyMedium,
         fallbackBadgeColor: labelIsWorkplace ? .tidexBlue : nil,
+        lineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 1,
         badgeHorizontalPadding: Spacing.xs,
         badgeVerticalPadding: labelIsWorkplace ? 1 : Spacing.xxxs
       )
     } else {
-      HStack(spacing: Spacing.micro) {
+      let badgeLayout =  // swiftlint:disable:this explicit_type_interface
+        dynamicTypeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.micro))
+        : AnyLayout(HStackLayout(spacing: Spacing.micro))
+      badgeLayout {
         ForEach(workplaceBadges) { badge in
           WorkplaceNameText(
             name: badge.title,
             colorHex: badge.colorHex,
             font: .tidexBodyMedium,
             fallbackBadgeColor: .tidexBlue,
+            lineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 1,
             badgeHorizontalPadding: Spacing.xs,
             badgeVerticalPadding: 1
           )
         }
       }
-      .lineLimit(1)
+      .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     }
   }
 
@@ -315,6 +326,7 @@ extension PayrollCard {
 
   fileprivate func receivedButton(action: @escaping () -> Void) -> some View {
     let tint: Color = isMarkedReceived ? .tidexSuccess : .tidexBlue  // swiftlint:disable:this explicit_type_interface
+    let textTint: Color = isMarkedReceived ? .tidexSuccess : .tidexBlueText  // swiftlint:disable:this explicit_type_interface line_length
     return Button(action: action) {
       Label(
         isMarkedReceived
@@ -323,7 +335,7 @@ extension PayrollCard {
         systemImage: isMarkedReceived ? "checkmark.circle.fill" : "circle"
       )
       .font(.tidexLabel)
-      .foregroundColor(tint)
+      .foregroundColor(textTint)
       .padding(.horizontal, Spacing.xs)
       .padding(.vertical, Spacing.xxxs)
       .background(Capsule(style: .continuous).fill(tint.opacity(0.12)))  // swiftlint:disable:this no_magic_numbers

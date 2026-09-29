@@ -5,9 +5,11 @@ struct OnboardingHintShimmerText: View {
   let text: String
   let trigger: Int
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var shimmerStartDate: Date?
   @State private var isShimmerActive = false
   @State private var cycleToken = 0
+  @ScaledMetric(relativeTo: .footnote) private var basePointSize: CGFloat = 13
 
   private let shimmerDuration = PreAuthSimulatorAnimationTiming.hintSweepDuration
   private let shimmerCleanupDelay = PreAuthSimulatorAnimationTiming.hintCleanupDelay
@@ -34,7 +36,6 @@ struct OnboardingHintShimmerText: View {
 
   private var staticText: AttributedString {
     var attributed = AttributedString(text)
-    let basePointSize = UIFont.preferredFont(forTextStyle: .footnote).pointSize
     attributed.font = .system(size: basePointSize, weight: .regular, design: .default)
     attributed.foregroundColor = .tidexTextMuted
     return attributed
@@ -51,7 +52,6 @@ struct OnboardingHintShimmerText: View {
   private func styledText(at currentDate: Date) -> AttributedString {
     var attributed = AttributedString(text)
     let characterCount = max(text.count, 1)
-    let basePointSize = UIFont.preferredFont(forTextStyle: .footnote).pointSize
 
     guard
       isShimmerActive,
@@ -81,7 +81,7 @@ struct OnboardingHintShimmerText: View {
         let weight: Font.Weight =
           intensity > 0.6 ? .bold : (intensity > 0.25 ? .semibold : .regular)
         let size = basePointSize * (1 + (0.09 * intensity))
-        let color: Color = intensity > 0.08 ? .tidexBlue : .tidexTextMuted
+        let color: Color = intensity > 0.08 ? .tidexBlueText : .tidexTextMuted
 
         attributed[attributedRange].font = .system(size: size, weight: weight, design: .default)
         attributed[attributedRange].foregroundColor = color
@@ -94,6 +94,8 @@ struct OnboardingHintShimmerText: View {
   }
 
   private func runShimmerCycle() {
+    // The per-frame font sweep is motion, so Reduce Motion keeps the static hint.
+    guard !reduceMotion else { return }
     cycleToken += 1
     let token = cycleToken
     shimmerStartDate = Date()
@@ -122,18 +124,9 @@ enum PreAuthSimulatorFocusStage {
 
 extension View {
   @ViewBuilder
-  func simulatorFocusStyle(isFocused: Bool, reduceTransparency: Bool) -> some View {
-    if isFocused {
-      self
-        .opacity(1)
-        .saturation(1)
-        .blur(radius: 0)
-    } else {
-      self
-        .opacity(0.55)
-        .saturation(0.45)
-        .blur(radius: reduceTransparency ? 0 : 1.5)
-    }
+  func simulatorFocusStyle(isFocused: Bool) -> some View {
+    // Sections that are not in focus lose color, not opacity or sharpness, so their text stays readable.
+    saturation(isFocused ? 1 : 0.45)
   }
 }
 
@@ -245,6 +238,7 @@ struct PreAuthSimulatorToolbarTotals: View {
   let baselinePrimary: Double?
   let showDelta: Bool
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var lastDisplayedPrimary: Double = 0
   @State private var lastDisplayedSecondary: Double = 0
 
@@ -264,6 +258,7 @@ struct PreAuthSimulatorToolbarTotals: View {
             HStack(alignment: .center, spacing: Spacing.xxxs) {
               Image(systemName: "plus")
                 .font(.caption2.weight(.bold))
+                .accessibilityHidden(true)
 
               animatedAmount(
                 delta,
@@ -272,15 +267,20 @@ struct PreAuthSimulatorToolbarTotals: View {
               )
               .font(.tidexFootnote)
             }
-            .foregroundColor(.tidexBlue)
-            .transition(.offset(y: -4).combined(with: .opacity))
+            .foregroundColor(.tidexBlueText)
+            .transition(reduceMotion ? .opacity : .offset(y: -4).combined(with: .opacity))
           }
         }
-        .transition(.offset(x: 6).combined(with: .opacity))
+        .accessibilityElement(children: .combine)
+        .transition(reduceMotion ? .opacity : .offset(x: 6).combined(with: .opacity))
       }
     }
-    .animation(.spring(response: 0.26, dampingFraction: 0.86), value: totals?.primary)
-    .animation(.spring(response: 0.26, dampingFraction: 0.86), value: deltaAmount)
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86), value: totals?.primary
+    )
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86), value: deltaAmount
+    )
   }
 
   private var deltaAmount: Double? {

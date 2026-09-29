@@ -183,7 +183,8 @@ struct FriendsThreadComposerHostedView: View {
       attachmentDrawer
     }
     .animation(
-      .spring(response: 0.26, dampingFraction: 0.86), value: attachmentController.isDrawerOpen
+      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86),
+      value: attachmentController.isDrawerOpen
     )
     .fixedSize(horizontal: false, vertical: true)
     .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
@@ -262,6 +263,7 @@ struct FriendsThreadComposerHostedView: View {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "hand.raised.fill")
           .foregroundColor(.tidexWarning)
+          .accessibilityHidden(true)
 
         Text(.friendsChatBlockedReadOnly)
           .font(.tidexFootnote)
@@ -281,10 +283,12 @@ struct FriendsThreadComposerHostedView: View {
           Text(sendErrorMessage)
             .font(.tidexFootnote)
             .foregroundColor(.tidexError)
+            .announcesToVoiceOver(sendErrorMessage)
         } else if let composerValidationMessage = configuration.composerValidationMessage {
           Text(composerValidationMessage)
             .font(.tidexFootnote)
             .foregroundColor(.tidexError)
+            .announcesToVoiceOver(composerValidationMessage)
         }
 
         Spacer(minLength: 0)
@@ -326,7 +330,7 @@ struct FriendsThreadComposerHostedView: View {
       )
       .padding(.horizontal, Spacing.md)
       .padding(.bottom, Spacing.sm)
-      .transition(.move(edge: .bottom).combined(with: .opacity))
+      .transition(MotionTokens.mirroredMoveTransition(edge: .bottom, reduceMotion: reduceMotion))
     }
   }
 
@@ -364,7 +368,8 @@ struct FriendsThreadComposerHostedView: View {
             || configuration.mode == .edit,
           action: toggleAttachmentDrawer
         )
-        .transition(.move(edge: .leading).combined(with: .opacity))
+        .transition(
+          MotionTokens.mirroredMoveTransition(edge: .leading, reduceMotion: reduceMotion))
       }
     }
     .animation(
@@ -577,6 +582,8 @@ extension FriendsThreadComposerHostedView {
 }
 
 private struct FriendsThreadComposerPlusButton: View {
+  @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 20
+
   let isOpen: Bool
   let isDisabled: Bool
   let action: () -> Void
@@ -584,10 +591,10 @@ private struct FriendsThreadComposerPlusButton: View {
   var body: some View {
     Button(action: action) {
       Image(systemName: "plus")
-        .font(.system(size: 20, weight: .semibold))
-        .foregroundColor(isDisabled ? .tidexTextMuted : .tidexBlue)
+        .font(.system(size: iconSize, weight: .semibold))
+        .foregroundColor(isDisabled ? .tidexTextMuted : .tidexBlueText)
         .rotationEffect(.degrees(isOpen ? 45 : 0))
-        .frame(width: 44, height: 44)
+        .frame(minWidth: 44, minHeight: 44)
         .background(
           Circle()
             .fill(isOpen ? Color.tidexBlue.opacity(0.28) : Color.tidexBlue.opacity(0.2))
@@ -625,6 +632,8 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
   let onOpenCamera: () -> Void
   let onOpenShiftCalendar: () -> Void
 
+  @ScaledMetric(relativeTo: .body) private var actionIconSize: CGFloat = 18
+
   private var hasShiftSnapshotAttachment: Bool {
     stagedAttachments.hasShiftSnapshot
   }
@@ -650,7 +659,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
     )
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+        .stroke(Color.tidexBorder, lineWidth: 1)
     )
   }
 
@@ -713,11 +722,11 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
   ) -> some View {
     Button(action: action) {
       Image(systemName: systemName)
-        .font(.system(size: 18, weight: .semibold))
+        .font(.system(size: actionIconSize, weight: .semibold))
         .foregroundColor(
-          isDisabled ? .tidexTextMuted : (isActive ? .tidexBlue : .tidexTextPrimary)
+          isDisabled ? .tidexTextMuted : (isActive ? .tidexBlueText : .tidexTextPrimary)
         )
-        .frame(width: 40, height: 40)
+        .frame(minWidth: 40, minHeight: 40)
         .background(
           RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
             .fill(
@@ -726,6 +735,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
                 : (isActive ? Color.tidexBlue.opacity(0.14) : Color.tidexSurfaceSecondary)
             )
         )
+        .contentShape(Rectangle().inset(by: -2))
     }
     .buttonStyle(.plain)
     .disabled(isProcessingAttachment || isDisabled)
@@ -790,10 +800,12 @@ private struct FriendsThreadComposerImageAttachmentsCard: View {
     let rowWidth = resolvedRowWidth(for: tileSize)
 
     HStack(spacing: Spacing.sm) {
-      ForEach(attachments) { attachment in
+      ForEach(Array(attachments.enumerated()), id: \.element.id) { position, attachment in
         FriendsThreadComposerImageThumbnail(
           image: attachment.image,
           sideLength: tileSize,
+          position: position + 1,
+          total: attachments.count,
           onRemove: { onRemove(attachment.index) }
         )
       }
@@ -837,9 +849,22 @@ private struct FriendsThreadComposerImageAttachmentsCard: View {
 }
 
 private struct FriendsThreadComposerImageThumbnail: View {
+  @ScaledMetric(relativeTo: .caption2) private var removeIconSize: CGFloat = 10
+
   let image: ImageAttachment
   let sideLength: CGFloat
+  let position: Int
+  let total: Int
   let onRemove: () -> Void
+
+  /// "Photo 2 of 3", or just "Photo" when it is the only one.
+  private var photoLabel: String {
+    let photo = String(localized: .friendsChatPreviewImage)
+    guard total > 1 else { return photo }
+    return FriendsChatMessageAccessibility.join([
+      photo, String(localized: .friendsAccessibilityPosition(position, total)),
+    ])
+  }
 
   var body: some View {
     ZStack(alignment: .topLeading) {
@@ -849,22 +874,7 @@ private struct FriendsThreadComposerImageThumbnail: View {
         HStack {
           Spacer(minLength: 0)
 
-          Button(action: onRemove) {
-            Image(systemName: "xmark")
-              .font(.system(size: 10, weight: .bold))
-              .foregroundColor(.white)
-              .frame(width: 24, height: 24)
-              .background(
-                Circle()
-                  .fill(Color.black.opacity(0.46))
-              )
-              .overlay(
-                Circle()
-                  .stroke(Color.white.opacity(0.16), lineWidth: 1)
-              )
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel(Text(.friendsChatComposerRemoveAttachment))
+          removeButton
         }
 
         Spacer(minLength: 0)
@@ -872,9 +882,34 @@ private struct FriendsThreadComposerImageThumbnail: View {
       .padding(6)
 
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .stroke(Color.tidexBorder.opacity(0.28), lineWidth: 1)
+        .stroke(Color.tidexBorder, lineWidth: 1)
 
     }
+  }
+
+  private var removeButton: some View {
+    Button(action: onRemove) {
+      Image(systemName: "xmark")
+        .font(.system(size: removeIconSize, weight: .bold))
+        .foregroundColor(.white)
+        .frame(minWidth: 24, minHeight: 24)
+        .background(
+          Circle()
+            .fill(Color.black.opacity(0.46))
+        )
+        .overlay(
+          Circle()
+            .stroke(Color.white.opacity(0.16), lineWidth: 1)
+        )
+        // The visible circle stays 24pt. The tap area is 44pt.
+        .contentShape(Rectangle().inset(by: -10))
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(
+      FriendsChatMessageAccessibility.join([
+        String(localized: .friendsChatComposerRemoveAttachment), photoLabel,
+      ])
+    )
   }
 
   @ViewBuilder
@@ -885,6 +920,8 @@ private struct FriendsThreadComposerImageThumbnail: View {
         .scaledToFill()
         .frame(width: sideLength, height: sideLength)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        .accessibilityLabel(photoLabel)
+        .accessibilityAddTraits(.isImage)
     } else {
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .fill(Color.tidexSurfaceSecondary)
@@ -893,29 +930,38 @@ private struct FriendsThreadComposerImageThumbnail: View {
           Image(systemName: "photo")
             .font(.tidexTitle2)
             .foregroundColor(.tidexTextMuted)
+            .accessibilityLabel(photoLabel)
         }
     }
   }
 }
 
 private struct FriendsThreadComposerReplyBanner: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   let preview: FriendsChatReplyPreviewModel
   let onCancel: () -> Void
 
   var body: some View {
     HStack(alignment: .top, spacing: Spacing.xs) {
       RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
-        .fill(Color.tidexBlue.opacity(0.7))
+        .fill(Color.tidexBlue)
         .frame(width: 3)
 
       FriendsChatReplyPreviewContent(
         preview: preview,
         isCurrentUser: false,
-        accentColor: .tidexBlue,
+        accentColor: .tidexBlueText,
         textColor: .tidexTextMuted,
-        snippetLineLimit: 1,
+        snippetLineLimit: dynamicTypeSize.isAccessibilitySize ? 3 : 1,
         thumbnailSize: CGSize(width: 56, height: 56),
         hidesImageOnlySnippet: true
+      )
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(
+        FriendsChatMessageAccessibility.join([
+          "\(String(localized: .friendsChatReplyTo)) \(preview.senderName)", preview.snippet,
+        ])
       )
 
       Spacer(minLength: 0)
@@ -928,7 +974,7 @@ private struct FriendsThreadComposerReplyBanner: View {
     )
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+        .stroke(Color.tidexBorder, lineWidth: 1)
     )
     .overlay(alignment: .topTrailing) {
       Button(action: onCancel) {
@@ -942,11 +988,12 @@ private struct FriendsThreadComposerReplyBanner: View {
           )
           .overlay(
             Circle()
-              .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+              .stroke(Color.tidexBorder, lineWidth: 1)
           )
+          .contentShape(Rectangle().inset(by: -8))
       }
       .buttonStyle(.plain)
-      .accessibilityLabel(Text(.commonCancel))
+      .accessibilityLabel(Text(.friendsAccessibilityCancelReply))
       .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyCancelButton)
       .padding(Spacing.xs)
     }
@@ -971,7 +1018,7 @@ private struct FriendsThreadComposerDismissibleCard<Content: View>: View {
       )
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-          .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+          .stroke(Color.tidexBorder, lineWidth: 1)
       )
       .overlay(alignment: .topTrailing) {
         dismissButton
@@ -1001,8 +1048,9 @@ private struct FriendsThreadComposerDismissibleCard<Content: View>: View {
         )
         .overlay(
           Circle()
-            .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+            .stroke(Color.tidexBorder, lineWidth: 1)
         )
+        .contentShape(Rectangle().inset(by: -6))
     }
     .buttonStyle(.plain)
     .accessibilityLabel(Text(accessibilityLabel))
@@ -1017,7 +1065,8 @@ private struct FriendsThreadComposerEditBanner: View {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "pencil")
           .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
+          .accessibilityHidden(true)
 
         Text(
           String(localized: .friendsChatComposerEditingMessage)
@@ -1035,7 +1084,7 @@ private struct FriendsThreadComposerEditBanner: View {
       )
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(Color.tidexBorder.opacity(0.4), lineWidth: 1)
+          .stroke(Color.tidexBorder, lineWidth: 1)
       )
 
       Button(action: onCancel) {
@@ -1047,6 +1096,7 @@ private struct FriendsThreadComposerEditBanner: View {
             Circle()
               .fill(Color.tidexSurfaceSecondary)
           )
+          .contentShape(Rectangle().inset(by: -6))
       }
       .buttonStyle(.plain)
       .accessibilityLabel(
@@ -1061,7 +1111,7 @@ private struct FriendsThreadComposerEditBanner: View {
     )
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+        .stroke(Color.tidexBorder, lineWidth: 1)
     )
   }
 }

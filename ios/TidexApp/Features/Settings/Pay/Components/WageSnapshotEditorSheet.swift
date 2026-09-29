@@ -472,20 +472,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
       // Tariff version info (effective date)
       if let version = tariffVersion {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "calendar")
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-
-          Text(.settingsPayEditorTariffEffectiveDate)
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-
-          Text(formatEffectiveDate(version.effective_date))
-            .font(.tidexCaption)
-            .foregroundColor(.tidexTextSecondary)
-
-          Spacer()
+        ViewThatFits(in: .horizontal) {
+          effectiveDateRow(version, isStacked: false)
+          effectiveDateRow(version, isStacked: true)
         }
       } else if isLoadingTariff {
         HStack(spacing: Spacing.xs) {
@@ -500,6 +489,33 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
       tariffRatesStatus
     }
+  }
+
+  @ViewBuilder
+  private func effectiveDateRow(_ version: TariffVersion, isStacked: Bool) -> some View {
+    let layout = isStacked
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xs))
+    layout {
+      Image(systemName: "calendar")
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
+
+      Text(.settingsPayEditorTariffEffectiveDate)
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+
+      Text(formatEffectiveDate(version.effective_date))
+        .font(.tidexCaption)
+        .foregroundColor(.tidexTextSecondary)
+
+      if !isStacked {
+        Spacer()
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .combine)
   }
 
   private var tariffTypePicker: some View {
@@ -528,7 +544,8 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         }
       }
       .pickerStyle(.menu)
-      .tint(.tidexBrandPrimary)
+      .accessibilityLabel(Text(.settingsPayEditorTariffTypeLabel))
+      .tint(.tidexBlueText)
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfaceSecondary)
@@ -603,7 +620,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         .labelsHidden()
         .datePickerStyle(.compact)
         .accessibilityLabel(Text(.settingsPayEditorFromDateLabel))
-        .tint(.tidexBrandPrimary)
+        .tint(.tidexBlueText)
         .frame(maxWidth: .infinity, alignment: .leading)
 
         Text(.settingsPayEditorFromDateHelp)
@@ -637,6 +654,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       Text(.settingsPayEditorDateConflictHelp)
         .font(.tidexFootnote)
         .foregroundColor(.tidexError)
+        .announcesToVoiceOver(String(localized: .settingsPayEditorDateConflictHelp))
     }
   }
 
@@ -647,6 +665,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
         .foregroundColor(.tidexError)
+        .accessibilityHidden(true)
 
       Text(message)
         .font(.tidexFootnote)
@@ -657,6 +676,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     .padding(Spacing.sm)
     .background(Color.tidexError.opacity(0.1))
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+    .announcesToVoiceOver(message)
   }
 
   // MARK: - Delete Button
@@ -672,6 +692,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       HStack(spacing: Spacing.xs) {
         Image(systemName: "trash")
           .font(.tidexBody)
+          .accessibilityHidden(true)
 
         Text(.settingsPayEditorDelete)
           .font(.tidexButton)

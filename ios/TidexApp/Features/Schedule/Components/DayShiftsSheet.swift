@@ -12,6 +12,7 @@ struct DayShiftsSheet: View {
   @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   // MARK: - Computed Properties
 
@@ -69,7 +70,7 @@ struct DayShiftsSheet: View {
             dismiss()
           }
           .font(.tidexButton)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
         }
       }
     }
@@ -78,7 +79,11 @@ struct DayShiftsSheet: View {
   // MARK: - Summary Header
 
   private var summaryHeader: some View {
-    HStack(spacing: Spacing.lg) {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.md))
+      : AnyLayout(HStackLayout(spacing: Spacing.lg))
+    return layout {
       // Total hours
       VStack(spacing: Spacing.xxs) {
         Text(formattedHours(totalHours))
@@ -90,9 +95,12 @@ struct DayShiftsSheet: View {
       }
 
       // Divider
-      Rectangle()
-        .fill(Color.tidexBorder)
-        .frame(width: 1, height: 40)
+      if !dynamicTypeSize.isAccessibilitySize {
+        Rectangle()
+          .fill(Color.tidexBorder)
+          .frame(width: 1, height: 40)
+          .accessibilityHidden(true)
+      }
 
       // Total earnings
       VStack(spacing: Spacing.xxs) {
@@ -104,12 +112,14 @@ struct DayShiftsSheet: View {
           .foregroundColor(.tidexTextSecondary)
       }
 
-      Spacer()
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
 
       // Shift count badge
       Text("\(shifts.count)")
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xxxs)
         .background(

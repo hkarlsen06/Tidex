@@ -1447,6 +1447,8 @@ internal final class AddShiftViewModel {
 
     // Success haptic
     Haptics.playShiftCreationSuccess()
+    AccessibilityNotification.Announcement(String(localized: .shiftsAccessibilityShiftsAdded))
+      .post()
 
     // Notify completion
     onShiftsCreated?(.single(dates: createdDates))
@@ -1533,6 +1535,7 @@ internal final class AddShiftViewModel {
 
     clearForm()
     Haptics.playShiftCreationSuccess()
+    AccessibilityNotification.Announcement(String(localized: .shiftsAccessibilitySaved)).post()
     NotificationCenter.default.postShiftsDidChange(
       context: .affecting(dateRangeStart: startDate, end: endDate)
     )
@@ -1686,6 +1689,7 @@ internal final class AddShiftViewModel {
 
     // Success haptic
     Haptics.playShiftCreationSuccess()
+    AccessibilityNotification.Announcement(String(localized: .shiftsAccessibilitySaved)).post()
 
     // Notify that shifts changed (for dashboard refresh)
     NotificationCenter.default.postShiftsDidChange(context: .fullReload)

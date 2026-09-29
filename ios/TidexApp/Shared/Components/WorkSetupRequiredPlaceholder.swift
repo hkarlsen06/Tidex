@@ -79,21 +79,22 @@ struct WorkSetupRequiredPlaceholder: View {
 
           Image(systemName: "building.2")
             .font(.system(size: 24, weight: .semibold))
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
+            .accessibilityHidden(true)
         }
         .frame(width: 52, height: 52)
 
         VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.settingsPaySetupRequiredBadge)
             .font(.tidexCaptionStrong)
-            .foregroundColor(.tidexBlue)
-            .lineLimit(1)
+            .foregroundColor(.tidexBlueText)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             .minimumScaleFactor(0.85)
 
           Text(.settingsPaySetupFinishTitle)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
-            .lineLimit(1)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             .minimumScaleFactor(0.85)
         }
 
@@ -141,8 +142,9 @@ struct WorkSetupRequiredPlaceholder: View {
 
         Text(.workSetupRequiredCta)
           .font(.tidexButton)
-          .lineLimit(1)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
           .minimumScaleFactor(0.85)
+          .multilineTextAlignment(.center)
 
         Image(systemName: "arrow.right")
           .font(.tidexCaptionStrong)
@@ -150,7 +152,8 @@ struct WorkSetupRequiredPlaceholder: View {
       }
       .foregroundColor(.tidexTextOnBrand)
       .frame(maxWidth: .infinity)
-      .frame(height: Spacing.buttonHeight)
+      .frame(minHeight: Spacing.buttonHeight)
+      .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? Spacing.xs : 0)
       .background(
         isRefreshingBeforeSetup
           ? Color.tidexBrandPrimary.opacity(0.7)
@@ -281,22 +284,24 @@ struct WorkSetupRequiredPlaceholder: View {
 private struct WorkSetupPreviewRow: View {
   let icon: String
   let title: LocalizedStringResource
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     HStack(spacing: Spacing.sm) {
       Image(systemName: icon)
         .font(.tidexFootnoteStrong)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .frame(width: 28, height: 28)
         .background(
           Circle()
             .fill(Color.tidexBlue.opacity(0.1))
         )
+        .accessibilityHidden(true)
 
       Text(title)
         .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexTextPrimary)
-        .lineLimit(1)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .minimumScaleFactor(0.85)
 
       Spacer(minLength: Spacing.sm)
@@ -304,6 +309,7 @@ private struct WorkSetupPreviewRow: View {
       Image(systemName: "lock.fill")
         .font(.system(size: 11, weight: .semibold))
         .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, Spacing.xxs)

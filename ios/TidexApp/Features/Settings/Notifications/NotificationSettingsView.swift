@@ -4,6 +4,7 @@ import UserNotifications
 /// Notification settings view
 /// Allows users to configure shift reminders and shared shift notifications
 struct NotificationSettingsView: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var viewModel = NotificationSettingsViewModel()
 
   var body: some View {
@@ -57,7 +58,7 @@ struct NotificationSettingsView: View {
           viewModel.showTimePickerSheet = false
         }
       )
-      .presentationDetents([.medium])
+      .presentationDetents([.medium, .large])
     }
   }
 
@@ -69,7 +70,7 @@ struct NotificationSettingsView: View {
     switch viewModel.notificationStatus {
     case .notDetermined:
       Section {
-        permissionRow(icon: "bell.badge", iconColor: .tidexBlue) {
+        permissionRow(icon: "bell.badge", iconColor: .tidexBlueText) {
           Button {
             Task {
               await viewModel.requestNotificationPermission()
@@ -90,6 +91,7 @@ struct NotificationSettingsView: View {
             Text(.notificationsPermissionOpenSettings)
           }
           .buttonStyle(.bordered)
+          .tint(.tidexBlueText)
         }
       } footer: {
         Text(.notificationsPermissionDeniedHint)
@@ -105,7 +107,7 @@ struct NotificationSettingsView: View {
     iconColor: Color,
     @ViewBuilder action: () -> Action
   ) -> some View {
-    HStack(spacing: Spacing.sm) {
+    permissionRowLayout {
       Label {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(.notificationsPermissionTitle)
@@ -121,12 +123,20 @@ struct NotificationSettingsView: View {
           .foregroundColor(iconColor)
       }
 
-      Spacer(minLength: Spacing.xs)
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer(minLength: Spacing.xs)
+      }
 
       action()
         .controlSize(.small)
         .tint(.tidexBlue)
     }
+  }
+
+  private var permissionRowLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.sm))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
   }
 
   private var permissionStatusText: String {
@@ -198,10 +208,10 @@ struct NotificationSettingsView: View {
     } label: {
       Label {
         Text(.notificationsRemindersAddTime)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       } icon: {
         Image(systemName: "plus.circle.fill")
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
       }
     }
   }

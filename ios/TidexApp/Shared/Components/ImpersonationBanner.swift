@@ -18,13 +18,20 @@ struct ImpersonationBanner: View {
   let onStop: () -> Void
 
   @State private var isLoading = false
+  @ScaledMetric(relativeTo: .title2) private var iconSize: CGFloat = 24
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
-    HStack(spacing: Spacing.sm) {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.sm))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+    layout {
       // Warning icon
       Image(systemName: "person.crop.circle.badge.exclamationmark")
-        .font(.system(size: 24))
+        .font(.system(size: iconSize))
         .foregroundStyle(Color.tidexWarning)
+        .accessibilityHidden(true)
 
       // Info text
       VStack(alignment: .leading, spacing: Spacing.micro) {
@@ -36,8 +43,11 @@ struct ImpersonationBanner: View {
           ExpirationText(expiresAt: expiresAt)
         }
       }
+      .accessibilityElement(children: .combine)
 
-      Spacer()
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
 
       // Stop button
       Button {
@@ -54,6 +64,8 @@ struct ImpersonationBanner: View {
         }
       }
       .disabled(isLoading)
+      .accessibilityLabel(Text(.commonAccessibilityStopImpersonating))
+      .accessibilityInputLabels([Text(.commonStop)])
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexError)
@@ -103,9 +115,16 @@ private struct ExpirationText: View {
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
       let remaining = expiresAt.timeIntervalSince(context.date)
-      Text(ImpersonationExpirationFormatter.text(remaining: remaining))
-        .font(.tidexCaptionRegular)
-        .foregroundStyle(remaining < 300 ? Color.tidexError : Color.tidexTextSecondary)
+      HStack(spacing: Spacing.xxs) {
+        // The countdown also turns red under five minutes, so a symbol carries the warning too.
+        if remaining < 300 {
+          Image(systemName: "exclamationmark.triangle.fill")
+            .accessibilityHidden(true)
+        }
+        Text(ImpersonationExpirationFormatter.text(remaining: remaining))
+      }
+      .font(.tidexCaptionRegular)
+      .foregroundStyle(remaining < 300 ? Color.tidexError : Color.tidexTextSecondary)
     }
   }
 }

@@ -179,6 +179,7 @@ struct MainTabView: View {
             } label: {
               Label {
                 Text(profileTabTitle)
+                  .accessibilityLabel(Text(verbatim: profileTabAccessibilityLabel))
               } icon: {
                 if let profileTabAvatar {
                   Image(uiImage: profileTabAvatar)
@@ -320,6 +321,12 @@ struct MainTabView: View {
   private var profileTabTitle: String {
     let firstName = coordinator.userDisplayName.split(separator: " ").first.map(String.init)
     return firstName ?? String(localized: .tabsProfile)
+  }
+
+  /// The tab shows the first name, so VoiceOver also says what the tab is.
+  private var profileTabAccessibilityLabel: String {
+    let profileTitle = String(localized: .tabsProfile)
+    return profileTabTitle == profileTitle ? profileTitle : "\(profileTabTitle), \(profileTitle)"
   }
 
   private func refreshUnreadFriendsCount() async {
@@ -501,6 +508,7 @@ private struct MonthPickerControls: View {
   let showsAddButton: Bool
   let onAddShift: () -> Void
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   private let monthContext = SharedMonthContext.shared
   @AppStorage("shiftsViewMode") private var showListView = false
 
@@ -545,17 +553,28 @@ private struct MonthPickerControls: View {
         .font(.tidexButton)
         .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexTextPrimary)
         .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+        .overlay(alignment: .topTrailing) {
+          // The icon color alone would be the only sign of conflicts, so add a badge shape.
+          if monthContext.hasConflictsInMonth {
+            Image(systemName: "exclamationmark.circle.fill")
+              .font(.caption2.weight(.bold))
+              .foregroundColor(.tidexWarning)
+              .padding(Spacing.xxs)
+          }
+        }
         .contentShape(Rectangle())
         .accessibilityHidden(true)
     }
     .buttonStyle(.plain)
-    .contentTransition(.symbolEffect(.replace))
+    .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
     .tidexGlass(
       shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
       interactive: true
     )
     .accessibilityLabel(
-      showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList))
+      showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList)
+    )
+    .accessibilityValue(monthContext.hasConflictsInMonth ? Text(.shiftsAccessibilityConflict) : Text(verbatim: ""))
     .sensoryFeedback(.selection, trigger: showListView)
   }
 

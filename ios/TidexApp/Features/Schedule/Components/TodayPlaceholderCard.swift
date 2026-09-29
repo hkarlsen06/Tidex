@@ -27,6 +27,17 @@ struct TodayPlaceholderCard: View {
       .onTapGesture {
         onTap()
       }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(
+        Text(
+          verbatim:
+            "\(dateParts.weekday) \(dateParts.dayMonth), \(String(localized: .commonToday))")
+      )
+      .accessibilityHint(Text(.shiftsAccessibilityAddShiftTodayHint))
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction(.default) {
+        onTap()
+      }
   }
 
   @ViewBuilder

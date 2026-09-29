@@ -82,6 +82,9 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
   @State private var showingCustomInput = false
   @State private var inputText = ""
   @FocusState private var isInputFocused: Bool
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @ScaledMetric(relativeTo: .title2) private var compactInputWidth: CGFloat = 80
+  @ScaledMetric(relativeTo: .title) private var fullInputWidth: CGFloat = 100
 
   enum Style {
     case compact  // Used inline in onboarding page 2
@@ -196,7 +199,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       // Slider card
       VStack(spacing: Spacing.md) {
         // Current value display (currency-aware)
-        HStack {
+        valueRowLayout {
           if showingCustomInput {
             customInputFieldFull
           } else if isCurrencyPrefix {
@@ -223,7 +226,9 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
               .foregroundColor(.tidexTextMuted)
           }
 
-          Spacer()
+          if !dynamicTypeSize.isAccessibilitySize {
+            Spacer()
+          }
         }
 
         sliderControl
@@ -243,6 +248,21 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
 
   // MARK: - Shared Components
 
+  /// The amount, currency and unit sit in one row, and stack when large text would overflow it.
+  private var valueRowLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout())
+  }
+
+  /// What VoiceOver reads for the current rate, for example "200 kr per hour".
+  private var spokenRate: String {
+    let amount = formatValueWithDecimals(value)
+    let perHour = String(localized: .commonPerHour)
+    return isCurrencyPrefix
+      ? "\(currencySymbol)\(amount) \(perHour)" : "\(amount) \(currencySymbol) \(perHour)"
+  }
+
   @ViewBuilder
   private var sliderControl: some View {
     Slider(
@@ -256,6 +276,8 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       }
     )
     .tint(.tidexBlue)
+    .accessibilityLabel(Text(.onboardingSliderLabel))
+    .accessibilityValue(Text(spokenRate))
   }
 
   @ViewBuilder
@@ -307,7 +329,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     }) {
       Text(text)
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .contentTransition(.numericText())
         .padding(.horizontal, Spacing.xxs)
         .padding(.vertical, Spacing.micro)
@@ -315,6 +337,8 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(Text(verbatim: "\(String(localized: .onboardingSliderLabel)), \(spokenRate)"))
+    .accessibilityInputLabels([text])
   }
 
   @ViewBuilder
@@ -329,7 +353,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     }) {
       Text(text)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .contentTransition(.numericText())
         .padding(.horizontal, Spacing.xxxs)
         .padding(.vertical, Spacing.micro)
@@ -337,6 +361,8 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(Text(verbatim: "\(String(localized: .onboardingSliderLabel)), \(spokenRate)"))
+    .accessibilityInputLabels([text])
   }
 
   // MARK: - Custom Input Fields
@@ -346,11 +372,12 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     HStack(spacing: Spacing.xxs) {
       TextField("", text: $inputText)
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .keyboardType(.decimalPad)
         .multilineTextAlignment(.trailing)
         .focused($isInputFocused)
-        .frame(width: 80)
+        .accessibilityLabel(Text(.onboardingSliderLabel))
+        .frame(width: compactInputWidth)
         .padding(.horizontal, Spacing.xxs)
         .padding(.vertical, Spacing.micro)
         .background(Color.tidexBlue.opacity(0.15))
@@ -375,11 +402,12 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     HStack(spacing: Spacing.xxs) {
       TextField("", text: $inputText)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .keyboardType(.decimalPad)
         .multilineTextAlignment(.leading)
         .focused($isInputFocused)
-        .frame(width: 100)
+        .accessibilityLabel(Text(.onboardingSliderLabel))
+        .frame(width: fullInputWidth)
         .padding(.horizontal, Spacing.xxxs)
         .padding(.vertical, Spacing.micro)
         .background(Color.tidexBlue.opacity(0.15))

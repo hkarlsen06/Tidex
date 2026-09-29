@@ -497,7 +497,7 @@ struct FriendShiftWidgetView: View {
       return .primary
 
     default:
-      return WidgetPalette.blue
+      return WidgetPalette.blueText
     }
   }
 
@@ -544,6 +544,17 @@ struct FriendShiftWidgetView: View {
         }
       }
     }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: accessibilitySummary))
+  }
+
+  /// One spoken summary: the friend's name, then the shift.
+  private var accessibilitySummary: String {
+    guard !entry.friendId.isEmpty else { return String(localized: .widgetSelectAFriend) }
+    let shift = WidgetAccessibility.shiftSummary(
+      entry, shiftDate: entry.shiftDate, startTime: entry.startTime, endTime: entry.endTime,
+      earnings: entry.showEarnings ? entry.netEarnings : nil)
+    return WidgetAccessibility.join([entry.friendName, shift])
   }
 
   // MARK: - No Friend Selected Layout

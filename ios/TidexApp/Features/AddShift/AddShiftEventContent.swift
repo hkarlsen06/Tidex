@@ -43,7 +43,7 @@ struct EventContent: View {
       .overlay {
         RoundedRectangle(cornerRadius: CornerRadius.lg)
           .stroke(
-            isTitleFieldFocused ? Color.tidexBlue.opacity(0.45) : Color.tidexBorder, lineWidth: 1)
+            isTitleFieldFocused ? Color.tidexBlue : Color.tidexBorder, lineWidth: 1)
       }
     }
     .contentShape(Rectangle())
@@ -119,6 +119,7 @@ struct EventContent: View {
       Text(.addShiftEventAllDay)
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
+        .accessibilityHidden(true)
 
       Spacer(minLength: Spacing.sm)
 
@@ -134,6 +135,7 @@ struct EventContent: View {
     HStack(spacing: Spacing.xxxs) {
       Image(systemName: "arrow.left.and.right")
         .font(.tidexMicro)
+        .accessibilityHidden(true)
       Text(rangeSummaryText)
         .font(.tidexMicro)
         .fixedSize(horizontal: false, vertical: true)

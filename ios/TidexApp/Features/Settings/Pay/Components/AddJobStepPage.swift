@@ -57,6 +57,7 @@ struct AddJobStepPage<Header: View, Cards: View>: View {
           .padding(.top, Spacing.sm)
           .frame(maxWidth: .infinity, alignment: .leading)
           .adaptiveContentWidth()
+          .announcesToVoiceOver(validationError)
       }
 
       Spacer()
@@ -68,12 +69,13 @@ struct AddJobStepPage<Header: View, Cards: View>: View {
     VStack(spacing: Spacing.xxxs) {
       Image(systemName: icon)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
         .accessibilityHidden(true)
       Text(title)
         .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
     }
     .padding(.horizontal, Spacing.xl)
     .adaptiveContentWidth()
@@ -110,14 +112,15 @@ struct AddJobSavingOverlay: View {
 
       VStack(spacing: Spacing.sm) {
         ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
         Text(.commonLoading)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundColor(.tidexTextPrimary)
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary.opacity(0.9))
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
+    // Keeps VoiceOver on the saving message instead of the controls behind it.
+    .accessibilityAddTraits(.isModal)
   }
 }

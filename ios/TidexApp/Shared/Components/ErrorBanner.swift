@@ -61,6 +61,7 @@ struct ErrorBanner: View {
       Color.tidexError.opacity(0.12),
       in: RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
     )
+    .announcesToVoiceOver(message)
   }
 }
 
@@ -116,6 +117,7 @@ struct SuccessBanner: View {
       Image(systemName: "checkmark.circle.fill")
         .foregroundColor(.tidexSuccess)
         .font(isToast ? .tidexLabelStrong : .tidexBody)
+        .accessibilityHidden(true)
 
       Text(message)
         .font(.tidexSubheadline)
@@ -131,7 +133,7 @@ struct SuccessBanner: View {
         Button(action: onAction) {
           Text(actionTitle)
             .font(isToast ? .tidexFootnoteStrong : .tidexLabel)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexBlueText)
             .lineLimit(1)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
@@ -162,6 +164,17 @@ struct SuccessBanner: View {
     )
     .cornerRadius(cornerRadius)
     .shadow(color: style == .toast ? Color.black.opacity(0.12) : .clear, radius: 10, y: 3)
+    .announcesToVoiceOver(message)
+  }
+}
+
+extension View {
+  /// Reads `message` aloud with VoiceOver when the view appears and whenever the text changes.
+  func announcesToVoiceOver(_ message: String) -> some View {
+    onAppear { AccessibilityNotification.Announcement(message).post() }
+      .onChange(of: message) { _, newMessage in
+        AccessibilityNotification.Announcement(newMessage).post()
+      }
   }
 }
 

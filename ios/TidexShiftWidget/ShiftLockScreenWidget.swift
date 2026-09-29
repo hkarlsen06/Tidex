@@ -243,12 +243,17 @@ struct ShiftLockScreenWidgetEntryView: View {
     switch widgetFamily {
     case .accessoryCircular:
       ShiftAccessoryCircularView(entry: entry)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: entry.circularAccessibilityLabel))
 
     case .accessoryRectangular:
       ShiftAccessoryRectangularView(entry: entry)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: entry.accessibilitySummary))
 
     case .accessoryInline:
       ShiftAccessoryInlineView(entry: entry)
+        .accessibilityLabel(Text(verbatim: entry.accessibilitySummary))
 
     default:
       // Fallback for unsupported families

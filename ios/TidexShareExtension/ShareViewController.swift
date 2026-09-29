@@ -1,5 +1,5 @@
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable accessibility_label_for_image accessibility_trait_for_button
+// swiftlint:disable accessibility_trait_for_button
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl
 // swiftlint:disable:next blanket_disable_command
@@ -158,6 +158,7 @@ private final class ShareExtensionViewModel {
 private struct ShareRootView: View {
   @Bindable var viewModel: ShareExtensionViewModel
   @FocusState private var isMessageFieldFocused: Bool
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     ZStack {
@@ -170,6 +171,7 @@ private struct ShareRootView: View {
         if viewModel.isLoading {
           Spacer()
           ProgressView()
+            .accessibilityLabel(Text(.shareAccessibilityLoading))
           Spacer()
         } else {
           composerRow
@@ -177,7 +179,7 @@ private struct ShareRootView: View {
           if let errorMessage = viewModel.errorMessage {
             Text(errorMessage)
               .font(.footnote)
-              .foregroundStyle(.red)
+              .foregroundStyle(SharedPalette.error)
               .frame(maxWidth: .infinity, alignment: .leading)
           }
 
@@ -194,26 +196,45 @@ private struct ShareRootView: View {
       .padding(.top, 16)
       .padding(.bottom, 12)
     }
+    // A failed send would otherwise show its error only to people who can see the screen.
+    .onChange(of: viewModel.errorMessage) { _, newMessage in
+      if let newMessage {
+        AccessibilityNotification.Announcement(newMessage).post()
+      }
+    }
+  }
+
+  /// At accessibility text sizes the buttons and title stack, so "Send" is never cut off.
+  private var topBarLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+      : AnyLayout(HStackLayout(spacing: 12))
   }
 
   private var topBar: some View {
-    HStack(spacing: 12) {
+    topBarLayout {
       Button(String(localized: .shareActionDismiss)) {
         viewModel.dismiss()
       }
       .font(.body)
       .buttonStyle(.plain)
 
-      Spacer()
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
 
       Text(.shareTitle)
         .font(.headline.weight(.semibold))
+        .accessibilityAddTraits(.isHeader)
 
-      Spacer()
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
 
       if viewModel.isSending {
         ProgressView()
-          .frame(width: 56, alignment: .trailing)
+          .accessibilityLabel(Text(.shareAccessibilitySending))
+          .frame(minWidth: 56, alignment: .trailing)
       } else {
         Button(String(localized: .shareActionSend)) {
           Task {
@@ -223,14 +244,20 @@ private struct ShareRootView: View {
         .font(.body.weight(.semibold))
         .buttonStyle(.plain)
         .disabled(!viewModel.canSend)
-        .foregroundStyle(viewModel.canSend ? Color.accentColor : Color.secondary)
-        .frame(width: 56, alignment: .trailing)
+        .foregroundStyle(viewModel.canSend ? SharedPalette.blueText : SharedPalette.textSecondary)
+        .frame(minWidth: 56, alignment: .trailing)
       }
     }
   }
 
+  private var composerLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+      : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
+  }
+
   private var composerRow: some View {
-    HStack(alignment: .top, spacing: 12) {
+    composerLayout {
       previewTile
       messageField
     }
@@ -247,10 +274,12 @@ private struct ShareRootView: View {
           .frame(width: 96, height: 128, alignment: .center)
           .background(SharedPalette.surfaceSecondary)
           .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+          .accessibilityLabel(Text(.shareAccessibilityPreview))
       } else {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
           .fill(SharedPalette.surfaceSecondary)
           .frame(width: 96, height: 128)
+          .accessibilityHidden(true)
       }
     }
   }

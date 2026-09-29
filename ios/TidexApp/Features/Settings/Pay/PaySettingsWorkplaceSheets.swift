@@ -79,6 +79,7 @@ struct EditWorkplaceSheet: View {
             Text(saveError)
               .font(.tidexFootnote)
               .foregroundColor(.tidexError)
+              .announcesToVoiceOver(saveError)
           }
         }
       }
@@ -200,7 +201,7 @@ struct RequiredJobReselectionSheet: View {
           HStack(spacing: Spacing.xxxs) {
             Image(systemName: "building.2")
               .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexBlueText)
               .accessibilityHidden(true)
             Text(.settingsPayChooseJobTitle)
           }

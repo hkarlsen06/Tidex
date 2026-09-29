@@ -7,14 +7,14 @@ struct DayButton: View {
   let isSelected: Bool
   let action: () -> Void
 
-  private let dayLabels = ["M", "T", "O", "T", "F", "L", "S"]
+  @ScaledMetric(relativeTo: .body) private var circleSize: CGFloat = 40
 
   var body: some View {
     Button(action: action) {
-      Text(dayLabels[day - 1])
+      Text(OnboardingWeekday.initial(for: day))
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-        .frame(width: 40, height: 40)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+        .frame(width: circleSize, height: circleSize)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
         .clipShape(Circle())
         .overlay(
@@ -25,6 +25,9 @@ struct DayButton: View {
         .frame(minWidth: 44, minHeight: 44)
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(Text(verbatim: OnboardingWeekday.name(for: day)))
+    .accessibilityInputLabels([OnboardingWeekday.name(for: day), OnboardingWeekday.initial(for: day)])
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
 
@@ -41,7 +44,8 @@ struct QuickSelectButton: View {
     }) {
       Text(title)
         .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
+        .multilineTextAlignment(.center)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
         .background(Color.tidexBlue.opacity(0.08))
@@ -71,7 +75,8 @@ struct TypeButton: View {
           .foregroundColor(.tidexTextMuted)
       }
       .frame(maxWidth: .infinity)
-      .frame(height: 64)
+      .padding(.vertical, Spacing.xs)
+      .frame(minHeight: 64)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       .overlay(
@@ -81,6 +86,8 @@ struct TypeButton: View {
       )
     }
     .buttonStyle(.plain)
+    .accessibilityElement(children: .combine)
+    .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
   }
 }
 
@@ -96,9 +103,10 @@ struct QuickValueButton: View {
     Button(action: action) {
       Text(type == .fixed ? "+\(Int(value))" : "\(Int(value))%")
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
+        .frame(minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
         .clipShape(Capsule())
         .overlay(
@@ -107,5 +115,6 @@ struct QuickValueButton: View {
         )
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }

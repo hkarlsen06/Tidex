@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Fixed height for the chip bar area to prevent layout shifts
-private let chipBarHeight: CGFloat = 44
-
 /// Horizontal bar showing selected weekday anchors as dismissible chips
 /// Always reserves space to prevent layout shifts when chips are added/removed
 struct WeekdayChipBar: View {
   let selectedDays: [String: String]  // weekday "0"-"6" -> anchor ISO date
   let onRemove: (String) -> Void
+
+  /// Fixed height for the chip bar area to prevent layout shifts. Scales with text size.
+  @ScaledMetric(relativeTo: .footnote) private var chipBarHeight: CGFloat = 44
 
   // Sorted weekdays (Monday first: 1, 2, 3, 4, 5, 6, 0)
   private var sortedWeekdays: [String] {
@@ -23,7 +23,8 @@ struct WeekdayChipBar: View {
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "star.fill")
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted.opacity(0.5))
+            .foregroundColor(.tidexTextMuted)
+            .accessibilityHidden(true)
           Text(.addShiftSelectAnchorDates)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
@@ -75,7 +76,7 @@ private struct WeekdayChip: View {
     HStack(spacing: Spacing.xxxs) {
       Text(weekdayName)
         .font(.tidexFootnoteStrong)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
 
       Text(formattedDate)
         .font(.tidexCaptionRegular)
@@ -85,8 +86,13 @@ private struct WeekdayChip: View {
         Image(systemName: "xmark.circle.fill")
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
+          // Grows the touch target to about 44pt without changing the chip.
+          .padding(Spacing.xs)
+          .contentShape(Rectangle())
+          .padding(-Spacing.xs)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(Text(.shiftsAccessibilityRemoveItem(weekdayName)))
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)

@@ -11,6 +11,7 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
   let highlightToday: Bool  // swiftlint:disable:this explicit_acl
 
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor  // swiftlint:disable:this explicit_type_interface line_length
 
   /// Currently selected day (for tooltip)
   @State private var selectedDay: String?
@@ -26,6 +27,24 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
   private var selectedDayData: DailyData? {
     guard let selected = selectedDay else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
     return data.first { $0.date == selected }
+  }
+
+  private var chartDescriptor: StatsCategoryChartDescriptor {
+    let total = data.reduce(0) { $0 + $1.earnings }  // swiftlint:disable:this explicit_type_interface
+    return StatsCategoryChartDescriptor(
+      title: title,
+      summary: String(localized: .statsAccessibilityChartTotal(CurrencyConfig.format(total, currency: currency))),
+      categoryAxisTitle: String(localized: .statsAccessibilityAxisDay),
+      valueAxisTitle: String(localized: .shiftsEarningsSection),
+      points: data.map { day in
+        StatsCategoryChartDescriptor.Point(
+          category: day.fullDay,
+          value: day.earnings,
+          label: "\(day.fullDay), \(CurrencyConfig.format(day.earnings, currency: currency))"
+        )
+      },
+      formatValue: { CurrencyConfig.format($0, currency: currency) }
+    )
   }
 
   // MARK: - Body
@@ -52,6 +71,8 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
           ) {
             if selectedDay == day.date {
               TooltipView(dayData: day, currency: currency)
+            } else if differentiateWithoutColor, highlightToday, day.fullDate == todayISO {
+              StatsBarHighlightMarker()
             }
           }
         }
@@ -73,7 +94,7 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
 
               Text(label)
                 .font((isHighlighted || isSelected) ? .tidexCaptionStrong : .tidexCaptionRegular)
-                .foregroundColor((isHighlighted || isSelected) ? .tidexBlue : .tidexTextSecondary)
+                .foregroundColor((isHighlighted || isSelected) ? .tidexBlueText : .tidexTextSecondary)
             }
           }
         }
@@ -94,6 +115,7 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
       }
       .chartYScale(domain: .automatic(includesZero: true))
       .chartLegend(.hidden)
+      .accessibilityChartDescriptor(chartDescriptor)
       .frame(height: 200)  // swiftlint:disable:this no_magic_numbers
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -155,7 +177,7 @@ private struct TooltipView: View {
 
       Text(CurrencyConfig.format(dayData.earnings, currency: currency))
         .font(.tidexMonoBody)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexBlueText)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)

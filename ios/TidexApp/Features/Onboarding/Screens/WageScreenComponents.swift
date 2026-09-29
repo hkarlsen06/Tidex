@@ -16,6 +16,8 @@ struct WageTariffSelector: View {
   /// Called after the user picks a different tariff type so the caller can load its version.
   let onTariffTypeChanged: (String) -> Void
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   /// Tariff levels to display - from version if available, otherwise static fallback
   private var tariffLevels: [TariffLevel] {
     if let version = data.currentTariffVersion {
@@ -43,7 +45,7 @@ struct WageTariffSelector: View {
             level: level,
             isSelected: data.selectedTariffLevel == level.level,
             action: {
-              withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+              withAnimation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8)) {
                 data.selectedTariffLevel = level.level
               }
             }
@@ -109,6 +111,9 @@ struct WageTariffSelector: View {
       RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
         .stroke(Color.tidexBorder, lineWidth: 1)
     )
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(.settingsPayEditorTariffTypeLabel))
+    .accessibilityValue(Text(selectedTariffTypeName))
   }
 
   private var selectedTariffTypeName: String {
@@ -142,10 +147,13 @@ struct WageTopBar: View {
           HStack(spacing: Spacing.xxs) {
             Image(systemName: "chevron.left")
               .font(.tidexButton)
+              .accessibilityHidden(true)
             Text(.commonBack)
               .font(.tidexBody)
           }
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexBlueText)
+          .frame(minHeight: 44)
+          .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
       } else {
@@ -172,8 +180,8 @@ struct WageGlassActionButton: View {
     Button(action: action) {
       Text(title)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexBlue)
-        .lineLimit(1)
+        .foregroundColor(.tidexBlueText)
+        .multilineTextAlignment(.center)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.xs)
         .background(.thinMaterial, in: Capsule())
@@ -209,8 +217,10 @@ struct WageTypeButton: View {
       Text(title)
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
         .foregroundColor(textColor)
+        .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .frame(height: 48)
+        .padding(.vertical, Spacing.xs)
+        .frame(minHeight: 48)
         .background(backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         .overlay(
@@ -220,11 +230,12 @@ struct WageTypeButton: View {
     }
     .buttonStyle(.plain)
     .opacity(isEnabled ? 1 : 0.55)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 
   private var textColor: Color {
     if isSelected {
-      return isEnabled ? .white : .tidexTextMuted
+      return isEnabled ? .tidexTextOnBrand : .tidexTextMuted
     }
     return isEnabled ? .tidexTextSecondary : .tidexTextMuted
   }
@@ -281,6 +292,7 @@ struct TariffLevelRow: View {
               .frame(width: 14, height: 14)
           }
         }
+        .accessibilityHidden(true)
       }
       .padding(Spacing.md)
       .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
@@ -292,5 +304,6 @@ struct TariffLevelRow: View {
       )
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }

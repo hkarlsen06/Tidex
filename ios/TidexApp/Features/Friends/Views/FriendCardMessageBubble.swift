@@ -16,9 +16,8 @@ struct FriendCardMessagePreview: Equatable {
 
   var metaColor: Color {
     switch state {
-    case .incomingUnread: .tidexBlue
+    case .incomingUnread: .tidexBlueText
     case .outgoingFailed: .tidexError
-    case .outgoingSending: .tidexTextMuted.opacity(0.5)
     default: .tidexTextMuted
     }
   }
@@ -59,6 +58,8 @@ struct FriendCardMessageBubble: View {
   let preview: FriendCardMessagePreview?
   let isTyping: Bool
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   private var state: FriendCardMessageState? {
     isTyping ? nil : preview?.state
   }
@@ -75,11 +76,13 @@ struct FriendCardMessageBubble: View {
       if isTyping {
         TypingIndicatorView(background: .tidexSurfaceSecondary)
           .scaleEffect(0.8, anchor: .leading)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel(Text(.friendsChatTypingToastBody))
       } else if let preview {
         Text(preview.text)
           .font(state == .incomingUnread ? .tidexSubheadline.weight(.semibold) : .tidexSubheadline)
           .foregroundColor(textColor)
-          .lineLimit(2)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xxxs)
           .background(
@@ -101,8 +104,7 @@ struct FriendCardMessageBubble: View {
   private var fillColor: Color {
     switch state {
     case .incomingUnread, .incomingOpened, nil: .tidexSurfaceSecondary
-    case .outgoingSent, .outgoingOpened: .tidexBlue
-    case .outgoingSending: .tidexBlue.opacity(0.55)
+    case .outgoingSent, .outgoingOpened, .outgoingSending: .tidexBlue
     case .outgoingFailed: .tidexError.opacity(0.14)
     }
   }

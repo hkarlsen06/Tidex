@@ -9,6 +9,7 @@ import UIKit
 /// While any day is selected, taps toggle days instead of opening them.
 struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   private let appearanceManager = AppearanceManager.shared
 
   let shifts: [ShiftWithComputations]
@@ -319,13 +320,13 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       )
       .userCurrency(headerDisplayCurrency)
       .contentShape(Rectangle())
-      .onTapGesture {
-        guard canShowMixedCurrencyBreakdown else {
-          return
-        }
-        toggleHaptic.impactOccurred()
-        showMixedCurrencyBreakdownPopover.toggle()
-      }
+      .onTapGesture(perform: toggleMixedCurrencyBreakdown)
+      .accessibilityAddTraits(canShowMixedCurrencyBreakdown ? .isButton : [])
+      .accessibilityHint(
+        canShowMixedCurrencyBreakdown
+          ? Text(.shiftsAccessibilityCurrencyBreakdownHint) : Text(verbatim: "")
+      )
+      .accessibilityAction(.default, toggleMixedCurrencyBreakdown)
       .popover(isPresented: $showMixedCurrencyBreakdownPopover) {
         MixedCurrencyBreakdownPopover(entries: activeCurrencyAggregate?.secondary ?? [])
           .presentationCompactAdaptation(.popover)
@@ -344,6 +345,14 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     .onChange(of: selectedDates) { _, _ in
       showMixedCurrencyBreakdownPopover = false
     }
+  }
+
+  private func toggleMixedCurrencyBreakdown() {
+    guard canShowMixedCurrencyBreakdown else {
+      return
+    }
+    toggleHaptic.impactOccurred()
+    showMixedCurrencyBreakdownPopover.toggle()
   }
 
   // MARK: - Header Data
@@ -583,24 +592,58 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       ),
       eventIndicatorCount: eventsOnDay.count
     )
-    // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      dayAccessibilityLabel(
-        dateISO: dayInfo.dateISO,
-        isToday: state.isToday,
-        shiftsOnDay: shiftsOnDay,
-        earnings: dayInfo.dateISO.flatMap { lookups.earningsByDate[$0] },
-        eventCount: eventsOnDay.count
-      )
+    // The default action runs the same logic as the coordinate tap overlay.
+    .modifier(
+      dayAccessibility(
+        for: dayInfo, state: state, shiftsOnDay: shiftsOnDay,
+        eventCount: eventsOnDay.count, earningsByDate: lookups.earningsByDate)
     )
-    .accessibilityAddTraits(state.isSelected ? [.isButton, .isSelected] : .isButton)
-    .accessibilityHidden(dayInfo.dateISO == nil)
+  }
+
+  private func dayAccessibility(
+    for dayInfo: CalendarDayInfo,
+    state: CalendarDayState,
+    shiftsOnDay: [ShiftWithComputations],
+    eventCount: Int,
+    earningsByDate: [String: CalendarEarningsData]
+  ) -> CalendarDayAccessibilityModifier {
+    let dateISO = dayInfo.dateISO
+    var toggleSelectionAction: (() -> Void)?
+    if let dateISO, canToggleSelection(of: dateISO) {
+      toggleSelectionAction = { toggleSelection(of: dateISO) }
+    }
+    return CalendarDayAccessibilityModifier(
+      label: dayAccessibilityLabel(
+        dateISO: dateISO, state: state, shiftsOnDay: shiftsOnDay,
+        earnings: dateISO.flatMap { earningsByDate[$0] }, eventCount: eventCount),
+      isSelected: state.isSelected,
+      isHidden: dateISO == nil || dayInfo.isOutsideMonth,
+      onActivate: {
+        guard let dateISO else { return }
+        Haptics.play(.selection)
+        activateDay(dateISO)
+      },
+      // Long press then drag is the only pointer way to select days, so offer it as an action.
+      onToggleSelection: toggleSelectionAction
+    )
+  }
+
+  private func canToggleSelection(of dateISO: String) -> Bool {
+    onDragSelect != nil && !isCopyMode && !isMoveMode && shiftsByDate[dateISO]?.isEmpty == false
+  }
+
+  private func toggleSelection(of dateISO: String) {
+    var updated = selectedDates
+    if !updated.insert(dateISO).inserted {
+      updated.remove(dateISO)
+    }
+    Haptics.play(.selection)
+    onDragSelect?(updated)
   }
 
   private func dayAccessibilityLabel(
     dateISO: String?,
-    isToday: Bool,
+    state: CalendarDayState,
     shiftsOnDay: [ShiftWithComputations],
     earnings: CalendarEarningsData?,
     eventCount: Int
@@ -612,26 +655,57 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       date.formatted(
         .dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
     ]
-    if isToday {
+    if state.isToday {
       parts.append(String(localized: .commonToday))
     }
-    if !shiftsOnDay.isEmpty {
-      parts.append(String(localized: .commonShiftCount(shiftsOnDay.count)))
-      let sortedShifts = shiftsOnDay.sorted {
-        CalendarGridHelper.timeToMinutes($0.startTime)
-          < CalendarGridHelper.timeToMinutes($1.startTime)
-      }
-      parts += sortedShifts.map {
-        CalendarGridHelper.shiftTimesAccessibilityText(startTime: $0.startTime, endTime: $0.endTime)
-      }
-      if let earnings {
-        parts.append(CalendarGridHelper.earningsAccessibilityText(earnings))
-      }
+    parts += shiftAccessibilityParts(shiftsOnDay: shiftsOnDay, earnings: earnings)
+    if state.hasConflict {
+      parts.append(String(localized: .shiftsAccessibilityConflict))
     }
     if eventCount > 0 {
       parts.append(String(localized: .calendarAccessibilityEventCount(eventCount)))
     }
     return Text(verbatim: parts.joined(separator: ", "))
+  }
+
+  /// Shift count, times, pay, workplace and excluded state for a day, empty when it has no shifts.
+  private func shiftAccessibilityParts(
+    shiftsOnDay: [ShiftWithComputations], earnings: CalendarEarningsData?
+  ) -> [String] {
+    guard !shiftsOnDay.isEmpty else { return [] }
+    let sortedShifts = shiftsOnDay.sorted {
+      CalendarGridHelper.timeToMinutes($0.startTime)
+        < CalendarGridHelper.timeToMinutes($1.startTime)
+    }
+    var parts = [String(localized: .commonShiftCount(shiftsOnDay.count))]
+    parts += sortedShifts.map {
+      CalendarGridHelper.shiftTimesAccessibilityText(startTime: $0.startTime, endTime: $0.endTime)
+    }
+    if let earnings {
+      parts.append(CalendarGridHelper.earningsAccessibilityText(earnings))
+    }
+    // Workplace colors carry no meaning for VoiceOver, so name the workplace in words.
+    let jobNames = hasMultipleActiveJobs ? workplaceNames(for: sortedShifts) : []
+    if !jobNames.isEmpty {
+      parts.append(
+        String(localized: .shiftsAccessibilityWorkplace(jobNames.joined(separator: ", "))))
+    }
+    if shiftsOnDay.contains(where: { excludedFromTotalIds.contains($0.id) }) {
+      parts.append(String(localized: .shiftsExcludedFromTotal))
+    }
+    return parts
+  }
+
+  /// Distinct workplace names for a day's shifts, in shift order.
+  private func workplaceNames(for shifts: [ShiftWithComputations]) -> [String] {
+    var names: [String] = []
+    for shift in shifts {
+      guard let jobId = shift.shift.job_id ?? defaultJobId,
+        let name = jobsById[jobId]?.name, !name.isEmpty, !names.contains(name)
+      else { continue }
+      names.append(name)
+    }
+    return names
   }
 
   // MARK: - Cell Styling
@@ -642,13 +716,16 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   /// Purple/violet color for deep link highlight from widgets
   private static let deepLinkHighlightColor = Color.tidexPurple
 
-  private static func highlightStyle(color: Color) -> CalendarCellStyle {
+  private static func highlightStyle(
+    color: Color, marker: CalendarCellMarker
+  ) -> CalendarCellStyle {
     CalendarCellStyle(
       backgroundColor: color.opacity(0.2),
       borderColor: color,
       borderWidth: 2.5,
       dayNumberColor: .tidexTextPrimary,
-      showsTodayBadge: false
+      showsTodayBadge: false,
+      marker: marker
     )
   }
 
@@ -661,10 +738,10 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   ) -> CalendarCellStyle {
     // Priority order: deep link > newly added > selected/drag > conflict > today > default
     if isDeepLinkHighlighted {
-      return Self.highlightStyle(color: Self.deepLinkHighlightColor)
+      return Self.highlightStyle(color: Self.deepLinkHighlightColor, marker: .deepLink)
     }
     if isNewlyAdded {
-      return Self.highlightStyle(color: Self.celebrationColor)
+      return Self.highlightStyle(color: Self.celebrationColor, marker: .newlyAdded)
     }
     if isSelected {
       let color: Color = hasConflict ? .tidexWarning : .tidexBlue
@@ -673,7 +750,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         borderColor: color,
         borderWidth: 2,
         dayNumberColor: hasConflict ? .tidexWarning : .tidexTextPrimary,
-        showsTodayBadge: isToday
+        showsTodayBadge: isToday,
+        marker: hasConflict ? .conflict : nil
       )
     }
     if hasConflict {
@@ -682,7 +760,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         borderColor: .clear,
         borderWidth: 0,
         dayNumberColor: .tidexTextPrimary,
-        showsTodayBadge: false
+        showsTodayBadge: false,
+        marker: .conflict
       )
     }
     if isToday {
@@ -706,7 +785,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       if let earnings = copyPreviewEarnings[dateISO] {
         return .earningsBreakdown(
           earnings,
-          color: copyPreviewConflictDates.contains(dateISO) ? .tidexWarning : .tidexBlue,
+          color: copyPreviewConflictDates.contains(dateISO) ? .tidexWarning : .tidexBlueText,
           beforeTaxColor: .tidexTextMuted
         )
       }
@@ -720,7 +799,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         return .earningsBreakdown(
           earnings,
           color: dayJobTimeColors.topColor,
-          beforeTaxColor: dayJobTimeColors.bottomColor.opacity(0.75)
+          beforeTaxColor: dayJobTimeColors.bottomColor
         )
       }
       return .earningsBreakdown(earnings)
@@ -766,6 +845,11 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       return
     }
 
+    activateDay(dayISO)
+  }
+
+  /// Runs the tap behavior for a day. Shared by the tap overlay and VoiceOver activation.
+  private func activateDay(_ dayISO: String) {
     if isCopyMode {
       onCopyToDate?(dayISO)
       return
@@ -809,6 +893,19 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   }
 
   // MARK: - Action Bar
+
+  /// Bars with text buttons stack vertically at accessibility text sizes so labels keep their width.
+  private var actionBarLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xxs))
+  }
+
+  private var actionBarShape: AnyShape {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+      : AnyShape(Capsule())
+  }
 
   @ViewBuilder
   private var actionBar: some View {
@@ -872,7 +969,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
   @ViewBuilder
   private var copyMoveBar: some View {
-    HStack(spacing: Spacing.xxs) {
+    actionBarLayout {
       copyMoveStatus
 
       Button {
@@ -883,7 +980,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
           .padding(.horizontal, Spacing.md)
-          .frame(height: 44)
+          .frame(minHeight: 44)
           .background(
             Capsule().fill(.clear)
               .tidexGlass(shape: .capsule, interactive: true)
@@ -897,7 +994,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       }
     }
     .padding(Spacing.xxs)
-    .background(Capsule().fill(Color.tidexSurfaceSecondary))
+    .background(actionBarShape.fill(Color.tidexSurfaceSecondary))
   }
 
   @ViewBuilder
@@ -944,7 +1041,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         .font(.tidexLabelStrong)
         .foregroundColor(copyTargetDates.isEmpty ? .tidexTextMuted : .tidexTextOnBrand)
         .padding(.horizontal, Spacing.md)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .background(
           Capsule()
             .fill(copyTargetDates.isEmpty ? Color.clear : Color.tidexBrandPrimary)
@@ -969,7 +1066,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       singleSelectionButton(
         systemImage: "doc.on.doc",
         label: .commonCopy,
-        tint: .tidexBlue
+        tint: .tidexBlueText
       ) {
         onCopy?()
       }
@@ -993,7 +1090,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       singleSelectionDeleteButton
     }
     .padding(Spacing.xxs)
-    .background(Capsule().fill(Color.tidexSurfaceSecondary))
+    .background(actionBarShape.fill(Color.tidexSurfaceSecondary))
   }
 
   private var singleSelectionDeleteButton: some View {
@@ -1013,7 +1110,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       }
       .foregroundColor(.tidexError)
       .frame(maxWidth: .infinity)
-      .frame(height: 44)
+      .frame(minHeight: 44)
       .background(
         Capsule().fill(.clear)
           .tidexGlass(shape: .capsule, tint: .tidexError.opacity(0.15), interactive: true)
@@ -1038,7 +1135,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         .font(.tidexLabel)
         .foregroundColor(tint)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .background(
           Capsule().fill(.clear)
             .tidexGlass(shape: .capsule, interactive: true)
@@ -1050,7 +1147,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
   @ViewBuilder
   private var multiSelectionBar: some View {
-    HStack(spacing: Spacing.xxs) {
+    actionBarLayout {
       Button {
         toggleHaptic.impactOccurred()
         showMultiSelectionDeleteConfirm = true
@@ -1069,7 +1166,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         }
         .foregroundColor(.tidexError)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .background(
           Capsule().fill(.clear)
             .tidexGlass(shape: .capsule, tint: .tidexError.opacity(0.15), interactive: true)
@@ -1090,7 +1187,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         }
         .foregroundColor(.tidexTextPrimary)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .background(
           Capsule().fill(.clear)
             .tidexGlass(shape: .capsule, interactive: true)
@@ -1100,7 +1197,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       .disabled(isDeleting)
     }
     .padding(Spacing.xxs)
-    .background(Capsule().fill(Color.tidexSurfaceSecondary))
+    .background(actionBarShape.fill(Color.tidexSurfaceSecondary))
   }
 
   @ViewBuilder
@@ -1118,7 +1215,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         if isDeleting {
           ProgressView()
             .progressViewStyle(
-              CircularProgressViewStyle(tint: confirmingDelete ? .white : .tidexError)
+              CircularProgressViewStyle(tint: confirmingDelete ? .tidexTextOnBrand : .tidexError)
             )
             .scaleEffect(0.7)
         } else {
@@ -1131,8 +1228,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
             .font(.tidexLabelStrong)
         }
       }
-      .foregroundColor(confirmingDelete ? .white : .tidexError)
-      .frame(width: confirmingDelete ? nil : 44, height: 44)
+      .foregroundColor(confirmingDelete ? .tidexTextOnBrand : .tidexError)
+      .frame(minWidth: confirmingDelete ? nil : 44, minHeight: 44)
       .frame(maxWidth: confirmingDelete ? .infinity : nil)
       .padding(.horizontal, confirmingDelete ? 16 : 0)
       .background(
@@ -1158,10 +1255,43 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       }
       .foregroundColor(.tidexTextOnBrand)
       .frame(maxWidth: .infinity)
-      .frame(height: 44)
+      .frame(minHeight: 44)
       .background(Capsule().fill(Color.tidexBrandPrimary))
     }
     .buttonStyle(.plain)
+  }
+}
+
+// MARK: - Day Accessibility
+
+/// Makes a day cell one VoiceOver and Voice Control button with its selection state and actions.
+struct CalendarDayAccessibilityModifier: ViewModifier {
+  let label: Text
+  let isSelected: Bool
+  let isHidden: Bool
+  let onActivate: () -> Void
+  let onToggleSelection: (() -> Void)?
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    // A trailing .accessibilityHidden doesn't remove an element that has actions, so hidden
+    // cells never become an element at all.
+    if isHidden {
+      content.accessibilityHidden(true)
+    } else {
+      content
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction(.default, onActivate)
+        .accessibilityActions {
+          if let onToggleSelection {
+            Button(action: onToggleSelection) {
+              Text(.shiftsAccessibilityToggleSelection)
+            }
+          }
+        }
+    }
   }
 }
 

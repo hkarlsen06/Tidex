@@ -25,7 +25,9 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
     // One instruction above the photo, and the confirm action in brand blue instead of the library's yellow.
     // iOS 26 and later show icon-only toolbar buttons without VoiceOver labels, so label them here.
     cropViewController.title = String(localized: .profileImageCropTitle)
-    cropViewController.doneButtonColor = UIColor(Color.tidexBlue)
+    // The crop screen is always dark, so resolve the text blue for the dark appearance.
+    cropViewController.doneButtonColor = UIColor(Color.tidexBlueText)
+      .resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
     cropViewController.toolbar.doneIconButton.accessibilityLabel = String(localized: .profileImageCropConfirm)
     cropViewController.toolbar.cancelIconButton.accessibilityLabel = String(localized: .commonCancel)
 

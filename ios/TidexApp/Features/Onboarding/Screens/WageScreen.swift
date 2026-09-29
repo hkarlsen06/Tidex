@@ -10,6 +10,7 @@ struct WageScreen: View {
   var topTrailingTitle: String?  // swiftlint:disable:this explicit_acl type_contents_order
   var onTopTrailingAction: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var isLoadingTariffData = false
   @State private var tariffLoadFailed = false
   @State private var isKeyboardVisible = false
@@ -128,6 +129,7 @@ struct WageScreen: View {
       .font(.tidexScreenTitle)
       .foregroundColor(.tidexTextPrimary)
       .multilineTextAlignment(.center)
+      .accessibilityAddTraits(.isHeader)
 
       Text(.onboardingWageSubtitle)
         .font(.tidexBody)
@@ -213,7 +215,7 @@ struct WageScreen: View {
 
   private func scrollCustomWageInputIntoView(_ scrollProxy: ScrollViewProxy) {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-      withAnimation(.easeOut(duration: 0.2)) {
+      withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
         scrollProxy.scrollTo(ScrollTarget.customWageContent, anchor: .bottom)
       }
     }
@@ -233,7 +235,7 @@ struct WageScreen: View {
         isSelected: data.wageType == .custom,
         isEnabled: true,
         action: {
-          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+          withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
             data.wageType = .custom
           }
         }
@@ -244,7 +246,7 @@ struct WageScreen: View {
         isSelected: data.wageType == .tariff,
         isEnabled: true,
         action: {
-          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+          withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
             data.wageType = .tariff
           }
         }

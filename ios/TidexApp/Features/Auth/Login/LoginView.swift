@@ -226,6 +226,7 @@ struct LoginView: View {
         .foregroundColor(.tidexError)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.xxs)
+        .announcesToVoiceOver(message)
     }
   }
 
@@ -245,6 +246,7 @@ struct LoginView: View {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "envelope")
           .font(.tidexBodyMedium)
+          .accessibilityHidden(true)
         Text(.loginEmailOrPhoneReveal)
           .font(.tidexBodyMedium)
           .multilineTextAlignment(.center)

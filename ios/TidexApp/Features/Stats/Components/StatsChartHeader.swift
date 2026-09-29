@@ -9,6 +9,8 @@ struct StatsChartHeader<Accessory: View>: View {  // swiftlint:disable:this expl
   var valueColor: Color = .tidexTextPrimary  // swiftlint:disable:this explicit_acl explicit_type_interface
   @ViewBuilder var accessory: () -> Accessory  // swiftlint:disable:this explicit_acl
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
+
   var body: some View {  // swiftlint:disable:this explicit_acl
     HStack(alignment: .top, spacing: Spacing.sm) {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -21,8 +23,8 @@ struct StatsChartHeader<Accessory: View>: View {  // swiftlint:disable:this expl
             .font(.tidexLargeTitle)
             .monospacedDigit()
             .foregroundColor(valueColor)
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)  // swiftlint:disable:this no_magic_numbers
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)  // swiftlint:disable:this line_length no_magic_numbers
         }
 
         if let caption {
@@ -33,6 +35,7 @@ struct StatsChartHeader<Accessory: View>: View {  // swiftlint:disable:this expl
         }
       }
       .accessibilityElement(children: .combine)
+      .accessibilityAddTraits(.isHeader)
 
       Spacer(minLength: 0)
 

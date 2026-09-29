@@ -16,6 +16,9 @@ struct UserMenuButton: View {
   /// Tap action
   var onTap: (() -> Void)?
 
+  /// Width cap for the first name, so a long name can't push the toolbar around. It grows with text size.
+  @ScaledMetric(relativeTo: .subheadline) private var maxNameWidth: CGFloat = 80
+
   var body: some View {
     if interactive {
       Button {
@@ -49,7 +52,7 @@ struct UserMenuButton: View {
         .foregroundColor(.tidexTextPrimary)
         .lineLimit(1)
         .truncationMode(.tail)
-        .frame(maxWidth: 80)  // Limit text width to prevent overly long names
+        .frame(maxWidth: maxNameWidth)
 
       // Profile picture or initial
       AvatarView(

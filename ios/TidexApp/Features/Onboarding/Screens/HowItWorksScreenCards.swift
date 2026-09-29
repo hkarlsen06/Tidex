@@ -5,6 +5,8 @@ struct OnboardingHowItWorksShiftPreviewCard: View {
   let isVisible: Bool
   let isDimmedForFocus: Bool
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   var body: some View {
     FeaturedShiftCard(
       shift: shift,
@@ -20,10 +22,11 @@ struct OnboardingHowItWorksShiftPreviewCard: View {
     .padding(.top, Spacing.md)
     .padding(.bottom, Spacing.xxl)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .opacity(isVisible ? (isDimmedForFocus ? 0.46 : 1.0) : 0)
+    .opacity(isVisible ? 1 : 0)
+    .saturation(isDimmedForFocus ? HowItWorksScreen.dimmedSaturation : 1)
     .offset(y: isVisible ? 0 : 18)
     .animation(
-      .spring(response: 0.4, dampingFraction: 0.82).delay(0.24),
+      reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.82).delay(0.24),
       value: isVisible
     )
     .animation(.easeInOut(duration: 0.26), value: isDimmedForFocus)
