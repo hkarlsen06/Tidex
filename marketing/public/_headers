@@ -1,0 +1,11 @@
+# Cloudflare Pages response headers.
+# Hashed build output never changes under the same name, so browsers can keep it for a year.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Images and the hero model keep their names when they change, so they are cached for a day.
+/story/*
+  Cache-Control: public, max-age=86400
+
+/brand/*
+  Cache-Control: public, max-age=86400

@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Inter, Manrope } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 import '@/app/globals.css';
 
-const inter = Inter({ subsets: ['latin'], display: 'swap' });
-const manrope = Manrope({ subsets: ['latin'], display: 'swap', variable: '--font-display' });
+// Poppins SemiBold is the display face of the App Store screenshots and the showcase film.
+const poppins = Poppins({ subsets: ['latin'], weight: '600', display: 'swap', variable: '--font-display' });
 
 // Shared by every root layout. Each segment has its own root layout so the
 // server-rendered <html lang> matches the page locale.
@@ -29,14 +29,14 @@ export const rootViewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#09192b',
+  themeColor: '#0a0f2e',
   colorScheme: 'dark',
 };
 
 export function RootShell({ lang, children }: { lang: string; children: ReactNode }) {
   return (
     <html lang={lang} className="dark">
-      <body className={`${inter.className} ${manrope.variable} bg-background text-foreground`}>
+      <body className={`${poppins.variable} bg-background text-foreground`}>
         {children}
       </body>
     </html>

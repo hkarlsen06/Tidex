@@ -9,6 +9,7 @@ showcase.py draws the rest of the film around these frames. Run from the reposit
   --track              only write track.json
   --locale en-US       captures for this locale
   --captures DIR       raw captures; default ios/ASConnectScreenshots/<version>/raw-dark
+  --hero DIR           write the tidex.no hero into DIR instead: phone.png and phone.glb (see hero())
 
 Writes video/blender/out/layer-<locale>/ (-preview/ with --preview): a PNG per frame, and track.json with the on-screen
 corners of every lift-out region on every frame. Without -b, Blender opens with the scene built and renders nothing.
@@ -496,15 +497,68 @@ def corners(scene, camera, model):
     return track
 
 
+# The tidex.no hero. marketing/components/HeroPhone.tsx repeats these numbers to line its three.js view up with the
+# still: the phone rests turned a little toward the headline (degrees) and fills HERO_FILL of the frame's height.
+HERO_PITCH, HERO_YAW, HERO_FILL = 4, -10, 0.86
+
+
+def hero(scene, camera, folder):
+    """The film's phone on the home screen, in the same studio, for tidex.no. Writes phone.png, a transparent still at
+    the resting tilt, and phone.glb, the untilted model that the page tilts after the pointer. Everything else in the
+    scene goes."""
+    for ob in list(scene.objects):
+        if ob.type in {'CAMERA', 'LIGHT'} or ob.name in {'aim', 'phone'} or ob.name.startswith('phone '):
+            ob.animation_data_clear()
+            ob.hide_render = False
+        else:
+            bpy.data.objects.remove(ob)
+    scene.frame_set(0)  # the screen shows its first capture, 01-home
+    rig = scene.objects['phone']
+    rig.location, rig.rotation_euler = (0, 0, 0), (math.radians(HERO_PITCH), 0, math.radians(HERO_YAW))
+    cam = camera.data
+    cam.animation_data_clear()
+    cam.shift_x = cam.shift_y = 0
+    cam.lens, cam.dof.use_dof = 100, False
+    camera.location = (0, -PHONE_H / HERO_FILL * MM / 0.24, 0)  # 24 mm of sensor at 100 mm sees 0.24 m per metre
+    scene.objects['aim'].location = (0, 0, 0)
+    scene.render.resolution_x, scene.render.resolution_y = 1200, 2400
+    scene.render.resolution_percentage = 100
+    scene.render.use_motion_blur = False
+    scene.render.filepath = str(folder / 'phone.png')
+    bpy.ops.render.render(write_still=True)
+
+    # glTF has no switching screens, curves or area lights: the glass shows 01-home straight, the frame becomes a
+    # mesh, and the page brings its own lights.
+    rig.rotation_euler = (0, 0, 0)
+    tree = scene.objects['phone glass'].active_material.node_tree
+    home = next(n for n in tree.nodes if n.type == 'TEX_IMAGE' and n.image.name == 'screen 01-home')
+    tree.links.new(home.outputs['Color'], tree.nodes['Principled BSDF'].inputs['Emission Color'])
+    home.image.scale(1024, round(1024 * CANVAS[1] / CANVAS[0]))
+    parts = [ob for ob in scene.objects if ob.name == 'phone' or ob.name.startswith('phone ')]
+    for ob in scene.objects:
+        ob.select_set(ob in parts)
+    bpy.context.view_layer.objects.active = scene.objects['phone frame']
+    bpy.ops.object.convert(target='MESH')
+    bpy.ops.export_scene.gltf(filepath=str(folder / 'phone.glb'), use_selection=True, export_apply=True,
+                              export_image_format='WEBP', export_image_quality=85, export_animations=False,
+                              export_cameras=False, export_lights=False)
+
+
 parser = argparse.ArgumentParser(prog='phone3d.py')
 parser.add_argument('--preview', action='store_true')
 parser.add_argument('--stills', type=lambda value: [int(f) for f in value.split(',')])
 parser.add_argument('--track', action='store_true')
 parser.add_argument('--locale', default='en-US')
 parser.add_argument('--captures', type=Path, default=CAPTURES)
+parser.add_argument('--hero', type=Path)
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else [])
 
 scene, camera, model = build()
+if args.hero:
+    if bpy.app.background:
+        args.hero.mkdir(parents=True, exist_ok=True)
+        hero(scene, camera, args.hero.resolve())
+    raise SystemExit
 folder = layer(args.locale, args.preview)
 folder.mkdir(parents=True, exist_ok=True)
 (folder / 'track.json').write_text(json.dumps(corners(scene, camera, model)))

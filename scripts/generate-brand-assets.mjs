@@ -110,6 +110,8 @@ try {
     '--rendition', 'Default', '--width', '1024', '--height', '1024', '--scale', '1', '--design-generation', '27']);
   const lockupIcon = await sharp(appIcon).resize(512, 512).png().toBuffer();
   await writeFile(path.join(publicDir, 'brand/tidex-app-icon.png'), lockupIcon);
+  // tidex.no shows the icon at 64 px at most; 192 px covers 3x screens at a fraction of the PNG's size.
+  await sharp(appIcon).resize(192, 192).webp({ quality: 90 }).toFile(path.join(publicDir, 'brand/tidex-app-icon.webp'));
   const iconHeight = 90;
   const letteringX = iconHeight + 8;
   const marks = {};

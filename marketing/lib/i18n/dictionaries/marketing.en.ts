@@ -7,16 +7,23 @@ export const marketingEn = {
     ogImageAlt: 'Tidex gives you full control over your salary',
   },
   hero: {
-    eyebrow: 'iPhone app',
-    title: 'Know what your shift is worth',
-    description: '...so you always know what you will actually get paid.',
-    primaryCta: 'See next paycheck',
-    appStoreCta: 'See next paycheck',
-    secondaryCta: 'FAQ',
+    title: "What's that extra shift really worth?",
+    titleEmphasis: 'really',
+    description: 'Tidex shows what your work adds up to, before payday.',
+    appStoreCta: 'Get Tidex free',
+    note: 'Free · No ads',
     imageAlt: 'Tidex logo',
     logoLinkLabel: 'Tidex on the App Store',
-    screenshotAlt: 'Screenshot of the Tidex iPhone app showing the dashboard and shifts overview.',
-    trustNote: 'Free to start. Built for real shift work.',
+    screenshotAlt: 'Tidex on an iPhone, showing $2,240 after tax in September and the next payout.',
+  },
+  story: {
+    heading: 'Inside the app',
+    panels: [
+      'Say yes to extra hours knowing what they pay. Put a shift in the calendar and see how it changes your month.',
+      'Every job in one overview. Follow your hours and earnings over time, without piecing together notes.',
+      'Know where the money comes from. See the breakdown behind the total, and have something to check your payslip against.',
+      'Your time is worth keeping track of. Start with your next shift.',
+    ],
   },
   faq: {
     eyebrow: 'FAQ',
@@ -86,34 +93,11 @@ export const marketingEn = {
       },
     ],
   },
-  socialProof: {
-    eyebrow: 'Built for real shifts',
-    heading: 'Why people keep using it',
-    description: 'People use Tidex for predictable pay planning, clearer overtime calculations, and fast follow-up reports.',
-    items: [
-      {
-        title: 'Clear math',
-        description: 'Every line in the total is visible, so you can understand exactly what changed in your pay.',
-      },
-      {
-        title: 'Report-ready exports',
-        description: 'Export clean reports quickly when you want to check payroll or share shift details.',
-      },
-      {
-        title: 'Fast to start',
-        description: 'Set up your rules once and get useful estimates for each shift without complex steps.',
-      },
-    ],
-  },
   ctaPrimary: {
-    heading: 'Ready to try with your own shifts?',
-    description: 'Create a free account and get control over supplements, overtime and reports before the next payday.',
-    button: 'Get started for free',
+    heading: 'Try it with your own shifts',
+    description: 'Every feature is free, with no ads and no subscription. Tidex is only for iPhone.',
   },
   contact: {
-    heading: 'Have questions?',
-    description: 'Reach out if anything is unclear or if you have feedback.',
-    button: 'Contact us',
     emailSubject: 'Contact from Tidex',
     emailBody: 'Hi!\n\nI have a question about ...',
   },

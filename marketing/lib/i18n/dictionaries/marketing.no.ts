@@ -7,16 +7,23 @@ export const marketingNo = {
     ogImageAlt: 'Tidex gir deg kontroll på lønnen din',
   },
   hero: {
-    eyebrow: 'iPhone-app',
-    title: 'Se hva vakten din er verdt',
-    description: '…så du alltid vet hva du faktisk får utbetalt.',
-    primaryCta: 'Se neste lønning',
-    appStoreCta: 'Se neste lønning',
-    secondaryCta: 'FAQ',
+    title: 'Hva er den ekstravakten egentlig verdt?',
+    titleEmphasis: 'egentlig',
+    description: 'Tidex viser hva du ligger an til å tjene, før lønningsdagen.',
+    appStoreCta: 'Last ned gratis',
+    note: 'Gratis · Uten reklame',
     imageAlt: 'Tidex-logo',
     logoLinkLabel: 'Tidex i App Store',
-    screenshotAlt: 'Skjermbilde av Tidex iPhone-appen som viser dashbordet og vaktoversikten.',
-    trustNote: 'Gratis å starte. Bygget for ekte arbeid.',
+    screenshotAlt: 'Tidex på en iPhone, som viser 22 400 kr etter skatt i september og neste utbetaling.',
+  },
+  story: {
+    heading: 'Inni appen',
+    panels: [
+      'Si ja til ekstravakter og vit hva de gir. Legg en vakt i kalenderen og se hva den betyr for måneden.',
+      'Alle jobbene i én oversikt. Følg med på timer og inntekt over tid, uten løse notater og regnestykker.',
+      'Vit hvor pengene kommer fra. Se hvordan beløpet er satt sammen, og ha noe å sjekke lønnsslippen mot.',
+      'Tiden din er verdt å holde styr på. Begynn med din neste vakt.',
+    ],
   },
   faq: {
     eyebrow: 'FAQ',
@@ -86,34 +93,11 @@ export const marketingNo = {
       },
     ],
   },
-  socialProof: {
-    eyebrow: 'Bygget for ekte vakter',
-    heading: 'Slik gir det verdi',
-    description: 'Brukere velger Tidex for forutsigbar beregning, tydeligere overtidsregler og enkle rapporter.',
-    items: [
-      {
-        title: 'Åpen beregning',
-        description: 'Hver linje i totalen er synlig, så du ser hvorfor lønnen blir som den blir.',
-      },
-      {
-        title: 'Rapporter som brukes',
-        description: 'Eksporter rene rapporter raskt når du trenger tall for lønnsoppfølging.',
-      },
-      {
-        title: 'Rask i bruk',
-        description: 'Sett opp reglene én gang, og få relevante estimater for hver vakt uten tung innsats.',
-      },
-    ],
-  },
   ctaPrimary: {
-    heading: 'Klar til å teste med dine egne vakter?',
-    description: 'Opprett en konto gratis og få kontroll på tillegg, overtid og rapporter før neste lønning går ut.',
-    button: 'Kom i gang gratis',
+    heading: 'Prøv med dine egne vakter',
+    description: 'Alle funksjoner er gratis, uten reklame og abonnement. Tidex finnes bare for iPhone.',
   },
   contact: {
-    heading: 'Har du spørsmål?',
-    description: 'Ta kontakt hvis du lurer på noe eller har tilbakemeldinger.',
-    button: 'Ta kontakt',
     emailSubject: 'Kontakt fra Tidex',
     emailBody: 'Hei!\n\nJeg lurer på ...',
   },

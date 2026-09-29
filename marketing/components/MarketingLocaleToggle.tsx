@@ -1,4 +1,6 @@
-import { localeNames, locales, type Locale } from '@/lib/i18n/config';
+'use client';
+
+import { LOCALE_COOKIE, localeNames, locales, type Locale } from '@/lib/i18n/config';
 import { buildLocalizedMarketingPath } from '@/lib/paths';
 
 interface MarketingLocaleToggleProps {
@@ -17,6 +19,10 @@ export function MarketingLocaleToggle({ locale, path }: MarketingLocaleTogglePro
           key={item}
           href={buildLocalizedMarketingPath(item, path)}
           hrefLang={item}
+          // functions/index.js reads this when someone opens tidex.no without a locale.
+          onClick={() => {
+            document.cookie = `${LOCALE_COOKIE}=${item}; path=/; max-age=31536000; samesite=lax`;
+          }}
           aria-current={item === locale ? 'page' : undefined}
           className={`inline-flex items-center rounded-full px-3.5 py-1.25 transition-colors hover:text-text-secondary ${
             item === locale ? 'bg-white/[0.04] text-text-secondary' : 'hover:bg-white/[0.02]'
