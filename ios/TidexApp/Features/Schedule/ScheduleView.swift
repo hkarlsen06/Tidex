@@ -2039,26 +2039,37 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     action: @escaping () -> Void
   ) -> some View {
     Button(action: action) {
-      Group {
-        if isSelected {
-          Text(title)
-            .font(.tidexFootnoteStrong)
-            .foregroundColor(.white)
-        } else {
-          WorkplaceNameText(
-            name: title,
-            colorHex: colorHex,
-            font: .tidexFootnoteStrong,
-            fallbackBadgeColor: isWorkplace ? .tidexBlue : nil
-          )
+      if isWorkplace {
+        // The job color fills the whole chip; a ring marks the selected one.
+        WorkplaceNameText(
+          name: title,
+          colorHex: colorHex,
+          font: .tidexFootnoteStrong,
+          fallbackBadgeColor: .tidexBlue,
+          badgeCornerRadius: 999,  // SwiftUI clamps this to a capsule
+          badgeHorizontalPadding: Spacing.sm,
+          badgeVerticalPadding: Spacing.xs
+        )
+        .overlay {
+          if isSelected {
+            Capsule().strokeBorder(Color.tidexTextPrimary, lineWidth: 2)
+          }
         }
+        // Grey out the other jobs while one job is selected.
+        .grayscale(selectedListJobId != nil && !isSelected ? 1 : 0)
+        .opacity(selectedListJobId != nil && !isSelected ? 0.6 : 1)
+      } else {
+        Text(title)
+          .font(.tidexFootnoteStrong)
+          .foregroundColor(isSelected ? .white : .tidexTextPrimary)
+          .padding(.horizontal, Spacing.sm)
+          .padding(.vertical, Spacing.xs)
+          .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
+          .clipShape(Capsule())
       }
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.xs)
-      .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
-      .clipShape(Capsule())
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 
   /// Individual shift card row (visual content only - swipe actions are on List row)

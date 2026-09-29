@@ -108,7 +108,7 @@ final class FriendsMessagingRealtimeCoordinator {
   private var outboundListTypingChannel: RealtimeChannelV2?
   private var outboundListTypingRecipientUserId: String?
   private var typingToastLastShownAtByThreadId: [String: Date] = [:]
-  private var isFriendsFeedVisible = false
+  private(set) var isFriendsFeedVisible = false
   private var listTypingThreadIds: Set<String> = []
   private var detailTypingThreadIds: Set<String> = []
   private var typingChannels: [String: RealtimeChannelV2] = [:]

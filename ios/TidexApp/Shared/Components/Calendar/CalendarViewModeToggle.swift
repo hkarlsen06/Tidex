@@ -8,11 +8,9 @@ import SwiftUI
 
 // MARK: - Calendar View Mode Toggle
 
-/// Reusable hours/money toggle bar for calendar views
-/// Uses glass effect for selected state
+/// Reusable hours/money toggle for calendar views.
+/// Native segmented picker, so the Liquid Glass thumb can be dragged between segments.
 struct CalendarViewModeToggle: View {
-  private let controlHeight: CGFloat = 44
-  private let controlInset: CGFloat = Spacing.xxs
   @Binding var viewMode: CalendarViewMode
   let currency: String
   let showMoneyOption: Bool
@@ -26,95 +24,38 @@ struct CalendarViewModeToggle: View {
     self._viewMode = viewMode
     self.currency = currency
     self.showMoneyOption = showMoneyOption
+    _ = Self.applyTidexAppearance
   }
 
+  /// Swaps the stock gray track and thumb for Tidex colors. The proxy is app-wide,
+  /// which is fine while this is the only segmented picker in the app.
+  private static let applyTidexAppearance: Void = {
+    let control = UISegmentedControl.appearance()
+    control.backgroundColor = UIColor(resource: .tidexSurfaceSecondary)
+    control.selectedSegmentTintColor = UIColor(Color.tidexGlassSurface)
+    let font = UIFont.systemFont(
+      ofSize: UIFont.preferredFont(forTextStyle: .subheadline).pointSize, weight: .semibold)
+    control.setTitleTextAttributes(
+      [.foregroundColor: UIColor(resource: .tidexTextMuted), .font: font], for: .normal)
+    control.setTitleTextAttributes(
+      [.foregroundColor: UIColor(resource: .tidexTextPrimary), .font: font], for: .selected)
+  }()
+
   var body: some View {
-    ZStack {
-      Capsule()
-        .fill(Color.tidexSurfaceSecondary.opacity(0.55))
-
-      GeometryReader { geometry in
-        let innerWidth = max(0, geometry.size.width - (controlInset * 2))
-        let segmentCount: CGFloat = showMoneyOption ? 2 : 1
-        let segmentWidth = innerWidth / segmentCount
-        let selectedIndex: CGFloat = viewMode == .money && showMoneyOption ? 1 : 0
-
-        Capsule()
-          .fill(Color.clear)
-          .tidexGlass(
-            shape: .capsule,
-            tint: .tidexGlassSurface.opacity(0.32),
-            interactive: true
-          )
-          .frame(width: segmentWidth, height: controlHeight)
-          .offset(x: controlInset + (selectedIndex * segmentWidth), y: controlInset)
-          .animation(
-            reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8),
-            value: selectedIndex
-          )
+    Picker(
+      selection: $viewMode.animation(
+        reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8))
+    ) {
+      Text(.shiftsCalendarToggleHours).tag(CalendarViewMode.hours)
+      if showMoneyOption {
+        Text(.shiftsCalendarToggleEarnings).tag(CalendarViewMode.money)
       }
-
-      HStack(spacing: 0) {
-        // Hours button
-        Button {
-          guard viewMode != .hours else { return }
-          if reduceMotion {
-            viewMode = .hours
-            viewMode.save()
-          } else {
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-              viewMode = .hours
-              viewMode.save()
-            }
-          }
-        } label: {
-          HStack(spacing: Spacing.xxxs) {
-            Image(systemName: "clock.fill")
-              .font(.tidexLabel)
-            Text(.shiftsCalendarToggleHours)
-              .font(viewMode == .hours ? .tidexLabelStrong : .tidexSubheadline)
-          }
-          .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .frame(height: controlHeight)
-          .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-
-        // Money button (only if showing earnings)
-        if showMoneyOption {
-          Button {
-            guard viewMode != .money else { return }
-            if reduceMotion {
-              viewMode = .money
-              viewMode.save()
-            } else {
-              withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                viewMode = .money
-                viewMode.save()
-              }
-            }
-          } label: {
-            HStack(spacing: Spacing.xxxs) {
-              Image(systemName: "banknote.fill")
-                .font(.tidexLabel)
-              Text(.shiftsCalendarToggleEarnings)
-                .font(viewMode == .money ? .tidexLabelStrong : .tidexSubheadline)
-            }
-            .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.sm)
-            .frame(height: controlHeight)
-            .contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-        }
-      }
-      .padding(controlInset)
+    } label: {
+      EmptyView()
     }
-    .frame(height: controlHeight + (controlInset * 2))
-    .sensoryFeedback(.impact(weight: .light), trigger: viewMode)
+    .pickerStyle(.segmented)
+    .controlSize(.large)
+    .onChange(of: viewMode) { viewMode.save() }
   }
 }
 

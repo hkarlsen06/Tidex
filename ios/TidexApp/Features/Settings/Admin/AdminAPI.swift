@@ -116,6 +116,19 @@ enum AdminAPI {
       ])
   }
 
+  static func updateShare(id: String, showEarnings: Bool, blocked: Bool, muted: Bool)
+    async throws
+  {
+    try await action(
+      "admin_update_share_api",
+      [
+        "p_share_id": .string(id),
+        "p_show_earnings": .bool(showEarnings),
+        "p_blocked": .bool(blocked),
+        "p_muted": .bool(muted),
+      ])
+  }
+
   static func deleteShare(id: String) async throws {
     try await action("admin_delete_share_api", ["p_share_id": .string(id)])
   }

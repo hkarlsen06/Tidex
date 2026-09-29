@@ -5,6 +5,7 @@ struct AdminSharesView: View {
   @State private var shares: [AdminShare]?
   @State private var total = 0
   @State private var pendingDelete: AdminShare?
+  @State private var editing: AdminShare?
   @State private var isCreating = false
   @State private var errorMessage: String?
 
@@ -16,7 +17,7 @@ struct AdminSharesView: View {
     List {
       Section {
         ForEach(shares ?? []) { share in
-          AdminShareRow(share: share)
+          Button { editing = share } label: { AdminShareRow(share: share) }
             .swipeActions {
               SwipeDeleteButton(title: "Delete") { pendingDelete = share }
             }
@@ -53,6 +54,9 @@ struct AdminSharesView: View {
     }
     .sheet(isPresented: $isCreating) {
       AdminCreateShareSheet { await load() }
+    }
+    .sheet(item: $editing) { share in
+      AdminEditShareSheet(share: share) { await load() }
     }
     .confirmationDialog(
       "Delete this share?",
@@ -221,6 +225,86 @@ private struct AdminCreateShareSheet: View {
           ownerID: owner.id, viewerID: viewer.id, showEarnings: showEarnings)
         Haptics.play(.success)
         await onCreated()
+        dismiss()
+      } catch {
+        Haptics.play(.error)
+        errorMessage = error.localizedDescription
+      }
+    }
+  }
+}
+
+private struct AdminEditShareSheet: View {
+  let share: AdminShare
+  let onSaved: () async -> Void
+
+  @State private var showEarnings: Bool
+  @State private var blocked: Bool
+  @State private var muted: Bool
+  @State private var isSaving = false
+  @State private var errorMessage: String?
+  @Environment(\.dismiss) private var dismiss
+
+  init(share: AdminShare, onSaved: @escaping () async -> Void) {
+    self.share = share
+    self.onSaved = onSaved
+    _showEarnings = State(initialValue: share.showEarnings)
+    _blocked = State(initialValue: share.blocked)
+    _muted = State(initialValue: share.muted)
+  }
+
+  private var hasChanges: Bool {
+    showEarnings != share.showEarnings || blocked != share.blocked || muted != share.muted
+  }
+
+  var body: some View {
+    NavigationStack {
+      Form {
+        Group {
+          Section {
+            LabeledContent("Owner", value: share.ownerDisplayName)
+            LabeledContent("Viewer", value: share.viewerDisplayName)
+          } footer: {
+            Text("To change who is in the share, delete it and create a new one.")
+          }
+          Section {
+            Toggle("Show earnings", isOn: $showEarnings)
+            Toggle("Hidden", isOn: $blocked)
+            Toggle("Muted", isOn: $muted)
+          }
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
+      }
+      .tidexListBackground()
+      .navigationTitle("Edit share")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar { toolbar }
+      .adminErrorAlert($errorMessage)
+    }
+  }
+
+  @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+    ToolbarItem(placement: .cancellationAction) {
+      Button("Cancel", role: .cancel) { dismiss() }
+    }
+    ToolbarItem(placement: .confirmationAction) {
+      if isSaving {
+        ProgressView()
+      } else {
+        Button("Save", action: save).disabled(!hasChanges)
+      }
+    }
+  }
+
+  private func save() {
+    Task {
+      isSaving = true
+      defer { isSaving = false }
+      do {
+        try await AdminAPI.updateShare(
+          id: share.id, showEarnings: showEarnings, blocked: blocked, muted: muted)
+        Haptics.play(.success)
+        await onSaved()
         dismiss()
       } catch {
         Haptics.play(.error)

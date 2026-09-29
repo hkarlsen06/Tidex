@@ -780,7 +780,11 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
 
     return MainActor.assumeIsolated {
-      SensitiveContentPresentationState.shared.activeFriendThreadId == threadId
+      // The Friends feed already shows a live typing indicator.
+      if type == "thread_typing", FriendsMessagingRealtimeCoordinator.shared.isFriendsFeedVisible {
+        return true
+      }
+      return SensitiveContentPresentationState.shared.activeFriendThreadId == threadId
     }
   }
 

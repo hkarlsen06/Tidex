@@ -115,7 +115,7 @@ struct AddShiftView: View {
                   }
                   // Fill exactly the space above the controls, so it only scrolls on screens
                   // too small for the calendar.
-                  .frame(minHeight: availableHeight)
+                  .frame(maxWidth: .infinity, minHeight: availableHeight)
                   .padding(.bottom, Self.bottomControlsInset)
                   .contentShape(Rectangle())
                   .monthSwipeGesture(

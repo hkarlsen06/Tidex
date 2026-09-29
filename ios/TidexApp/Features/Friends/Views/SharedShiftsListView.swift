@@ -38,7 +38,6 @@ struct SharedShiftsListView: View {
 
   var onSendToChatCompleted: ((SendShiftToChatResult) -> Void)?
 
-  @Environment(\.layoutDirection) private var layoutDirection
   @Environment(\.userCurrency) private var currency
   @Environment(\.isSceneCaptured) private var isSceneCaptured
 
@@ -64,12 +63,8 @@ struct SharedShiftsListView: View {
     UIDevice.current.userInterfaceIdiom == .phone
   }
 
-  private let swipeThreshold: CGFloat = 50
-  private let verticalLimit: CGFloat = 50
-  private let edgeExclusion: CGFloat = 24
-
   var body: some View {
-    GeometryReader { geometry in
+    GeometryReader { _ in
       ZStack {
         TidexAppBackground()
 
@@ -81,7 +76,7 @@ struct SharedShiftsListView: View {
           shiftListContent
         } else {
           // Center the calendar vertically like in ShiftsView
-          VStack {
+          VStack {  // swiftlint:disable:this closure_body_length
             Spacer()
             SharedShiftsCalendarView(
               shifts: shifts,
@@ -100,11 +95,18 @@ struct SharedShiftsListView: View {
               userEarningsByDate: userEarningsByDate,
               onShiftTapped: { shift in
                 selectedShift = shift
+              },
+              onSwipeLeft: {
+                AppearanceTracker.shared.reset()
+                onNextMonth?()
+              },
+              onSwipeRight: {
+                AppearanceTracker.shared.reset()
+                onPreviousMonth?()
               }
             )
             .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-            .simultaneousGesture(monthSwipeDragGesture(containerWidth: geometry.size.width))
             Spacer()
           }
           // Offset for month picker overlay so content centers in available space
@@ -171,35 +173,6 @@ struct SharedShiftsListView: View {
         await reportScreenshot()
       }
     }
-  }
-
-  private func monthSwipeDragGesture(containerWidth: CGFloat) -> some Gesture {
-    DragGesture(minimumDistance: 10)
-      .onEnded { value in
-        let horizontal = value.translation.width
-        let vertical = abs(value.translation.height)
-        guard vertical <= verticalLimit else { return }
-        guard abs(horizontal) >= swipeThreshold else { return }
-
-        // Leave edge swipes to NavigationStack interactive pop gesture.
-        let startX = value.startLocation.x
-        // swiftlint:disable:next conditional_returns_on_newline
-        guard startX > edgeExclusion, startX < (containerWidth - edgeExclusion) else { return }
-
-        let swipeLeft = horizontal < 0
-        let action: (() -> Void)?
-        if swipeLeft {
-          action = layoutDirection == .rightToLeft ? onPreviousMonth : onNextMonth
-        } else {
-          action = layoutDirection == .rightToLeft ? onNextMonth : onPreviousMonth
-        }
-
-        guard let action else { return }
-
-        AppearanceTracker.shared.reset()
-        Haptics.play(.medium)
-        action()
-      }
   }
 
   // MARK: - List View

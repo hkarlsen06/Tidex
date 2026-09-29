@@ -36,11 +36,14 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
 
   /// Callback when a shift is tapped (for showing details)
   var onShiftTapped: ((ShiftWithComputations) -> Void)?
+  var onSwipeLeft: (() -> Void)?
+  var onSwipeRight: (() -> Void)?
 
   // swiftlint:disable:next explicit_type_interface type_contents_order
   @State private var viewMode = CalendarViewMode.load()
   @State private var selectedDates: Set<String> = []
   @State private var selectedEarningsByDate: [String: CalendarEarningsData] = [:]
+  @State private var dragSelection: CalendarDragSelection?
   private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
   private let calendar = Calendar.gregorianCurrent
 
@@ -453,6 +456,24 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     let grid = CalendarMonthGrid(days: days) { dayInfo in
       calendarDayView(for: dayInfo, metrics: metrics)
     }
+    .overlay {
+      GeometryReader { geometry in
+        CalendarDragSelectOverlay(
+          onTap: { location in
+            guard let dayInfo = day(at: location, gridSize: geometry.size, days: days) else {
+              return
+            }
+            handleDayTap(dayInfo: dayInfo, metrics: metrics)
+          },
+          onDragSelect: { state, location in
+            handleDragSelect(
+              state, at: location, gridSize: geometry.size, days: days, metrics: metrics)
+          },
+          onSwipeLeft: onSwipeLeft,
+          onSwipeRight: onSwipeRight
+        )
+      }
+    }
 
     if let phase {
       grid
@@ -521,6 +542,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
         )
       }
     }
+    // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(
       dayAccessibilityLabel(
@@ -530,12 +552,6 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     .accessibilityAddTraits(
       shiftsOnDay.isEmpty ? [] : isSelected ? [.isButton, .isSelected] : .isButton
     )
-    .onTapGesture {
-      handleDayTap(dayInfo: dayInfo, metrics: metrics)
-    }
-    .onLongPressGesture {
-      handleDayLongPress(dayInfo: dayInfo, metrics: metrics)
-    }
   }
 
   /// Spoken label for a day cell: date, today, whose shifts it has, their times and earnings.
@@ -600,6 +616,14 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     return matchesShiftId || matchesDate
   }
 
+  /// The in-month day under a point in the grid, if any.
+  private func day(
+    at location: CGPoint, gridSize: CGSize, days: [CalendarDayInfo]
+  ) -> CalendarDayInfo? {
+    let dateISO = CalendarDragSelection.dateISO(at: location, gridSize: gridSize, days: days)
+    return days.first { $0.dateISO != nil && $0.dateISO == dateISO }
+  }
+
   /// Handle tap on a calendar day
   private func handleDayTap(dayInfo: CalendarDayInfo, metrics: CalendarMetrics) {
     guard !dayInfo.isOutsideMonth, let dateISO = dayInfo.dateISO else { return }
@@ -621,10 +645,27 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     }
   }
 
-  private func handleDayLongPress(dayInfo: CalendarDayInfo, metrics: CalendarMetrics) {
-    guard !dayInfo.isOutsideMonth, let dateISO = dayInfo.dateISO else { return }
-    guard let firstShift = metrics.shiftsByDate[dateISO]?.first else { return }
-    onShiftTapped?(firstShift)
+  /// Long press and drag selects days, like Schedule. Where days can't be selected,
+  /// a long press opens the day's first shift instead.
+  private func handleDragSelect(
+    _ state: UIGestureRecognizer.State, at location: CGPoint, gridSize: CGSize,
+    days: [CalendarDayInfo], metrics: CalendarMetrics
+  ) {
+    let dateISO = CalendarDragSelection.dateISO(at: location, gridSize: gridSize, days: days)
+    guard showEarnings, !isSuperimposing else {
+      if state == .began, let dateISO, let firstShift = metrics.shiftsByDate[dateISO]?.first {
+        onShiftTapped?(firstShift)
+      }
+      return
+    }
+    guard
+      let selection = CalendarDragSelection.update(
+        &dragSelection, state: state, dateISO: dateISO, days: days, current: selectedDates,
+        isEligible: { metrics.shiftsByDate[$0]?.isEmpty == false })
+    else { return }
+    Haptics.play(.selection)
+    selectedDates = selection
+    syncSelectedEarnings(with: metrics)
   }
 
   // MARK: - Cell Styling
