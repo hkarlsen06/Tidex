@@ -269,12 +269,15 @@ final class NotificationPreferencesRepository {
   /// - Parameters:
   ///   - userId: User ID
   ///   - serverUpdatedAt: Server's updated_at timestamp
-  func markClean(for userId: String, serverUpdatedAt: Date) {
+  ///   - pushedLocalUpdatedAt: `localUpdatedAt` of the values that were pushed. The preferences
+  ///     stay dirty when the user edited them during the push.
+  func markClean(for userId: String, serverUpdatedAt: Date, pushedLocalUpdatedAt: Date) {
     guard let preferences = getPreferences(for: userId) else {
       return
     }
 
-    preferences.markClean(serverUpdatedAt: serverUpdatedAt)
+    preferences.markPushed(
+      serverUpdatedAt: serverUpdatedAt, pushedLocalUpdatedAt: pushedLocalUpdatedAt)
 
     // Use the context that contains the preferences object
     guard let context = preferences.modelContext else {

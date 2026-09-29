@@ -142,7 +142,7 @@ internal final class FeedbackSettingsViewModel {
       FeedbackSettingsConstants.logger.error(
         "Failed to get user session: \(error.localizedDescription)"
       )
-      if AuthSessionManager.shared.isTransientSessionResolutionError(error),
+      if ErrorTranslations.isOffline(error),
         let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
       {
         userId = offlineUserId
@@ -150,7 +150,7 @@ internal final class FeedbackSettingsViewModel {
         feedbackHistory = []
         isOfflineUnavailable = true
       } else {
-        errorMessage = "Not authenticated"
+        errorMessage = String(localized: .commonErrorNotAuthenticated)
       }
     }
 
@@ -165,20 +165,17 @@ internal final class FeedbackSettingsViewModel {
     }
 
     guard let userId, let userEmail else {
-      errorMessage = "Not authenticated"
+      errorMessage = String(localized: .commonErrorNotAuthenticated)
       return
     }
 
     let trimmedMessage: String = message.trimmingCharacters(in: .whitespacesAndNewlines)
 
-    guard !trimmedMessage.isEmpty else {
-      errorMessage = "Please enter your feedback"
-      return
-    }
-
-    guard trimmedMessage.count <= FeedbackSettingsConstants.maxFeedbackLength else {
-      errorMessage =
-        "Feedback must be \(FeedbackSettingsConstants.maxFeedbackLength) characters or less"
+    // The submit button is disabled for empty and over-limit text (`canSubmit`), so these
+    // guards only cover callers that skip it. The character counter already shows the limit.
+    guard !trimmedMessage.isEmpty,
+      trimmedMessage.count <= FeedbackSettingsConstants.maxFeedbackLength
+    else {
       return
     }
 
@@ -196,7 +193,10 @@ internal final class FeedbackSettingsViewModel {
       FeedbackSettingsConstants.logger.error(
         "Failed to submit feedback: \(error.localizedDescription)"
       )
-      errorMessage = "Failed to send feedback. Please try again."
+      errorMessage =
+        ErrorTranslations.isOffline(error)
+        ? String(localized: .feedbackOfflineSubmitUnavailable)
+        : String(localized: .feedbackErrorSendFailed)
     }
 
     isSubmitting = false
@@ -266,7 +266,10 @@ internal final class FeedbackSettingsViewModel {
       FeedbackSettingsConstants.logger.error(
         "Failed to fetch feedback history: \(error.localizedDescription)"
       )
-      // Don't show error for history fetch failure
+      // Only surface offline. The form still works and other failures keep the last list.
+      if ErrorTranslations.isOffline(error) {
+        errorMessage = ErrorTranslations.offlineMessage
+      }
     }
   }
 }

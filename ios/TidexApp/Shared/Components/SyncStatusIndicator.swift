@@ -33,10 +33,12 @@ struct SyncStatusIndicator: View {
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(CornerRadius.xxxl)
       .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+      .accessibilityElement(children: .combine)
 
     case .failed(_, let lastSync):
       HStack(spacing: Spacing.xs) {
         Image(systemName: "exclamationmark.icloud")
+          .accessibilityHidden(true)
           .font(.tidexLabel)
           .foregroundColor(.tidexWarning)
 
@@ -69,6 +71,7 @@ struct SyncStatusIndicator: View {
     case .offline:
       HStack(spacing: Spacing.xs) {
         Image(systemName: "wifi.slash")
+          .accessibilityHidden(true)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextMuted)
 
@@ -80,6 +83,7 @@ struct SyncStatusIndicator: View {
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(CornerRadius.xxxl)
+      .accessibilityElement(children: .combine)
     }
   }
 

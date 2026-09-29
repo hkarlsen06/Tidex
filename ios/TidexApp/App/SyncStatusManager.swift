@@ -39,12 +39,13 @@ final class SyncStatusManager {
   private(set) var lastSuccessfulSync: Date?
   private(set) var lastSuccessfulSyncSummary: SyncCompletionSummary?
 
-  private init() {}
+  init() {}
 
   // MARK: - Status Updates
 
-  /// Called when sync starts
-  func syncStarted() {
+  /// Called when sync starts. Background syncs keep an offline status so the pill does not flicker.
+  func syncStarted(isBackground: Bool = false) {
+    if isBackground, status == .offline { return }
     status = .syncing
   }
 
@@ -64,6 +65,13 @@ final class SyncStatusManager {
   /// Set status to offline (e.g., no network)
   func setOffline() {
     status = .offline
+  }
+
+  /// Called when the network returns. Drops a stale offline status and lets the next sync result decide.
+  func connectivityRestored() {
+    if status == .offline {
+      status = .synced
+    }
   }
 
   /// Clear failed status (e.g., user dismissed banner)

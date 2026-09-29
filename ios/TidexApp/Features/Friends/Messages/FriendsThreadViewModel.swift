@@ -197,6 +197,7 @@ internal final class FriendsThreadViewModel {
   private let repository: FriendsMessagesRepository
   private let composerDraftStore: FriendsComposerDraftStore
   private let realtimeCoordinator: any FriendsMessagingRealtimeCoordinating
+  private let outbox: FriendsMessageOutbox
   private let viewerUserIdResolver: () async -> String?
   @ObservationIgnored private var hasLoaded = false
   @ObservationIgnored private var loadingQuotedMessageIds: Set<String> = []
@@ -258,6 +259,7 @@ internal final class FriendsThreadViewModel {
     repository: FriendsMessagesRepository? = nil,
     composerDraftStore: FriendsComposerDraftStore? = nil,
     realtimeCoordinator: (any FriendsMessagingRealtimeCoordinating)? = nil,
+    outbox: FriendsMessageOutbox? = nil,
     viewerUserIdResolver: (() async -> String?)? = nil
   ) {
     self.route = route
@@ -272,6 +274,12 @@ internal final class FriendsThreadViewModel {
     self.repository = repository ?? .shared
     self.composerDraftStore = composerDraftStore ?? .shared
     self.realtimeCoordinator = realtimeCoordinator ?? FriendsMessagingRealtimeCoordinator.shared
+    // The shared outbox sends through the shared service and repository. Injected ones get their own.
+    self.outbox =
+      outbox
+      ?? (service == nil && repository == nil
+        ? .shared
+        : FriendsMessageOutbox(service: self.service, repository: self.repository))
     self.viewerUserIdResolver =
       viewerUserIdResolver
       ?? {
@@ -703,6 +711,7 @@ internal final class FriendsThreadViewModel {
       threadId: route.threadId, viewerUserId: viewerUserId)
     await stopTypingIfNeeded()
 
+    _ = outbox.claim(optimisticMessage.id)
     let sendTask = startSendTask(for: optimisticMessage)
     await repository.saveOptimisticMessage(
       optimisticMessage,
@@ -711,6 +720,7 @@ internal final class FriendsThreadViewModel {
     )
 
     if let earlyResult = await sendTask.peekResult() {
+      defer { outbox.release(optimisticMessage.id) }
       return await handleEarlySendResult(
         earlyResult, optimisticMessage: optimisticMessage, composerSnapshot: composerSnapshot)
     }
@@ -774,17 +784,13 @@ internal final class FriendsThreadViewModel {
   ) async -> Bool {
     switch earlyResult {
     case .success(let sentMessage):
-      await repository.saveConfirmedMessage(
-        sentMessage,
-        replacingLocalMessageId: optimisticMessage.id,
-        in: route.threadId,
-        for: viewerUserId
-      )
+      await outbox.confirm(sentMessage, replacing: optimisticMessage, userId: viewerUserId)
       loadFromCache()
       return true
 
     case .failure(let error):
-      if isConnectivityError(error) {
+      let shouldQueue = outbox.disposition(for: error, messageId: optimisticMessage.id) == .queue
+      if shouldQueue {
         await repository.updateMessageSendState(
           messageId: optimisticMessage.id,
           viewerUserId: viewerUserId,
@@ -794,6 +800,7 @@ internal final class FriendsThreadViewModel {
         sendErrorMessage = nil
       } else {
         await repository.deleteMessage(id: optimisticMessage.id, viewerUserId: viewerUserId)
+        outbox.discardPendingData(for: optimisticMessage)
         await restoreComposerSnapshot(composerSnapshot, requestFocus: true)
         if isSafetyFilterError(error) {
           sendErrorMessage = messageBlockedBySafetyFilterMessage
@@ -803,7 +810,7 @@ internal final class FriendsThreadViewModel {
       }
       loadFromCache()
       kThreadLogger.error("Failed to send thread message: \(error.localizedDescription)")
-      return isConnectivityError(error)
+      return shouldQueue
     }
   }
 
@@ -831,7 +838,9 @@ internal final class FriendsThreadViewModel {
     await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
     loadFromCache()
 
+    // Queued and failed messages never reached the server, so there is nothing to delete there.
     guard message.sendState == .sent else {
+      outbox.discardPendingData(for: message)
       Haptics.play(.light)
       return
     }
@@ -867,6 +876,7 @@ internal final class FriendsThreadViewModel {
       return
     }
 
+    outbox.resetAttempts(for: messageId)
     await repository.updateMessageSendState(
       messageId: messageId,
       viewerUserId: viewerUserId,
@@ -1636,36 +1646,24 @@ internal final class FriendsThreadViewModel {
     sendTask: SendTaskHandle? = nil
   ) {
     guard !backgroundSendingMessageIds.contains(message.id) else { return }
+    // A send task from sendMessage already holds the claim. Any other caller must take it here.
+    guard sendTask != nil || outbox.claim(message.id) else { return }
     backgroundSendingMessageIds.insert(message.id)
     let sendTask = sendTask ?? startSendTask(for: message)
     Task { @MainActor in
       defer {
         backgroundSendingMessageIds.remove(message.id)
+        outbox.release(message.id)
       }
 
       switch await sendTask.waitForResult() {
       case .success(let sentMessage):
-        await repository.saveConfirmedMessage(
-          sentMessage,
-          replacingLocalMessageId: message.id,
-          in: route.threadId,
-          for: viewerUserId
-        )
+        await outbox.confirm(sentMessage, replacing: message, userId: viewerUserId)
         loadFromCache()
         await NotificationService.shared.requestPermissionAndRegister(for: viewerUserId)
 
       case .failure(let error):
-        let sendState: FriendMessageSendState = isConnectivityError(error) ? .sending : .failed
-        let failureMessage =
-          isConnectivityError(error)
-          ? waitingForNetworkMessage
-          : error.localizedDescription
-        await repository.updateMessageSendState(
-          messageId: message.id,
-          viewerUserId: viewerUserId,
-          sendState: sendState,
-          failureMessage: failureMessage
-        )
+        await outbox.recordFailure(error, for: message, userId: viewerUserId)
         loadFromCache()
         kThreadLogger.error("Failed to send thread message: \(error.localizedDescription)")
       }
@@ -1687,16 +1685,14 @@ internal final class FriendsThreadViewModel {
     return handle
   }
 
+  /// The outbox sends queued messages for every thread. It posts a thread update per message,
+  /// so this thread reloads when one of its messages goes out.
   private func retryQueuedMessagesIfNeeded() {
-    let queuedMessages = messages.filter { message in
-      message.threadId == route.threadId
-        && message.senderUserId == viewerUserId
-        && message.sendState == .sending
-        && !backgroundSendingMessageIds.contains(message.id)
-    }
-
-    for message in queuedMessages {
-      sendMessageInBackground(message)
+    guard !viewerUserId.isEmpty else { return }
+    let userId = viewerUserId
+    Task { @MainActor in
+      await outbox.drain(userId: userId)
+      loadFromCache()
     }
   }
 
@@ -1782,30 +1778,7 @@ internal final class FriendsThreadViewModel {
   }
 
   private func isConnectivityError(_ error: Error) -> Bool {
-    if error is CancellationError {
-      return false
-    }
-
-    if let serviceError = error as? FriendsMessagingServiceError {
-      switch serviceError {
-      case .networkError:
-        return true
-
-      case .notAuthenticated, .decodingError, .httpError:
-        return false
-      }
-    }
-
-    let nsError = error as NSError
-    if nsError.domain == NSURLErrorDomain {
-      return true
-    }
-
-    if let underlyingError = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
-      return isConnectivityError(underlyingError)
-    }
-
-    return false
+    FriendsMessageOutbox.isConnectivityError(error)
   }
 
   private func offlineDisplayErrorIfNeeded(_ error: Error) -> Error {
@@ -1813,15 +1786,7 @@ internal final class FriendsThreadViewModel {
   }
 
   private func sendMessageToService(_ message: FriendMessage) async throws -> FriendMessage {
-    let outgoingAttachments = try await makeOutgoingAttachments(for: message)
-    let sentMessage = try await service.sendMessage(
-      threadId: route.threadId,
-      clientId: message.clientId,
-      body: message.body,
-      replyToMessageId: message.replyToMessageId,
-      attachments: outgoingAttachments,
-      metadataData: message.sendableMetadataData
-    )
+    let sentMessage = try await outbox.send(message)
     resetTypingNotificationCooldown()
     return sentMessage
   }
@@ -1829,8 +1794,8 @@ internal final class FriendsThreadViewModel {
   private func makeOptimisticAttachment(from image: ImageAttachment, index: Int)
     -> FriendMessageAttachment
   {
-    let storagePath = pendingAttachmentStoragePath(for: image.id)
-    cacheImage(image, for: storagePath)
+    let storagePath = FriendsMessageOutbox.pendingAttachmentStoragePath(for: image.id)
+    outbox.savePendingImage(image, storagePath: storagePath)
 
     let imageSize = UIImage(data: image.data)?.size
     return FriendMessageAttachment(
@@ -1845,95 +1810,6 @@ internal final class FriendsThreadViewModel {
       height: imageSize.map { Int($0.height.rounded()) },
       createdAt: Date()
     )
-  }
-
-  private func makeOutgoingAttachments(for message: FriendMessage) async throws
-    -> [FriendOutgoingAttachment]
-  {
-    var outgoingAttachments: [FriendOutgoingAttachment] = []
-
-    for attachment in message.attachments {
-      if isPendingAttachment(attachment),
-        let pendingImage = await pendingImageAttachment(for: attachment)
-      {
-        let uploadedAttachment = try await service.uploadImageAttachment(
-          threadId: route.threadId,
-          image: pendingImage
-        )
-        cacheImage(pendingImage, for: uploadedAttachment.storagePath)
-        outgoingAttachments.append(uploadedAttachment)
-        continue
-      }
-
-      guard !isPendingAttachment(attachment) else {
-        throw ActionError.missingPendingAttachment
-      }
-
-      outgoingAttachments.append(
-        FriendOutgoingAttachment(
-          attachmentId: attachment.id,
-          storagePath: attachment.storagePath,
-          mimeType: attachment.mimeType,
-          byteSize: attachment.byteSize,
-          width: attachment.width,
-          height: attachment.height
-        ))
-    }
-
-    return outgoingAttachments
-  }
-
-  private func pendingAttachmentStoragePath(for attachmentId: String) -> String {
-    "local-pending/\(attachmentId)"
-  }
-
-  private func isPendingAttachment(_ attachment: FriendMessageAttachment) -> Bool {
-    attachment.storagePath.hasPrefix("local-pending/")
-  }
-
-  private func pendingImageAttachment(for attachment: FriendMessageAttachment) async
-    -> ImageAttachment?
-  {
-    let attachmentId = attachment.id
-    let storagePath = attachment.storagePath
-
-    return await Task.detached(priority: .userInitiated) {
-      let cacheURL = Self.imageCacheURL(for: storagePath)
-
-      if let cachedImage = ImageCache.shared.get(for: cacheURL, policy: .messageAttachment),
-        let data = cachedImage.jpegData(compressionQuality: 0.9)
-      {
-        return ImageAttachment(id: attachmentId, data: data, mediaType: "image/jpeg")
-      }
-
-      if let cachedImage = await ImageCache.shared.getFromDisk(
-        for: cacheURL,
-        policy: .messageAttachment
-      ),
-        let data = cachedImage.jpegData(compressionQuality: 0.9)
-      {
-        return ImageAttachment(id: attachmentId, data: data, mediaType: "image/jpeg")
-      }
-
-      return nil
-    }.value
-  }
-
-  private func cacheImage(_ image: ImageAttachment, for storagePath: String) {
-    guard let uiImage = UIImage(data: image.data) else { return }
-    ImageCache.shared.set(
-      uiImage,
-      for: Self.imageCacheURL(for: storagePath),
-      policy: .messageAttachment
-    )
-  }
-
-  private nonisolated static func imageCacheURL(for storagePath: String) -> URL {
-    var components = URLComponents()
-    components.scheme = "https"
-    components.host = "friends-message-cache.local"
-    components.path = "/\(storagePath)"
-    return components.url ?? URL(filePath: "/tmp/friends-message-cache-fallback")
   }
 
   private var shiftSnapshotSendUnavailableMessage: String {

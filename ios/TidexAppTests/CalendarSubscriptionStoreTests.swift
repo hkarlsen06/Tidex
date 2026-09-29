@@ -83,6 +83,137 @@ final class CalendarSubscriptionStoreTests: XCTestCase {
     XCTAssertNil(store.fallbackHTTPSURL)
   }
 
+  func testRefreshOfflineKeepsLastKnownSubscription() async {
+    let defaults = makeDefaults()
+    let metadata = makeMetadata()
+    let online = MockCalendarSubscriptionService(
+      state: CalendarSubscriptionState(metadata: metadata),
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    let firstLaunch = makeStore(service: online, defaults: defaults)
+    await firstLaunch.refresh()
+
+    let offline = MockCalendarSubscriptionService(
+      state: .inactive,
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    offline.getError = URLError(.notConnectedToInternet)
+    let secondLaunch = makeStore(service: offline, defaults: defaults)
+    await secondLaunch.refresh()
+
+    XCTAssertEqual(secondLaunch.state.metadata, metadata)
+    XCTAssertFalse(secondLaunch.isStateUnknown)
+    XCTAssertFalse(secondLaunch.canOfferSetup)
+    XCTAssertEqual(secondLaunch.errorMessage, ErrorTranslations.offlineMessage)
+  }
+
+  func testRefreshOfflineWithoutStoredStateIsUnknownNotInactive() async {
+    let offline = MockCalendarSubscriptionService(
+      state: .inactive,
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    offline.getError = URLError(.notConnectedToInternet)
+    let store = makeStore(service: offline, defaults: makeDefaults())
+
+    await store.refresh()
+
+    XCTAssertTrue(store.isStateUnknown)
+    XCTAssertFalse(store.canOfferSetup)
+    XCTAssertEqual(store.errorMessage, ErrorTranslations.offlineMessage)
+
+    // A later successful refresh replaces the unknown state.
+    offline.getError = nil
+    await store.refresh()
+
+    XCTAssertFalse(store.isStateUnknown)
+    XCTAssertTrue(store.canOfferSetup)
+  }
+
+  func testRefreshOfflineAfterInactiveResultStaysInactive() async {
+    let defaults = makeDefaults()
+    let online = MockCalendarSubscriptionService(
+      state: .inactive,
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    await makeStore(service: online, defaults: defaults).refresh()
+
+    let offline = MockCalendarSubscriptionService(
+      state: .inactive,
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    offline.getError = URLError(.notConnectedToInternet)
+    let store = makeStore(service: offline, defaults: defaults)
+    await store.refresh()
+
+    XCTAssertFalse(store.isStateUnknown)
+    XCTAssertTrue(store.canOfferSetup)
+  }
+
+  func testStoredStateFromAnotherUserIsIgnored() async {
+    let defaults = makeDefaults()
+    let online = MockCalendarSubscriptionService(
+      state: CalendarSubscriptionState(metadata: makeMetadata()),
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    await makeStore(service: online, defaults: defaults, userId: "user-1").refresh()
+
+    let offline = MockCalendarSubscriptionService(
+      state: .inactive,
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    offline.getError = URLError(.notConnectedToInternet)
+    let store = makeStore(service: offline, defaults: defaults, userId: "user-2")
+    await store.refresh()
+
+    XCTAssertNil(store.state.metadata)
+    XCTAssertTrue(store.isStateUnknown)
+  }
+
+  func testResetForUserChangeClearsStoredState() async {
+    let defaults = makeDefaults()
+    let online = MockCalendarSubscriptionService(
+      state: CalendarSubscriptionState(metadata: makeMetadata()),
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    let store = makeStore(service: online, defaults: defaults)
+    await store.refresh()
+
+    store.resetForUserChange()
+    online.getError = URLError(.notConnectedToInternet)
+    await store.refresh()
+
+    XCTAssertNil(store.state.metadata)
+    XCTAssertTrue(store.isStateUnknown)
+  }
+
+  private func makeDefaults() -> UserDefaults {
+    let suiteName = "CalendarSubscriptionStoreTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName) ?? .standard
+    defaults.removePersistentDomain(forName: suiteName)
+    return defaults
+  }
+
+  private func makeStore(
+    service: CalendarSubscriptionServicing,
+    defaults: UserDefaults,
+    userId: String = "user-1"
+  ) -> CalendarSubscriptionStore {
+    CalendarSubscriptionStore(
+      service: service,
+      tokenStore: InMemoryCalendarSubscriptionTokenStore(),
+      defaults: defaults,
+      userIdProvider: { userId }
+    )
+  }
+
   private func makeMetadata(
     id: String = "subscription-1",
     suffix: String = "aaaaaaaa"
@@ -113,6 +244,7 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
   var state: CalendarSubscriptionState
   let activeAfterDuplicate: CalendarSubscriptionState
   let createError: Error?
+  var getError: Error?
 
   init(
     state: CalendarSubscriptionState,
@@ -125,7 +257,10 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
   }
 
   // swiftlint:disable:next async_without_await
-  func getSubscription() async -> CalendarSubscriptionState {
+  func getSubscription() async throws -> CalendarSubscriptionState {
+    if let getError {
+      throw getError
+    }
     if createError != nil {
       state = activeAfterDuplicate
     }

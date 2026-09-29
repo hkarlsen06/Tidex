@@ -110,7 +110,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         )
         selectedShift = nil
       },
-      showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+      showsCalendarSubscriptionCTA: calendarSubscriptionStore.canOfferSetup,
       onShowInCalendarRequested: {
         openCalendarSubscriptionSetupFromDashboard()
       },
@@ -657,7 +657,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           onInlineReminderUpdate: { editResult in
             try await viewModel.updateEvent(editResult)
           },
-          showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+          showsCalendarSubscriptionCTA: calendarSubscriptionStore.canOfferSetup,
           onShowInCalendarRequested: {
             openCalendarSubscriptionSetupFromDashboard()
           },

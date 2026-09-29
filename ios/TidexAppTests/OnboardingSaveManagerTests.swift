@@ -116,3 +116,68 @@ final class OnboardingFirstShiftCarryoverStoreTests: XCTestCase {
     XCTAssertFalse(OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft(defaults: defaults))
   }
 }
+
+@MainActor
+final class OnboardingCompletionStoreTests: XCTestCase {
+  private struct OfflineError: Error {}
+
+  private var defaults: UserDefaults!
+
+  override func setUp() {
+    super.setUp()
+    defaults = UserDefaults(suiteName: "OnboardingCompletionStoreTests")
+    defaults.removePersistentDomain(forName: "OnboardingCompletionStoreTests")
+  }
+
+  override func tearDown() {
+    defaults.removePersistentDomain(forName: "OnboardingCompletionStoreTests")
+    defaults = nil
+    super.tearDown()
+  }
+
+  func testCompletionIsLocalAndQueuedBeforeAnyNetworkCall() {
+    OnboardingCompletionStore.markCompleted(userId: "user-1", defaults: defaults)
+
+    XCTAssertTrue(OnboardingCompletionStore.isCompletedLocally(userId: "user-1", defaults: defaults))
+    XCTAssertTrue(
+      OnboardingCompletionStore.hasPendingMetadataUpdate(userId: "user-1", defaults: defaults))
+    XCTAssertFalse(OnboardingCompletionStore.isCompletedLocally(userId: "user-2", defaults: defaults))
+  }
+
+  func testFailedMetadataUpdateKeepsCompletionAndStaysQueued() async {
+    OnboardingCompletionStore.markCompleted(userId: "user-1", defaults: defaults)
+
+    await OnboardingCompletionStore.retryPendingMetadataIfNeeded(
+      userId: "user-1", defaults: defaults, updateMetadata: { throw OfflineError() })
+
+    XCTAssertTrue(OnboardingCompletionStore.isCompletedLocally(userId: "user-1", defaults: defaults))
+    XCTAssertTrue(
+      OnboardingCompletionStore.hasPendingMetadataUpdate(userId: "user-1", defaults: defaults))
+  }
+
+  func testRetrySendsQueuedUpdateOnceAndClearsIt() async {
+    OnboardingCompletionStore.markCompleted(userId: "user-1", defaults: defaults)
+    var calls = 0
+
+    await OnboardingCompletionStore.retryPendingMetadataIfNeeded(
+      userId: "user-1", defaults: defaults, updateMetadata: { calls += 1 })
+    await OnboardingCompletionStore.retryPendingMetadataIfNeeded(
+      userId: "user-1", defaults: defaults, updateMetadata: { calls += 1 })
+
+    XCTAssertEqual(calls, 1)
+    XCTAssertFalse(
+      OnboardingCompletionStore.hasPendingMetadataUpdate(userId: "user-1", defaults: defaults))
+    XCTAssertTrue(OnboardingCompletionStore.isCompletedLocally(userId: "user-1", defaults: defaults))
+  }
+
+  func testMarkingAgainAfterMetadataSyncedDoesNotQueueAnotherUpdate() async {
+    OnboardingCompletionStore.markCompleted(userId: "user-1", defaults: defaults)
+    await OnboardingCompletionStore.retryPendingMetadataIfNeeded(
+      userId: "user-1", defaults: defaults, updateMetadata: {})
+
+    OnboardingCompletionStore.markCompleted(userId: "user-1", defaults: defaults)
+
+    XCTAssertFalse(
+      OnboardingCompletionStore.hasPendingMetadataUpdate(userId: "user-1", defaults: defaults))
+  }
+}

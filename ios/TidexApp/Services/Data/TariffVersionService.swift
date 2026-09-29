@@ -8,9 +8,21 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "TariffVersion
 
 /// Service for fetching tariff types and versions from Supabase
 /// Uses RPC functions for efficient server-side date resolution
-/// Tariff data is relatively static, so aggressive caching is used
+/// Tariff data is relatively static, so aggressive caching is used.
+/// The last successful fetch is also saved to disk, so lists still load offline and after a relaunch.
 actor TariffVersionService {
   static let shared = TariffVersionService()
+
+  /// Shape of the JSON file in Application Support.
+  private struct DiskCache: Codable {
+    var types: [TariffType]?
+    var versions: [String: [TariffVersion]] = [:]
+  }
+
+  typealias FetchTypes = @Sendable () async throws -> [TariffType]
+  typealias FetchVersions = @Sendable (_ tariffType: String) async throws -> [TariffVersion]
+  typealias FetchVersionForDate =
+    @Sendable (_ tariffType: String, _ date: String) async throws -> TariffVersion
 
   // MARK: - Cache
 
@@ -29,7 +41,73 @@ actor TariffVersionService {
   /// Cache validity duration (24 hours - tariff data rarely changes)
   private let cacheValiditySeconds: TimeInterval = 24 * 60 * 60
 
-  private init() {}
+  private let cacheURL: URL?
+  private let fetchTypes: FetchTypes
+  private let fetchVersions: FetchVersions
+  private let fetchVersionForDate: FetchVersionForDate
+
+  init(
+    cacheURL: URL? = TariffVersionService.defaultCacheURL,
+    fetchTypes: @escaping FetchTypes = TariffVersionService.remoteTypes,
+    fetchVersions: @escaping FetchVersions = TariffVersionService.remoteVersions,
+    fetchVersionForDate: @escaping FetchVersionForDate = TariffVersionService.remoteVersionForDate
+  ) {
+    self.cacheURL = cacheURL
+    self.fetchTypes = fetchTypes
+    self.fetchVersions = fetchVersions
+    self.fetchVersionForDate = fetchVersionForDate
+
+    // Disk data has no timestamp, so it counts as expired: the next call tries the network
+    // first and only falls back to the disk copy when that fails.
+    if let cacheURL,
+      let data = try? Data(contentsOf: cacheURL),
+      let disk = try? JSONDecoder().decode(DiskCache.self, from: data)
+    {
+      cachedTypes = disk.types
+      cachedVersions = disk.versions
+    }
+  }
+
+  // MARK: - Remote
+
+  nonisolated static let defaultCacheURL: URL? = FileManager.default
+    .urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+    .appendingPathComponent("TariffCache.json")
+
+  nonisolated static let remoteTypes: FetchTypes = {
+    try await supabase.rpc("get_tariff_types").execute().value
+  }
+
+  nonisolated static let remoteVersions: FetchVersions = { tariffType in
+    try await supabase
+      .rpc("get_tariff_versions", params: ["p_tariff_type": tariffType])
+      .execute()
+      .value
+  }
+
+  nonisolated static let remoteVersionForDate: FetchVersionForDate = { tariffType, date in
+    // The RPC returns a single row or null
+    try await supabase
+      .rpc(
+        "get_tariff_version_for_date",
+        params: ["p_tariff_type": tariffType, "p_target_date": date]
+      )
+      .single()
+      .execute()
+      .value
+  }
+
+  private func persist() {
+    guard let cacheURL else { return }
+    do {
+      try FileManager.default.createDirectory(
+        at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+      let data = try JSONEncoder().encode(DiskCache(types: cachedTypes, versions: cachedVersions))
+      try data.write(to: cacheURL, options: .atomic)
+    } catch {
+      logger.error("Failed to save tariff cache: \(error.localizedDescription)")
+    }
+  }
 
   // MARK: - Public API
 
@@ -49,15 +127,12 @@ actor TariffVersionService {
     logger.info("Fetching tariff types from server")
 
     do {
-      let types: [TariffType] =
-        try await supabase
-        .rpc("get_tariff_types")
-        .execute()
-        .value
+      let types = try await fetchTypes()
 
       // Update cache
       cachedTypes = types
       typesCacheTimestamp = Date()
+      persist()
 
       logger.info("Fetched \(types.count) tariff types")
       return types
@@ -91,15 +166,12 @@ actor TariffVersionService {
     logger.info("Fetching tariff versions for \(tariffType) from server")
 
     do {
-      let versions: [TariffVersion] =
-        try await supabase
-        .rpc("get_tariff_versions", params: ["p_tariff_type": tariffType])
-        .execute()
-        .value
+      let versions = try await fetchVersions(tariffType)
 
       // Update cache
       cachedVersions[tariffType] = versions
       versionsCacheTimestamp[tariffType] = Date()
+      persist()
 
       logger.info("Fetched \(versions.count) tariff versions for \(tariffType)")
       return versions
@@ -128,22 +200,15 @@ actor TariffVersionService {
     logger.info("Fetching tariff version for \(tariffType) at date \(date)")
 
     do {
-      // The RPC returns a single row or null
-      let version: TariffVersion =
-        try await supabase
-        .rpc(
-          "get_tariff_version_for_date",
-          params: [
-            "p_tariff_type": tariffType,
-            "p_target_date": date,
-          ]
-        )
-        .single()
-        .execute()
-        .value
+      let version = try await fetchVersionForDate(tariffType, date)
 
       logger.info(
         "Found tariff version \(version.id) (effective \(version.effective_date)) for date \(date)")
+
+      // Offline lookups resolve the date against the full version list, so make sure it is saved.
+      if cachedVersions[tariffType] == nil {
+        Task { _ = try? await getTariffVersions(tariffType: tariffType) }
+      }
       return version
     } catch {
       // Check if error is "no rows returned" - return nil instead of throwing
@@ -155,6 +220,13 @@ actor TariffVersionService {
       }
 
       logger.error("Failed to fetch tariff version for date: \(error.localizedDescription)")
+
+      // Resolve the date from the saved version list. ISO dates compare correctly as strings.
+      if let cached = cachedVersions[tariffType] {
+        logger.warning("Resolving tariff version for \(date) from saved versions due to error")
+        return cached.filter { $0.effective_date <= date }.max { $0.effective_date < $1.effective_date }
+      }
+
       throw error
     }
   }
@@ -202,6 +274,7 @@ actor TariffVersionService {
     cachedVersions.removeAll()
     typesCacheTimestamp = nil
     versionsCacheTimestamp.removeAll()
+    persist()
     logger.info("Tariff version cache cleared")
   }
 
@@ -210,6 +283,7 @@ actor TariffVersionService {
   func clearVersionsCache(for tariffType: String) {
     cachedVersions.removeValue(forKey: tariffType)
     versionsCacheTimestamp.removeValue(forKey: tariffType)
+    persist()
     logger.debug("Cleared tariff version cache for \(tariffType)")
   }
 

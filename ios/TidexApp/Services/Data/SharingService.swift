@@ -50,8 +50,9 @@ enum SharingServiceError: Error, LocalizedError {
     case .notAuthenticated:
       return String(localized: .commonErrorNotAuthenticated)
 
-    case .networkError(let error):
-      return String(localized: .commonErrorNetwork(error.localizedDescription))
+    case .networkError:
+      // Not the URLError text: it follows the system language, not the app language.
+      return String(localized: .commonErrorGeneric)
 
     case .decodingError:
       return String(localized: .commonErrorUnexpectedResponse)

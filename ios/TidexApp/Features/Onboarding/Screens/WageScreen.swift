@@ -11,6 +11,7 @@ struct WageScreen: View {
   var onTopTrailingAction: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
 
   @State private var isLoadingTariffData = false
+  @State private var tariffLoadFailed = false
   @State private var isKeyboardVisible = false
 
   private var showsTopBar: Bool {
@@ -51,6 +52,10 @@ struct WageScreen: View {
       if data.currentTariffVersion == nil, data.wageType == .tariff {
         await loadTariffVersion(for: data.selectedTariffTypeId)
       }
+    }
+    .onChange(of: ConnectivityMonitor.shared.isOnline) { _, isOnline in
+      // Reload the tariff lists once the connection is back.
+      if isOnline, tariffLoadFailed { Task { await loadTariffData() } }
     }
     .onChange(of: data.wageType) { _, newType in
       // Tariff uses kr (Norwegian krone) - reset currency when switching to tariff
@@ -155,6 +160,7 @@ struct WageScreen: View {
           }
         }
 
+        if tariffLoadFailed { TariffOfflineHint() }
       case .custom:
         customWageContent
           .id(ScrollTarget.customWageContent)
@@ -288,8 +294,8 @@ struct WageScreen: View {
       // Load latest version for the selected tariff type
       await loadTariffVersion(for: data.selectedTariffTypeId)
     } catch {
-      // Silently fail - will use static fallback rates
-      print("Failed to load tariff data: \(error)")
+      // Static fallback rates stay in use. The offline hint tells the user why.
+      tariffLoadFailed = true
     }
   }
 
@@ -300,9 +306,10 @@ struct WageScreen: View {
       await MainActor.run {
         data.currentTariffVersion = version
       }
+      tariffLoadFailed = false
     } catch {
-      // Silently fail - will use static fallback rates
-      print("Failed to load tariff version: \(error)")
+      // Static fallback rates stay in use. The offline hint tells the user why.
+      tariffLoadFailed = true
     }
   }
 }

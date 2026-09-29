@@ -117,15 +117,15 @@ final class ManageSharingViewModel {
         (underlying as? URLError)?.code == .cancelled
       {
         logger.info("loadFriends network request was cancelled")
-      } else if isOfflineFallbackEligible(error) {
+      } else if ErrorTranslations.isOffline(error) {
         logger.info("Using existing sharing management state while offline")
         areServerActionsUnavailable = true
         await loadLocalVisibilityPreferencesIfPossible()
       } else {
         logger.error("Failed to load friends (SharingServiceError): \(error)")
-        errorMessage = error.localizedDescription
+        errorMessage = String(localized: .sharingErrorLoadFriends)
       }
-    } catch  where isOfflineFallbackEligible(error) {
+    } catch  where ErrorTranslations.isOffline(error) {
       logger.info("Using existing sharing management state while offline")
       areServerActionsUnavailable = true
       await loadLocalVisibilityPreferencesIfPossible()
@@ -702,29 +702,11 @@ extension ManageSharingViewModel {
   }
 
   private func userFacingActionError(for error: Error, fallback: String) -> String {
-    if isOfflineFallbackEligible(error) {
+    if ErrorTranslations.isOffline(error) {
       areServerActionsUnavailable = true
       return String(localized: .sharingOfflineActionFailed)
     }
 
     return fallback
-  }
-
-  private func isOfflineFallbackEligible(_ error: Error) -> Bool {
-    if AuthSessionManager.shared.isTransientSessionResolutionError(error) {
-      return true
-    }
-
-    guard let sharingError = error as? SharingServiceError else {
-      return false
-    }
-
-    switch sharingError {
-    case .networkError(let underlying), .decodingError(let underlying):
-      return AuthSessionManager.shared.isTransientSessionResolutionError(underlying)
-
-    case .notAuthenticated, .httpError, .noShareAccess:
-      return false
-    }
   }
 }

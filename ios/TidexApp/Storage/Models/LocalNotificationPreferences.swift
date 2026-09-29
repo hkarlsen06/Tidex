@@ -140,4 +140,14 @@ extension LocalNotificationPreferences {
     syncStatus = .clean
     self.serverUpdatedAt = serverUpdatedAt
   }
+
+  /// Mark as clean after a push, unless the user edited the preferences while it was in flight.
+  /// Every edit sets `localUpdatedAt`, so a value other than `pushedLocalUpdatedAt` means the
+  /// pushed values are stale. The row then stays dirty and the next sync pushes the edit.
+  func markPushed(serverUpdatedAt: Date, pushedLocalUpdatedAt: Date) {
+    self.serverUpdatedAt = serverUpdatedAt
+    if localUpdatedAt == pushedLocalUpdatedAt {
+      syncStatus = .clean
+    }
+  }
 }

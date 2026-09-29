@@ -65,8 +65,9 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
     case .notAuthenticated:
       return String(localized: .commonErrorNotAuthenticated)
 
-    case .networkError(let error):
-      return String(localized: .commonErrorNetwork(error.localizedDescription))
+    case .networkError:
+      // The underlying text comes from the system language, so it stays out of app copy.
+      return String(localized: .commonErrorGeneric)
 
     case .decodingError:
       return String(localized: .commonErrorUnexpectedResponse)

@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import Supabase
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "OnboardingSaveManager")
@@ -103,8 +102,11 @@ final class OnboardingSaveManager {
         logger.info("Prepared friend-only skip state")
       }
 
-      try await markOnboardingFinished()
-      logger.info("Marked onboarding as finished in user metadata")
+      // The local flag finishes onboarding. The metadata update runs in the background and
+      // stays queued if it fails, so a slow or missing network never blocks the success screen.
+      OnboardingCompletionStore.markCompleted(userId: userId)
+      Task { await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: userId) }
+      logger.info("Recorded onboarding completion")
 
       if completionMode == .friendOnlySkip {
         clearOnboardingDraftState()
@@ -123,7 +125,7 @@ final class OnboardingSaveManager {
 
     } catch {
       status = .error
-      errorMessage = error.localizedDescription
+      errorMessage = String(localized: .onboardingSuccessErrorMessage)
       logger.error("Failed to save onboarding data: \(error.localizedDescription)")
     }
   }
@@ -300,14 +302,6 @@ final class OnboardingSaveManager {
     )
 
     UserDefaults.standard.set("sharing", forKey: Self.startupTabCacheKey)
-  }
-
-  private func markOnboardingFinished() async throws {
-    _ = try await supabase.auth.update(
-      user: UserAttributes(
-        data: ["finishedOnboarding": .bool(true)]
-      )
-    )
   }
 
   private func clearOnboardingDraftState() {

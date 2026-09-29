@@ -191,6 +191,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // Prewarm coordinator so auth listener starts before RootContent is created.
     _ = AppCoordinator.shared
+    ConnectivityMonitor.shared.start()
 
     // Trivial async system call
     application.registerForRemoteNotifications()

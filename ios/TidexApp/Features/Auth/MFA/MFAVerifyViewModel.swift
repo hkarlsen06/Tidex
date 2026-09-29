@@ -145,6 +145,6 @@ final class MFAVerifyViewModel {
 
   /// Sign out and return to login
   func signOutAndReturn() async {
-    await coordinator?.signOut()
+    await coordinator?.signOutKeepingUnsyncedChanges()
   }
 }

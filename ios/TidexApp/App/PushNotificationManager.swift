@@ -62,31 +62,9 @@ final class PushNotificationManager {
   }
 
   private func isTransientNetworkError(_ error: Error) -> Bool {
-    let transientCodes: Set<URLError.Code> = [
-      .timedOut,
-      .cannotFindHost,
-      .cannotConnectToHost,
-      .networkConnectionLost,
-      .cancelled,
-      .dnsLookupFailed,
-      .notConnectedToInternet,
-      .internationalRoamingOff,
-      .callIsActive,
-      .dataNotAllowed,
-    ]
-
-    if let urlError = error as? URLError {
-      return transientCodes.contains(urlError.code)
-    }
-
-    let nsError = error as NSError
-    if nsError.domain == NSURLErrorDomain,
-      let code = URLError.Code(rawValue: nsError.code) as URLError.Code?
-    {
-      return transientCodes.contains(code)
-    }
-
-    return false
+    // A cancelled registration is not a failure the user can act on either.
+    (error as? URLError)?.code == .cancelled
+      || AuthSessionManager.shared.isTransientNetworkError(error)
   }
 
   private func messageLooksTransientNetworkFailure(_ message: String) -> Bool {

@@ -195,7 +195,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-09-27',
+    lastUpdatedDate: '2026-09-29',
     dateLocale: 'en-US',
     sections: [
       {
@@ -216,6 +216,7 @@ export const legalEn = {
           { boldLabel: 'Payment data:', text: 'Handled by Apple for iOS in-app purchases. We do not store card information.' },
           { boldLabel: 'AI assistant data:', text: 'When you use the Wagey AI assistant, the messages you send (including text and images), your display name, and shift data retrieved during the conversation are processed by a third-party AI service (see section 5).' },
           { boldLabel: 'Notification metadata:', text: 'If you enable push notifications, notification payloads may include sender identity, limited message preview text, screenshot alerts, and thread identifiers so the app can show and open the correct conversation.' },
+          { boldLabel: 'Device and usage data:', text: 'When you open the app, it sends the app version, iOS version, device model, language, region and time zone, some of your settings (notification and background refresh permissions, which Tidex widgets you use, light or dark mode, text size and Reduce Motion), and the time you opened it. The app also sends technical reports about launches and sign-in, such as whether you are signed in and any error messages, so we can fix sign-in problems.' },
         ],
       },
       {
@@ -229,6 +230,7 @@ export const legalEn = {
           { text: 'Process subscription payments via Apple (iOS app).' },
           { text: 'Deliver push notifications and related in-app alerts if you enable them.' },
           { text: 'Communicate with you about the service.' },
+          { text: 'Give support, fix problems, and count how many people use the app and its features.' },
           { text: 'Provide AI-powered assistance through the Wagey feature, including answering questions about your shifts, helping manage shifts, and calculating wages. This requires sending relevant data to a third-party AI service (see section 5).' },
           { text: 'Review abuse reports, enforce our rules, and protect users and the service from abuse.' },
         ],
@@ -244,7 +246,7 @@ export const legalEn = {
           { boldLabel: 'Backups:', text: 'We back up the database every night and every hour. Backups are kept for up to 28 days, on our server and in Cloudflare R2 storage in the EU.' },
           { boldLabel: 'Email:', text: 'Emails about your account, such as password reset links, are sent from our own mail server.' },
           { boldLabel: 'On-device storage:', text: 'The iOS app stores session tokens in the iOS Keychain and may cache app data locally on your device to support sign-in and app performance.' },
-          { boldLabel: 'Retention:', text: 'Data is kept for as long as you maintain an active account. We do not guarantee long-term archival.' },
+          { boldLabel: 'Retention:', text: 'Data is kept for as long as you maintain an active account. Records of which hours you used the app are deleted after 32 days, and sign-in reports after 90 days. We do not guarantee long-term archival.' },
           { boldLabel: 'Deletion:', text: 'If you delete your account, we delete your account data from our active systems as part of the deletion process. Copies in backups are removed as the backups expire, within 28 days.' },
           { boldLabel: 'Safety review:', text: 'If content is reported or linked to abusive behaviour, authorised reviewers may inspect relevant messages, attachments, account metadata, and report records to investigate and enforce our rules.' },
         ],

@@ -40,6 +40,8 @@ internal struct TablePushResult {
   internal let table: SyncTable
   internal let rowsPushed: Int, newConflicts: Int, rebased: Int
   internal let affectedMonths: Set<ShiftChangeAffectedMonth> = []
+  /// Rows skipped because of an error that is not a server rejection. They stay dirty.
+  internal var failedRows: Int = 0
 }
 
 // MARK: - Sync Completion Summary

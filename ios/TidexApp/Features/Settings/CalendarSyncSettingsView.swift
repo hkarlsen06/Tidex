@@ -28,6 +28,8 @@ struct CalendarSyncSettingsView: View {
                 .foregroundColor(.tidexTextSecondary)
             }
           }
+        } else if CalendarSubscriptionStore.shared.isStateUnknown {
+          unknownStateSection
         } else {
           modeSection
           actionsSection
@@ -145,6 +147,23 @@ struct CalendarSyncSettingsView: View {
     }
     .foregroundColor(.tidexBlue)
     .disabled(viewModel.isUpdatingCalendarSubscription)
+  }
+
+  /// The last refresh failed and nothing is stored, so "Set up" would be a guess.
+  private var unknownStateSection: some View {
+    Section {
+      Text(.commonErrorLoadFailed)
+        .foregroundColor(.tidexTextSecondary)
+
+      Button {
+        Task {
+          await CalendarSubscriptionStore.shared.refresh()
+        }
+      } label: {
+        Label(String(localized: .commonRetry), systemImage: "arrow.clockwise")
+      }
+      .foregroundColor(.tidexBlue)
+    }
   }
 
   private var fallbackSection: some View {

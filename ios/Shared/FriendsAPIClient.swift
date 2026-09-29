@@ -2498,29 +2498,42 @@ enum FriendsAPIError: Error, LocalizedError, Sendable {
   case noAccessToken
   case noAnonKey
   case networkError(underlying: String)
+  case offline
   case httpError(statusCode: Int)
   case decodingError(underlying: String)
   case unauthorized
 
+  /// Maps a transport failure to `.offline` when the device has no usable connection.
+  /// The share extension can't reach `AuthSessionManager`, so it keeps its own code list.
+  static func transportError(_ error: Error) -> FriendsAPIError {
+    let offlineCodes: Set<URLError.Code> = [
+      .timedOut,
+      .cannotFindHost,
+      .cannotConnectToHost,
+      .networkConnectionLost,
+      .dnsLookupFailed,
+      .notConnectedToInternet,
+      .internationalRoamingOff,
+      .callIsActive,
+      .dataNotAllowed,
+    ]
+    if let urlError = error as? URLError, offlineCodes.contains(urlError.code) {
+      return .offline
+    }
+    return .networkError(underlying: error.localizedDescription)
+  }
+
+  /// User-facing text. The `underlying` strings are English diagnostics and stay out of it.
   var errorDescription: String? {
     switch self {
-    case .noAccessToken:
-      return "No access token available"
+    case .noAccessToken, .unauthorized:
+      return String(localized: .shareErrorSignInRequired)
 
-    case .noAnonKey:
-      return "Missing Supabase anon key"
+    case .offline:
+      return String(localized: .shareErrorOffline)
 
-    case .networkError(let message):
-      return "Network error: \(message)"
-
-    case .httpError(let code):
-      return "HTTP error: \(code)"
-
-    case .decodingError(let message):
-      return "Decoding error: \(message)"
-
-    case .unauthorized:
-      return "Unauthorized - token may be expired"
+    case .noAnonKey, .networkError, .httpError, .decodingError:
+      return String(localized: .shareErrorRequestFailed)
     }
   }
 }
@@ -2775,7 +2788,7 @@ enum FriendsAPIClient {
     } catch let error as FriendsAPIError {
       throw error
     } catch {
-      throw FriendsAPIError.networkError(underlying: error.localizedDescription)
+      throw FriendsAPIError.transportError(error)
     }
   }
 
@@ -3298,7 +3311,7 @@ enum FriendsAPIClient {
       } catch let error as FriendsAPIError {
         throw error
       } catch {
-        throw FriendsAPIError.networkError(underlying: error.localizedDescription)
+        throw FriendsAPIError.transportError(error)
       }
 
       return ShareOutgoingAttachment(

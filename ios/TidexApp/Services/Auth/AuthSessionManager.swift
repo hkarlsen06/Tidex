@@ -1,3 +1,5 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_length
 import Foundation
 import Supabase
 import SwiftData
@@ -207,6 +209,33 @@ final class AuthSessionManager {
     } catch {
       logger.debug("No session available: \(error.localizedDescription)")
       return nil
+    }
+  }
+
+  /// The session stored on this device. Reads local storage only, with no network and
+  /// no refresh, so the access token may be expired.
+  func localSession() -> Session? {
+    #if DEBUG
+      if AppStoreScreenshotFixture.isActive {
+        return AppStoreScreenshotFixture.session
+      }
+    #endif
+    return supabase.auth.currentSession
+  }
+
+  /// Like `getSessionIfAvailable`, but a transient failure (offline, timeout) falls back
+  /// to the stored session. Use it where a user with a stored session must keep working
+  /// offline. Revoked or missing sessions still return nil.
+  func getSessionOrLocal(allowProactiveRefresh: Bool = true) async -> Session? {
+    do {
+      return try await getSession(
+        allowProactiveRefresh: allowProactiveRefresh,
+        reportMissingSessionWarning: false
+      )
+    } catch {
+      guard isTransientSessionResolutionError(error) else { return nil }
+      logger.info("Using stored session after transient failure")
+      return localSession()
     }
   }
 

@@ -195,7 +195,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-09-27',
+    lastUpdatedDate: '2026-09-29',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -216,6 +216,7 @@ export const legalNo = {
           { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Apple for kjøp i appen på iOS. Vi lagrer ikke kortinformasjon.' },
           { boldLabel: 'AI-assistentdata:', text: 'Når du bruker Wagey AI-assistenten, blir meldingene du sender (inkludert tekst og bilder), visningsnavnet ditt og skiftdata som hentes under samtalen behandlet av en tredjeparts AI-tjeneste (se punkt 5).' },
           { boldLabel: 'Varslingsmetadata:', text: 'Hvis du aktiverer pushvarsler, kan varslingspayloaden inneholde avsenderidentitet, begrenset meldingsforhåndsvisning, skjermbildevarsler og trådidentifikatorer slik at appen kan vise og åpne riktig samtale.' },
+          { boldLabel: 'Enhets- og bruksdata:', text: 'Når du åpner appen, sender den appversjon, iOS-versjon, enhetsmodell, språk, region og tidssone, noen av innstillingene dine (tillatelse til varsler og bakgrunnsoppdatering, hvilke Tidex-widgeter du bruker, lys eller mørk modus, tekststørrelse og Reduser bevegelse), og tidspunktet du åpnet den. Appen sender også tekniske rapporter om oppstart og innlogging, for eksempel om du er logget inn og eventuelle feilmeldinger, slik at vi kan rette innloggingsproblemer.' },
         ],
       },
       {
@@ -229,6 +230,7 @@ export const legalNo = {
           { text: 'Behandle abonnementsbetalinger via Apple (iOS-appen).' },
           { text: 'Levere pushvarsler og relaterte varsler i appen dersom du aktiverer dem.' },
           { text: 'Kommunisere med deg om tjenesten.' },
+          { text: 'Gi brukerstøtte, rette feil og telle hvor mange som bruker appen og funksjonene i den.' },
           { text: 'Tilby AI-drevet assistanse gjennom Wagey-funksjonen, inkludert å svare på spørsmål om skiftene dine, hjelpe med å administrere skift og beregne lønn. Dette krever sending av relevante data til en tredjeparts AI-tjeneste (se punkt 5).' },
           { text: 'Behandle misbruksrapporter, håndheve reglene våre og beskytte brukere og tjenesten mot misbruk.' },
         ],
@@ -244,7 +246,7 @@ export const legalNo = {
           { boldLabel: 'Sikkerhetskopier:', text: 'Vi tar sikkerhetskopi av databasen hver natt og hver time. Sikkerhetskopiene oppbevares i opptil 28 dager, på serveren vår og i Cloudflare R2-lagring i EU.' },
           { boldLabel: 'E-post:', text: 'E-post om kontoen din, som lenker for å tilbakestille passord, sendes fra vår egen e-postserver.' },
           { boldLabel: 'Lagring på enheten:', text: 'iOS-appen lagrer økttokens i iOS-nøkkelringen og kan mellomlagre appdata lokalt på enheten for å støtte innlogging og appytelse.' },
-          { boldLabel: 'Oppbevaring:', text: 'Data oppbevares så lenge du har en aktiv konto. Vi garanterer ikke langtidsoppbevaring.' },
+          { boldLabel: 'Oppbevaring:', text: 'Data oppbevares så lenge du har en aktiv konto. Oversikten over hvilke timer du brukte appen slettes etter 32 dager, og innloggingsrapporter etter 90 dager. Vi garanterer ikke langtidsoppbevaring.' },
           { boldLabel: 'Sletting:', text: 'Når du sletter kontoen din, sletter vi kontodataene dine fra våre aktive systemer som en del av sletteprosessen. Kopier i sikkerhetskopier forsvinner etter hvert som sikkerhetskopiene utløper, innen 28 dager.' },
           { boldLabel: 'Sikkerhetsgjennomgang:', text: 'Hvis innhold rapporteres eller knyttes til misbruk, kan autoriserte behandlere gjennomgå relevante meldinger, vedlegg, kontometadata og rapportdata for å undersøke og håndheve reglene våre.' },
         ],

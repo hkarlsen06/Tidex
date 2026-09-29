@@ -13,23 +13,23 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SyncCoordinat
 /// Cursor is only persisted after full page success, so failed pages will re-pull.
 private let pullSaveBatchSize = 50
 
-private enum SyncState {
+internal enum SyncState {
   case idle
   case syncing(userId: String, startedAt: Date)
 }
 
-private enum SyncStartDecision {
+internal enum SyncStartDecision {
   case started
   case alreadySyncing
   case skippedInterval
 }
 
-private actor SyncStateStore {
+internal actor SyncStateStore {
   private var syncState: SyncState = .idle
   private var lastAutoSyncAt: Date?
   private var needsFollowUpSync = false
 
-  func beginSync(reason: SyncReason, userId: String, minimumSyncInterval: TimeInterval)
+  internal func beginSync(reason: SyncReason, userId: String, minimumSyncInterval: TimeInterval)
     -> SyncStartDecision
   {
     switch syncState {
@@ -52,22 +52,23 @@ private actor SyncStateStore {
       return .skippedInterval
     }
 
-    if requiresIntervalCheck {
-      lastAutoSyncAt = Date()
-    }
-
+    // The interval guard starts when a sync succeeds (see endSync). The syncing state above
+    // already stops two syncs from starting at once.
     syncState = .syncing(userId: userId, startedAt: Date())
     return .started
   }
 
-  func endSync() -> Bool {
+  /// Ends the running sync and returns whether a coalesced follow-up sync is due.
+  /// A failed sync clears the interval guard so the next foreground sync can retry at once.
+  internal func endSync(success: Bool) -> Bool {
     syncState = .idle
+    lastAutoSyncAt = success ? Date() : nil
     let shouldRunFollowUp = needsFollowUpSync
     needsFollowUpSync = false
     return shouldRunFollowUp
   }
 
-  func reset() {
+  internal func reset() {
     syncState = .idle
     lastAutoSyncAt = nil
     needsFollowUpSync = false
@@ -306,7 +307,8 @@ final class SyncCoordinator {
 
     case .skippedInterval:
       // Keep locale metadata in sync even when full sync is interval-skipped.
-      await updateAppLocaleMetadataIfNeeded()
+      // Fire and forget so a slow auth request cannot delay the foreground path.
+      Task { await self.updateAppLocaleMetadataIfNeeded() }
       // Keep foreground Live Activity state fresh without running full widget
       // storage recomputation on the main thread when sync is interval-skipped.
       await MainActor.run {
@@ -335,7 +337,9 @@ final class SyncCoordinator {
       lastError = nil
       lastSyncAttemptedAt = startTime
     }
-    await updateRemoteLastSyncedAt(userId: userId, syncedAt: startTime)
+    // Fire and forget. The RPC can take up to the request timeout, and the sync must not hold
+    // the syncing lock for that long.
+    Task { await self.updateRemoteLastSyncedAt(userId: userId, syncedAt: startTime) }
 
     // Update global sync status for UI indicators (only for manual pull-to-refresh)
     if reason == .manualRefresh {
@@ -398,7 +402,7 @@ final class SyncCoordinator {
       }
     }
 
-    let needsFollowUpSync = await stateStore.endSync()
+    let needsFollowUpSync = await stateStore.endSync(success: result.success)
     await MainActor.run {
       isSyncing = false
     }
@@ -419,8 +423,7 @@ final class SyncCoordinator {
     reason: SyncReason,
     userId: String
   ) async {
-    guard result.success else { return }
-
+    // A partly failed sync can still have changed work setup data, so this does not check success.
     let workSetupTables: Set<SyncTable> = [.jobs, .wageSnapshots]
     let pulledWorkSetupData = result.tableResults.contains { tableResult in
       workSetupTables.contains(tableResult.table)
@@ -465,8 +468,78 @@ final class SyncCoordinator {
     }
   }
 
-  /// Performs the actual sync work (locale update, pull, push, widget update).
-  /// Extracted so it can be raced against a timeout in `sync()`.
+  /// Mutable outcome of the pull phase. It is a class so that a timed out pull keeps the tables
+  /// it finished.
+  private final class PullPhase: @unchecked Sendable {
+    var tableResults: [TablePullResult] = []
+    var error: Error?
+  }
+
+  /// Time the pull phase gets. The rest of `syncTimeout` is left for the push phase.
+  private static let pullTimeout: UInt64 = 20_000_000_000  // 20 seconds
+
+  /// Runs `operation` and cancels it after `nanoseconds`. Returns nil when it timed out.
+  private static func withTimeout<T: Sendable>(
+    nanoseconds: UInt64,
+    operation: @escaping @Sendable () async -> T
+  ) async -> T? {
+    await withTaskGroup(of: T?.self) { group in
+      group.addTask { await operation() }
+      group.addTask {
+        try? await Task.sleep(nanoseconds: nanoseconds)
+        return nil
+      }
+      guard let first = await group.next() else { return nil }
+      group.cancelAll()
+      return first
+    }
+  }
+
+  /// Whether the error means the device has no usable connection, so more requests would fail.
+  private static func isNetworkError(_ error: Error) async -> Bool {
+    await MainActor.run { AuthSessionManager.shared.isTransientNetworkError(error) }
+  }
+
+  /// Whether the error comes from cancelling the sync, including a cancelled URL request.
+  private static func isCancellation(_ error: Error) -> Bool {
+    error is CancellationError || (error as? URLError)?.code == .cancelled
+  }
+
+  /// Pulls every table and records failures in `phase` instead of throwing. A network error or
+  /// cancellation stops the phase, since the remaining requests would fail too.
+  private func pullAllTables(
+    into phase: PullPhase,
+    tables: [SyncTable],
+    userId: String,
+    syncState: LocalSyncState
+  ) async {
+    for table in tables {
+      if Task.isCancelled { return }
+      do {
+        phase.tableResults.append(try await pullTable(table, userId: userId, syncState: syncState))
+      } catch {
+        logger.error("Pull of \(table.displayName) failed: \(error.localizedDescription)")
+        if phase.error == nil { phase.error = error }
+        if Self.isCancellation(error) { return }
+        if await Self.isNetworkError(error) { return }
+      }
+      await Task.yield()
+    }
+  }
+
+  /// Handles a push error that is not a row rejection. It rethrows errors that stop the sync,
+  /// which are network errors and cancellation. For any other error the row is skipped and stays
+  /// dirty, so the next sync retries it.
+  private func skipRowUnlessFatal(_ error: Error, table: SyncTable, id: String) async throws {
+    if Self.isCancellation(error) { throw error }
+    if await Self.isNetworkError(error) { throw error }
+    logger.error(
+      "Skipping push of \(table.displayName) row \(id.prefix(8)): \(error.localizedDescription)")
+  }
+
+  // Performs the actual sync work (pull, push, widget update).
+  // Extracted so it can be raced against a timeout in `sync()`.
+  // swiftlint:disable:next cyclomatic_complexity
   private func performSyncWork(
     reason: SyncReason,
     userId: String,
@@ -474,8 +547,8 @@ final class SyncCoordinator {
     tables: [SyncTable],
     updateWidgetStorage: Bool
   ) async -> SyncResult {
-    // Keep locale metadata aligned with the app locale.
-    await updateAppLocaleMetadataIfNeeded()
+    // Keep locale metadata aligned with the app locale. The sync does not depend on it.
+    Task { await self.updateAppLocaleMetadataIfNeeded() }
 
     // Get or create sync state
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
@@ -487,24 +560,46 @@ final class SyncCoordinator {
         state.markSyncStarted(at: startTime)
       }
 
-      // Phase 1: Pull all tables (get latest server state)
-      var tableResults: [TablePullResult] = []
+      // Phase 1: Pull all tables (get latest server state).
+      // A failed pull does not skip the push phase, so local edits still reach the server.
+      // Push handles a stale revision by fetching the server row and rebasing onto it.
+      let pullPhase = PullPhase()
+      let pullFinished: Void? = await Self.withTimeout(nanoseconds: Self.pullTimeout) {
+        await self.pullAllTables(
+          into: pullPhase, tables: tables, userId: userId, syncState: syncState)
+      }
+      try Task.checkCancellation()
+      if pullFinished == nil {
+        logger.error("Pull timed out, continuing with push")
+        pullPhase.error = SyncError.pullTimedOut
+      }
+      let tableResults = pullPhase.tableResults
 
-      for table in tables {
-        try Task.checkCancellation()
-        let result = try await pullTable(table, userId: userId, syncState: syncState)
-        tableResults.append(result)
-        await Task.yield()
+      // Phase 2: Push dirty records to server.
+      // Skipped when the pull failed because the device is offline.
+      var pushResults: [TablePushResult] = []
+      var pushError: Error?
+      var isOffline = false
+      if let pullError = pullPhase.error {
+        isOffline = await Self.isNetworkError(pullError)
       }
 
-      // Phase 2: Push dirty records to server
-      var pushResults: [TablePushResult] = []
-
-      for table in tables {
-        try Task.checkCancellation()
-        let result = try await pushTable(table, userId: userId)
-        pushResults.append(result)
-        await Task.yield()
+      if !isOffline {
+        for table in tables {
+          try Task.checkCancellation()
+          do {
+            let result = try await pushTable(table, userId: userId)
+            pushResults.append(result)
+          } catch {
+            if Self.isCancellation(error) { throw error }
+            logger.error("Push of \(table.displayName) failed: \(error.localizedDescription)")
+            if pushError == nil { pushError = error }
+            if await Self.isNetworkError(error) { break }
+          }
+          await Task.yield()
+        }
+        // A push that stopped early can leave finished rows unsaved.
+        try? await storeActor.save()
       }
 
       // Calculate totals
@@ -515,12 +610,8 @@ final class SyncCoordinator {
       let totalConflicts = pullConflicts + pushConflicts
       let totalAutoMerged = tableResults.reduce(0) { $0 + $1.autoMerged }
       _ = pushResults.reduce(0) { $0 + $1.rebased }  // totalRebased - tracked but not logged
+      let skippedPushRows = pushResults.reduce(0) { $0 + $1.failedRows }
       let duration = Date().timeIntervalSince(startTime)
-
-      // Update sync state
-      await storeActor.updateSyncState(userId: userId) { state in
-        state.markSyncSucceeded()
-      }
 
       let conflicts = try await storeActor.countConflicts(userId: userId)
       let completionSummary = SyncCompletionSummary(
@@ -529,15 +620,6 @@ final class SyncCoordinator {
         tableResults: tableResults,
         pushResults: pushResults
       )
-
-      await MainActor.run {
-        lastSyncedAt = Date()
-        conflictCount = conflicts
-        SyncStatusManager.shared.syncSucceeded(summary: completionSummary)
-      }
-
-      // Note: lastAutoSyncAt is now updated at the START of sync (for interval-guarded syncs)
-      // to prevent race conditions where concurrent syncs both pass the interval check
 
       // Only log when there's actual data transfer
       if totalRows > 0 || totalPushed > 0 || totalConflicts > 0 {
@@ -551,6 +633,33 @@ final class SyncCoordinator {
         NativeWidgetStorage.updateWidgetStorage(for: userId)
       }
 
+      var failure: Error? = pullPhase.error ?? pushError
+      if failure == nil, skippedPushRows > 0 {
+        failure = SyncError.rowsNotPushed(count: skippedPushRows)
+      }
+      if let failure {
+        return await recordSyncFailure(
+          failure,
+          userId: userId,
+          startTime: startTime,
+          storeActor: storeActor,
+          tableResults: tableResults,
+          pushResults: pushResults,
+          summary: completionSummary
+        )
+      }
+
+      // Update sync state
+      await storeActor.updateSyncState(userId: userId) { state in
+        state.markSyncSucceeded()
+      }
+
+      await MainActor.run {
+        lastSyncedAt = Date()
+        conflictCount = conflicts
+        SyncStatusManager.shared.syncSucceeded(summary: completionSummary)
+      }
+
       return SyncResult(
         success: true,
         tableResults: tableResults,
@@ -562,7 +671,7 @@ final class SyncCoordinator {
         duration: duration,
         error: nil
       )
-    } catch is CancellationError {
+    } catch let error where Self.isCancellation(error) {
       let duration = Date().timeIntervalSince(startTime)
       logger.warning("Sync cancelled after \(String(format: "%.1f", duration))s")
       return SyncResult(
@@ -577,45 +686,71 @@ final class SyncCoordinator {
         error: "Sync timed out"
       )
     } catch {
-      let duration = Date().timeIntervalSince(startTime)
+      return await recordSyncFailure(
+        error, userId: userId, startTime: startTime, storeActor: storeActor)
+    }
+  }
 
-      // Extract user-friendly message if available, otherwise use technical description
-      let userFriendlyMessage: String
-      let technicalMessage = error.localizedDescription
+  /// Records a failed sync in the sync state and the status indicator and builds the result.
+  /// A network error shows the offline status. Any other error shows the failed status.
+  /// A partly failed sync passes what it pulled and pushed, so the UI still refreshes from it.
+  private func recordSyncFailure(
+    _ error: Error,
+    userId: String,
+    startTime: Date,
+    storeActor: LocalStoreActor,
+    tableResults: [TablePullResult] = [],
+    pushResults: [TablePushResult] = [],
+    summary: SyncCompletionSummary? = nil
+  ) async -> SyncResult {
+    let duration = Date().timeIntervalSince(startTime)
+    let technicalMessage = error.localizedDescription
+    let isOffline = await Self.isNetworkError(error)
 
-      if let syncError = error as? SyncError {
-        userFriendlyMessage = syncError.userFriendlyMessage
-      } else if let encodingError = error as? SyncEncodingError {
-        userFriendlyMessage = encodingError.userFriendlyMessage
+    // Extract user-friendly message if available, otherwise use the localized generic message
+    let userFriendlyMessage: String
+    if let syncError = error as? SyncError {
+      userFriendlyMessage = syncError.userFriendlyMessage
+    } else if let encodingError = error as? SyncEncodingError {
+      userFriendlyMessage = encodingError.userFriendlyMessage
+    } else {
+      userFriendlyMessage = String(localized: .syncSyncFailed)
+    }
+
+    // Log technical details for debugging
+    logger.error("Sync failed: \(technicalMessage)")
+
+    await storeActor.updateSyncState(userId: userId) { state in
+      state.markSyncFailed(error: technicalMessage)
+    }
+    let conflicts = try? await storeActor.countConflicts(userId: userId)
+
+    // Surface the failure to the UI
+    await MainActor.run {
+      lastError = userFriendlyMessage
+      if let conflicts { conflictCount = conflicts }
+      if let summary, summary.hasLocalReadModelChanges {
+        SyncStatusManager.shared.syncSucceeded(summary: summary)
+      }
+      if isOffline {
+        SyncStatusManager.shared.setOffline()
       } else {
-        userFriendlyMessage = "Sync failed: \(technicalMessage)"
-      }
-
-      // Log technical details for debugging
-      logger.error("Sync failed: \(technicalMessage)")
-
-      await storeActor.updateSyncState(userId: userId) { state in
-        state.markSyncFailed(error: technicalMessage)
-      }
-
-      // Surface user-friendly message to UI
-      await MainActor.run {
-        lastError = userFriendlyMessage
         SyncStatusManager.shared.syncFailed(message: userFriendlyMessage)
       }
-
-      return SyncResult(
-        success: false,
-        tableResults: [],
-        pushResults: [],
-        totalRowsProcessed: 0,
-        totalRowsPushed: 0,
-        totalConflicts: 0,
-        totalAutoMerged: 0,
-        duration: duration,
-        error: userFriendlyMessage
-      )
     }
+
+    return SyncResult(
+      success: false,
+      tableResults: tableResults,
+      pushResults: pushResults,
+      totalRowsProcessed: tableResults.reduce(0) { $0 + $1.rowsProcessed },
+      totalRowsPushed: pushResults.reduce(0) { $0 + $1.rowsPushed },
+      totalConflicts: tableResults.reduce(0) { $0 + $1.newConflicts }
+        + pushResults.reduce(0) { $0 + $1.newConflicts },
+      totalAutoMerged: tableResults.reduce(0) { $0 + $1.autoMerged },
+      duration: duration,
+      error: userFriendlyMessage
+    )
   }
 
   // MARK: - Pull Implementation
@@ -721,15 +856,29 @@ final class SyncCoordinator {
   private func reconcilePayrollAdjustmentHardDeletes(userId: String) async throws
     -> (count: Int, affectedMonths: Set<ShiftChangeAffectedMonth>)
   {
-    let serverRows: [SyncRowId] =
-      try await supabase
-      .from("payroll_adjustments")
-      .select("id")
-      .eq("user_id", value: userId)
-      .execute()
-      .value
+    // Page by id. The server caps a response at its max-rows setting, and a truncated list would
+    // make real rows look deleted. Any failed page throws before local rows are touched.
+    var serverIds = Set<String>()
+    var lastId: String?
+    while true {
+      var query = supabase
+        .from("payroll_adjustments")
+        .select("id")
+        .eq("user_id", value: userId)
+      if let lastId {
+        query = query.gt("id", value: lastId)
+      }
+      let page: [SyncRowId] =
+        try await query
+        .order("id", ascending: true)
+        .limit(pageSize)
+        .execute()
+        .value
+      serverIds.formUnion(page.map(\.id))
+      guard page.count == pageSize, let pageLastId = page.last?.id else { break }
+      lastId = pageLastId
+    }
 
-    let serverIds = Set(serverRows.map(\.id))
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     return try await storeActor.markMissingCleanPayrollAdjustmentsDeleted(
       userId: userId,
@@ -851,7 +1000,9 @@ final class SyncCoordinator {
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
-      let result = try await applyJobRow(row, storeActor: storeActor)
+      let result = try await applyIsolated(table: .jobs, id: row.id) {
+        try await self.applyJobRow(row, storeActor: storeActor)
+      }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
 
@@ -871,28 +1022,19 @@ final class SyncCoordinator {
     let duration = Date().timeIntervalSince(pageStartTime)
     logger.info("jobs: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    guard let lastRow = rows.last else {
-      return PagePullResult(
-        rowsProcessed: 0,
-        lastUpdatedAt: Date(),
-        lastTieId: "",
-        maxRevision: maxRevision,
-        newConflicts: 0,
-        autoMerged: 0,
-        hasMore: false
-      )
-    }
-
-    let lastUpdatedAt = try requireISO8601(lastRow.updated_at, table: .jobs, id: lastRow.id)
+    let cursorPosition = Self.lastParseableCursorPosition(
+      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
+      table: .jobs
+    )
 
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: lastUpdatedAt,
-      lastTieId: lastRow.id,
+      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
+      lastTieId: cursorPosition?.id ?? cursor.tieId,
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: rows.count == pageSize
+      hasMore: cursorPosition != nil && rows.count == pageSize
     )
   }
 
@@ -930,7 +1072,7 @@ final class SyncCoordinator {
 
     switch existing.syncStatus {
     case .clean:
-      await storeActor.updateJobFromServer(
+      if await storeActor.updateJobFromServer(
         id: serverRow.id,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
@@ -938,8 +1080,21 @@ final class SyncCoordinator {
         archivedAt: serverArchivedAt,
         deletedAt: serverDeletedAt,
         snapshot: serverSnapshot
+      ) {
+        return .updated
+      }
+      // The row stopped being clean after it was read. Read it again and take the merge path.
+      guard let fresh = try? await storeActor.getJob(id: serverRow.id), fresh.syncStatus != .clean else {
+        return .noChange
+      }
+      return await applyJobToExisting(
+        existing: fresh,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverArchivedAt: serverArchivedAt,
+        serverDeletedAt: serverDeletedAt,
+        storeActor: storeActor
       )
-      return .updated
 
     case .dirty, .pendingDelete:
       if serverRow.revision == existing.serverRevision {
@@ -1030,7 +1185,9 @@ final class SyncCoordinator {
         affectedMonths.insert(ShiftChangeAffectedMonth(date: existing.shiftDate))
       }
 
-      let result = try await applyShiftRow(row, storeActor: storeActor)
+      let result = try await applyIsolated(table: .userShifts, id: row.id) {
+        try await self.applyShiftRow(row, storeActor: storeActor)
+      }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
       if row.revision > maxRevision {
@@ -1053,31 +1210,19 @@ final class SyncCoordinator {
     logger.info(
       "user_shifts: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    // Get cursor position from the last row
-    // SAFETY: guard let prevents crash if rows somehow became empty
-    guard let lastRow = rows.last else {
-      logger.warning("Unexpected empty rows after processing in pullShiftsPage")
-      return PagePullResult(
-        rowsProcessed: 0,
-        lastUpdatedAt: Date(),
-        lastTieId: "",
-        maxRevision: maxRevision,
-        newConflicts: newConflicts,
-        autoMerged: autoMerged,
-        hasMore: false
-      )
-    }
-    // SAFETY: Throw on parse failure to prevent cursor corruption
-    let lastUpdatedAt = try requireISO8601(lastRow.updated_at, table: .userShifts, id: lastRow.id)
+    let cursorPosition = Self.lastParseableCursorPosition(
+      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
+      table: .userShifts
+    )
 
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: lastUpdatedAt,
-      lastTieId: lastRow.id,
+      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
+      lastTieId: cursorPosition?.id ?? cursor.tieId,
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: rows.count == pageSize,
+      hasMore: cursorPosition != nil && rows.count == pageSize,
       affectedMonths: affectedMonths
     )
   }
@@ -1134,15 +1279,27 @@ final class SyncCoordinator {
     switch existing.syncStatus {
     case .clean:
       // Overwrite with server data
-      await storeActor.updateShiftFromServer(
+      if await storeActor.updateShiftFromServer(
         id: serverRow.id,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         serverDeletedAt: serverDeletedAt,
         snapshot: serverSnapshot
+      ) {
+        return .updated
+      }
+      // The row stopped being clean after it was read. Read it again and take the merge path.
+      guard let fresh = try? await storeActor.getUserShift(id: serverRow.id), fresh.syncStatus != .clean else {
+        return .noChange
+      }
+      return await applyShiftToExisting(
+        existing: fresh,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        storeActor: storeActor
       )
-      return .updated
 
     case .dirty, .pendingDelete:
       if serverRow.revision == existing.serverRevision {
@@ -1289,7 +1446,9 @@ final class SyncCoordinator {
         )
       }
 
-      let result = try await applyEventRow(row, storeActor: storeActor)
+      let result = try await applyIsolated(table: .events, id: row.id) {
+        try await self.applyEventRow(row, storeActor: storeActor)
+      }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
       if row.revision > maxRevision {
@@ -1309,29 +1468,19 @@ final class SyncCoordinator {
     logger.info(
       "events: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    guard let lastRow = rows.last else {
-      logger.warning("Unexpected empty rows after processing in pullEventsPage")
-      return PagePullResult(
-        rowsProcessed: 0,
-        lastUpdatedAt: Date(),
-        lastTieId: "",
-        maxRevision: maxRevision,
-        newConflicts: newConflicts,
-        autoMerged: autoMerged,
-        hasMore: false
-      )
-    }
-
-    let lastUpdatedAt = try requireISO8601(lastRow.updated_at, table: .events, id: lastRow.id)
+    let cursorPosition = Self.lastParseableCursorPosition(
+      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
+      table: .events
+    )
 
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: lastUpdatedAt,
-      lastTieId: lastRow.id,
+      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
+      lastTieId: cursorPosition?.id ?? cursor.tieId,
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: rows.count == pageSize,
+      hasMore: cursorPosition != nil && rows.count == pageSize,
       affectedMonths: affectedMonths
     )
   }
@@ -1375,15 +1524,27 @@ final class SyncCoordinator {
 
     switch existing.syncStatus {
     case .clean:
-      await storeActor.updateEventFromServer(
+      if await storeActor.updateEventFromServer(
         id: serverRow.id,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         serverDeletedAt: serverDeletedAt,
         snapshot: serverSnapshot
+      ) {
+        return .updated
+      }
+      // The row stopped being clean after it was read. Read it again and take the merge path.
+      guard let fresh = try? await storeActor.getEvent(id: serverRow.id), fresh.syncStatus != .clean else {
+        return .noChange
+      }
+      return await applyEventToExisting(
+        existing: fresh,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        storeActor: storeActor
       )
-      return .updated
 
     case .dirty, .pendingDelete:
       if serverRow.revision == existing.serverRevision {
@@ -1514,7 +1675,9 @@ final class SyncCoordinator {
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
-      let result = try await applyRecurringShiftRow(row, storeActor: storeActor)
+      let result = try await applyIsolated(table: .recurringShifts, id: row.id) {
+        try await self.applyRecurringShiftRow(row, storeActor: storeActor)
+      }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
       if row.revision > maxRevision {
@@ -1537,31 +1700,19 @@ final class SyncCoordinator {
       "recurring_shifts: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s"
     )
 
-    // SAFETY: guard let prevents crash if rows somehow became empty
-    guard let lastRow = rows.last else {
-      logger.warning("Unexpected empty rows after processing in pullRecurringShiftsPage")
-      return PagePullResult(
-        rowsProcessed: 0,
-        lastUpdatedAt: Date(),
-        lastTieId: "",
-        maxRevision: maxRevision,
-        newConflicts: newConflicts,
-        autoMerged: autoMerged,
-        hasMore: false
-      )
-    }
-    // SAFETY: Throw on parse failure to prevent cursor corruption
-    let lastUpdatedAt = try requireISO8601(
-      lastRow.updated_at, table: .recurringShifts, id: lastRow.id)
+    let cursorPosition = Self.lastParseableCursorPosition(
+      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
+      table: .recurringShifts
+    )
 
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: lastUpdatedAt,
-      lastTieId: lastRow.id,
+      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
+      lastTieId: cursorPosition?.id ?? cursor.tieId,
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: rows.count == pageSize
+      hasMore: cursorPosition != nil && rows.count == pageSize
     )
   }
 
@@ -1607,15 +1758,27 @@ final class SyncCoordinator {
 
     switch existing.syncStatus {
     case .clean:
-      await storeActor.updateRecurringShiftFromServer(
+      if await storeActor.updateRecurringShiftFromServer(
         id: serverRow.id,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         serverDeletedAt: serverDeletedAt,
         snapshot: serverSnapshot
+      ) {
+        return .updated
+      }
+      // The row stopped being clean after it was read. Read it again and take the merge path.
+      guard let fresh = try? await storeActor.getRecurringShift(id: serverRow.id), fresh.syncStatus != .clean else {
+        return .noChange
+      }
+      return await applyRecurringShiftToExisting(
+        existing: fresh,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        storeActor: storeActor
       )
-      return .updated
 
     case .dirty, .pendingDelete:
       if serverRow.revision == existing.serverRevision {
@@ -1740,7 +1903,9 @@ final class SyncCoordinator {
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
-      let result = try await applyWageSnapshotRow(row, storeActor: storeActor)
+      let result = try await applyIsolated(table: .wageSnapshots, id: row.id) {
+        try await self.applyWageSnapshotRow(row, storeActor: storeActor)
+      }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
       if row.revision > maxRevision {
@@ -1762,31 +1927,19 @@ final class SyncCoordinator {
     logger.info(
       "wage_snapshots: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    // SAFETY: guard let prevents crash if rows somehow became empty
-    guard let lastRow = rows.last else {
-      logger.warning("Unexpected empty rows after processing in pullWageSnapshotsPage")
-      return PagePullResult(
-        rowsProcessed: 0,
-        lastUpdatedAt: Date(),
-        lastTieId: "",
-        maxRevision: maxRevision,
-        newConflicts: newConflicts,
-        autoMerged: autoMerged,
-        hasMore: false
-      )
-    }
-    // SAFETY: Throw on parse failure to prevent cursor corruption
-    let lastUpdatedAt = try requireISO8601(
-      lastRow.updated_at, table: .wageSnapshots, id: lastRow.id)
+    let cursorPosition = Self.lastParseableCursorPosition(
+      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
+      table: .wageSnapshots
+    )
 
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: lastUpdatedAt,
-      lastTieId: lastRow.id,
+      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
+      lastTieId: cursorPosition?.id ?? cursor.tieId,
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: rows.count == pageSize
+      hasMore: cursorPosition != nil && rows.count == pageSize
     )
   }
 
@@ -1832,15 +1985,27 @@ final class SyncCoordinator {
 
     switch existing.syncStatus {
     case .clean:
-      await storeActor.updateWageSnapshotFromServer(
+      if await storeActor.updateWageSnapshotFromServer(
         id: serverRow.id,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         serverDeletedAt: serverDeletedAt,
         snapshot: serverSnapshot
+      ) {
+        return .updated
+      }
+      // The row stopped being clean after it was read. Read it again and take the merge path.
+      guard let fresh = try? await storeActor.getWageSnapshot(id: serverRow.id), fresh.syncStatus != .clean else {
+        return .noChange
+      }
+      return await applyWageSnapshotToExisting(
+        existing: fresh,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        storeActor: storeActor
       )
-      return .updated
 
     case .dirty, .pendingDelete:
       if serverRow.revision == existing.serverRevision {
@@ -1927,6 +2092,7 @@ final class SyncCoordinator {
     }
 
     var rowsPushed = 0
+    var failedRows = 0
     var newConflicts = 0
 
     for adjustment in dirtyAdjustments {
@@ -1944,6 +2110,10 @@ final class SyncCoordinator {
         )
         await storeActor.markPayrollAdjustmentConflict(id: adjustmentId, serverSnapshot: nil)
         result = .conflict
+      } catch {
+        try await skipRowUnlessFatal(error, table: .payrollAdjustments, id: adjustmentId)
+        failedRows += 1
+        result = .noChange
       }
       switch result {
       case .success, .deleted:
@@ -1965,7 +2135,8 @@ final class SyncCoordinator {
       table: .payrollAdjustments,
       rowsPushed: rowsPushed,
       newConflicts: newConflicts,
-      rebased: 0
+      rebased: 0,
+      failedRows: failedRows
     )
   }
 
@@ -2226,35 +2397,28 @@ final class SyncCoordinator {
         affectedMonths.insert(ShiftChangeAffectedMonth(date: existing.payoutDate))
       }
 
-      let result = try await applyPayrollAdjustmentRow(row, storeActor: storeActor)
+      let result = try await applyIsolated(table: .payrollAdjustments, id: row.id) {
+        try await self.applyPayrollAdjustmentRow(row, storeActor: storeActor)
+      }
       if result == .conflict { newConflicts += 1 }
       if row.revision > maxRevision { maxRevision = row.revision }
     }
 
     try await storeActor.save()
 
-    guard let lastRow = rows.last else {
-      return PagePullResult(
-        rowsProcessed: 0,
-        lastUpdatedAt: Date(),
-        lastTieId: "",
-        maxRevision: maxRevision,
-        newConflicts: newConflicts,
-        autoMerged: 0,
-        hasMore: false
-      )
-    }
-    let lastUpdatedAt = try requireISO8601(
-      lastRow.updated_at, table: .payrollAdjustments, id: lastRow.id)
+    let cursorPosition = Self.lastParseableCursorPosition(
+      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
+      table: .payrollAdjustments
+    )
 
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: lastUpdatedAt,
-      lastTieId: lastRow.id,
+      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
+      lastTieId: cursorPosition?.id ?? cursor.tieId,
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: 0,
-      hasMore: rows.count == pageSize,
+      hasMore: cursorPosition != nil && rows.count == pageSize,
       affectedMonths: affectedMonths
     )
   }
@@ -2273,40 +2437,75 @@ final class SyncCoordinator {
     )
 
     if let existing = try await storeActor.getPayrollAdjustment(id: serverRow.id) {
-      switch existing.syncStatus {
-      case .clean:
-        await storeActor.updatePayrollAdjustmentFromServer(
-          id: serverRow.id,
-          serverRow: serverRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverDeletedAt: serverDeletedAt,
-          snapshot: serverSnapshot
-        )
-        return .updated
-
-      case .dirty, .pendingDelete:
-        if serverRow.revision == existing.serverRevision { return .noChange }
-        await storeActor.mergePayrollAdjustmentFromServer(
-          id: serverRow.id,
-          serverRow: serverRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverDeletedAt: serverDeletedAt,
-          snapshot: serverSnapshot
-        )
-        return .autoMerged
-
-      case .conflict:
-        await storeActor.markPayrollAdjustmentConflict(
-          id: serverRow.id,
-          serverSnapshot: serverSnapshot
-        )
-        return .noChange
-      }
+      return await applyPayrollAdjustmentToExisting(
+        existing: existing,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        serverSnapshot: serverSnapshot,
+        storeActor: storeActor
+      )
     }
 
     let local = LocalPayrollAdjustment.from(serverRow: serverRow, serverUpdatedAt: serverUpdatedAt)
     try await storeActor.upsertPayrollAdjustment(local)
     return .inserted
+  }
+
+  // swiftlint:disable:next function_parameter_count
+  private func applyPayrollAdjustmentToExisting(
+    existing: LocalPayrollAdjustment,
+    serverRow: SyncPayrollAdjustmentRow,
+    serverUpdatedAt: Date,
+    serverDeletedAt: Date?,
+    serverSnapshot: PayrollAdjustmentServerSnapshot,
+    storeActor: LocalStoreActor
+  ) async -> ApplyResult {
+    switch existing.syncStatus {
+    case .clean:
+      if await storeActor.updatePayrollAdjustmentFromServer(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        snapshot: serverSnapshot,
+        onlyIfClean: true
+      ) {
+        return .updated
+      }
+      // The row stopped being clean after it was read. Read it again and take the merge path.
+      guard let fresh = try? await storeActor.getPayrollAdjustment(id: serverRow.id),
+        fresh.syncStatus != .clean
+      else {
+        return .noChange
+      }
+      return await applyPayrollAdjustmentToExisting(
+        existing: fresh,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        serverSnapshot: serverSnapshot,
+        storeActor: storeActor
+      )
+
+    case .dirty, .pendingDelete:
+      if serverRow.revision == existing.serverRevision { return .noChange }
+      await storeActor.mergePayrollAdjustmentFromServer(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        snapshot: serverSnapshot
+      )
+      return .autoMerged
+
+    case .conflict:
+      await storeActor.markPayrollAdjustmentConflict(
+        id: serverRow.id,
+        serverSnapshot: serverSnapshot
+      )
+      return .noChange
+    }
   }
 
   // MARK: - User Settings Pull
@@ -2366,7 +2565,9 @@ final class SyncCoordinator {
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
-      let result = try await applyUserSettingsRow(row, storeActor: storeActor)
+      let result = try await applyIsolated(table: .userSettings, id: row.user_id) {
+        try await self.applyUserSettingsRow(row, storeActor: storeActor)
+      }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
       if row.revision > maxRevision {
@@ -2388,31 +2589,19 @@ final class SyncCoordinator {
     logger.info(
       "user_settings: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    // SAFETY: guard let prevents crash if rows somehow became empty
-    guard let lastRow = rows.last else {
-      logger.warning("Unexpected empty rows after processing in pullUserSettingsPage")
-      return PagePullResult(
-        rowsProcessed: 0,
-        lastUpdatedAt: Date(),
-        lastTieId: "",
-        maxRevision: maxRevision,
-        newConflicts: newConflicts,
-        autoMerged: autoMerged,
-        hasMore: false
-      )
-    }
-    // SAFETY: Throw on parse failure to prevent cursor corruption
-    let lastUpdatedAt = try requireISO8601(
-      lastRow.updated_at, table: .userSettings, id: lastRow.user_id)
+    let cursorPosition = Self.lastParseableCursorPosition(
+      rows.map { (updatedAt: $0.updated_at, id: $0.user_id) },
+      table: .userSettings
+    )
 
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: lastUpdatedAt,
-      lastTieId: lastRow.user_id,  // user_settings uses user_id as primary key
+      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
+      lastTieId: cursorPosition?.id ?? cursor.tieId,
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: rows.count == pageSize
+      hasMore: cursorPosition != nil && rows.count == pageSize
     )
   }
 
@@ -2453,14 +2642,27 @@ final class SyncCoordinator {
 
     switch existing.syncStatus {
     case .clean:
-      await storeActor.updateUserSettingsFromServer(
+      if await storeActor.updateUserSettingsFromServer(
         userId: serverRow.user_id,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         snapshot: serverSnapshot
+      ) {
+        return .updated
+      }
+      // The row stopped being clean after it was read. Read it again and take the merge path.
+      guard let fresh = try? await storeActor.getUserSettings(userId: serverRow.user_id),
+        fresh.syncStatus != .clean
+      else {
+        return .noChange
+      }
+      return await applyUserSettingsToExisting(
+        existing: fresh,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        storeActor: storeActor
       )
-      return .updated
 
     case .dirty:
       if serverRow.revision == existing.serverRevision {
@@ -2573,6 +2775,7 @@ final class SyncCoordinator {
     }
 
     var rowsPushed = 0
+    var failedRows = 0
     var newConflicts = 0
     var rebased = 0
 
@@ -2604,6 +2807,10 @@ final class SyncCoordinator {
         logger.error("Server rejected job \(jobId.prefix(8)): \(error.localizedDescription)")
         await storeActor.markJobConflict(id: jobId, serverSnapshot: nil)
         result = .conflict
+      } catch {
+        try await skipRowUnlessFatal(error, table: .jobs, id: jobId)
+        failedRows += 1
+        result = .noChange
       }
       switch result {
       case .success, .deleted:
@@ -2623,7 +2830,12 @@ final class SyncCoordinator {
 
     try await storeActor.save()
     return TablePushResult(
-      table: .jobs, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+      table: .jobs,
+      rowsPushed: rowsPushed,
+      newConflicts: newConflicts,
+      rebased: rebased,
+      failedRows: failedRows
+    )
   }
 
   private func jobPushPriority(_ job: LocalJob) -> Int {
@@ -2760,6 +2972,20 @@ final class SyncCoordinator {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let jobId = job.id
+
+    // A row that was never pushed has no server row to soft-delete. Retire the local row
+    // instead of returning a conflict that no sync can clear.
+    if job.serverRevision == 0 {
+      let deletedAt = Date()
+      await storeActor.markJobDeleted(
+        id: jobId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: 0,
+        deletedAt: deletedAt
+      )
+      logger.debug("Discarded unsynced job \(jobId.prefix(8))")
+      return .deleted
+    }
     let serverRevision = Int(job.serverRevision)
 
     let returnedRows: [SyncJobRow] =
@@ -2816,6 +3042,19 @@ final class SyncCoordinator {
       await storeActor.markJobConflict(id: jobId, serverSnapshot: serverSnapshot)
     }
 
+    // The server has no row at all, for example after it purged old soft deleted rows. The row
+    // is gone there, which is what the delete wanted. Retire the local row instead of retrying
+    // on every sync.
+    if serverRows.isEmpty {
+      let deletedAt = Date()
+      await storeActor.markJobDeleted(
+        id: jobId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: job.serverRevision,
+        deletedAt: deletedAt
+      )
+      return .deleted
+    }
     return .conflict
   }
 
@@ -2878,6 +3117,7 @@ final class SyncCoordinator {
       }
 
       logger.error("Insert job returned no rows for \(jobId.prefix(8))")
+      await storeActor.markJobConflict(id: jobId, serverSnapshot: nil)
       return .conflict
     } catch {
       let errorString = String(describing: error)
@@ -2897,6 +3137,9 @@ final class SyncCoordinator {
           return try await handleJobPushConflict(
             job: job, userId: userId, storeActor: storeActor, isRetry: false)
         }
+        // No row with this id exists, so another unique constraint failed. Mark the row as a
+        // conflict so it does not retry on every sync.
+        await storeActor.markJobConflict(id: jobId, serverSnapshot: nil)
         return .conflict
       }
 
@@ -2996,6 +3239,7 @@ final class SyncCoordinator {
     }
 
     var rowsPushed = 0
+    var failedRows = 0
     var newConflicts = 0
     var rebased = 0
 
@@ -3009,6 +3253,10 @@ final class SyncCoordinator {
         logger.error("Server rejected shift \(shiftId.prefix(8)): \(error.localizedDescription)")
         await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
         result = .conflict
+      } catch {
+        try await skipRowUnlessFatal(error, table: .userShifts, id: shiftId)
+        failedRows += 1
+        result = .noChange
       }
       switch result {
       case .success, .deleted:
@@ -3028,7 +3276,12 @@ final class SyncCoordinator {
 
     try await storeActor.save()
     return TablePushResult(
-      table: .userShifts, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+      table: .userShifts,
+      rowsPushed: rowsPushed,
+      newConflicts: newConflicts,
+      rebased: rebased,
+      failedRows: failedRows
+    )
   }
 
   private func pushUserShift(
@@ -3187,6 +3440,20 @@ final class SyncCoordinator {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let shiftId = shift.id
+
+    // A row that was never pushed has no server row to soft-delete. Retire the local row
+    // instead of returning a conflict that no sync can clear.
+    if shift.serverRevision == 0 {
+      let deletedAt = Date()
+      await storeActor.markShiftDeleted(
+        id: shiftId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: 0,
+        serverDeletedAt: deletedAt
+      )
+      logger.debug("Discarded unsynced shift \(shiftId.prefix(8))")
+      return .deleted
+    }
     // Note: Convert Int64 to Int for PostgrestFilterValue conformance
     let serverRevision = Int(shift.serverRevision)
 
@@ -3257,6 +3524,19 @@ final class SyncCoordinator {
         deletedAt: serverDeletedAt
       )
       await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+    }
+    // The server has no row at all, for example after it purged old soft deleted rows. The row
+    // is gone there, which is what the delete wanted. Retire the local row instead of retrying
+    // on every sync.
+    if serverRows.isEmpty {
+      let deletedAt = Date()
+      await storeActor.markShiftDeleted(
+        id: shiftId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: shift.serverRevision,
+        serverDeletedAt: deletedAt
+      )
+      return .deleted
     }
     return .conflict
   }
@@ -3344,6 +3624,7 @@ final class SyncCoordinator {
         return .success
       }
       logger.error("Insert shift returned no rows for \(shiftId.prefix(8))")
+      await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
       return .conflict
     } catch {
       let errorString = String(describing: error)
@@ -3364,6 +3645,9 @@ final class SyncCoordinator {
           return try await handleShiftPushConflict(
             shift: shift, userId: userId, storeActor: storeActor, isRetry: false)
         }
+        // No row with this id exists, so another unique constraint failed. Mark the row as a
+        // conflict so it does not retry on every sync.
+        await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
         return .conflict
       }
       // Check if it's an RLS policy violation - mark as conflict, don't abort sync
@@ -3481,6 +3765,7 @@ final class SyncCoordinator {
     }
 
     var rowsPushed = 0
+    var failedRows = 0
     var newConflicts = 0
     var rebased = 0
 
@@ -3494,6 +3779,10 @@ final class SyncCoordinator {
         logger.error("Server rejected event \(eventId.prefix(8)): \(error.localizedDescription)")
         await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
         result = .conflict
+      } catch {
+        try await skipRowUnlessFatal(error, table: .events, id: eventId)
+        failedRows += 1
+        result = .noChange
       }
       switch result {
       case .success, .deleted:
@@ -3516,7 +3805,8 @@ final class SyncCoordinator {
       table: .events,
       rowsPushed: rowsPushed,
       newConflicts: newConflicts,
-      rebased: rebased
+      rebased: rebased,
+      failedRows: failedRows
     )
   }
 
@@ -3785,6 +4075,7 @@ final class SyncCoordinator {
         return .success
       }
       logger.error("Insert event returned no rows for \(eventId.prefix(8))")
+      await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
       return .conflict
     } catch {
       let errorString = String(describing: error)
@@ -3804,6 +4095,9 @@ final class SyncCoordinator {
           return try await handleEventPushConflict(
             event: event, userId: userId, storeActor: storeActor, isRetry: false)
         }
+        // No row with this id exists, so another unique constraint failed. Mark the row as a
+        // conflict so it does not retry on every sync.
+        await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
         return .conflict
       }
       if errorString.contains("row-level security") || errorString.contains("42501") {
@@ -3897,6 +4191,7 @@ final class SyncCoordinator {
     }
 
     var rowsPushed = 0
+    var failedRows = 0
     var newConflicts = 0
     var rebased = 0
 
@@ -3911,6 +4206,10 @@ final class SyncCoordinator {
           "Server rejected recurring shift \(shiftId.prefix(8)): \(error.localizedDescription)")
         await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
         result = .conflict
+      } catch {
+        try await skipRowUnlessFatal(error, table: .recurringShifts, id: shiftId)
+        failedRows += 1
+        result = .noChange
       }
       switch result {
       case .success, .deleted:
@@ -3930,7 +4229,12 @@ final class SyncCoordinator {
 
     try await storeActor.save()
     return TablePushResult(
-      table: .recurringShifts, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+      table: .recurringShifts,
+      rowsPushed: rowsPushed,
+      newConflicts: newConflicts,
+      rebased: rebased,
+      failedRows: failedRows
+    )
   }
 
   private func pushRecurringShift(
@@ -4117,6 +4421,20 @@ final class SyncCoordinator {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let shiftId = shift.id
+
+    // A row that was never pushed has no server row to soft-delete. Retire the local row
+    // instead of returning a conflict that no sync can clear.
+    if shift.serverRevision == 0 {
+      let deletedAt = Date()
+      await storeActor.markRecurringShiftDeleted(
+        id: shiftId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: 0,
+        serverDeletedAt: deletedAt
+      )
+      logger.debug("Discarded unsynced recurring shift \(shiftId.prefix(8))")
+      return .deleted
+    }
     // Note: Convert Int64 to Int for PostgrestFilterValue conformance
     let serverRevision = Int(shift.serverRevision)
 
@@ -4178,6 +4496,19 @@ final class SyncCoordinator {
         deletedAt: serverDeletedAt
       )
       await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+    }
+    // The server has no row at all, for example after it purged old soft deleted rows. The row
+    // is gone there, which is what the delete wanted. Retire the local row instead of retrying
+    // on every sync.
+    if serverRows.isEmpty {
+      let deletedAt = Date()
+      await storeActor.markRecurringShiftDeleted(
+        id: shiftId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: shift.serverRevision,
+        serverDeletedAt: deletedAt
+      )
+      return .deleted
     }
     return .conflict
   }
@@ -4273,6 +4604,7 @@ final class SyncCoordinator {
         return .success
       }
       logger.error("Insert recurring shift returned no rows for \(shiftId.prefix(8))")
+      await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
       return .conflict
     } catch {
       let errorString = String(describing: error)
@@ -4294,6 +4626,9 @@ final class SyncCoordinator {
           return try await handleRecurringShiftPushConflict(
             shift: shift, userId: userId, storeActor: storeActor, isRetry: false)
         }
+        // No row with this id exists, so another unique constraint failed. Mark the row as a
+        // conflict so it does not retry on every sync.
+        await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
         return .conflict
       }
       // Check if it's an RLS policy violation - mark as conflict, don't abort sync
@@ -4393,6 +4728,7 @@ final class SyncCoordinator {
     }
 
     var rowsPushed = 0
+    var failedRows = 0
     var newConflicts = 0
     var rebased = 0
 
@@ -4407,6 +4743,10 @@ final class SyncCoordinator {
           "Server rejected wage snapshot \(snapshotId.prefix(8)): \(error.localizedDescription)")
         await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
         result = .conflict
+      } catch {
+        try await skipRowUnlessFatal(error, table: .wageSnapshots, id: snapshotId)
+        failedRows += 1
+        result = .noChange
       }
       switch result {
       case .success, .deleted:
@@ -4426,7 +4766,12 @@ final class SyncCoordinator {
 
     try await storeActor.save()
     return TablePushResult(
-      table: .wageSnapshots, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+      table: .wageSnapshots,
+      rowsPushed: rowsPushed,
+      newConflicts: newConflicts,
+      rebased: rebased,
+      failedRows: failedRows
+    )
   }
 
   /// Columns of a partial wage snapshot UPDATE, limited to the fields marked dirty.
@@ -4553,6 +4898,20 @@ final class SyncCoordinator {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let snapshotId = snapshot.id
+
+    // A row that was never pushed has no server row to soft-delete. Retire the local row
+    // instead of returning a conflict that no sync can clear.
+    if snapshot.serverRevision == 0 {
+      let deletedAt = Date()
+      await storeActor.markWageSnapshotDeleted(
+        id: snapshotId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: 0,
+        serverDeletedAt: deletedAt
+      )
+      logger.debug("Discarded unsynced wage snapshot \(snapshotId.prefix(8))")
+      return .deleted
+    }
     // Note: Convert Int64 to Int for PostgrestFilterValue conformance
     let serverRevision = Int(snapshot.serverRevision)
 
@@ -4613,6 +4972,19 @@ final class SyncCoordinator {
         deletedAt: serverDeletedAt
       )
       await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
+    }
+    // The server has no row at all, for example after it purged old soft deleted rows. The row
+    // is gone there, which is what the delete wanted. Retire the local row instead of retrying
+    // on every sync.
+    if serverRows.isEmpty {
+      let deletedAt = Date()
+      await storeActor.markWageSnapshotDeleted(
+        id: snapshotId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: snapshot.serverRevision,
+        serverDeletedAt: deletedAt
+      )
+      return .deleted
     }
     return .conflict
   }
@@ -4718,6 +5090,7 @@ final class SyncCoordinator {
         return .success
       }
       logger.error("Insert wage snapshot returned no rows for \(snapshotId.prefix(8))")
+      await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
       return .conflict
     } catch {
       let errorString = String(describing: error)
@@ -4739,6 +5112,9 @@ final class SyncCoordinator {
           return try await handleWageSnapshotPushConflict(
             snapshot: snapshot, userId: userId, storeActor: storeActor, isRetry: false)
         }
+        // No row with this id exists, so another unique constraint failed. Mark the row as a
+        // conflict so it does not retry on every sync.
+        await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
         return .conflict
       }
       // Check if it's an RLS policy violation - mark as conflict, don't abort sync
@@ -5077,6 +5453,7 @@ final class SyncCoordinator {
         return .success
       }
       logger.error("Insert user settings returned no rows for \(userId.prefix(8))")
+      await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
       return .conflict
     } catch {
       let errorString = String(describing: error)
@@ -5098,6 +5475,9 @@ final class SyncCoordinator {
           return try await handleUserSettingsPushConflict(
             settings: settings, userId: userId, storeActor: storeActor, isRetry: false)
         }
+        // No row with this id exists, so another unique constraint failed. Mark the row as a
+        // conflict so it does not retry on every sync.
+        await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
         return .conflict
       }
       // Check if it's an RLS policy violation - mark as conflict, don't abort sync
@@ -5172,58 +5552,221 @@ final class SyncCoordinator {
 
   // MARK: - Conflict Resolution API
 
+  /// Whether the server has a row with this key, deleted or not.
+  private func serverRowExists(table: SyncTable, keyColumn: String = "id", key: String) async throws
+    -> Bool
+  {
+    let rows: [AnyJSON] =
+      try await supabase
+      .from(table.tableName)
+      .select(keyColumn)
+      .eq(keyColumn, value: key)
+      .limit(1)
+      .execute()
+      .value
+    return !rows.isEmpty
+  }
+
+  // Applies a conflict resolution to one row. The typed wrappers below supply the row type
+  // specific store calls.
+  //
+  // A conflict has a server snapshot when the server row changed. It has none when the server
+  // rejected the write (22, 23, P0 and 42501 errors), when an insert failed on another unique
+  // key, or when the row is gone from the server.
+  // - keepServer without a snapshot drops the local row when the server has no row to keep. If
+  //   the server has the row, the local row returns to its last synced state.
+  // - keepLocal without a snapshot inserts the row again when the server has no row, and
+  //   otherwise pushes against the current revision.
+  // - `discard` is nil when a row cannot be dropped, as with user settings.
+  // swiftlint:disable:next cyclomatic_complexity function_parameter_count
+  private func resolveConflict<Row: SyncPushTrackedModel, Snapshot>(
+    _ row: Row,
+    table: SyncTable,
+    id: String,
+    userId: String,
+    resolution: ConflictResolution,
+    storeActor: LocalStoreActor,
+    decode: (Data) -> Snapshot?,
+    revision: (Snapshot) -> Int64,
+    serverRowExists: () async throws -> Bool,
+    applyServer: (Snapshot) async -> Void,
+    discard: (() async -> Void)?,
+    requeue: (Int64) async -> Void,
+    markConflict: () async -> Void,
+    push: () async throws -> Void
+  ) async throws {
+    let snapshot = row.conflictServerSnapshot.flatMap(decode)
+    var hasServerRow = false
+    if row.serverRevision > 0 {
+      hasServerRow = try await serverRowExists()
+    }
+
+    switch resolution {
+    case .keepServer:
+      if let snapshot {
+        await applyServer(snapshot)
+      } else if !hasServerRow {
+        guard let discard else {
+          throw SyncError.missingConflictSnapshot(table: table, id: id)
+        }
+        await discard()
+      } else if let lastSynced = decode(row.lastSyncedSnapshot) {
+        await applyServer(lastSynced)
+      } else {
+        throw SyncError.missingConflictSnapshot(table: table, id: id)
+      }
+
+    case .keepLocal:
+      if let snapshot {
+        await requeue(revision(snapshot))
+      } else {
+        await requeue(hasServerRow ? row.serverRevision : 0)
+      }
+
+      do {
+        try await push()
+      } catch where Self.isRowRejection(error) {
+        logger.error(
+          "Server rejected \(table.displayName) \(id.prefix(8)) again: \(error.localizedDescription)"
+        )
+        await markConflict()
+      } catch where Self.isCancellation(error) {
+        throw error
+      } catch {
+        // The row stays queued and the next sync retries it.
+        logger.warning(
+          "Push after resolving \(table.displayName) \(id.prefix(8)) failed: \(error.localizedDescription)"
+        )
+      }
+    }
+
+    try await storeActor.save()
+    let conflicts = try await storeActor.countConflicts(userId: userId)
+    await MainActor.run {
+      conflictCount = conflicts
+    }
+    NativeWidgetStorage.updateWidgetStorage(for: userId)
+  }
+
+  /// Resolve a conflict for a job
+  func resolveJobConflict(jobId: String, resolution: ConflictResolution, userId: String)
+    async throws
+  {
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    guard let job = try await storeActor.getJob(id: jobId) else {
+      throw SyncError.notFound(table: .jobs, id: jobId)
+    }
+    guard job.syncStatus == .conflict else {
+      throw SyncError.notInConflict(table: .jobs, id: jobId)
+    }
+
+    try await resolveConflict(
+      job,
+      table: .jobs,
+      id: jobId,
+      userId: userId,
+      resolution: resolution,
+      storeActor: storeActor,
+      decode: { JobServerSnapshot.decode(from: $0) },
+      revision: { $0.revision },
+      serverRowExists: { try await self.serverRowExists(table: .jobs, key: jobId) },
+      applyServer: { await storeActor.resolveJobConflictKeepServer(id: jobId, serverSnapshot: $0) },
+      discard: {
+        let now = Date()
+        await storeActor.markJobDeleted(
+          id: jobId, serverUpdatedAt: now, serverRevision: 0, deletedAt: now)
+      },
+      requeue: { await storeActor.resolveJobConflictKeepLocal(id: jobId, serverRevision: $0) },
+      markConflict: { await storeActor.markJobConflict(id: jobId, serverSnapshot: nil) },
+      push: {
+        if let updated = try await storeActor.getJob(id: jobId) {
+          _ = try await self.pushJob(
+            updated, userId: userId, storeActor: storeActor, isRetry: false)
+        }
+      }
+    )
+  }
+
   /// Resolve a conflict for a user shift
   func resolveShiftConflict(shiftId: String, resolution: ConflictResolution, userId: String)
     async throws
   {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-
     guard let shift = try await storeActor.getUserShift(id: shiftId) else {
       throw SyncError.notFound(table: .userShifts, id: shiftId)
     }
-
     guard shift.syncStatus == .conflict else {
       throw SyncError.notInConflict(table: .userShifts, id: shiftId)
     }
 
-    switch resolution {
-    case .keepServer:
-      // Overwrite local with server snapshot
-      guard let serverSnapshotData = shift.conflictServerSnapshot,
-        let serverSnapshot = UserShiftServerSnapshot.decode(from: serverSnapshotData)
-      else {
-        throw SyncError.missingConflictSnapshot(table: .userShifts, id: shiftId)
+    try await resolveConflict(
+      shift,
+      table: .userShifts,
+      id: shiftId,
+      userId: userId,
+      resolution: resolution,
+      storeActor: storeActor,
+      decode: { UserShiftServerSnapshot.decode(from: $0) },
+      revision: { $0.revision },
+      serverRowExists: { try await self.serverRowExists(table: .userShifts, key: shiftId) },
+      applyServer: {
+        await storeActor.resolveShiftConflictKeepServer(id: shiftId, serverSnapshot: $0)
+      },
+      discard: {
+        let now = Date()
+        await storeActor.markShiftDeleted(
+          id: shiftId, serverUpdatedAt: now, serverRevision: 0, serverDeletedAt: now)
+      },
+      requeue: { await storeActor.resolveShiftConflictKeepLocal(id: shiftId, serverRevision: $0) },
+      markConflict: { await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil) },
+      push: {
+        if let updated = try await storeActor.getUserShift(id: shiftId) {
+          _ = try await self.pushUserShift(
+            updated, userId: userId, storeActor: storeActor, isRetry: false)
+        }
       }
+    )
+  }
 
-      await storeActor.resolveShiftConflictKeepServer(id: shiftId, serverSnapshot: serverSnapshot)
-
-    case .keepLocal:
-      // Update serverRevision to server's value, keep local values, set dirty, attempt push
-      guard let serverSnapshotData = shift.conflictServerSnapshot,
-        let serverSnapshot = UserShiftServerSnapshot.decode(from: serverSnapshotData)
-      else {
-        throw SyncError.missingConflictSnapshot(table: .userShifts, id: shiftId)
-      }
-
-      await storeActor.resolveShiftConflictKeepLocal(
-        id: shiftId, serverRevision: serverSnapshot.revision)
-
-      // Attempt to push
-      if let updatedShift = try await storeActor.getUserShift(id: shiftId) {
-        _ = try await pushUserShift(
-          updatedShift, userId: userId, storeActor: storeActor, isRetry: false)
-        try await storeActor.save()
-      }
+  /// Resolve a conflict for an event
+  func resolveEventConflict(eventId: String, resolution: ConflictResolution, userId: String)
+    async throws
+  {
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    guard let event = try await storeActor.getEvent(id: eventId) else {
+      throw SyncError.notFound(table: .events, id: eventId)
+    }
+    guard event.syncStatus == .conflict else {
+      throw SyncError.notInConflict(table: .events, id: eventId)
     }
 
-    // Update conflict count
-    let conflicts = try await storeActor.countConflicts(userId: userId)
-    await MainActor.run {
-      conflictCount = conflicts
-    }
-
-    // Update widget storage since shift data changed
-    NativeWidgetStorage.updateWidgetStorage(for: userId)
+    try await resolveConflict(
+      event,
+      table: .events,
+      id: eventId,
+      userId: userId,
+      resolution: resolution,
+      storeActor: storeActor,
+      decode: { EventServerSnapshot.decode(from: $0) },
+      revision: { $0.revision },
+      serverRowExists: { try await self.serverRowExists(table: .events, key: eventId) },
+      applyServer: {
+        await storeActor.resolveEventConflictKeepServer(id: eventId, serverSnapshot: $0)
+      },
+      discard: {
+        let now = Date()
+        await storeActor.markEventDeleted(
+          id: eventId, serverUpdatedAt: now, serverRevision: 0, serverDeletedAt: now)
+      },
+      requeue: { await storeActor.resolveEventConflictKeepLocal(id: eventId, serverRevision: $0) },
+      markConflict: { await storeActor.markEventConflict(id: eventId, serverSnapshot: nil) },
+      push: {
+        if let updated = try await storeActor.getEvent(id: eventId) {
+          _ = try await self.pushEvent(
+            updated, userId: userId, storeActor: storeActor, isRetry: false)
+        }
+      }
+    )
   }
 
   /// Resolve a conflict for a recurring shift
@@ -5231,50 +5774,42 @@ final class SyncCoordinator {
     shiftId: String, resolution: ConflictResolution, userId: String
   ) async throws {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-
     guard let shift = try await storeActor.getRecurringShift(id: shiftId) else {
       throw SyncError.notFound(table: .recurringShifts, id: shiftId)
     }
-
     guard shift.syncStatus == .conflict else {
       throw SyncError.notInConflict(table: .recurringShifts, id: shiftId)
     }
 
-    switch resolution {
-    case .keepServer:
-      guard let serverSnapshotData = shift.conflictServerSnapshot,
-        let serverSnapshot = RecurringShiftServerSnapshot.decode(from: serverSnapshotData)
-      else {
-        throw SyncError.missingConflictSnapshot(table: .recurringShifts, id: shiftId)
+    try await resolveConflict(
+      shift,
+      table: .recurringShifts,
+      id: shiftId,
+      userId: userId,
+      resolution: resolution,
+      storeActor: storeActor,
+      decode: { RecurringShiftServerSnapshot.decode(from: $0) },
+      revision: { $0.revision },
+      serverRowExists: { try await self.serverRowExists(table: .recurringShifts, key: shiftId) },
+      applyServer: {
+        await storeActor.resolveRecurringShiftConflictKeepServer(id: shiftId, serverSnapshot: $0)
+      },
+      discard: {
+        let now = Date()
+        await storeActor.markRecurringShiftDeleted(
+          id: shiftId, serverUpdatedAt: now, serverRevision: 0, serverDeletedAt: now)
+      },
+      requeue: {
+        await storeActor.resolveRecurringShiftConflictKeepLocal(id: shiftId, serverRevision: $0)
+      },
+      markConflict: { await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil) },
+      push: {
+        if let updated = try await storeActor.getRecurringShift(id: shiftId) {
+          _ = try await self.pushRecurringShift(
+            updated, userId: userId, storeActor: storeActor, isRetry: false)
+        }
       }
-
-      await storeActor.resolveRecurringShiftConflictKeepServer(
-        id: shiftId, serverSnapshot: serverSnapshot)
-
-    case .keepLocal:
-      guard let serverSnapshotData = shift.conflictServerSnapshot,
-        let serverSnapshot = RecurringShiftServerSnapshot.decode(from: serverSnapshotData)
-      else {
-        throw SyncError.missingConflictSnapshot(table: .recurringShifts, id: shiftId)
-      }
-
-      await storeActor.resolveRecurringShiftConflictKeepLocal(
-        id: shiftId, serverRevision: serverSnapshot.revision)
-
-      if let updatedShift = try await storeActor.getRecurringShift(id: shiftId) {
-        _ = try await pushRecurringShift(
-          updatedShift, userId: userId, storeActor: storeActor, isRetry: false)
-        try await storeActor.save()
-      }
-    }
-
-    let conflicts = try await storeActor.countConflicts(userId: userId)
-    await MainActor.run {
-      conflictCount = conflicts
-    }
-
-    // Update widget storage since recurring shift data changed (affects generated shifts)
-    NativeWidgetStorage.updateWidgetStorage(for: userId)
+    )
   }
 
   /// Resolve a conflict for a wage snapshot
@@ -5282,99 +5817,132 @@ final class SyncCoordinator {
     snapshotId: String, resolution: ConflictResolution, userId: String
   ) async throws {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-
     guard let snapshot = try await storeActor.getWageSnapshot(id: snapshotId) else {
       throw SyncError.notFound(table: .wageSnapshots, id: snapshotId)
     }
-
     guard snapshot.syncStatus == .conflict else {
       throw SyncError.notInConflict(table: .wageSnapshots, id: snapshotId)
     }
 
-    switch resolution {
-    case .keepServer:
-      guard let serverSnapshotData = snapshot.conflictServerSnapshot,
-        let serverSnapshot = WageSnapshotServerSnapshot.decode(from: serverSnapshotData)
-      else {
-        throw SyncError.missingConflictSnapshot(table: .wageSnapshots, id: snapshotId)
+    try await resolveConflict(
+      snapshot,
+      table: .wageSnapshots,
+      id: snapshotId,
+      userId: userId,
+      resolution: resolution,
+      storeActor: storeActor,
+      decode: { WageSnapshotServerSnapshot.decode(from: $0) },
+      revision: { $0.revision },
+      serverRowExists: { try await self.serverRowExists(table: .wageSnapshots, key: snapshotId) },
+      applyServer: {
+        await storeActor.resolveWageSnapshotConflictKeepServer(id: snapshotId, serverSnapshot: $0)
+      },
+      discard: {
+        let now = Date()
+        await storeActor.markWageSnapshotDeleted(
+          id: snapshotId, serverUpdatedAt: now, serverRevision: 0, serverDeletedAt: now)
+      },
+      requeue: {
+        await storeActor.resolveWageSnapshotConflictKeepLocal(id: snapshotId, serverRevision: $0)
+      },
+      markConflict: {
+        await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
+      },
+      push: {
+        if let updated = try await storeActor.getWageSnapshot(id: snapshotId) {
+          _ = try await self.pushWageSnapshot(
+            updated, userId: userId, storeActor: storeActor, isRetry: false)
+        }
       }
+    )
+  }
 
-      await storeActor.resolveWageSnapshotConflictKeepServer(
-        id: snapshotId, serverSnapshot: serverSnapshot)
-
-    case .keepLocal:
-      guard let serverSnapshotData = snapshot.conflictServerSnapshot,
-        let serverSnapshot = WageSnapshotServerSnapshot.decode(from: serverSnapshotData)
-      else {
-        throw SyncError.missingConflictSnapshot(table: .wageSnapshots, id: snapshotId)
-      }
-
-      await storeActor.resolveWageSnapshotConflictKeepLocal(
-        id: snapshotId, serverRevision: serverSnapshot.revision)
-
-      if let updatedSnapshot = try await storeActor.getWageSnapshot(id: snapshotId) {
-        _ = try await pushWageSnapshot(
-          updatedSnapshot, userId: userId, storeActor: storeActor, isRetry: false)
-        try await storeActor.save()
-      }
+  /// Resolve a conflict for a payroll adjustment
+  func resolvePayrollAdjustmentConflict(
+    adjustmentId: String, resolution: ConflictResolution, userId: String
+  ) async throws {
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    guard let adjustment = try await storeActor.getPayrollAdjustment(id: adjustmentId) else {
+      throw SyncError.notFound(table: .payrollAdjustments, id: adjustmentId)
+    }
+    guard adjustment.syncStatus == .conflict else {
+      throw SyncError.notInConflict(table: .payrollAdjustments, id: adjustmentId)
     }
 
-    let conflicts = try await storeActor.countConflicts(userId: userId)
-    await MainActor.run {
-      conflictCount = conflicts
-    }
-
-    // Update widget storage since wage calculations may have changed
-    NativeWidgetStorage.updateWidgetStorage(for: userId)
+    try await resolveConflict(
+      adjustment,
+      table: .payrollAdjustments,
+      id: adjustmentId,
+      userId: userId,
+      resolution: resolution,
+      storeActor: storeActor,
+      decode: { PayrollAdjustmentServerSnapshot.decode(from: $0) },
+      revision: { $0.revision },
+      serverRowExists: {
+        try await self.serverRowExists(table: .payrollAdjustments, key: adjustmentId)
+      },
+      applyServer: {
+        await storeActor.resolvePayrollAdjustmentConflictKeepServer(
+          id: adjustmentId, serverSnapshot: $0)
+      },
+      discard: {
+        let now = Date()
+        await storeActor.markPayrollAdjustmentDeleted(
+          id: adjustmentId, serverUpdatedAt: now, serverRevision: 0, serverDeletedAt: now)
+      },
+      requeue: {
+        await storeActor.resolvePayrollAdjustmentConflictKeepLocal(
+          id: adjustmentId, serverRevision: $0)
+      },
+      markConflict: {
+        await storeActor.markPayrollAdjustmentConflict(id: adjustmentId, serverSnapshot: nil)
+      },
+      push: {
+        if let updated = try await storeActor.getPayrollAdjustment(id: adjustmentId) {
+          _ = try await self.pushPayrollAdjustment(
+            updated, userId: userId, storeActor: storeActor)
+        }
+      }
+    )
   }
 
   /// Resolve a conflict for user settings
   func resolveUserSettingsConflict(resolution: ConflictResolution, userId: String) async throws {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-
     guard let settings = try await storeActor.getUserSettings(userId: userId) else {
       throw SyncError.notFound(table: .userSettings, id: userId)
     }
-
     guard settings.syncStatus == .conflict else {
       throw SyncError.notInConflict(table: .userSettings, id: userId)
     }
 
-    switch resolution {
-    case .keepServer:
-      guard let serverSnapshotData = settings.conflictServerSnapshot,
-        let serverSnapshot = UserSettingsServerSnapshot.decode(from: serverSnapshotData)
-      else {
-        throw SyncError.missingConflictSnapshot(table: .userSettings, id: userId)
+    try await resolveConflict(
+      settings,
+      table: .userSettings,
+      id: userId,
+      userId: userId,
+      resolution: resolution,
+      storeActor: storeActor,
+      decode: { UserSettingsServerSnapshot.decode(from: $0) },
+      revision: { $0.revision },
+      serverRowExists: {
+        try await self.serverRowExists(table: .userSettings, keyColumn: "user_id", key: userId)
+      },
+      applyServer: {
+        await storeActor.resolveUserSettingsConflictKeepServer(userId: userId, serverSnapshot: $0)
+      },
+      discard: nil,
+      requeue: {
+        await storeActor.resolveUserSettingsConflictKeepLocal(userId: userId, serverRevision: $0)
+      },
+      markConflict: { await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil) },
+      push: {
+        if let updated = try await storeActor.getUserSettings(userId: userId) {
+          _ = try await self.pushUserSettingsRow(
+            updated, userId: userId, storeActor: storeActor, isRetry: false)
+        }
       }
-
-      await storeActor.resolveUserSettingsConflictKeepServer(
-        userId: userId, serverSnapshot: serverSnapshot)
-
-    case .keepLocal:
-      guard let serverSnapshotData = settings.conflictServerSnapshot,
-        let serverSnapshot = UserSettingsServerSnapshot.decode(from: serverSnapshotData)
-      else {
-        throw SyncError.missingConflictSnapshot(table: .userSettings, id: userId)
-      }
-
-      await storeActor.resolveUserSettingsConflictKeepLocal(
-        userId: userId, serverRevision: serverSnapshot.revision)
-
-      if let updatedSettings = try await storeActor.getUserSettings(userId: userId) {
-        _ = try await pushUserSettingsRow(
-          updatedSettings, userId: userId, storeActor: storeActor, isRetry: false)
-        try await storeActor.save()
-      }
-    }
-
-    let conflicts = try await storeActor.countConflicts(userId: userId)
-    await MainActor.run {
-      conflictCount = conflicts
-    }
-
-    // Update widget storage since settings (e.g., currency) may affect display
-    NativeWidgetStorage.updateWidgetStorage(for: userId)
+    )
   }
 
   // MARK: - Notification Preferences Pull
@@ -5445,30 +6013,19 @@ final class SyncCoordinator {
       "notification_preferences: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s"
     )
 
-    guard let lastRow = rows.last else {
-      logger.warning("Unexpected empty rows after processing in pullNotificationPreferencesPage")
-      return PagePullResult(
-        rowsProcessed: 0,
-        lastUpdatedAt: Date(),
-        lastTieId: "",
-        maxRevision: 0,
-        newConflicts: 0,
-        autoMerged: 0,
-        hasMore: false
-      )
-    }
-
-    let lastUpdatedAt = try requireISO8601(
-      lastRow.updated_at, table: .notificationPreferences, id: lastRow.user_id)
+    let cursorPosition = Self.lastParseableCursorPosition(
+      rows.map { (updatedAt: $0.updated_at, id: $0.user_id) },
+      table: .notificationPreferences
+    )
 
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: lastUpdatedAt,
-      lastTieId: lastRow.user_id,
-      maxRevision: 0,  // No revision column for notification_preferences
-      newConflicts: 0,  // iOS is source of truth, no conflicts
+      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
+      lastTieId: cursorPosition?.id ?? cursor.tieId,
+      maxRevision: 0,
+      newConflicts: 0,
       autoMerged: 0,
-      hasMore: rows.count == pageSize
+      hasMore: cursorPosition != nil && rows.count == pageSize
     )
   }
 
@@ -5479,6 +6036,7 @@ final class SyncCoordinator {
       let shiftRemindersEnabled: Bool
       let shiftReminderMinutesArray: [Int]
       let sharedShiftsEnabled: Bool
+      let localUpdatedAt: Date
     }
 
     // Get dirty preferences (if any)
@@ -5490,7 +6048,8 @@ final class SyncCoordinator {
       return NotificationPreferencesPayload(
         shiftRemindersEnabled: dirty.shiftRemindersEnabled,
         shiftReminderMinutesArray: dirty.shiftReminderMinutesArray,
-        sharedShiftsEnabled: dirty.sharedShiftsEnabled
+        sharedShiftsEnabled: dirty.sharedShiftsEnabled,
+        localUpdatedAt: dirty.localUpdatedAt
       )
     }
 
@@ -5523,8 +6082,12 @@ final class SyncCoordinator {
         let serverUpdatedAt = parseUpdatedAt(
           returnedRow.updated_at, table: .notificationPreferences, id: userId)
         await MainActor.run {
+          // Keeps the preferences dirty when the user edited them during the push.
           NotificationPreferencesRepository.shared.markClean(
-            for: userId, serverUpdatedAt: serverUpdatedAt)
+            for: userId,
+            serverUpdatedAt: serverUpdatedAt,
+            pushedLocalUpdatedAt: preferences.localUpdatedAt
+          )
         }
         logger.debug("Pushed notification preferences for user \(userId.prefix(8))")
         return TablePushResult(
@@ -5563,6 +6126,52 @@ final class SyncCoordinator {
     case noChange
     case autoMerged
     case conflict
+  }
+
+  /// Whether the error means one server row holds data the app cannot read, such as a bad
+  /// timestamp or date. Local store and network errors are not row errors.
+  static func isUnreadableRowError(_ error: Error) -> Bool {
+    if error is SyncEncodingError {
+      return true
+    }
+    if let syncError = error as? SyncError, case .dateParsingFailed = syncError {
+      return true
+    }
+    return false
+  }
+
+  /// Applies one pulled row. A row with unreadable data is logged and skipped, so it cannot keep
+  /// the cursor from advancing and block every later row. Other errors still stop the pull.
+  private func applyIsolated(
+    table: SyncTable,
+    id: String,
+    _ apply: () async throws -> ApplyResult
+  ) async throws -> ApplyResult? {
+    do {
+      return try await apply()
+    } catch where Self.isUnreadableRowError(error) {
+      logger.error(
+        "Skipping unreadable \(table.displayName) row \(id.prefix(8)): \(error.localizedDescription)"
+      )
+      return nil
+    }
+  }
+
+  /// Cursor position of the last row whose `updated_at` parses. A row with a bad timestamp is
+  /// skipped, so it cannot keep the cursor from moving past the rows before it. Returns nil when
+  /// no row parses, and the caller then keeps the old cursor and stops paging.
+  static func lastParseableCursorPosition(
+    _ rows: [(updatedAt: String, id: String)],
+    table: SyncTable
+  ) -> (updatedAt: Date, id: String)? {
+    for row in rows.reversed() {
+      if let date = ISO8601Timestamp.date(from: row.updatedAt) {
+        return (date, row.id)
+      }
+      logger.error(
+        "Unparseable updated_at for \(table.displayName) id=\(row.id): '\(row.updatedAt)'")
+    }
+    return nil
   }
 
   /// Parse ISO8601 date string to Date
@@ -5679,6 +6288,8 @@ enum SyncError: LocalizedError {
   case missingConflictSnapshot(table: SyncTable, id: String)
   case notFound(table: SyncTable, id: String)
   case notInConflict(table: SyncTable, id: String)
+  case pullTimedOut
+  case rowsNotPushed(count: Int)
 
   /// Technical description for logging
   var errorDescription: String? {
@@ -5697,6 +6308,12 @@ enum SyncError: LocalizedError {
 
     case .localSaveFailed(let table, let message):  // swiftlint:disable:this pattern_matching_keywords
       return "Failed to save pulled \(table.displayName) rows locally: \(message)"
+
+    case .pullTimedOut:
+      return "Pulling server changes timed out"
+
+    case .rowsNotPushed(let count):
+      return "\(count) local changes could not be pushed and stay queued for the next sync"
     }
   }
 
@@ -5715,6 +6332,12 @@ enum SyncError: LocalizedError {
 
     case .localSaveFailed:
       return "Sync failed: Local changes could not be saved. Please try again."
+
+    case .pullTimedOut:
+      return "Sync failed: Server changes took too long to load. Please try again."
+
+    case .rowsNotPushed:
+      return "Sync failed: Some changes could not be sent. They will be retried."
     }
   }
 }

@@ -2876,13 +2876,15 @@ internal actor LocalStoreActor {
 
   // MARK: - Conflict Helpers
 
-  /// Get all records with conflicts for a user
+  // Get all records with conflicts for a user
+  // swiftlint:disable:next function_body_length
   internal func getConflicts(userId: String) throws -> (
     jobs: [LocalJob],
     shifts: [LocalUserShift],
     events: [LocalEvent],
     recurringShifts: [LocalRecurringShift],
     wageSnapshots: [LocalWageSnapshot],
+    payrollAdjustments: [LocalPayrollAdjustment],
     settings: LocalUserSettings?
   ) {
     let jobsDescriptor = FetchDescriptor<LocalJob>(
@@ -2920,6 +2922,13 @@ internal actor LocalStoreActor {
     )
     let wageSnapshots = try modelContext.fetch(snapshotsDescriptor)
 
+    let adjustmentsDescriptor = FetchDescriptor<LocalPayrollAdjustment>(
+      predicate: #Predicate { adjustment in
+        adjustment.userId == userId && adjustment.syncStatusRaw == "conflict"
+      }
+    )
+    let payrollAdjustments = try modelContext.fetch(adjustmentsDescriptor)
+
     let settingsDescriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { settings in
         settings.userId == userId && settings.syncStatusRaw == "conflict"
@@ -2927,7 +2936,7 @@ internal actor LocalStoreActor {
     )
     let settings = try modelContext.fetch(settingsDescriptor).first
 
-    return (jobs, shifts, events, recurringShifts, wageSnapshots, settings)
+    return (jobs, shifts, events, recurringShifts, wageSnapshots, payrollAdjustments, settings)
   }
 
   /// Check if user has any conflicts
@@ -2935,10 +2944,39 @@ internal actor LocalStoreActor {
     let conflicts = try getConflicts(userId: userId)
     return !conflicts.jobs.isEmpty || !conflicts.shifts.isEmpty
       || !conflicts.events.isEmpty || !conflicts.recurringShifts.isEmpty
-      || !conflicts.wageSnapshots.isEmpty || conflicts.settings != nil
+      || !conflicts.wageSnapshots.isEmpty || !conflicts.payrollAdjustments.isEmpty
+      || conflicts.settings != nil
   }
 
-  /// Check if user has any pending changes
+  /// Whether notification preferences have edits that were not pushed.
+  /// The repository normalizes the user id to upper case.
+  internal func hasDirtyNotificationPreferences(userId: String) throws -> Bool {
+    let normalizedUserId = userId.uppercased()
+    var descriptor = FetchDescriptor<LocalNotificationPreferences>(
+      predicate: #Predicate { preferences in
+        preferences.userId == normalizedUserId && preferences.syncStatusRaw == "dirty"
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
+  }
+
+  /// Whether the user has chat messages that the server has not accepted.
+  /// A message in the sending or failed state exists only on this device.
+  internal func hasUnsentMessages(userId: String) throws -> Bool {
+    var descriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { message in
+        message.viewerUserId == userId
+          && (message.sendStateRaw == "sending" || message.sendStateRaw == "failed")
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
+  }
+
+  /// Whether signing out would delete data that never reached the server.
+  /// This covers dirty rows, conflicted rows, notification preferences and unsent chat messages.
+  /// A conflicted row holds a local edit or a never pushed row until the user resolves it.
   internal func hasPendingChanges(userId: String) throws -> Bool {
     try hasDirtyJobs(userId: userId)
       || hasDirtyUserShifts(userId: userId)
@@ -2947,6 +2985,9 @@ internal actor LocalStoreActor {
       || hasDirtyWageSnapshots(userId: userId)
       || hasDirtyPayrollAdjustments(userId: userId)
       || hasDirtyUserSettings(userId: userId)
+      || hasDirtyNotificationPreferences(userId: userId)
+      || hasConflicts(userId: userId)
+      || hasUnsentMessages(userId: userId)
   }
 
   /// Count total conflicts for a user
@@ -2955,6 +2996,7 @@ internal actor LocalStoreActor {
     return conflicts.jobs.count + conflicts.shifts.count + conflicts.events.count
       + conflicts.recurringShifts.count
       + conflicts.wageSnapshots.count
+      + conflicts.payrollAdjustments.count
       + (conflicts.settings != nil ? 1 : 0)
   }
 
@@ -2974,6 +3016,7 @@ internal actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for Jobs
 
+  @discardableResult
   // swiftlint:disable:next function_parameter_count
   internal func updateJobFromServer(
     id: String,
@@ -2983,15 +3026,19 @@ internal actor LocalStoreActor {
     archivedAt: Date?,
     deletedAt: Date?,
     snapshot: JobServerSnapshot
-  ) {
+  ) -> Bool {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
 
     guard let existing = try? modelContext.fetch(descriptor).first else {
+      return false
+    }
 
-      return
-
+    // The coordinator read the sync status outside this actor. Check it again here so a local
+    // edit made since then is not overwritten.
+    guard existing.syncStatus == .clean else {
+      return false
     }
 
     existing.name = serverRow.name
@@ -3009,6 +3056,8 @@ internal actor LocalStoreActor {
     existing.serverRevision = serverRevision
     existing.lastSyncedSnapshot = snapshot.encoded()
     existing.localUpdatedAt = Date()
+
+    return true
   }
 
   internal func markJobConflict(id: String, serverSnapshot: JobServerSnapshot?) {
@@ -3086,6 +3135,7 @@ internal actor LocalStoreActor {
   // MARK: - Sync Update Operations for User Shifts
 
   /// Update a shift from server data (for clean rows)
+  @discardableResult
   internal func updateShiftFromServer(
     id: String,
     serverRow: SyncShiftRow,
@@ -3093,15 +3143,19 @@ internal actor LocalStoreActor {
     serverRevision: Int64,
     serverDeletedAt: Date?,
     snapshot: UserShiftServerSnapshot
-  ) {
+  ) -> Bool {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
 
     guard let existing = try? modelContext.fetch(descriptor).first else {
+      return false
+    }
 
-      return
-
+    // The coordinator read the sync status outside this actor. Check it again here so a local
+    // edit made since then is not overwritten.
+    guard existing.syncStatus == .clean else {
+      return false
     }
 
     let dateFormatter = isoDateFormatter
@@ -3123,6 +3177,8 @@ internal actor LocalStoreActor {
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = snapshot.encoded()
     existing.localUpdatedAt = Date()
+
+    return true
   }
 
   /// Mark a shift as having a conflict
@@ -3214,6 +3270,7 @@ internal actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for Events
 
+  @discardableResult
   internal func updateEventFromServer(
     id: String,
     serverRow: SyncEventRow,
@@ -3221,15 +3278,19 @@ internal actor LocalStoreActor {
     serverRevision: Int64,
     serverDeletedAt: Date?,
     snapshot: EventServerSnapshot
-  ) {
+  ) -> Bool {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
 
     guard let existing = try? modelContext.fetch(descriptor).first else {
+      return false
+    }
 
-      return
-
+    // The coordinator read the sync status outside this actor. Check it again here so a local
+    // edit made since then is not overwritten.
+    guard existing.syncStatus == .clean else {
+      return false
     }
 
     let dateFormatter = isoDateFormatter
@@ -3249,6 +3310,8 @@ internal actor LocalStoreActor {
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = snapshot.encoded()
     existing.localUpdatedAt = Date()
+
+    return true
   }
 
   internal func markEventConflict(id: String, serverSnapshot: EventServerSnapshot?) {
@@ -3338,6 +3401,8 @@ internal actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for Recurring Shifts
 
+  @discardableResult
+  // swiftlint:disable:next function_body_length
   internal func updateRecurringShiftFromServer(
     id: String,
     serverRow: SyncRecurringShiftRow,
@@ -3345,15 +3410,19 @@ internal actor LocalStoreActor {
     serverRevision: Int64,
     serverDeletedAt: Date?,
     snapshot: RecurringShiftServerSnapshot
-  ) {
+  ) -> Bool {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
 
     guard let existing = try? modelContext.fetch(descriptor).first else {
+      return false
+    }
 
-      return
-
+    // The coordinator read the sync status outside this actor. Check it again here so a local
+    // edit made since then is not overwritten.
+    guard existing.syncStatus == .clean else {
+      return false
     }
 
     existing.jobId = serverRow.job_id
@@ -3387,6 +3456,8 @@ internal actor LocalStoreActor {
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = snapshot.encoded()
     existing.localUpdatedAt = Date()
+
+    return true
   }
 
   internal func markRecurringShiftConflict(
@@ -3490,6 +3561,7 @@ internal actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for Wage Snapshots
 
+  @discardableResult
   internal func updateWageSnapshotFromServer(
     id: String,
     serverRow: SyncWageSnapshotRow,
@@ -3497,15 +3569,19 @@ internal actor LocalStoreActor {
     serverRevision: Int64,
     serverDeletedAt: Date?,
     snapshot: WageSnapshotServerSnapshot
-  ) {
+  ) -> Bool {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
 
     guard let existing = try? modelContext.fetch(descriptor).first else {
+      return false
+    }
 
-      return
-
+    // The coordinator read the sync status outside this actor. Check it again here so a local
+    // edit made since then is not overwritten.
+    guard existing.syncStatus == .clean else {
+      return false
     }
 
     let dateFormatter = isoDateFormatter
@@ -3529,6 +3605,8 @@ internal actor LocalStoreActor {
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = snapshot.encoded()
     existing.localUpdatedAt = Date()
+
+    return true
   }
 
   internal func markWageSnapshotConflict(id: String, serverSnapshot: WageSnapshotServerSnapshot?) {
@@ -3622,21 +3700,26 @@ internal actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for User Settings
 
+  @discardableResult
   internal func updateUserSettingsFromServer(
     userId: String,
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
     serverRevision: Int64,
     snapshot: UserSettingsServerSnapshot
-  ) {
+  ) -> Bool {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
 
     guard let existing = try? modelContext.fetch(descriptor).first else {
+      return false
+    }
 
-      return
-
+    // The coordinator read the sync status outside this actor. Check it again here so a local
+    // edit made since then is not overwritten.
+    guard existing.syncStatus == .clean else {
+      return false
     }
 
     let dateFormatter = FormatterCache.iso8601Formatter()
@@ -3660,6 +3743,8 @@ internal actor LocalStoreActor {
     existing.serverRevision = serverRevision
     existing.lastSyncedSnapshot = snapshot.encoded()
     existing.localUpdatedAt = Date()
+
+    return true
   }
 
   internal func markUserSettingsConflict(

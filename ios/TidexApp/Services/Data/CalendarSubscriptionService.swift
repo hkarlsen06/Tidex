@@ -29,7 +29,7 @@ enum CalendarSubscriptionContentMode: String, CaseIterable, Identifiable, Codabl
   }
 }
 
-struct CalendarSubscriptionMetadata: Equatable, Sendable {
+struct CalendarSubscriptionMetadata: Codable, Equatable, Sendable {
   let id: String
   let contentMode: CalendarSubscriptionContentMode
   let tokenSuffix: String

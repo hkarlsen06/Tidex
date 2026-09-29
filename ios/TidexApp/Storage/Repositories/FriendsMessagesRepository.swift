@@ -219,6 +219,30 @@ final class FriendsMessagesRepository {
     }
   }
 
+  /// Returns the viewer's queued (unsent) messages across all threads, oldest first.
+  func getQueuedMessages(viewerUserId: String) -> [FriendMessage] {
+    let context = ModelContext(container)
+    let queuedState: String? = FriendMessageSendState.sending.rawValue
+    let descriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { localMessage in
+        localMessage.viewerUserId == viewerUserId && localMessage.sendStateRaw == queuedState
+      },
+      sortBy: [
+        SortDescriptor(\LocalMessage.createdAt, order: .forward),
+        SortDescriptor(\LocalMessage.id, order: .forward),
+      ]
+    )
+
+    do {
+      return try context.fetch(descriptor).compactMap {
+        getMessage(id: $0.id, viewerUserId: viewerUserId)
+      }
+    } catch {
+      logger.error("Failed to fetch queued messages: \(error.localizedDescription)")
+      return []
+    }
+  }
+
   func getMessagingSyncState(
     viewerUserId: String,
     scope: FriendMessagingSyncScope

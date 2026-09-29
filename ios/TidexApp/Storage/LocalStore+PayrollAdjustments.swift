@@ -191,15 +191,23 @@ extension LocalStoreActor {
     return existing.toPayrollAdjustment()
   }
 
+  /// Overwrites the local row with the server row.
+  /// With `onlyIfClean`, a row that is no longer clean stays untouched and the call returns false.
+  /// The coordinator reads the sync status outside this actor, so it needs this check.
+  @discardableResult
   func updatePayrollAdjustmentFromServer(
     id: String,
     serverRow: SyncPayrollAdjustmentRow,
     serverUpdatedAt: Date,
     serverDeletedAt: Date?,
-    snapshot: PayrollAdjustmentServerSnapshot
-  ) {
+    snapshot: PayrollAdjustmentServerSnapshot,
+    onlyIfClean: Bool = false
+  ) -> Bool {
     guard let existing = try? getPayrollAdjustment(id: id) else {
-      return
+      return false
+    }
+    if onlyIfClean, existing.syncStatus != .clean {
+      return false
     }
     let formatter = payrollAdjustmentDateFormatter
     existing.jobId = serverRow.job_id
@@ -221,6 +229,7 @@ extension LocalStoreActor {
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = snapshot.encoded()
     existing.localUpdatedAt = Date()
+    return true
   }
 
   // swiftlint:disable:next function_parameter_count
@@ -353,5 +362,51 @@ extension LocalStoreActor {
     }
     existing.syncStatus = .conflict
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
+  }
+
+  /// Resolves a payroll adjustment conflict by replacing the local values with the server values.
+  func resolvePayrollAdjustmentConflictKeepServer(
+    id: String,
+    serverSnapshot: PayrollAdjustmentServerSnapshot
+  ) {
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
+    let formatter = payrollAdjustmentDateFormatter
+    existing.jobId = serverSnapshot.jobId
+    existing.amount = serverSnapshot.amount
+    existing.currency = serverSnapshot.currency
+    existing.category = serverSnapshot.category
+    existing.taxTreatment = serverSnapshot.taxTreatment
+    existing.descriptionText = serverSnapshot.description
+    existing.note = serverSnapshot.note
+    existing.curatedNote = serverSnapshot.curatedNote
+    existing.curatedDescription = serverSnapshot.curatedDescription
+    existing.curatedLink = serverSnapshot.curatedLink
+    existing.curatedLinkTitle = serverSnapshot.curatedLinkTitle
+    existing.earnedFromDate = serverSnapshot.earnedFromDate.flatMap { formatter.date(from: $0) }
+    existing.earnedToDate = serverSnapshot.earnedToDate.flatMap { formatter.date(from: $0) }
+    existing.payoutDate = formatter.date(from: serverSnapshot.payoutDate) ?? existing.payoutDate
+    existing.serverUpdatedAt = serverSnapshot.updatedAt
+    existing.serverRevision = serverSnapshot.revision
+    existing.serverDeletedAt = serverSnapshot.deletedAt
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.lastSyncedSnapshot = serverSnapshot.encoded()
+    existing.conflictServerSnapshot = nil
+    existing.localUpdatedAt = Date()
+  }
+
+  /// Resolves a payroll adjustment conflict by keeping the local values and queuing a push.
+  /// A push sends the whole row, so every field is marked dirty.
+  func resolvePayrollAdjustmentConflictKeepLocal(id: String, serverRevision: Int64) {
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
+    existing.serverRevision = serverRevision
+    existing.syncStatus = .dirty
+    existing.dirtyFieldKeys = Set(PayrollAdjustmentField.allCases)
+    existing.conflictServerSnapshot = nil
+    existing.localUpdatedAt = Date()
   }
 }

@@ -1,5 +1,15 @@
 import SwiftUI
 
+/// Shown when tariff data could not be loaded and the built-in rates are in use.
+struct TariffOfflineHint: View {
+  var body: some View {
+    Text(.onboardingWageTariffOffline)
+      .font(.tidexFootnote)
+      .foregroundColor(.tidexWarning)
+      .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
 /// Tariff type menu and tariff level list for the wage screen.
 struct WageTariffSelector: View {
   @Bindable var data: OnboardingData

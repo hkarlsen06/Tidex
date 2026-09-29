@@ -119,6 +119,7 @@ struct SettingsView: View {
     case recurringShifts
     case calendarSync(calendarSetupIntent: CalendarSubscriptionSetupIntent? = nil)
     case data
+    case syncConflicts
     case feedback
     case admin
     #if DEBUG
@@ -290,6 +291,9 @@ extension SettingsView {
     case .data:
       DataSettingsView()
 
+    case .syncConflicts:
+      SyncConflictsView()
+
     case .feedback:
       FeedbackSettingsView()
 
@@ -403,6 +407,18 @@ extension SettingsView {
 
       NavigationLink(value: SettingsDestination.data) {
         Label(String(localized: .settingsMenuDataLabel), systemImage: "doc.text")
+      }
+
+      if SyncCoordinator.shared.conflictCount > 0 {
+        NavigationLink(value: SettingsDestination.syncConflicts) {
+          LabeledContent {
+            Text(SyncCoordinator.shared.conflictCount, format: .number)
+          } label: {
+            Label(
+              String(localized: .syncConflictsTitle),
+              systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+          }
+        }
       }
     }
   }
@@ -742,10 +758,16 @@ extension SettingsView {
   }
 
   private func presentPayChooserError(_ error: Error) {
-    presentPayChooserError(
-      error.localizedDescription,
-      title: (error as? JobsRepositoryError)?.alertTitle
-    )
+    // Only JobsRepositoryError has localized text. Server and system errors don't.
+    let message: String
+    if error is JobsRepositoryError {
+      message = error.localizedDescription
+    } else if ErrorTranslations.isOffline(error) {
+      message = ErrorTranslations.offlineMessage
+    } else {
+      message = String(localized: .commonErrorGeneric)
+    }
+    presentPayChooserError(message, title: (error as? JobsRepositoryError)?.alertTitle)
   }
 
   private func archivePayJob(_ jobId: String) async {

@@ -148,7 +148,11 @@ final class ProfileSettingsViewModel {
       }
 
     } catch {
-      loadOfflineProfileFallback()
+      if ErrorTranslations.isOffline(error) {
+        loadOfflineProfileFallback()
+      } else {
+        errorMessage = String(localized: .profileErrorsLoadFailed)
+      }
     }
 
     isLoading = false

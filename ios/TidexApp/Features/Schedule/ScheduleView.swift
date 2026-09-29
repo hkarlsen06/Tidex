@@ -575,7 +575,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           shiftDetailsSheet(
             for: shift,
             selection: $selectedShift,
-            showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+            showsCalendarSubscriptionCTA: calendarSubscriptionStore.canOfferSetup,
             startInEditMode: false
           )
         }
@@ -602,7 +602,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             onInlineReminderUpdate: { editResult in
               try await viewModel.updateEvent(editResult)
             },
-            showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+            showsCalendarSubscriptionCTA: calendarSubscriptionStore.canOfferSetup,
             onShowInCalendarRequested: {
               openCalendarSubscriptionSetupFromShifts()
             },

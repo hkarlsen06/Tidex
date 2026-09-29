@@ -147,9 +147,7 @@ final class SecuritySettingsViewModel {
 
     } catch {
       logger.error("Failed to load security info: \(error)")
-      if AuthSessionManager.shared.isTransientSessionResolutionError(error)
-        || AuthSessionManager.shared.offlineUserIdFallback() != nil
-      {
+      if ErrorTranslations.isOffline(error) {
         isOfflineLimited = true
       } else {
         errorMessage = String(localized: .securityErrorsLoadFailed)

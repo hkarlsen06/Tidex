@@ -32,6 +32,12 @@ enum TermsVersion {
   /// Uses a cached value if available and not expired
   /// Returns fallback version if API is unavailable (timeout/error)
   static func fetchCurrentVersionReference() async -> String {
+    await fetchLiveVersionReference() ?? fallbackVersionReference
+  }
+
+  /// Like `fetchCurrentVersionReference`, but returns nil when the manifest can't be reached.
+  /// Callers use nil to tell "offline" apart from "the fallback says re-accept".
+  static func fetchLiveVersionReference() async -> String? {
     // Check cache first
     if let cached = cachedVersionReference,
       let fetchTime = lastFetchTime,
@@ -45,7 +51,7 @@ enum TermsVersion {
       let url = APIConfiguration.legalVersionURL
       guard url.absoluteString.isEmpty == false else {
         logger.error("Invalid endpoint URL")
-        return fallbackVersionReference
+        return nil
       }
 
       let request = URLRequest(url: url, timeoutInterval: requestTimeout)
@@ -55,7 +61,7 @@ enum TermsVersion {
         httpResponse.statusCode == 200
       else {
         logger.warning("API returned non-200 status")
-        return fallbackVersionReference
+        return nil
       }
 
       let versionResponse = try JSONDecoder().decode(VersionResponse.self, from: data)
@@ -73,8 +79,8 @@ enum TermsVersion {
 
       return latestVersionReference
     } catch {
-      logger.warning("Failed to fetch version: \(error.localizedDescription). Using fallback.")
-      return fallbackVersionReference
+      logger.warning("Failed to fetch version: \(error.localizedDescription)")
+      return nil
     }
   }
 
@@ -103,6 +109,21 @@ enum TermsVersion {
 
     let currentVersionReference = await fetchCurrentVersionReference()
     return compareDates(acceptedAt: termsAcceptedAt, versionReference: currentVersionReference)
+  }
+
+  /// Re-acceptance check against the live manifest.
+  /// - Returns: nil when the manifest is unreachable, so the caller can defer the check.
+  static func needsTermsReAcceptanceIfReachable(_ termsAcceptedAt: String?) async -> Bool? {
+    needsTermsReAcceptance(termsAcceptedAt, liveVersionReference: await fetchLiveVersionReference())
+  }
+
+  static func needsTermsReAcceptance(
+    _ termsAcceptedAt: String?,
+    liveVersionReference: String?
+  ) -> Bool? {
+    guard let liveVersionReference else { return nil }
+    guard let termsAcceptedAt, !termsAcceptedAt.isEmpty else { return true }
+    return compareDates(acceptedAt: termsAcceptedAt, versionReference: liveVersionReference)
   }
 
   // MARK: - Private Helpers

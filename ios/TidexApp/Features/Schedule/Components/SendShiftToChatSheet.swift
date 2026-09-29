@@ -52,6 +52,14 @@ enum SendAttachmentRecipientOrdering {
 }
 
 enum SendAttachmentRecipientResolver {
+  /// The stored direct thread with a recipient, so sending doesn't need the network
+  /// when the conversation already exists on this device. Expects newest-first order.
+  static func localDirectThread(for recipientId: String, in threads: [FriendThread])
+    -> FriendThread?
+  {
+    threads.first { $0.kind == .direct && $0.counterpartUserId == recipientId }
+  }
+
   static func mergedRecipients(
     fetchedRecipients: [ShareRecipient],
     cachedFriends: SharedShiftsRepository.CachedFriendsSnapshot,
@@ -192,7 +200,7 @@ private final class SendAttachmentToChatViewModel {
         includeLocalFallbacks: true
       )
       if recipients.isEmpty {
-        errorMessage = error.localizedDescription
+        errorMessage = userMessage(for: error)
       }
     }
 
@@ -220,8 +228,15 @@ private final class SendAttachmentToChatViewModel {
         return nil
       }
 
-      let thread = try await service.getOrCreateDirectThread(otherUserId: recipient.id)
-      await repository.saveThread(thread, for: viewerUserId)
+      let thread: FriendThread
+      if let localThread = SendAttachmentRecipientResolver.localDirectThread(
+        for: recipient.id, in: repository.getThreads(for: viewerUserId))
+      {
+        thread = localThread
+      } else {
+        thread = try await service.getOrCreateDirectThread(otherUserId: recipient.id)
+        await repository.saveThread(thread, for: viewerUserId)
+      }
       await composerDraftStore.saveAttachmentDraft(
         attachment,
         threadId: thread.id,
@@ -229,8 +244,24 @@ private final class SendAttachmentToChatViewModel {
       )
       return SendShiftToChatResult(thread: thread, recipient: recipient)
     } catch {
-      errorMessage = error.localizedDescription
+      errorMessage = userMessage(for: error)
       return nil
+    }
+  }
+
+  /// Local errors and `FriendsAPIError` already have localized descriptions. Server and
+  /// transport errors don't, so they map to fixed copy.
+  private func userMessage(for error: Error) -> String {
+    if ErrorTranslations.isOffline(error) {
+      return ErrorTranslations.offlineMessage
+    }
+
+    switch error {
+    case FriendsMessagingServiceError.httpError, FriendsMessagingServiceError.networkError:
+      return String(localized: .commonErrorGeneric)
+
+    default:
+      return error.localizedDescription
     }
   }
 }

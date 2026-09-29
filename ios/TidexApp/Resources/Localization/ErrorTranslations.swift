@@ -95,10 +95,38 @@ enum ErrorTranslations {
     return message
   }
 
-  /// Translate an Error to a user-friendly localized message
+  /// Translate an Error to a user-friendly localized message.
+  /// Network failures get localized copy instead of the system-language URLError text.
   /// - Parameter error: The error to translate
   /// - Returns: A translated error message
+  @MainActor
   static func translate(_ error: Error) -> String {
+    if isOffline(error) {
+      return offlineMessage
+    }
     return translate(error.localizedDescription)
+  }
+
+  /// Localized copy for a request that failed because the device can't reach the server.
+  static var offlineMessage: String {
+    String(localized: .dataExportErrorNetwork)
+  }
+
+  /// True when the request failed because the device is offline or can't reach the server.
+  /// Unwraps the service error wrappers, then defers to `AuthSessionManager`.
+  @MainActor
+  static func isOffline(_ error: Error) -> Bool {
+    switch error {
+    case SharingServiceError.networkError(let underlying),
+      SharingServiceError.decodingError(let underlying),
+      FriendsMessagingServiceError.networkError(let underlying):
+      return isOffline(underlying)
+
+    case FriendsAPIError.offline:
+      return true
+
+    default:
+      return AuthSessionManager.shared.isTransientSessionResolutionError(error)
+    }
   }
 }

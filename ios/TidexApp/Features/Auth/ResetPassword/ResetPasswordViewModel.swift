@@ -241,7 +241,7 @@ final class ResetPasswordViewModel {
 
   func handleSuccessAction() async {
     if presentationMode == .recovery {
-      await AppCoordinator.shared.signOut()
+      await AppCoordinator.shared.signOutKeepingUnsyncedChanges()
     }
 
     navigateToLogin()

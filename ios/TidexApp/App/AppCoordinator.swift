@@ -239,6 +239,8 @@ final class AppCoordinator {
   @ObservationIgnored private var didReceiveInitialSession = false
   @ObservationIgnored private var isUpdatingAuthState = false
   @ObservationIgnored private var isUserInitiatedSignOutInProgress = false
+  /// Set when the terms check could not reach the manifest. Cleared by `recheckTermsIfPending`.
+  @ObservationIgnored private var isTermsRecheckPending = false
 
   // MARK: - Initialization
 
@@ -443,7 +445,7 @@ final class AppCoordinator {
 
         isUpdatingAuthState = false
 
-        if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
+        if let session = await AuthSessionManager.shared.getSessionOrLocal() {
           if await routeToMFAIfRequired(session) { return }
           launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
           AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
@@ -548,12 +550,17 @@ final class AppCoordinator {
             // The SDK ended the session (for example a revoked refresh token). The
             // server calls need a session, but the device-local cleanup still applies.
             await clearSignedOutDeviceState()
+            // The local store stays, so mark whose it is. A different user signing in wipes it.
+            retainLocalData(for: userId)
           }
           applySignedOutState()
 
         case .tokenRefreshed:
-          // Token refreshed, state unchanged
-          break
+          // A launch without network can leave userId unset. Finish it now that the
+          // refresh worked.
+          if userId == nil, appState == .authenticated, session != nil {
+            await updateUserProfile()
+          }
 
         case .mfaChallengeVerified:
           // MFA verified, user is now fully authenticated
@@ -590,6 +597,8 @@ final class AppCoordinator {
     isUpdatingAuthState = true
     defer { isUpdatingAuthState = false }
 
+    await discardRetainedLocalDataIfUserChanged()
+
     let didComplete = await withTaskGroup(of: Bool.self) { group in
       group.addTask { @MainActor in
         await self.performMFAAndTermsCheck()
@@ -609,7 +618,8 @@ final class AppCoordinator {
       // authenticated rather than kicking the user to the login screen. MFA/terms
       // will be re-checked on the next foreground or successful network call.
       launchLog.error("[Launch] Auth check timed out after 10s, proceeding to authenticated")
-      if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
+      isTermsRecheckPending = true
+      if let session = await AuthSessionManager.shared.getSessionOrLocal() {
         if await routeToMFAIfRequired(session) { return }
         loadOnboardingStateFromUser(session.user)
         userId = session.user.normalizedId
@@ -623,7 +633,7 @@ final class AppCoordinator {
   /// Extracted from checkMFAAndUpdateState so it can be wrapped in a timeout.
   private func performMFAAndTermsCheck() async {
     if ImpersonationManager.shared.isImpersonating,
-      let session = await AuthSessionManager.shared.getSessionIfAvailable()
+      let session = await AuthSessionManager.shared.getSessionOrLocal()
     {
       if await routeToMFAIfRequired(session) { return }
       await checkTermsAndUpdateState(initialSession: session)
@@ -649,7 +659,7 @@ final class AppCoordinator {
       }
     } catch {
       // Fall back to the stored session so a failed check can't skip MFA.
-      if let session = await AuthSessionManager.shared.getSessionIfAvailable(
+      if let session = await AuthSessionManager.shared.getSessionOrLocal(
         allowProactiveRefresh: false
       ), await routeToMFAIfRequired(session) {
         return
@@ -703,7 +713,7 @@ final class AppCoordinator {
       session: session,
       isImpersonating: { impersonation.isImpersonating },
       validateImpersonation: { await impersonation.validateSessionOnLaunch() },
-      currentSession: { await AuthSessionManager.shared.getSessionIfAvailable() })
+      currentSession: { await AuthSessionManager.shared.getSessionOrLocal() })
     switch route {
     case .notRequired:
       return false
@@ -762,7 +772,19 @@ final class AppCoordinator {
       let termsAcceptedAt = user.userMetadata["terms_accepted_at"]?.value as? String
 
       // Quick sync check with cached/fallback version - doesn't block on API
-      let needsReAcceptanceImmediate = TermsVersion.needsTermsReAcceptance(termsAcceptedAt)
+      var needsReAcceptanceImmediate = TermsVersion.needsTermsReAcceptance(termsAcceptedAt)
+
+      // The fallback version is only a guess. A user who accepted before and can't reach
+      // the manifest would be stuck on a screen that needs the network, so let them in
+      // and check again once online.
+      if needsReAcceptanceImmediate, termsAcceptedAt != nil {
+        if let live = await TermsVersion.needsTermsReAcceptanceIfReachable(termsAcceptedAt) {
+          needsReAcceptanceImmediate = live
+        } else {
+          needsReAcceptanceImmediate = false
+          isTermsRecheckPending = true
+        }
+      }
 
       if needsReAcceptanceImmediate {
         // User definitely needs to accept terms (based on cached/fallback version)
@@ -794,7 +816,7 @@ final class AppCoordinator {
       }
     } catch {
       // If we can't check terms, proceed to authenticated and let backend handle it
-      if let session = await AuthSessionManager.shared.getSessionIfAvailable(
+      if let session = await AuthSessionManager.shared.getSessionOrLocal(
         allowProactiveRefresh: allowProactiveRefresh
       ) {
         loadOnboardingStateFromUser(session.user)
@@ -811,13 +833,19 @@ final class AppCoordinator {
   private func checkTermsVersionInBackground(termsAcceptedAt: String?) {
     runTrackedTask { [weak self] in
       // Fetch latest terms version from API (this may take time on slow networks)
-      let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt)
+      let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceIfReachable(termsAcceptedAt)
 
       // Check cancellation after async operation to avoid stale state updates
       guard !Task.isCancelled else { return }
 
       await MainActor.run { [weak self] in
         guard let self, !Task.isCancelled else { return }
+
+        // Offline: the fallback version must not gate the app. Check again when online.
+        guard let needsReAcceptance else {
+          isTermsRecheckPending = true
+          return
+        }
 
         // Only transition if we're still authenticated and terms are actually needed
         if needsReAcceptance, appState == .authenticated {
@@ -826,6 +854,16 @@ final class AppCoordinator {
         }
       }
     }
+  }
+
+  /// Runs the terms check that was skipped because the manifest was unreachable.
+  private func recheckTermsIfPending() {
+    guard isTermsRecheckPending, appState == .authenticated else { return }
+    isTermsRecheckPending = false
+    let termsAcceptedAt =
+      AuthSessionManager.shared.localSession()?.user.userMetadata["terms_accepted_at"]?.value
+      as? String
+    checkTermsVersionInBackground(termsAcceptedAt: termsAcceptedAt)
   }
 
   /// Cancel all tracked background tasks
@@ -912,11 +950,10 @@ final class AppCoordinator {
   /// Load onboarding completion state from user metadata
   /// Called before setting appState to .authenticated to prevent PostAuthOnboarding flash
   private func loadOnboardingStateFromUser(_ user: User) {
-    if let finishedOnboarding = user.userMetadata["finishedOnboarding"]?.value as? Bool {
-      self.hasFinishedOnboardingRemotely = finishedOnboarding
-    } else {
-      self.hasFinishedOnboardingRemotely = false
-    }
+    let finishedRemotely = (user.userMetadata["finishedOnboarding"]?.value as? Bool) ?? false
+    // Onboarding finished offline is recorded locally until the metadata update reaches the server.
+    self.hasFinishedOnboardingRemotely =
+      finishedRemotely || OnboardingCompletionStore.isCompletedLocally(userId: user.normalizedId)
   }
 
   // MARK: - User Profile
@@ -925,8 +962,7 @@ final class AppCoordinator {
   /// Also triggers initial sync in background
   private func updateUserProfile() async {
     do {
-      // Use AuthSessionManager to prevent concurrent refresh race conditions
-      let session = try await AuthSessionManager.shared.getSession()
+      let session = try await sessionForProfileLoad()
       let user = session.user
 
       // Store user ID
@@ -936,6 +972,7 @@ final class AppCoordinator {
       // Check if onboarding was already completed (from raw_user_meta_data.finishedOnboarding)
       // Note: loadOnboardingStateFromUser is called earlier, but we update again in case metadata changed
       loadOnboardingStateFromUser(user)
+      Task { await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: currentUserId) }
 
       // Extract display name from user metadata or fall back to email
       if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
@@ -986,6 +1023,24 @@ final class AppCoordinator {
     }
   }
 
+  /// Resolves the session for loading the profile. Offline with an expired access token,
+  /// the refresh fails, so fall back to the stored session. The user, onboarding state and
+  /// cached settings all come from local data, and the sync retries when the network is back.
+  private func sessionForProfileLoad() async throws -> Session {
+    do {
+      // Use AuthSessionManager to prevent concurrent refresh race conditions
+      return try await AuthSessionManager.shared.getSession()
+    } catch {
+      guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
+        let stored = AuthSessionManager.shared.localSession()
+      else {
+        throw error
+      }
+      launchLog.warning("[Auth] Session refresh failed transiently; using stored session")
+      return stored
+    }
+  }
+
   // MARK: - Sync Triggers
 
   /// Trigger initial sync after authentication
@@ -997,6 +1052,7 @@ final class AppCoordinator {
       guard let self else { return }
       await coordinator.loadTrackingState(userId: userId)
       _ = await coordinator.sync(reason: .appLaunch, userId: userId)
+      await FriendsMessageOutbox.shared.drain(userId: userId)
 
       let settings = await MainActor.run { () -> UserSettings? in
         guard self.userId == userId else { return nil }
@@ -1041,6 +1097,23 @@ final class AppCoordinator {
     }
   }
 
+  /// Called by `ConnectivityMonitor` when the network comes back. Pushes local changes,
+  /// bypassing the sync interval guard, and sends queued chat messages.
+  func handleConnectivityRestored() async {
+    guard appState == .authenticated else { return }
+    recheckTermsIfPending()
+
+    // A launch without network can leave userId unset. This also starts the initial sync.
+    guard let userId else {
+      await updateUserProfile()
+      return
+    }
+
+    _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
+    await FriendsMessageOutbox.shared.drain(userId: userId)
+    await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: userId)
+  }
+
   /// Cancels pending foreground work. Called when the app resigns active or enters
   /// the background.
   func cancelForegroundWork() {
@@ -1065,12 +1138,22 @@ final class AppCoordinator {
         return
       }
 
+      recheckTermsIfPending()
+
+      // A launch without network can leave userId unset. This also starts the initial sync.
+      if self.userId == nil {
+        await updateUserProfile()
+        return
+      }
+
       if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
         await appDelegate.registerCachedAPNsTokenIfNeeded()
       }
 
       await syncCoordinator.loadTrackingState(userId: userId)
       _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
+      await FriendsMessageOutbox.shared.drain(userId: userId)
+      await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: userId)
 
       if let currentUserIdAfterSync = self.userId, currentUserIdAfterSync != userId {
         return
@@ -1100,11 +1183,14 @@ final class AppCoordinator {
             previousState: appState
           )
         )
+        // The refresh token is gone, so unsynced changes can't push. Keep them for the same
+        // user's next sign-in. Read this before the local sign-out removes the session.
+        let unsyncedUserId = await userIdWithUnsyncedChanges()
         try? await supabase.auth.signOut(scope: .local)
         // Run outside this task: clearAllCachedData() cancels foregroundTask.
         Task { @MainActor [weak self] in
           guard let self else { return }
-          await clearAllCachedData()
+          await clearAllCachedData(retainingLocalDataFor: unsyncedUserId)
           applySignedOutState()
         }
         return
@@ -1127,6 +1213,9 @@ final class AppCoordinator {
             previousState: appState
           )
         )
+        if self.userId == nil {
+          await updateUserProfile()
+        }
         return
       }
 
@@ -1186,7 +1275,7 @@ final class AppCoordinator {
 
   /// Called when user declines terms (signs out)
   func handleTermsDeclined() async {
-    await signOut()
+    await signOutKeepingUnsyncedChanges()
   }
 
   /// Sign out the user from this device only (local scope)
@@ -1204,16 +1293,62 @@ final class AppCoordinator {
   /// Pushes local changes before a user-initiated sign-out.
   /// - Returns: false when changes are still unsynced, so signing out would delete them.
   func syncPendingChangesBeforeSignOut() async -> Bool {
-    guard let userId else { return true }
+    // Before the profile loads (MFA, terms) userId is nil, so use the stored session.
+    // An unknown user is not safe to wipe.
+    guard let userId = userIdForSignOutCheck() else { return false }
+    guard await hasPendingChanges(userId: userId) else { return true }
     _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
-    let hasPendingChanges =
-      (try? await LocalStore.shared.storeActor.hasPendingChanges(userId: userId)) ?? true
-    return !hasPendingChanges
+    await FriendsMessageOutbox.shared.drain(userId: userId)
+    return !(await hasPendingChanges(userId: userId))
+  }
+
+  /// Sign out from a screen that can't ask what to do with unsynced changes (MFA, terms
+  /// decline, password recovery). Tries to push changes first. If some remain, the session
+  /// ends but the local store stays for that user. The same user's next sign-in pushes them,
+  /// and a different user's sign-in wipes them.
+  func signOutKeepingUnsyncedChanges() async {
+    guard let userId = userIdForSignOutCheck() else {
+      await signOut()
+      return
+    }
+    let canWipe = await syncPendingChangesBeforeSignOut()
+    await performSignOut(global: false, retainingLocalDataFor: canWipe ? nil : userId)
+  }
+
+  private func userIdForSignOutCheck() -> String? {
+    Self.signOutUserId(
+      current: userId,
+      local: AuthSessionManager.shared.localSession()?.normalizedUserId,
+      offlineFallback: { AuthSessionManager.shared.offlineUserIdFallback() }
+    )
+  }
+
+  nonisolated static func signOutUserId(
+    current: String?,
+    local: String?,
+    offlineFallback: () -> String?
+  ) -> String? {
+    if let current, !current.isEmpty { return current }
+    if let local, !local.isEmpty { return local }
+    return offlineFallback()
+  }
+
+  private func hasPendingChanges(userId: String) async -> Bool {
+    // A failed read counts as pending so it never wipes by mistake.
+    (try? await LocalStore.shared.storeActor.hasPendingChanges(userId: userId)) ?? true
+  }
+
+  /// The signed-in user's id when they have unsynced changes, otherwise nil.
+  private func userIdWithUnsyncedChanges() async -> String? {
+    guard let userId = userIdForSignOutCheck() else { return nil }
+    return await hasPendingChanges(userId: userId) ? userId : nil
   }
 
   /// Internal sign out implementation
   /// - Parameter global: If true, signs out from all devices; if false, only this device
-  private func performSignOut(global: Bool) async {
+  private func performSignOut(global: Bool, retainingLocalDataFor retainedUserId: String? = nil)
+    async
+  {
     isUserInitiatedSignOutInProgress = true
     AuthDiagnosticsReporter.shared.record(
       .userInitiatedSignOut,
@@ -1233,7 +1368,7 @@ final class AppCoordinator {
     }
 
     // Clear all cached data
-    await clearAllCachedData()
+    await clearAllCachedData(retainingLocalDataFor: retainedUserId)
 
     do {
       if global {
@@ -1252,7 +1387,9 @@ final class AppCoordinator {
 
   /// Clear all cached data without signing out
   /// Used during sign out and when switching user context (impersonation)
-  private func clearAllCachedData() async {
+  /// - Parameter retainedUserId: When set, the local store and defaults stay because this
+  ///   user has unsynced changes. See `discardRetainedLocalDataIfUserChanged`.
+  private func clearAllCachedData(retainingLocalDataFor retainedUserId: String? = nil) async {
     // Stop messaging realtime first so in-flight callbacks can't write the previous
     // user's threads back after the local store is reset.
     friendsRealtimeTask?.cancel()
@@ -1268,13 +1405,15 @@ final class AppCoordinator {
     CalendarSubscriptionStore.clearStoredTokensForUserReset()
 
     // Clear all local data (shifts, settings, sync state, etc.)
-    await LocalStore.shared.resetAllData()
+    if retainedUserId == nil {
+      await LocalStore.shared.resetAllData()
+    }
 
     // Clear image cache
     ImageCache.shared.clearAll()
     NotificationService.shared.setApplicationBadgeCount(0)
 
-    if let bundleId = Bundle.main.bundleIdentifier {
+    if retainedUserId == nil, let bundleId = Bundle.main.bundleIdentifier {
       let seenPreAuthOnboarding = UserDefaults.standard.bool(
         forKey: "hasCompletedPreAuthOnboarding")
       UserDefaults.standard.removePersistentDomain(forName: bundleId)
@@ -1287,7 +1426,41 @@ final class AppCoordinator {
     // This clears the interval guard so the next user's initial sync isn't blocked
     await syncCoordinator.resetForUserChange()
 
+    retainLocalData(for: retainedUserId)
     initialSyncComplete = false
+  }
+
+  private static let retainedLocalDataUserIdKey = "auth.retained_local_data_user_id"
+
+  /// Records whose data is still in the local store after a sign-out that kept it.
+  private func retainLocalData(for userId: String?) {
+    guard let userId, !userId.isEmpty else { return }
+    UserDefaults.standard.set(userId, forKey: Self.retainedLocalDataUserIdKey)
+  }
+
+  nonisolated static func shouldWipeRetainedData(
+    retainedUserId: String?,
+    sessionUserId: String
+  ) -> Bool {
+    guard let retainedUserId, !retainedUserId.isEmpty else { return false }
+    return retainedUserId.lowercased() != sessionUserId.lowercased()
+  }
+
+  /// Runs at sign-in. The local store has no owner field, so a store kept for user A
+  /// must not reach user B. Same user keeps it and pushes the changes.
+  private func discardRetainedLocalDataIfUserChanged() async {
+    let defaults = UserDefaults.standard
+    guard let retainedUserId = defaults.string(forKey: Self.retainedLocalDataUserIdKey),
+      let sessionUserId = AuthSessionManager.shared.localSession()?.normalizedUserId
+    else {
+      return
+    }
+    if Self.shouldWipeRetainedData(retainedUserId: retainedUserId, sessionUserId: sessionUserId) {
+      launchLog.warning("[Auth] Different user signed in; wiping retained local data")
+      await clearAllCachedData()
+    } else {
+      defaults.removeObject(forKey: Self.retainedLocalDataUserIdKey)
+    }
   }
 
   /// Device-local cleanup that needs no session: widgets, the extension keychain token,
@@ -1498,8 +1671,7 @@ final class AppCoordinator {
   /// Called by ImpersonationManager AFTER setting the new session
   func completeUserSwitch() async {
     do {
-      // Use AuthSessionManager to prevent concurrent refresh race conditions
-      let session = try await AuthSessionManager.shared.getSession()
+      let session = try await sessionForProfileLoad()
       let user = session.user
       let currentUserId = user.normalizedId
 

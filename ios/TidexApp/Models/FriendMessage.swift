@@ -153,7 +153,6 @@ internal struct FriendMessage: Identifiable, Codable, Equatable {
     senderUserId == viewerUserId
       && messageType == .user
       && deletedAt == nil
-      && (sendState == .sent || sendState == .failed)
   }
 
   internal func withSendState(
