@@ -17,48 +17,50 @@ struct ErrorBanner: View {
   var onDismiss: (() -> Void)?
 
   var body: some View {
-    HStack(alignment: .top, spacing: Spacing.sm) {
-      Image(systemName: "exclamationmark.triangle.fill")
-        .foregroundColor(.tidexError)
-        .font(.tidexBody)
-
-      Text(message)
+    HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+      Image(systemName: "exclamationmark.circle.fill")
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextPrimary)
-        .multilineTextAlignment(.leading)
+        .foregroundStyle(Color.tidexError)
+        .accessibilityHidden(true)
 
-      Spacer()
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        Text(message)
+          .font(.tidexSubheadline)
+          .foregroundStyle(Color.tidexTextPrimary)
+          .fixedSize(horizontal: false, vertical: true)
 
-      if let onRetry {
-        Button(action: onRetry) {
-          Text(.commonRetry)
-            .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
-            .frame(minWidth: 44, minHeight: 44)
-            .contentShape(Rectangle())
+        if let onRetry {
+          Button(action: onRetry) {
+            Label(.commonRetry, systemImage: "arrow.clockwise")
+              .font(.tidexLabel)
+          }
+          .buttonStyle(.bordered)
+          .buttonBorderShape(.capsule)
+          .tint(.tidexError)
         }
-        .buttonStyle(.plain)
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
 
       if let onDismiss {
         Button(action: onDismiss) {
           Image(systemName: "xmark")
-            .foregroundColor(.tidexTextMuted)
             .font(.tidexCaptionStrong)
-            .frame(minWidth: 44, minHeight: 44)
+            .foregroundStyle(Color.tidexTextMuted)
+            // 44pt hit area that doesn't add height to the banner.
+            .padding(Spacing.md)
             .contentShape(Rectangle())
+            .padding(-Spacing.md)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(.commonDismiss))
       }
     }
-    .padding(Spacing.md)
-    .background(Color.tidexError.opacity(0.15))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.md)
-        .stroke(Color.tidexError.opacity(0.3), lineWidth: 1)
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.sm)
+    .background(
+      Color.tidexError.opacity(0.12),
+      in: RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
     )
-    .cornerRadius(CornerRadius.md)
   }
 }
 

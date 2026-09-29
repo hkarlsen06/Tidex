@@ -22,9 +22,12 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
     cropViewController.resetAspectRatioEnabled = false
     cropViewController.aspectRatioPickerButtonHidden = true
 
-    // Customize button titles
-    cropViewController.doneButtonTitle = String(localized: .profileImageCropConfirm)
-    cropViewController.cancelButtonTitle = String(localized: .commonCancel)
+    // One instruction above the photo, and the confirm action in brand blue instead of the library's yellow.
+    // iOS 26 and later show icon-only toolbar buttons without VoiceOver labels, so label them here.
+    cropViewController.title = String(localized: .profileImageCropTitle)
+    cropViewController.doneButtonColor = UIColor(Color.tidexBlue)
+    cropViewController.toolbar.doneIconButton.accessibilityLabel = String(localized: .profileImageCropConfirm)
+    cropViewController.toolbar.cancelIconButton.accessibilityLabel = String(localized: .commonCancel)
 
     // Wrap in navigation controller for proper presentation
     let navigationController = UINavigationController(rootViewController: cropViewController)

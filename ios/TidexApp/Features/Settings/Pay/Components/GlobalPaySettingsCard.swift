@@ -23,15 +23,7 @@ struct GlobalPaySettingsCard: View {
   @State private var showingCurrencyPicker = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.mlg) {
-      // Section header
-      Text(.settingsPayGlobalTitle)
-        .font(.tidexButton)
-        .foregroundColor(.tidexTextPrimary)
-
-      // Currency selector
-      currencyInput
-
+    PaySettingsSection(title: .settingsPayGlobalTitle, footer: footer) {
       if let onUpdatePayPeriod {
         PayPeriodSettingsSection(
           jobId: jobId,
@@ -39,19 +31,19 @@ struct GlobalPaySettingsCard: View {
           payrollDay: selectedPayrollDay,
           onUpdate: onUpdatePayPeriod
         )
+        PaySettingsRowDivider()
       }
 
       // Two-weekly pay has its own paydays, so the monthly payday only applies to monthly periods.
       if !payPeriod.isBiweekly {
         payrollDayInput
+        PaySettingsRowDivider()
       }
 
-      // Half-tax month
       halfTaxMonthPicker
+      PaySettingsRowDivider()
+      currencyInput
     }
-    .padding(Spacing.md)
-    .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .onAppear {
       initializeFromInputs(force: true)
     }
@@ -85,84 +77,57 @@ struct GlobalPaySettingsCard: View {
     initializedJobId = jobId
   }
 
+  // MARK: - Footer
+
+  /// The pay period example explains the payday when it is shown, so the long helper
+  /// only appears where the pay period picker is hidden.
+  private var footer: Text? {
+    if !canChangeCurrency {
+      return Text(.settingsPayCurrencyTariffWarning)
+    }
+    if onUpdatePayPeriod == nil, payPeriod.isCalendarMonth {
+      return Text(.settingsPayGlobalPayrollDayHelper)
+    }
+    return nil
+  }
+
   // MARK: - Currency Input
 
-  @ViewBuilder
   private var currencyInput: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.settingsPayGlobalCurrency)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      Button(action: {
-        if canChangeCurrency {
-          showingCurrencyPicker = true
-        }
-      }) {
-        HStack {
+    Button {
+      showingCurrencyPicker = true
+    } label: {
+      PaySettingsRow(title: .settingsPayGlobalCurrency) {
+        HStack(spacing: Spacing.xs) {
           Text(CurrencyConfig.get(selectedCurrency).label)
             .font(.tidexBody)
-            .foregroundColor(canChangeCurrency ? .tidexTextPrimary : .tidexTextMuted)
+            .foregroundStyle(Color.tidexTextSecondary)
+            .lineLimit(1)
 
-          Spacer()
-
-          if canChangeCurrency {
-            Image(systemName: "chevron.down")
-              .font(.tidexLabel)
-              .foregroundColor(.tidexTextMuted)
-          } else {
-            Image(systemName: "lock.fill")
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-          }
+          Image(systemName: canChangeCurrency ? "chevron.right" : "lock.fill")
+            .font(.tidexCaption)
+            .foregroundStyle(Color.tidexTextMuted)
+            .accessibilityHidden(true)
         }
-        .padding(Spacing.sm)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-      }
-      .buttonStyle(.plain)
-      .disabled(!canChangeCurrency)
-      .sensoryFeedback(.impact(weight: .light), trigger: showingCurrencyPicker) { _, new in new }
-
-      if !canChangeCurrency {
-        Text(.settingsPayCurrencyTariffWarning)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
       }
     }
+    .buttonStyle(.plain)
+    .disabled(!canChangeCurrency)
+    .sensoryFeedback(.impact(weight: .light), trigger: showingCurrencyPicker) { _, new in new }
   }
 
   // MARK: - Payroll Day Input
 
-  @ViewBuilder
   private var payrollDayInput: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.settingsPayGlobalPayrollDay)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      Picker("", selection: $selectedPayrollDay) {
-        ForEach(1...31, id: \.self) { day in
-          Text(payrollDayOptionTitle(day)).tag(day)
-        }
-      }
-      .pickerStyle(.menu)
-      .tint(.tidexBlue)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(Spacing.sm)
-      .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-      .onChange(of: selectedPayrollDay) { _, newValue in
-        onUpdatePayrollDay(newValue)
-      }
-      .sensoryFeedback(.selection, trigger: selectedPayrollDay)
-
-      if payPeriod.isCalendarMonth {
-        Text(.settingsPayGlobalPayrollDayHelper)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
+    PaySettingsPickerRow(title: .settingsPayGlobalPayrollDay, selection: $selectedPayrollDay) {
+      ForEach(1...31, id: \.self) { day in
+        Text(payrollDayOptionTitle(day)).tag(day)
       }
     }
+    .onChange(of: selectedPayrollDay) { _, newValue in
+      onUpdatePayrollDay(newValue)
+    }
+    .sensoryFeedback(.selection, trigger: selectedPayrollDay)
   }
 
   private func payrollDayOptionTitle(_ day: Int) -> String {
@@ -194,38 +159,21 @@ struct GlobalPaySettingsCard: View {
 
   // MARK: - Half-Tax Month Picker
 
-  @ViewBuilder
   private var halfTaxMonthPicker: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.settingsPayGlobalHalfTaxMonth)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      Picker("", selection: $selectedHalfTaxMonth) {
-        Text(.settingsPayGlobalHalfTaxMonthOff)
-          .tag(nil as Int?)
-        Text(.settingsPayGlobalHalfTaxMonthNovember)
-          .tag(11 as Int?)
-        Text(.settingsPayGlobalHalfTaxMonthDecember)
-          .tag(12 as Int?)
-      }
-      .pickerStyle(.menu)
-      .tint(.tidexBlue)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(Spacing.sm)
-      .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-      .onChange(of: selectedHalfTaxMonth) { _, newValue in
-        Task {
-          await onUpdateHalfTaxMonth(newValue)
-        }
-      }
-      .sensoryFeedback(.selection, trigger: selectedHalfTaxMonth)
-
-      Text(.settingsPayGlobalHalfTaxMonthHelper)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+    PaySettingsPickerRow(title: .settingsPayGlobalHalfTaxMonth, selection: $selectedHalfTaxMonth) {
+      Text(.settingsPayGlobalHalfTaxMonthOff)
+        .tag(nil as Int?)
+      Text(.settingsPayGlobalHalfTaxMonthNovember)
+        .tag(11 as Int?)
+      Text(.settingsPayGlobalHalfTaxMonthDecember)
+        .tag(12 as Int?)
     }
+    .onChange(of: selectedHalfTaxMonth) { _, newValue in
+      Task {
+        await onUpdateHalfTaxMonth(newValue)
+      }
+    }
+    .sensoryFeedback(.selection, trigger: selectedHalfTaxMonth)
   }
 }
 

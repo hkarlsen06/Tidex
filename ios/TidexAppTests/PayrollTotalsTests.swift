@@ -10,9 +10,10 @@ final class PayrollTotalsTests: XCTestCase {
       ([TestFixtures.job(id: "job", isDefault: true, halfTaxMonth: 11)], nil, nil, 15),
       ([], nil, 11, 15),
       ([], nil, 12, 30),
+      // A calendar month can't be paid before it ends, so this pays in November like the default.
       ([TestFixtures.job(
         id: "job", isDefault: true, halfTaxMonth: 11,
-        payPeriod: .monthly(startDay: 1, payoutMonthOffset: 0))], "job", nil, 20),
+        payPeriod: .monthly(startDay: 1, payoutMonthOffset: 0))], "job", nil, 15),
       ([TestFixtures.job(
         id: "job", isDefault: true, halfTaxMonth: 11,
         payPeriod: .monthly(startDay: 16, payoutMonthOffset: 1))], "job", nil, 30),

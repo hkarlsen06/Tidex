@@ -49,10 +49,7 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
 
   var body: some View {  // swiftlint:disable:this explicit_acl
     VStack(alignment: .leading, spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
-      // Title
-      Text(.statsChartsMonthlyProgressTitle)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+      StatsChartHeader(title: String(localized: .statsChartsMonthlyProgressTitle))
 
       // Chart
       Chart {
@@ -104,7 +101,7 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
               let isToday = data.first(where: { $0.day == day })?.isToday ?? false  // swiftlint:disable:this explicit_type_interface line_length
               Text("\(day)")
                 .font(isToday ? .tidexCaptionStrong : .tidexCaptionRegular)
-                .foregroundColor(isToday ? .tidexBlue : .tidexTextPrimary)
+                .foregroundColor(isToday ? .tidexBlue : .tidexTextSecondary)
             }
           }
         }
@@ -120,14 +117,49 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
               .locale(.appLocale)
           )
           .font(.tidexCaptionRegular)
-          .foregroundStyle(Color.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextSecondary)
         }
       }
       .chartLegend(.hidden)
       .frame(height: 220)  // swiftlint:disable:this no_magic_numbers
+
+      // Name the two lines so the dashed grey one doesn't need guessing.
+      HStack(spacing: Spacing.md) {
+        ProgressLegendItem(label: .commonThisMonth, color: .tidexBlue, dash: [])
+        ProgressLegendItem(
+          label: .commonPreviousMonth,
+          color: .tidexTextMuted.opacity(0.6),  // swiftlint:disable:this no_magic_numbers
+          dash: [4, 3]  // swiftlint:disable:this no_magic_numbers
+        )
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .statsPanelSurface()
+  }
+}
+
+// MARK: - Legend
+
+private struct ProgressLegendItem: View {
+  let label: LocalizedStringResource
+  let color: Color
+  let dash: [CGFloat]
+
+  var body: some View {
+    HStack(spacing: Spacing.xxs) {
+      Path { path in
+        path.move(to: CGPoint(x: 0, y: 1))
+        path.addLine(to: CGPoint(x: 14, y: 1))  // swiftlint:disable:this no_magic_numbers
+      }
+      .stroke(color, style: StrokeStyle(lineWidth: 2, dash: dash))  // swiftlint:disable:this no_magic_numbers
+      .frame(width: 14, height: 2)  // swiftlint:disable:this no_magic_numbers
+      .accessibilityHidden(true)
+
+      Text(label)
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextSecondary)
+        .lineLimit(1)
+    }
   }
 }
 
@@ -137,15 +169,10 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
 struct MonthlyProgressChartEmpty: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
 
   var body: some View {  // swiftlint:disable:this explicit_acl
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(.statsChartsMonthlyProgressTitle)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.statsChartsMonthlyProgressNoData)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextSecondary)
-    }
+    StatsChartHeader(
+      title: String(localized: .statsChartsMonthlyProgressTitle),
+      caption: String(localized: .statsChartsMonthlyProgressNoData)
+    )
     .frame(maxWidth: .infinity, alignment: .leading)
     .statsPanelSurface()
   }

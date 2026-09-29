@@ -32,10 +32,10 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
 
   var body: some View {  // swiftlint:disable:this explicit_acl
     VStack(alignment: .leading, spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
-      // Title
-      Text(title)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+      StatsChartHeader(
+        title: title,
+        value: CurrencyConfig.format(data.reduce(0) { $0 + $1.earnings }, currency: currency)
+      )
 
       // Chart
       Chart {
@@ -73,7 +73,7 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
 
               Text(label)
                 .font((isHighlighted || isSelected) ? .tidexCaptionStrong : .tidexCaptionRegular)
-                .foregroundColor((isHighlighted || isSelected) ? .tidexBlue : .tidexTextPrimary)
+                .foregroundColor((isHighlighted || isSelected) ? .tidexBlue : .tidexTextSecondary)
             }
           }
         }
@@ -89,7 +89,7 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
               .locale(.appLocale)
           )
           .font(.tidexCaptionRegular)
-          .foregroundStyle(Color.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextSecondary)
         }
       }
       .chartYScale(domain: .automatic(includesZero: true))
@@ -176,16 +176,8 @@ struct WeeklyBarChartEmpty: View {  // swiftlint:disable:this explicit_acl expli
   let title: String  // swiftlint:disable:this explicit_acl
 
   var body: some View {  // swiftlint:disable:this explicit_acl
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(title)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.statsChartsWeeklyChartNoData)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
+    StatsChartHeader(title: title, caption: String(localized: .statsChartsWeeklyChartNoData))
+      .frame(maxWidth: .infinity, alignment: .leading)
     .statsPanelSurface()
   }
 }

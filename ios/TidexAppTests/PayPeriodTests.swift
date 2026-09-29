@@ -45,6 +45,20 @@ internal final class PayPeriodTests: XCTestCase {
       [PayWindow(start: "2026-08-16", end: "2026-09-15", payoutDate: "2026-10-12")])
   }
 
+  internal func testSameMonthPaydayBeforePeriodEndMovesToNextMonth() {
+    let schedule = PayoutSchedule(
+      period: .monthly(startDay: 28, payoutMonthOffset: 0), payrollDay: 10)
+
+    XCTAssertEqual(
+      schedule.window(containing: "2026-09-29"),
+      PayWindow(start: "2026-09-28", end: "2026-10-27", payoutDate: "2026-11-10"))
+    XCTAssertEqual(
+      schedule.windows(paidInYear: 2_026, month: 11),
+      [PayWindow(start: "2026-09-28", end: "2026-10-27", payoutDate: "2026-11-10")])
+    XCTAssertFalse(PayoutSchedule.canPayInEndMonth(startDay: 28, payrollDay: 10))
+    XCTAssertTrue(PayoutSchedule.canPayInEndMonth(startDay: 16, payrollDay: 25))
+  }
+
   internal func testMonthlyWindowsPaidInMonthMatchWindowContainingDay() throws {
     let schedules = [
       PayoutSchedule(period: .calendarMonth, payrollDay: 20),

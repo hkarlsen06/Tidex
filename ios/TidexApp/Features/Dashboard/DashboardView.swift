@@ -276,6 +276,26 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     }
   }
 
+  /// Variant ids are per job, so the same id can belong to both the next and the previous payout.
+  private func isSamePayout(_ lhs: PayrollCardVariant, _ rhs: PayrollCardVariant) -> Bool {  // swiftlint:disable:this line_length type_contents_order
+    lhs.id == rhs.id
+      && lhs.jobBreakdowns.first?.earningsPeriodStart == rhs.jobBreakdowns.first?.earningsPeriodStart
+  }
+
+  /// The previous payout for the displayed month, or nil when the sheet already shows it.
+  private func previousPayrollVariant(unlessShowing variant: PayrollCardVariant)  // swiftlint:disable:this line_length type_contents_order
+    -> PayrollCardVariant?
+  {
+    guard let data = viewModel.dashboardData,
+      let previous = viewModel.previousPayrollCardVariants(
+        fallback: data,
+        defaultTitle: String(localized: .dashboardPreviousPayout)
+      ).first,
+      !isSamePayout(previous, variant)
+    else { return nil }
+    return previous
+  }
+
   private func payrollDetailsSheet(for variant: PayrollCardVariant) -> some View {  // swiftlint:disable:this line_length type_contents_order
     PayrollDetailsSheet(
       variant: variant,
@@ -287,6 +307,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       },
       onDeleteAdjustment: { id in
         try await viewModel.deletePayrollAdjustment(id: id)
+      },
+      onShowPreviousPayout: previousPayrollVariant(unlessShowing: variant).map { previous in
+        { selectedPayrollDetailsVariant = previous }
       }
     )
     .userCurrency(variant.currency)
@@ -496,9 +519,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .onChange(of: viewModel.payrollCardSnapshot) { _, snapshot in
         guard let selected = selectedPayrollDetailsVariant, let snapshot else { return }
         if let updated = (snapshot.variants + snapshot.previousPayoutVariants).first(where: {
-          $0.id == selected.id
-            && $0.jobBreakdowns.first?.earningsPeriodStart
-              == selected.jobBreakdowns.first?.earningsPeriodStart
+          isSamePayout($0, selected)
         }) {
           selectedPayrollDetailsVariant = updated
         }
@@ -1009,10 +1030,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     }()
 
     let payrollVariants = viewModel.payrollCardVariants(fallback: data, defaultTitle: payrollLabel)  // swiftlint:disable:this explicit_type_interface line_length
-    let previousPayrollVariant: PayrollCardVariant? = viewModel.previousPayrollCardVariants(
-      fallback: data,
-      defaultTitle: String(localized: .dashboardPreviousPayout)
-    ).first
     let isPayrollCardLoading = viewModel.payrollCardSnapshot == nil  // swiftlint:disable:this explicit_type_interface
     if let selectedPayrollVariant = payrollVariants.first {
       let showsMultiWorkplacePayroll = !selectedPayrollVariant.badges.isEmpty  // swiftlint:disable:this explicit_type_interface line_length
@@ -1085,31 +1102,23 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           clockButtonsSection()
         }
 
+        // The previous payout is reached from the payout details sheet, so the payout
+        // and the featured shift are the only rows here.
         VStack(spacing: Spacing.sm) {
-          VStack(spacing: Spacing.xxs) {
-            if let previousPayrollVariant, !isPayrollCardLoading {
-              previousPayrollDetailsChip(for: previousPayrollVariant)
-            } else if usesFixedCardHeights {
-              Color.clear
-                .frame(height: 28)  // swiftlint:disable:this no_magic_numbers
-            }
-
-            // Payroll Card (Previous Month relative to displayed month)
-            payrollCardSection(
-              selectedVariant: selectedPayrollVariant,
-              variantCount: payrollVariants.count,
-              canManuallySetPayrollStatus: canManuallySetPayrollStatus,
-              payrollMarkedReceived: payrollMarkedReceived,
-              payrollOverrideUserId: payrollOverrideUserId,
-              payrollProgress: isPayrollCardLoading ? nil : selectedPayrollProgress,
-              isLoading: isPayrollCardLoading,
-              showsLoadingShimmer: false
-            )
-            .frame(
-              height: usesFixedCardHeights ? payrollSectionMinHeight : nil,
-              alignment: .top
-            )
-          }
+          payrollCardSection(
+            selectedVariant: selectedPayrollVariant,
+            variantCount: payrollVariants.count,
+            canManuallySetPayrollStatus: canManuallySetPayrollStatus,
+            payrollMarkedReceived: payrollMarkedReceived,
+            payrollOverrideUserId: payrollOverrideUserId,
+            payrollProgress: isPayrollCardLoading ? nil : selectedPayrollProgress,
+            isLoading: isPayrollCardLoading,
+            showsLoadingShimmer: false
+          )
+          .frame(
+            height: usesFixedCardHeights ? payrollSectionMinHeight : nil,
+            alignment: .top
+          )
 
           // Featured Shift Card - exact height on regular Dynamic Type to avoid
           // skeleton/content vertical recentering during the loading transition.
@@ -1346,32 +1355,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       }
   }
 
-  private func previousPayrollDetailsChip(for variant: PayrollCardVariant) -> some View {  // swiftlint:disable:this line_length type_contents_order
-    Button {
-      Haptics.play(.medium)
-      selectedPayrollDetailsVariant = variant
-    } label: {
-      HStack(spacing: Spacing.xxs) {
-        Image(systemName: "clock.arrow.circlepath")
-          .font(.tidexCaptionRegular.weight(.semibold))
-          .foregroundColor(.tidexTextSecondary)
-          .accessibilityHidden(true)
-
-        Text(.dashboardSeePreviousPayout)
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexBlue)
-          .lineLimit(1)
-      }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.xxs)
-      .frame(minHeight: 28)  // swiftlint:disable:this no_magic_numbers
-      .background(Color.tidexBlue.opacity(0.1))  // swiftlint:disable:this no_magic_numbers
-      .clipShape(Capsule())
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel(Text(.dashboardSeePreviousPayout))
-  }
-
   // MARK: - Featured Shift Section
 
   /// Featured shift card with fixed height to prevent layout jumps
@@ -1563,28 +1546,21 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             }
 
             VStack(spacing: Spacing.sm) {
-              VStack(spacing: Spacing.xxs) {
-                if usesFixedCardHeights {
-                  Color.clear
-                    .frame(height: 28)  // swiftlint:disable:this no_magic_numbers
-                }
-
-                // Payroll Card skeleton
-                PayrollCard(
-                  payrollDate: Date(),
-                  label: String(localized: .dashboardNextPayout),
-                  gross: 0,
-                  net: nil,
-                  tax: nil,
-                  taxEnabled: false,
-                  isLoading: true,
-                  isElevated: false
-                )
-                .frame(
-                  height: usesFixedCardHeights ? payrollSectionMinHeight : nil,
-                  alignment: .top
-                )
-              }
+              // Payroll Card skeleton
+              PayrollCard(
+                payrollDate: Date(),
+                label: String(localized: .dashboardNextPayout),
+                gross: 0,
+                net: nil,
+                tax: nil,
+                taxEnabled: false,
+                isLoading: true,
+                isElevated: false
+              )
+              .frame(
+                height: usesFixedCardHeights ? payrollSectionMinHeight : nil,
+                alignment: .top
+              )
 
               // Featured Shift Card skeleton
               if usesFixedCardHeights {
@@ -1730,70 +1706,74 @@ private struct ClockOutReviewSheet: View {
     isSaving || isDiscarding
   }
 
+  private var durationText: String {
+    guard isValidRange, let startTime, let resolvedEndTime else { return "--" }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    // swiftlint:disable:next explicit_type_interface no_magic_numbers
+    let wholeMinutes = Duration.seconds(Int(resolvedEndTime.timeIntervalSince(startTime) / 60) * 60)
+    return wholeMinutes.formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))
+  }
+
   var body: some View {
     NavigationStack {  // swiftlint:disable:this closure_body_length
       VStack(alignment: .leading, spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
-        HStack {
-          Text(.shiftsDate)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-          Spacer()
+        VStack(spacing: Spacing.xxs) {
+          Text(durationText)
+            .font(.tidexAmountLarge)
+            .monospacedDigit()
+            .foregroundColor(isValidRange ? .tidexTextPrimary : .tidexTextMuted)
+            .contentTransition(.numericText())
+            .animation(.snappy, value: durationText)
           if let startTime {
-            Text(startTime, format: .dateTime.day().month().year())
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-          } else {
-            Text("--")
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextMuted)
+            Text(startTime, format: .dateTime.weekday(.wide).day().month(.wide))
+              .font(.tidexSubheadline)
+              .foregroundColor(.tidexTextSecondary)
           }
         }
-        .padding(.horizontal, Spacing.md)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
 
-        if availableJobs.count > 1 {
-          Button {
-            showJobChooser = true
-          } label: {
-            HStack(spacing: Spacing.sm) {
-              Text(.settingsPayChooseJobTitle)
-                .font(.tidexSubheadline)
-                .foregroundColor(.tidexTextSecondary)
-
-              Spacer(minLength: Spacing.sm)
-
-              if let selectedJob {
-                WorkplaceNameText(
-                  name: selectedJob.name,
-                  colorHex: selectedJob.color,
-                  font: .tidexMonoCaption,
-                  fallbackBadgeColor: .tidexBlue,
-                  badgeHorizontalPadding: Spacing.xs,
-                  badgeVerticalPadding: 2  // swiftlint:disable:this no_magic_numbers
-                )
-                .lineLimit(1)
-                .truncationMode(.tail)
-              }
-
-              Image(systemName: "chevron.down")  // swiftlint:disable:this accessibility_label_for_image
-                .font(.tidexMicro)
-                .foregroundColor(.tidexTextMuted)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Spacing.md)
-            .background(
-              RoundedRectangle(cornerRadius: CornerRadius.xxl)
-                .fill(Color.tidexSurfacePrimary)
-            )
-          }
-          .buttonStyle(.plain)
-        }
-
-        VStack(spacing: Spacing.md) {
+        VStack(spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
           TimeRangePicker(
             startTime: $startTime,
             endTime: $endTime,
-            focusedFieldBinding: $focusedTimeField
+            focusedFieldBinding: $focusedTimeField,
+            showsRecentTimeChips: false
           )
+
+          if availableJobs.count > 1 {
+            Divider()
+
+            Button {
+              showJobChooser = true
+            } label: {
+              HStack(spacing: Spacing.sm) {
+                Text(.settingsPayChooseJobTitle)
+                  .font(.tidexSubheadline)
+                  .foregroundColor(.tidexTextSecondary)
+
+                Spacer(minLength: Spacing.sm)
+
+                if let selectedJob {
+                  WorkplaceNameText(
+                    name: selectedJob.name,
+                    colorHex: selectedJob.color,
+                    font: .tidexMonoCaption,
+                    fallbackBadgeColor: .tidexBlue,
+                    badgeHorizontalPadding: Spacing.xs,
+                    badgeVerticalPadding: 2  // swiftlint:disable:this no_magic_numbers
+                  )
+                  .lineLimit(1)
+                  .truncationMode(.tail)
+                }
+
+                Image(systemName: "chevron.up.chevron.down")  // swiftlint:disable:this accessibility_label_for_image
+                  .font(.tidexMicro)
+                  .foregroundColor(.tidexTextMuted)
+              }
+              .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+          }
         }
         .padding(Spacing.md)
         .background(
@@ -1810,18 +1790,17 @@ private struct ClockOutReviewSheet: View {
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
           }
-          .padding(.horizontal, Spacing.md)
         }
 
         if let errorMessage {
           Text(errorMessage)
             .font(.tidexFootnote)
             .foregroundColor(.tidexError)
-            .padding(.horizontal, Spacing.md)
         }
 
         Spacer()
       }
+      .padding(.horizontal, Spacing.md)
       .padding(.top, Spacing.md)
       .background(Color.tidexBackground.ignoresSafeArea())
       .navigationTitle(.dashboardClockOutReviewTitle)
@@ -1848,20 +1827,14 @@ private struct ClockOutReviewSheet: View {
             await discard()
           }
         } label: {
-          Text(.dashboardClockOutDiscardShift)
-            .font(.tidexLabelStrong)
+          Label(String(localized: .dashboardClockOutDiscardShift), systemImage: "trash")
+            .font(.tidexLabel)
             .foregroundColor(.tidexError)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.sm)
-            .background(
-              RoundedRectangle(cornerRadius: CornerRadius.card)
-                .fill(Color.tidexSurfacePrimary)
-            )
+            .frame(maxWidth: .infinity, minHeight: 44)  // swiftlint:disable:this no_magic_numbers
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.xs)
-        .background(Color.tidexBackground)
         .disabled(isWorking)
       }
       .task {

@@ -16,12 +16,9 @@ final class EventDetailsSummaryBuilderTests: XCTestCase {
 
     let summary = EventDetailsSummaryBuilder.scheduleSummary(for: event)
 
-    XCTAssertEqual(summary.rows.count, 1)
-    XCTAssertEqual(summary.rows.first?.title, String(localized: .addShiftEventDate))
-    XCTAssertEqual(summary.rows.first?.value, EventSheetFormatter.longDate("2026-04-20"))
-    XCTAssertEqual(summary.footerIcon, "clock")
+    XCTAssertEqual(summary.dateText, EventSheetFormatter.longDate("2026-04-20"))
     XCTAssertEqual(
-      summary.footerText,
+      summary.timeText,
       ShiftCardFormatter.localizedTimeRange(
         start: "09:00",
         end: "11:30",
@@ -31,7 +28,7 @@ final class EventDetailsSummaryBuilderTests: XCTestCase {
     )
   }
 
-  func testScheduleSummaryForMultiDayAllDayEventIncludesStartAndEndRows() {
+  func testScheduleSummaryForMultiDayAllDayEventShowsRangeOnOneLine() {
     let event = TestFixtures.event(
       id: "event-2",
       startDate: "2026-04-20",
@@ -42,12 +39,31 @@ final class EventDetailsSummaryBuilderTests: XCTestCase {
 
     let summary = EventDetailsSummaryBuilder.scheduleSummary(for: event)
 
-    XCTAssertEqual(summary.rows.count, 2)
-    XCTAssertEqual(summary.rows[0].title, String(localized: .addShiftEventStartDate))
-    XCTAssertEqual(summary.rows[0].value, EventSheetFormatter.longDate("2026-04-20"))
-    XCTAssertEqual(summary.rows[1].title, String(localized: .addShiftEventEndDate))
-    XCTAssertEqual(summary.rows[1].value, EventSheetFormatter.longDate("2026-04-22"))
-    XCTAssertEqual(summary.footerIcon, "calendar")
-    XCTAssertEqual(summary.footerText, String(localized: .addShiftEventAllDay))
+    XCTAssertNotEqual(summary.dateText, EventSheetFormatter.longDate("2026-04-20"))
+    XCTAssertTrue(summary.dateText.contains("20"))
+    XCTAssertTrue(summary.dateText.contains("22"))
+    XCTAssertTrue(summary.dateText.contains("2026"))
+    XCTAssertEqual(summary.timeText, String(localized: .addShiftEventAllDay))
+  }
+
+  func testScheduleSummaryForTimedEventWithoutTimesFallsBackToAllDay() {
+    let event = TestFixtures.event(
+      id: "event-3",
+      startDate: "2026-04-20",
+      endDate: "2026-04-20",
+      isAllDay: false,
+      note: "Reminder"
+    )
+
+    let summary = EventDetailsSummaryBuilder.scheduleSummary(for: event)
+
+    XCTAssertEqual(summary.timeText, String(localized: .addShiftEventAllDay))
+  }
+
+  func testDateRangeFallsBackToStartDateWhenEndIsBeforeStart() {
+    XCTAssertEqual(
+      EventSheetFormatter.dateRange(from: "2026-04-22", to: "2026-04-20"),
+      EventSheetFormatter.longDate("2026-04-22")
+    )
   }
 }

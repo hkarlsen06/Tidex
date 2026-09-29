@@ -16,35 +16,50 @@ struct LoadingOverlay: View {
 
   var body: some View {
     ZStack {
-      Color.black.opacity(0.4)
+      // Light dim: enough to show the screen is busy and to block taps, without hiding what's behind.
+      Color.black.opacity(0.25)
         .ignoresSafeArea()
 
-      VStack(spacing: Spacing.md) {
-        if isSuccess {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 44))
-            .foregroundColor(.tidexSuccess)
-            .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-        } else {
-          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-            .scaleEffect(1.5)
-        }
+      VStack(spacing: Spacing.sm) {
+        statusIcon
 
         if let message {
           Text(message)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
         }
       }
-      .padding(Spacing.xl)
-      .background(Color.tidexSurfacePrimary.opacity(0.95))
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+      .padding(Spacing.lg)
+      .frame(minWidth: 112, maxWidth: 240)
+      .background(
+        Color.tidexSurfacePrimary,
+        in: RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
+      )
       .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isSuccess)
-      .accessibilityElement(children: .combine)
-      .accessibilityLabel(
-        message ?? String(localized: isSuccess ? "common.done" : "common.loading"))
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(message.map { Text($0) } ?? Text(isSuccess ? .commonDone : .commonLoading))
     }
+    .accessibilityAddTraits(.isModal)
+  }
+
+  /// Fixed-size slot so the card doesn't jump when the spinner turns into a checkmark.
+  private var statusIcon: some View {
+    ZStack {
+      if isSuccess {
+        Image(systemName: "checkmark.circle.fill")
+          .font(.largeTitle)
+          .foregroundStyle(Color.tidexSuccess)
+          .accessibilityHidden(true)
+          .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+      } else {
+        ProgressView()
+          .controlSize(.large)
+          .tint(.tidexTextSecondary)
+      }
+    }
+    .frame(width: 44, height: 44)
   }
 }
 
@@ -97,4 +112,11 @@ extension View {
       .foregroundColor(.tidexTextPrimary)
   }
   .loading(true, message: "Logging in...")
+}
+
+#Preview("Success") {
+  ZStack {
+    Color.tidexBackground.ignoresSafeArea()
+  }
+  .loadingWithSuccess(false, isSuccess: true)
 }

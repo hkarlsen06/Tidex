@@ -12,92 +12,34 @@ struct EventEditResult {
   let notificationAnchorTime: String?
 }
 
-struct EventDetailsSummaryRow: Equatable {
-  let title: String
-  let value: String
-}
-
+/// The two lines under the event title: which day(s), and what time.
 struct EventDetailsScheduleSummary: Equatable {
-  let rows: [EventDetailsSummaryRow]
-  let footerText: String
-  let footerIcon: String
+  let dateText: String
+  let timeText: String
 }
 
 enum EventDetailsSummaryBuilder {
   static func scheduleSummary(for event: EventRow) -> EventDetailsScheduleSummary {
-    let formattedStartDate = EventSheetFormatter.longDate(event.start_date)
-    let formattedEndDate = EventSheetFormatter.longDate(event.end_date)
-    let spansMultipleDays = event.start_date != event.end_date
+    let dateText =
+      event.start_date == event.end_date
+      ? EventSheetFormatter.longDate(event.start_date)
+      : EventSheetFormatter.dateRange(from: event.start_date, to: event.end_date)
 
-    if event.is_all_day {
-      if spansMultipleDays {
-        return EventDetailsScheduleSummary(
-          rows: [
-            EventDetailsSummaryRow(
-              title: String(localized: .addShiftEventStartDate),
-              value: formattedStartDate
-            ),
-            EventDetailsSummaryRow(
-              title: String(localized: .addShiftEventEndDate),
-              value: formattedEndDate
-            ),
-          ],
-          footerText: String(localized: .addShiftEventAllDay),
-          footerIcon: "calendar"
-        )
-      }
-
+    guard !event.is_all_day, let start = event.start_time, let end = event.end_time else {
       return EventDetailsScheduleSummary(
-        rows: [
-          EventDetailsSummaryRow(
-            title: String(localized: .addShiftEventDate),
-            value: formattedStartDate
-          )
-        ],
-        footerText: String(localized: .addShiftEventAllDay),
-        footerIcon: "calendar"
+        dateText: dateText,
+        timeText: String(localized: .addShiftEventAllDay)
       )
     }
 
-    let footerText: String = {
-      guard let start = event.start_time, let end = event.end_time else {
-        return String(localized: .addShiftEventAllDay)
-      }
-
-      return ShiftCardFormatter.localizedTimeRange(
+    return EventDetailsScheduleSummary(
+      dateText: dateText,
+      timeText: ShiftCardFormatter.localizedTimeRange(
         start: start,
         end: end,
         locale: Locale.appLocale,
         separator: " – "
       )
-    }()
-
-    if spansMultipleDays {
-      return EventDetailsScheduleSummary(
-        rows: [
-          EventDetailsSummaryRow(
-            title: String(localized: .addShiftEventStartDate),
-            value: formattedStartDate
-          ),
-          EventDetailsSummaryRow(
-            title: String(localized: .addShiftEventEndDate),
-            value: formattedEndDate
-          ),
-        ],
-        footerText: footerText,
-        footerIcon: "clock"
-      )
-    }
-
-    return EventDetailsScheduleSummary(
-      rows: [
-        EventDetailsSummaryRow(
-          title: String(localized: .addShiftEventDate),
-          value: formattedStartDate
-        )
-      ],
-      footerText: footerText,
-      footerIcon: "clock"
     )
   }
 }
@@ -136,13 +78,11 @@ struct EventDetailsSheet: View {
   @State private var reminderAnchorTime: Date?
   @State private var focusedTimeField: TimeInputField?
   @State private var errorMessage: String?
-  @State private var successMessage: String?
   @State private var isSaving = false
   @State private var showingCalendarSubscriptionConfirmation = false
   @State private var isResettingDraft = false
   @State private var lastSavedReminderTimes: [Int] = []
   @State private var lastSavedReminderAnchorTime: Date?
-  @State private var shouldFocusTitleWhenEditing = false
   @FocusState private var isTitleFieldFocused: Bool
 
   private let inlineReminderSaveDelayNanoseconds: UInt64 = 300_000_000
@@ -228,16 +168,20 @@ struct EventDetailsSheet: View {
             errorBanner(message: errorMessage)
           }
 
-          if let successMessage {
-            successBanner(message: successMessage)
+          if !isEditing, onUpdate != nil {
+            DetailSheetActionButton(
+              title: String(localized: .shiftsActionsEdit),
+              systemImage: "pencil",
+              style: .primary
+            ) {
+              beginEditing()
+            }
           }
-
-          actionButtons
         }
         .padding(Spacing.mlg)
       }
       .background(Color.tidexBackground)
-      .navigationTitle(String(localized: .addShiftModeEvents))
+      .navigationTitle(String(localized: .addShiftEventNoteTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
@@ -249,6 +193,15 @@ struct EventDetailsSheet: View {
               }
             }
             .foregroundColor(.tidexTextSecondary)
+          } else if let onDelete {
+            Button(role: .destructive) {
+              onDelete()
+            } label: {
+              Image(systemName: "trash")
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexError)
+            }
+            .accessibilityLabel(Text(.eventsDeleteButton))
           }
         }
 
@@ -271,7 +224,6 @@ struct EventDetailsSheet: View {
       }
       .onAppear {
         resetDraft()
-        shouldFocusTitleWhenEditing = false
         isEditing = startInEditMode
       }
       .onDisappear {
@@ -280,17 +232,8 @@ struct EventDetailsSheet: View {
       .onChange(of: isEditing) { _, newValue in
         if newValue {
           reminderAutosaveTask?.cancel()
-        }
-        guard newValue else {
+        } else {
           isTitleFieldFocused = false
-          shouldFocusTitleWhenEditing = false
-          return
-        }
-
-        if shouldFocusTitleWhenEditing {
-          DispatchQueue.main.async {
-            isTitleFieldFocused = true
-          }
         }
       }
       .onChange(of: isAllDay) { _, newValue in
@@ -350,52 +293,93 @@ struct EventDetailsSheet: View {
 
   private var detailsContent: some View {
     VStack(spacing: Spacing.md) {
-      VStack(alignment: .leading, spacing: Spacing.xs) {
-        Text(.addShiftEventNoteTitle)
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
+      headerCard
+
+      remindersCard(isEditable: canEditReminderSettings, showsPastHint: !canEditReminderSettings)
+
+      if showsCalendarSubscriptionCTA {
+        calendarSubscriptionRow
+      }
+    }
+  }
+
+  /// What the event is and when, in one glance. Tapping it opens the editor.
+  private var headerCard: some View {
+    Button {
+      beginEditing()
+    } label: {
+      VStack(alignment: .leading, spacing: Spacing.md) {
         Text(event.note)
           .font(.tidexTitle2)
           .foregroundColor(.tidexTextPrimary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      }
-      .padding(Spacing.lg)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
-      )
-      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
-      .onTapGesture {
-        beginEditing(focusTitle: true)
-      }
+          .multilineTextAlignment(.leading)
+          .fixedSize(horizontal: false, vertical: true)
 
-      VStack(spacing: Spacing.sm) {
-        ForEach(Array(scheduleSummary.rows.enumerated()), id: \.offset) { index, row in
-          detailRow(title: row.title, value: row.value)
-
-          if index < scheduleSummary.rows.count - 1 {
-            Divider()
-              .background(Color.tidexBorder)
-          }
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+          headerLine(systemImage: "calendar", text: scheduleSummary.dateText)
+          headerLine(systemImage: "clock", text: scheduleSummary.timeText)
         }
-
-        Divider()
-          .background(Color.tidexBorder)
-
-        scheduleFooter
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.lg)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
       .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
-      .onTapGesture {
-        beginEditing(focusTitle: false)
-      }
-
-      remindersCard(isEditable: canEditReminderSettings, showsPastHint: !canEditReminderSettings)
     }
+    .buttonStyle(.plain)
+  }
+
+  private func headerLine(systemImage: String, text: String) -> some View {
+    HStack(spacing: Spacing.sm) {
+      Image(systemName: systemImage)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextSecondary)
+        .frame(width: Spacing.iconSize)
+        .accessibilityHidden(true)
+
+      Text(text)
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private var calendarSubscriptionRow: some View {
+    Button {
+      showingCalendarSubscriptionConfirmation = true
+    } label: {
+      HStack(spacing: Spacing.sm) {
+        Image(systemName: "calendar.badge.clock")
+          .font(.tidexBody)
+          .foregroundColor(.tidexTextSecondary)
+          .frame(width: Spacing.iconSize)
+          .accessibilityHidden(true)
+
+        Text(.calendarSubscriptionDetailCta)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.leading)
+
+        Spacer(minLength: Spacing.xs)
+
+        Image(systemName: "chevron.right")
+          .font(.tidexCaption)
+          .foregroundColor(.tidexTextMuted)
+          .flipsForRightToLeftLayoutDirection(true)
+          .accessibilityHidden(true)
+      }
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
+      .frame(minHeight: 44)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
+          .fill(Color.tidexSurfacePrimary)
+      )
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+    }
+    .buttonStyle(.plain)
   }
 
   private var editorContent: some View {
@@ -411,8 +395,8 @@ struct EventDetailsSheet: View {
   private var titleEditorSection: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.addShiftEventNoteTitle)
-        .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .font(.tidexCaptionStrong)
+        .foregroundColor(.tidexTextMuted)
 
       TextField(
         String(localized: .addShiftSubmitRequirementsEventNote),
@@ -509,71 +493,6 @@ struct EventDetailsSheet: View {
     .padding(.vertical, Spacing.xsm)
   }
 
-  private var actionButtons: some View {
-    VStack(spacing: Spacing.md) {
-      if !isEditing {
-        VStack(spacing: Spacing.sm) {
-          DetailSheetActionButton(
-            title: String(localized: .shiftsActionsEdit),
-            style: .secondary
-          ) {
-            beginEditing(focusTitle: false)
-          }
-
-          deleteActionButton
-        }
-
-        if showsCalendarSubscriptionCTA {
-          DetailSheetActionButton(
-            title: String(localized: .calendarSubscriptionDetailCta),
-            systemImage: "calendar.badge.clock",
-            style: .primary
-          ) {
-            showingCalendarSubscriptionConfirmation = true
-          }
-        }
-      } else {
-        deleteActionButton
-      }
-    }
-  }
-
-  private var deleteActionButton: some View {
-    DetailSheetActionButton(
-      title: String(localized: .eventsDeleteButton),
-      style: .destructive
-    ) {
-      onDelete?()
-    }
-  }
-
-  private var scheduleFooter: some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: scheduleSummary.footerIcon)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-      Text(scheduleSummary.footerText)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexBlue)
-        .fixedSize(horizontal: false, vertical: true)
-      Spacer(minLength: 0)
-    }
-  }
-
-  private func detailRow(title: String, value: String) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xxs) {
-      Text(title)
-        .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextMuted)
-
-      Text(value)
-        .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-  }
-
   private func dateEditor(title: String, selection: Binding<Date>) -> some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(title)
@@ -630,32 +549,20 @@ struct EventDetailsSheet: View {
   }
 
   private func errorBanner(message: String) -> some View {
-    statusBanner(message: message, color: .red)
-  }
-
-  private func successBanner(message: String) -> some View {
-    statusBanner(message: message, color: .tidexSuccess)
-  }
-
-  private func statusBanner(message: String, color: Color) -> some View {
     Text(message)
       .font(.tidexSubheadline)
-      .foregroundColor(color)
+      .foregroundColor(.tidexError)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.md)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(color.opacity(0.08))
+          .fill(Color.tidexError.opacity(0.08))
       )
   }
 
-  private func beginEditing(focusTitle: Bool) {
-    shouldFocusTitleWhenEditing = focusTitle
+  private func beginEditing() {
     focusedTimeField = nil
-
-    if !focusTitle {
-      isTitleFieldFocused = false
-    }
+    isTitleFieldFocused = false
 
     withAnimation(.easeInOut(duration: 0.2)) {
       isEditing = true
@@ -677,7 +584,6 @@ struct EventDetailsSheet: View {
     lastSavedReminderTimes = reminderTimes
     lastSavedReminderAnchorTime = reminderAnchorTime
     errorMessage = nil
-    successMessage = nil
     isResettingDraft = false
   }
 
@@ -781,5 +687,20 @@ enum EventSheetFormatter {
     return date.formatted(
       .dateTime.weekday(.wide).day().month(.wide).year().locale(.appLocale)
     ).sentenceCased()
+  }
+
+  /// A multi-day span on one line, like "Mon 20 – Wed 22 April 2026".
+  static func dateRange(from startISO: String, to endISO: String) -> String {
+    guard
+      let start = Date.fromISODateString(startISO),
+      let end = Date.fromISODateString(endISO),
+      start < end
+    else {
+      return longDate(startISO)
+    }
+
+    let style = Date.IntervalFormatStyle(locale: .appLocale, calendar: .gregorianCurrent)
+      .weekday(.abbreviated).day().month(.wide).year()
+    return (start..<end).formatted(style).sentenceCased()
   }
 }

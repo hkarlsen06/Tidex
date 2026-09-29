@@ -56,55 +56,29 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
   // MARK: - Body
 
   var body: some View {  // swiftlint:disable:this explicit_acl
-    VStack(spacing: 0) {
-      // Header with completed-month average
+    VStack(alignment: .leading, spacing: Spacing.md) {
       headerView
-
-      // Chart
       chartView
     }
-    .statsPanelSurface(padding: 0)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .statsPanelSurface()
   }
 
   // MARK: - Header View
 
-  @ViewBuilder
   private var headerView: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      // Title
-      Text(.statsChartsEmploymentTitle)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
-
-      HStack(alignment: .firstTextBaseline) {
-        // Average percentage for completed months
-        if let average = data.completedMonthsAverage() {
-          Text(Self.formatPercent(average))
-            .font(.tidexMonoDisplay)
-            .foregroundColor(.tidexEmploymentAccent)
-        } else {
-          Text("--")
-            .font(.tidexMonoBody)
-            .foregroundColor(.tidexEmploymentAccent)
-        }
-
-        Text(completedAverageSubtitle)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexEmploymentAccent)
-
-        Spacer()
-
-        // Info button - show actual hours used (37.5 or 40)
-        InfoPopoverButton(
-          message: String(
-            localized: .statsChartsEmploymentInfo(formatHours(data.fullTimeHoursPerWeek)))  // swiftlint:disable:this line_length multiline_arguments_brackets
-        )
-      }
+    StatsChartHeader(
+      title: String(localized: .statsChartsEmploymentTitle),
+      value: data.completedMonthsAverage().map(Self.formatPercent) ?? "--",
+      caption: completedAverageSubtitle,
+      valueColor: .tidexEmploymentAccent
+    ) {
+      // Info button - show actual hours used (37.5 or 40)
+      InfoPopoverButton(
+        message: String(
+          localized: .statsChartsEmploymentInfo(formatHours(data.fullTimeHoursPerWeek)))  // swiftlint:disable:this line_length multiline_arguments_brackets
+      )
     }
-    .padding(Spacing.mlg)
-    .padding(.bottom, -Spacing.xxs)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.tidexSurfaceSecondary)
   }
 
   // MARK: - Chart View
@@ -178,8 +152,8 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
         AxisValueLabel {
           if let amount = value.as(Double.self) {
             Text("\(Int(amount))%")
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextPrimary)
+              .font(.tidexCaptionRegular)
+              .foregroundColor(.tidexTextSecondary)
           }
         }
       }
@@ -187,8 +161,6 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
     .chartYScale(domain: 0...100)
     .chartLegend(.hidden)
     .frame(height: 200)  // swiftlint:disable:this no_magic_numbers
-    .padding(Spacing.mlg)
-    .padding(.top, Spacing.xxs)
   }
 
   // MARK: - Helpers
@@ -221,7 +193,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
     if isCurrentMonth || isSelected {
       return .tidexBlue
     }
-    return .tidexTextPrimary
+    return .tidexTextSecondary
   }
 
   /// Format hours for display (e.g., "37,50" or "40,00")
@@ -383,15 +355,10 @@ private struct InfoPopoverButton: View {
 struct EmploymentPercentageChartEmpty: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
 
   var body: some View {  // swiftlint:disable:this explicit_acl
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(.statsChartsEmploymentTitle)
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.statsChartsEmploymentNoData)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
+    StatsChartHeader(
+      title: String(localized: .statsChartsEmploymentTitle),
+      caption: String(localized: .statsChartsEmploymentNoData)
+    )
     .frame(maxWidth: .infinity, alignment: .leading)
     .statsPanelSurface()
   }

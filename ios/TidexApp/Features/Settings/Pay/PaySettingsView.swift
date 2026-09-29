@@ -226,7 +226,6 @@ struct PaySettingsView: View {
       VStack(spacing: Spacing.lg) {
         if viewModel.shouldShowWorkplaceHeader {
           jobHeader
-            .padding(.horizontal, Spacing.md)
         }
 
         if viewModel.isSelectedJobConfigured {
@@ -256,19 +255,17 @@ struct PaySettingsView: View {
               await viewModel.updatePayPeriod(value)
             }
           )
-          .padding(.horizontal, Spacing.md)
         } else {
           finishPaySetupPanel
-            .padding(.horizontal, Spacing.md)
         }
 
         jobActionsPanel
-          .padding(.horizontal, Spacing.md)
 
         // Bottom padding
         Spacer()
           .frame(height: Spacing.xxl)
       }
+      .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.lg)
     }
     .refreshable {
@@ -287,25 +284,15 @@ struct PaySettingsView: View {
       payPeriod: viewModel.selectedJobPayPeriod,
       onEdit: { viewModel.openEditEditor(snapshot: $0, section: $1) }
     )
-    .padding(.horizontal, Spacing.md)
   }
 
   private var wageHistory: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      WageHistoryTimelineView(
-        entries: viewModel.timelineEntries,
-        currency: viewModel.userCurrency,
-        onAddNew: { viewModel.openCreateEditor() },
-        onEdit: { snapshot in viewModel.openEditEditor(snapshot: snapshot) }
-      )
-
-      Text(.settingsPayTimelineInfoTip)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, Spacing.md)
-    }
-    .padding(.horizontal, Spacing.md)
+    WageHistoryTimelineView(
+      entries: viewModel.timelineEntries,
+      currency: viewModel.userCurrency,
+      onAddNew: { viewModel.openCreateEditor() },
+      onEdit: { snapshot in viewModel.openEditEditor(snapshot: snapshot) }
+    )
   }
 
   private var finishPaySetupPanel: some View {
@@ -345,61 +332,63 @@ struct PaySettingsView: View {
   @ViewBuilder
   private var jobActionsPanel: some View {
     if viewModel.selectedJob != nil {
-      VStack(alignment: .leading, spacing: Spacing.xs) {
-        Text(.settingsPayJobActionsTitle)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
-          .padding(.horizontal, Spacing.md)
-          .accessibilityAddTraits(.isHeader)
+      PaySettingsSection(
+        title: .settingsPayJobActionsTitle,
+        footer: viewModel.selectedJobManagementHint.map { Text($0) }
+      ) {
+        Button {
+          showingEditJobSheet = true
+        } label: {
+          jobActionRow(
+            icon: "pencil",
+            title: String(localized: .settingsPayEditJobTitle),
+            tint: .tidexBlue
+          )
+        }
+        .buttonStyle(.plain)
 
-        VStack(spacing: 0) {
-          if !viewModel.isSelectedJobDefault {
-            Button {
-              Task {
-                await viewModel.setSelectedJobAsDefault()
-              }
-            } label: {
-              jobActionRow(
-                icon: "checkmark.circle",
-                title: String(localized: .settingsPayJobActionsSetDefault),
-                tint: .tidexBlue,
-                isEnabled: viewModel.canSetSelectedJobAsDefault
-                  && !viewModel.isProcessingJobAction
-              )
-            }
-            .buttonStyle(.plain)
-            .disabled(!viewModel.canSetSelectedJobAsDefault || viewModel.isProcessingJobAction)
+        jobActionDivider
 
-            Divider()
-              .padding(.leading, Spacing.md + 22 + Spacing.sm)
-          }
-
+        if !viewModel.isSelectedJobDefault {
           Button {
-            showingArchiveConfirmation = true
+            Task {
+              await viewModel.setSelectedJobAsDefault()
+            }
           } label: {
             jobActionRow(
-              icon: "archivebox",
-              title: String(localized: .settingsPayJobActionsArchive),
-              tint: .tidexTextPrimary,
-              isEnabled: viewModel.canArchiveSelectedJob && !viewModel.isProcessingJobAction
+              icon: "checkmark.circle",
+              title: String(localized: .settingsPayJobActionsSetDefault),
+              tint: .tidexBlue,
+              isEnabled: viewModel.canSetSelectedJobAsDefault
+                && !viewModel.isProcessingJobAction
             )
           }
           .buttonStyle(.plain)
-          .disabled(!viewModel.canArchiveSelectedJob || viewModel.isProcessingJobAction)
-        }
-        .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+          .disabled(!viewModel.canSetSelectedJobAsDefault || viewModel.isProcessingJobAction)
 
-        if let hint = viewModel.selectedJobManagementHint {
-          Text(hint)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, Spacing.md)
+          jobActionDivider
         }
+
+        Button {
+          showingArchiveConfirmation = true
+        } label: {
+          jobActionRow(
+            icon: "archivebox",
+            title: String(localized: .settingsPayJobActionsArchive),
+            tint: .tidexTextPrimary,
+            isEnabled: viewModel.canArchiveSelectedJob && !viewModel.isProcessingJobAction
+          )
+        }
+        .buttonStyle(.plain)
+        .disabled(!viewModel.canArchiveSelectedJob || viewModel.isProcessingJobAction)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
     }
+  }
+
+  /// Starts under the row titles, past the icon column.
+  private var jobActionDivider: some View {
+    Divider()
+      .padding(.leading, Spacing.md + 22 + Spacing.sm)
   }
 
   private func jobActionRow(
@@ -432,53 +421,36 @@ struct PaySettingsView: View {
   @ViewBuilder
   private var jobHeader: some View {
     if let selectedJobName = viewModel.selectedJobName {
-      HStack(alignment: .center, spacing: Spacing.sm) {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-          WorkplaceNameText(
-            name: selectedJobName,
-            colorHex: viewModel.selectedJob?.color,
-            font: .tidexScreenTitle,
-            fallbackBadgeColor: .tidexBlue,
-            lineLimit: 2,
-            maxTextAlignment: .leading,
-            badgeCornerRadius: CornerRadius.md,
-            badgeHorizontalPadding: Spacing.sm
-          )
-          .multilineTextAlignment(.leading)
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        WorkplaceNameText(
+          name: selectedJobName,
+          colorHex: viewModel.selectedJob?.color,
+          font: .tidexScreenTitle,
+          fallbackBadgeColor: .tidexBlue,
+          lineLimit: 2,
+          maxTextAlignment: .leading,
+          badgeCornerRadius: CornerRadius.md,
+          badgeHorizontalPadding: Spacing.sm
+        )
+        .multilineTextAlignment(.leading)
 
-          if viewModel.isSelectedJobDefault {
-            Label {
-              Text(.settingsPayJobActionsStandardStatus)
-            } icon: {
-              Image(systemName: "checkmark.circle.fill")
-            }
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexBlue)
-          } else if !viewModel.isSelectedJobConfigured {
-            Label {
-              Text(.settingsPaySetupRequiredBadge)
-            } icon: {
-              Image(systemName: "exclamationmark.circle.fill")
-            }
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexWarning)
+        if viewModel.isSelectedJobDefault {
+          Label {
+            Text(.settingsPayJobActionsStandardStatus)
+          } icon: {
+            Image(systemName: "checkmark.circle.fill")
           }
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexBlue)
+        } else if !viewModel.isSelectedJobConfigured {
+          Label {
+            Text(.settingsPaySetupRequiredBadge)
+          } icon: {
+            Image(systemName: "exclamationmark.circle.fill")
+          }
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexWarning)
         }
-        .layoutPriority(1)
-
-        Spacer(minLength: Spacing.xs)
-
-        Button {
-          showingEditJobSheet = true
-        } label: {
-          Image(systemName: "pencil")
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexBlue)
-            .frame(width: 44, height: 44)
-            .background(Color.tidexSurfacePrimary, in: Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(.settingsPayEditJobTitle))
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }

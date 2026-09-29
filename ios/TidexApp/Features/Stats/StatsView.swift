@@ -168,14 +168,8 @@ struct StatsView: View {
               .presentationCompactAdaptation(.popover)
           }
 
-          sectionHeader(.statsSectionCharts)
-
+          // Same month as the overview first, then zoom in to the week and out to the year.
           VStack(spacing: Spacing.md) {
-            // Weekly Chart (This Week or Best Week)
-            weeklyChartSection(stats: stats)
-              .frame(minHeight: 260, alignment: .top)  // swiftlint:disable:this no_magic_numbers
-
-            // Monthly Progress Chart
             Group {
               if !stats.thisMonthCumulative.isEmpty {
                 MonthlyProgressChart(data: stats.thisMonthCumulative)
@@ -184,6 +178,10 @@ struct StatsView: View {
               }
             }
             .frame(minHeight: 280, alignment: .top)  // swiftlint:disable:this no_magic_numbers
+
+            // This Week, or Best Week for past months
+            weeklyChartSection(stats: stats)
+              .frame(minHeight: 260, alignment: .top)  // swiftlint:disable:this no_magic_numbers
 
             // Yearly Income Chart
             yearlyIncomeChartSection(stats: stats)
@@ -228,14 +226,6 @@ struct StatsView: View {
         await refreshStatsContent()
       }
     }  // ScrollViewReader
-  }
-
-  private func sectionHeader(_ title: LocalizedStringResource) -> some View {  // swiftlint:disable:this line_length type_contents_order
-    Text(title)
-      .font(.tidexLabelStrong)
-      .foregroundColor(.tidexTextSecondary)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.top, Spacing.xs)
   }
 
   @ViewBuilder

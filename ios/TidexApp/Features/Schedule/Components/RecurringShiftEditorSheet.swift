@@ -1,8 +1,7 @@
 import SwiftUI
 
 /// Sheet for editing a recurring shift pattern
-/// Allows editing start/end times, repeat interval, selected days, and end condition
-/// Uses the same UI layout as the add recurring shift flow
+/// Sections run in the order people think about a shift: time, days, duration, excluded dates
 struct RecurringShiftEditorSheet: View {
   let recurringShift: RecurringShiftRow
   let onSave: ((RecurringShiftEditResult) -> Void)?
@@ -27,9 +26,7 @@ struct RecurringShiftEditorSheet: View {
   // MARK: - UI State
 
   @State private var isSaving = false
-  @State private var isDeleting = false
   @State private var showDeleteConfirmation = false
-  @State private var errorMessage: String?
   @State private var focusedTimeField: TimeInputField?
 
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -133,71 +130,32 @@ struct RecurringShiftEditorSheet: View {
         let availableHeight = geometry.size.height - (MonthPickerLayout.totalBottomInset)
 
         ScrollView {
-          VStack(spacing: Spacing.mlg) {
-            // Header with title and optional reset button
-            headerSection
-
-            // Duration picker (same as add flow)
-            DurationPicker(endCondition: $editedEndCondition)
-
-            // Repeat interval picker (same as add flow)
-            RepeatIntervalPicker(interval: $editedRepeatInterval)
-
-            // Time picker (same as add flow)
-            TimeRangePicker(
-              startTime: $editedStartTime,
-              endTime: $editedEndTime,
-              focusedFieldBinding: $focusedTimeField
-            )
-
-            Divider()
-              .background(Color.tidexBorder)
-
-            // Month navigation header
-            AnimatedMonthHeader(
-              monthName: displayMonthName,
-              year: displayYear,
-              phase: monthPhase,
-              config: .compact,
-              onPrevious: goToPreviousMonth,
-              onNext: goToNextMonth,
-              onNavigateToMonth: navigateToMonth,
-              isLoading: false
-            )
-
-            // Weekday chip bar showing selected anchors
-            WeekdayChipBar(
-              selectedDays: editedSelectedDays,
-              onRemove: { weekday in
-                // Don't allow removing the last weekday
-                if editedSelectedDays.count > 1 {
-                  editedSelectedDays.removeValue(forKey: weekday)
-                }
-              }
-            )
-
-            // Calendar for selecting anchor dates
-            EditRecurringCalendarView(
-              displayMonth: displayMonth,
-              selectedDays: $editedSelectedDays,
-              repeatInterval: editedRepeatInterval,
-              endCondition: editedEndCondition,
-              existingShiftDates: []
-            )
-
-            exclusionsSection
-
-            // Error message
-            if let error = errorMessage {
-              errorBanner(message: error)
+          VStack(alignment: .leading, spacing: Spacing.xl) {
+            section(.shiftsTimeSection) {
+              TimeRangePicker(
+                startTime: $editedStartTime,
+                endTime: $editedEndTime,
+                focusedFieldBinding: $focusedTimeField
+              )
             }
 
-            // Action Buttons
-            actionButtons
+            daysSection
+
+            DurationPicker(endCondition: $editedEndCondition)
+
+            // Exclusions can only be restored here, so the section is hidden for shifts without any.
+            if !recurringShift.effectiveExclusions.isEmpty {
+              exclusionsSection
+            }
+
+            if onDelete != nil {
+              deleteButton
+            }
           }
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)
           .padding(.horizontal, Spacing.md)
           .padding(.top, Spacing.md)
+          .padding(.bottom, Spacing.bottomScrollMargin)  // Clears the month picker
           .frame(maxWidth: .infinity)
           .frame(minHeight: availableHeight, alignment: .top)
         }
@@ -211,6 +169,7 @@ struct RecurringShiftEditorSheet: View {
           .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
       }
       .background(Color.tidexBackground)
+      .navigationTitle(String(localized: .recurringEditTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
@@ -250,144 +209,116 @@ struct RecurringShiftEditorSheet: View {
 
   // MARK: - Sections
 
-  private var headerSection: some View {
-    HStack {
-      VStack(alignment: .leading, spacing: Spacing.xxs) {
-        Text(.recurringEditTitle)
-          .font(.tidexScreenTitle)
-          .foregroundColor(.tidexTextPrimary)
+  /// A titled group, using the same header style as `DurationPicker`.
+  private func section<Content: View>(
+    _ title: LocalizedStringResource,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      Text(title)
+        .font(.tidexLabelStrong)
+        .foregroundColor(.tidexTextMuted)
+        .textCase(.uppercase)
+        .accessibilityAddTraits(.isHeader)
 
-        Text(.addShiftHeaderSubtitle)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      Spacer()
-
-      // Delete button (replaces reset button from add flow)
-      if onDelete != nil {
-        Button {
-          showDeleteConfirmation = true
-        } label: {
-          Image(systemName: "trash.circle.fill")
-            .font(.system(size: 24))
-            .foregroundColor(.tidexError)
-        }
-      }
+      content()
     }
-    .padding(.bottom, Spacing.xs)
   }
 
-  private var actionButtons: some View {
-    // Save button only - delete is in header
-    Button {
-      saveChanges()
-    } label: {
-      HStack(spacing: Spacing.xs) {
-        if isSaving {
-          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-            .scaleEffect(0.8)
-        } else {
-          Image(systemName: "checkmark")
-            .font(.tidexLabel)
+  private var daysSection: some View {
+    section(.recurringEditorDaysSection) {
+      RepeatIntervalPicker(interval: $editedRepeatInterval)
+
+      WeekdayChipBar(
+        selectedDays: editedSelectedDays,
+        onRemove: { weekday in
+          // Don't allow removing the last weekday
+          if editedSelectedDays.count > 1 {
+            editedSelectedDays.removeValue(forKey: weekday)
+          }
         }
-        Text(.commonSaveChanges)
-          .font(.tidexLabelStrong)
-      }
-      .foregroundColor(.tidexTextOnBrand)
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, Spacing.sm)
-      .background(hasChanges && canSave ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-      .cornerRadius(CornerRadius.lg)
+      )
+
+      AnimatedMonthHeader(
+        monthName: displayMonthName,
+        year: displayYear,
+        phase: monthPhase,
+        config: .compact,
+        onPrevious: goToPreviousMonth,
+        onNext: goToNextMonth,
+        onNavigateToMonth: navigateToMonth,
+        isLoading: false
+      )
+
+      EditRecurringCalendarView(
+        displayMonth: displayMonth,
+        selectedDays: $editedSelectedDays,
+        repeatInterval: editedRepeatInterval,
+        endCondition: editedEndCondition,
+        existingShiftDates: []
+      )
     }
-    .disabled(isSaving || !hasChanges || !canSave)
-    .padding(.top, Spacing.xs)
-    .padding(.bottom, Spacing.bottomScrollMargin)  // Extra bottom padding to clear the month picker
   }
 
   private var exclusionsSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.xsm) {
-      Text(.recurringExclusionsTitle)
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.recurringExclusionsDescription)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-
+    section(.recurringExclusionsTitle) {
       if editedExclusions.isEmpty {
         Text(.recurringExclusionsNone)
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.xsm)
-          .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(CornerRadius.md)
       } else {
         VStack(spacing: Spacing.xs) {
           ForEach(editedExclusions, id: \.self) { dateISO in
             exclusionRow(dateISO: dateISO)
           }
         }
+
+        Text(.recurringExclusionsDescription)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
       }
     }
   }
 
   private func exclusionRow(dateISO: String) -> some View {
     HStack(spacing: Spacing.sm) {
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(formattedExclusionDate(dateISO))
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(verbatim: dateISO)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-      }
+      Text(formattedExclusionDate(dateISO))
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextPrimary)
 
       Spacer()
 
       Button {
         editedExclusions.removeAll { $0 == dateISO }
-        editedExclusions = normalizeExclusions(editedExclusions)
       } label: {
         Text(.recurringRestoreDateButton)
           .font(.tidexFootnoteStrong)
           .foregroundColor(.tidexBlue)
           .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, 7)
+          .padding(.vertical, Spacing.xxxs)
           .background(Color.tidexBlue.opacity(0.12))
-          .cornerRadius(CornerRadius.sm)
+          .clipShape(Capsule())
       }
       .buttonStyle(.plain)
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.md)
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.md)
-        .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-    )
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
   }
 
-  @ViewBuilder
-  private func errorBanner(message: String) -> some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: "exclamationmark.triangle.fill")
-        .font(.tidexSubheadline)
+  private var deleteButton: some View {
+    Button(role: .destructive) {
+      showDeleteConfirmation = true
+    } label: {
+      Label(.recurringEditorDeleteButton, systemImage: "trash")
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexError)
-      Text(message)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexError)
-      Spacer()
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.sm)
+        .background(Color.tidexError.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
-    .padding(Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.lg)
-        .fill(Color.tidexError.opacity(0.1))
-    )
+    .buttonStyle(.plain)
   }
 
   // MARK: - Helpers
@@ -441,7 +372,6 @@ struct RecurringShiftEditorSheet: View {
 
     isSaving = true
     impactHaptic.impactOccurred()
-    errorMessage = nil
 
     let result = RecurringShiftEditResult(
       recurringId: recurringShift.id,
@@ -459,7 +389,6 @@ struct RecurringShiftEditorSheet: View {
   }
 
   private func deleteRecurringShift() {
-    isDeleting = true
     impactHaptic.impactOccurred()
     onDelete?()
     dismiss()
@@ -472,9 +401,8 @@ struct RecurringShiftEditorSheet: View {
   private func formattedExclusionDate(_ dateISO: String) -> String {
     guard let date = Date.fromISODateString(dateISO) else { return dateISO }
     let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    formatter.timeStyle = .none
     formatter.locale = Locale.appLocale
+    formatter.setLocalizedDateFormatFromTemplate("EEEdMMMy")
     return formatter.string(from: date)
   }
 }

@@ -3,44 +3,31 @@ import SwiftUI
 /// Data export settings view
 /// Allows users to export their shift data as PDF or CSV
 struct DataSettingsView: View {
-  private let presetColumns = [
-    GridItem(.flexible(), spacing: Spacing.xs),
-    GridItem(.flexible(), spacing: Spacing.xs),
+  private let presets: [ExportPeriodPreset] = [
+    .lastMonth, .currentMonth, .lastYear, .currentYear, .custom,
   ]
 
   @State private var viewModel = DataSettingsViewModel()
 
   var body: some View {
-    ScrollView {
-      VStack(spacing: Spacing.lg) {
-        // Error message
+    Form {
+      Group {
         if let error = viewModel.errorMessage {
-          ErrorBanner(message: error, onDismiss: { viewModel.clearError() })
+          Section {
+            ErrorBanner(message: error, onDismiss: { viewModel.clearError() })
+          }
         }
 
-        // Sync indicator
-        if viewModel.isSyncing {
-          syncingIndicator
-        }
+        periodSection
+        exportSection
 
-        // Period selection
-        periodSelectionSection
-
-        // Export buttons
-        exportButtonsSection
-
-        // Share the file once it's ready
         if let shareURL = viewModel.shareURL {
-          readyToShareCard(url: shareURL)
+          shareSection(url: shareURL)
         }
-
-        // About section
-        aboutSection
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.lg)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
-    .background(Color.tidexBackground)
+    .tidexListBackground()
     .navigationTitle(String(localized: .dataTitle))
     .navigationBarTitleDisplayMode(.inline)
     .task {
@@ -48,109 +35,43 @@ struct DataSettingsView: View {
     }
   }
 
-  private func readyToShareCard(url: URL) -> some View {
-    HStack(spacing: Spacing.sm) {
-      Image(systemName: "checkmark.circle.fill")
-        .foregroundColor(.tidexSuccess)
-        .accessibilityHidden(true)
-      Text(.dataExportReadyToShare)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextPrimary)
-      Spacer()
-      ShareLink(item: url) {
-        Label(String(localized: .dataExportShare), systemImage: "square.and.arrow.up")
-      }
-      Button {
-        viewModel.dismissShareSheet()
+  // MARK: - Period Section
+
+  private var periodSection: some View {
+    Section {
+      Picker(selection: $viewModel.selectedPreset) {
+        ForEach(presets) { preset in
+          Text(presetLabel(preset))
+            .tag(Optional(preset))
+        }
       } label: {
-        Image(systemName: "xmark.circle.fill")
-          .foregroundColor(.tidexTextMuted)
+        Text(.dataExportPeriodLabel)
       }
-      .accessibilityLabel(Text(.commonDismiss))
-    }
-    .padding(Spacing.sm)
-    .background(Color.tidexSurfaceSecondary)
-    .cornerRadius(CornerRadius.sm)
-  }
+      .pickerStyle(.inline)
+      .labelsHidden()
 
-  // MARK: - Syncing Indicator
+      if viewModel.selectedPreset == .custom {
+        // Each bound keeps the other valid, so the range can't be inverted.
+        DatePicker(
+          selection: $viewModel.customFromDate,
+          in: ...viewModel.customToDate,
+          displayedComponents: .date
+        ) {
+          Text(.dataExportFromLabel)
+        }
 
-  private var syncingIndicator: some View {
-    HStack(spacing: Spacing.sm) {
-      ProgressView()
-        .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-        .scaleEffect(0.8)
-
-      Text(.dataExportSyncing)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-
-      Spacer()
-    }
-    .padding(Spacing.sm)
-    .background(Color.tidexBlue.opacity(0.1))
-    .cornerRadius(CornerRadius.sm)
-  }
-
-  // MARK: - Period Selection Section
-
-  private var periodSelectionSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      // Section header
-      Text(.dataExportPeriodLabel)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-        .textCase(.uppercase)
-        .padding(.horizontal, Spacing.sm)
-
-      Text(.dataExportPeriodDescription)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-        .padding(.horizontal, Spacing.sm)
-
-      // Preset buttons
-      LazyVGrid(columns: presetColumns, spacing: Spacing.xs) {
-        ForEach([ExportPeriodPreset.lastMonth, .currentMonth, .lastYear, .currentYear], id: \.self)
-        { preset in
-          presetButton(preset)
+        DatePicker(
+          selection: $viewModel.customToDate,
+          in: viewModel.customFromDate...,
+          displayedComponents: .date
+        ) {
+          Text(.dataExportToLabel)
         }
       }
-
-      // Divider with "or"
-      HStack {
-        Rectangle()
-          .fill(Color.tidexBorder)
-          .frame(height: 1)
-        Text(String(localized: .commonOr).uppercased())
-          .font(.tidexMicro)
-          .foregroundColor(.tidexTextMuted)
-        Rectangle()
-          .fill(Color.tidexBorder)
-          .frame(height: 1)
-      }
-
-      // Custom period card
-      customPeriodCard
+    } header: {
+      Text(.dataExportPeriodLabel)
     }
-  }
-
-  private func presetButton(_ preset: ExportPeriodPreset) -> some View {
-    let isSelected = viewModel.selectedPreset == preset
-
-    return Button {
-      viewModel.selectedPreset = preset
-    } label: {
-      Text(presetLabel(preset))
-        .font(.tidexLabel)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.sm)
-            .fill(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
-        )
-    }
-    .buttonStyle(.plain)
+    .tint(.tidexBlue)
   }
 
   private func presetLabel(_ preset: ExportPeriodPreset) -> String {
@@ -179,204 +100,97 @@ struct DataSettingsView: View {
     }
   }
 
-  private var customPeriodCard: some View {
-    let isSelected = viewModel.selectedPreset == .custom
+  // MARK: - Export Section
 
-    return Button {
-      viewModel.selectedPreset = .custom
-    } label: {
-      VStack(alignment: .leading, spacing: Spacing.md) {
-        Text(.dataExportCustomPeriod)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-
-        // Date pickers in a balanced row
-        HStack(spacing: Spacing.sm) {
-          // From date
-          VStack(alignment: .leading, spacing: Spacing.xxxs) {
-            Text(.dataExportFromLabel)
-              .font(.tidexMicro)
-              .foregroundColor(.tidexTextMuted)
-              .textCase(.uppercase)
-
-            DatePicker(
-              "",
-              selection: $viewModel.customFromDate,
-              displayedComponents: .date
-            )
-            .datePickerStyle(.compact)
-            .labelsHidden()
-            .onChange(of: viewModel.customFromDate) { _, _ in
-              viewModel.selectedPreset = .custom
-            }
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-
-          // To date
-          VStack(alignment: .leading, spacing: Spacing.xxxs) {
-            Text(.dataExportToLabel)
-              .font(.tidexMicro)
-              .foregroundColor(.tidexTextMuted)
-              .textCase(.uppercase)
-
-            DatePicker(
-              "",
-              selection: $viewModel.customToDate,
-              displayedComponents: .date
-            )
-            .datePickerStyle(.compact)
-            .labelsHidden()
-            .onChange(of: viewModel.customToDate) { _, _ in
-              viewModel.selectedPreset = .custom
-            }
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
-
-        // Error message for invalid range
-        if viewModel.isCustomRangeInvalid {
-          Text(.dataExportDateRangeError)
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexError)
-        }
-      }
-      .padding(Spacing.md)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.lg)
-          .fill(Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg)
-          .stroke(isSelected ? Color.tidexBlue : Color.tidexBorder, lineWidth: 1)
-      )
-    }
-    .buttonStyle(.plain)
-  }
-
-  // MARK: - Export Buttons Section
-
-  private var exportButtonsSection: some View {
-    VStack(spacing: Spacing.md) {
-      // PDF Export
-      exportCard(
-        icon: "doc.text.fill",
-        iconColor: .tidexBlue,
+  private var exportSection: some View {
+    Section {
+      exportRow(
+        icon: "doc.text",
         title: String(localized: .dataExportPdfTitle),
         description: String(localized: .dataExportPdfDescription),
-        buttonLabel: viewModel.isExportingPdf
-          ? String(localized: .dataExportPdfExporting)
-          : String(localized: .dataExportPdfButton),
-        isLoading: viewModel.isExportingPdf,
-        buttonColor: .tidexBlue
+        isLoading: viewModel.isExportingPdf
       ) {
         Task {
           await viewModel.exportShifts(format: .pdf, locale: Locale.current)
         }
       }
 
-      // CSV Export
-      exportCard(
-        icon: "tablecells.fill",
-        iconColor: .tidexBlue,
+      exportRow(
+        icon: "tablecells",
         title: String(localized: .dataExportCsvTitle),
         description: String(localized: .dataExportCsvDescription),
-        buttonLabel: viewModel.isExportingCsv
-          ? String(localized: .dataExportCsvExporting)
-          : String(localized: .dataExportCsvButton),
-        isLoading: viewModel.isExportingCsv,
-        buttonColor: .tidexBlue
+        isLoading: viewModel.isExportingCsv
       ) {
         Task {
           await viewModel.exportShifts(format: .csv, locale: Locale.current)
         }
       }
-
+    } footer: {
+      Text(.dataExportAboutDescription)
     }
   }
 
-  private func exportCard(  // swiftlint:disable:this function_body_length function_parameter_count type_contents_order
+  private func exportRow(
     icon: String,
-    iconColor: Color,
     title: String,
     description: String,
-    buttonLabel: String,
     isLoading: Bool,
-    buttonColor: Color,
     action: @escaping () -> Void
   ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      // Header row with icon and title
+    Button(action: action) {
       HStack(spacing: Spacing.sm) {
-        // Icon in colored background
-        Image(systemName: icon)
-          .font(.system(size: 20, weight: .medium))
-          .foregroundColor(iconColor)
-          .frame(width: 40, height: 40)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.md)
-              .fill(iconColor.opacity(0.15))
-          )
+        Label {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
+            Text(title)
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextPrimary)
 
-        Text(title)
-          .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-      }
-
-      // Description
-      Text(description)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-        .fixedSize(horizontal: false, vertical: true)
-
-      // Full-width button
-      Button(action: action) {
-        HStack(spacing: Spacing.xs) {
-          if isLoading {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-              .scaleEffect(0.8)
-          } else {
-            Image(systemName: "square.and.arrow.down")
-              .font(.tidexLabel)
+            Text(isLoading && viewModel.isSyncing ? String(localized: .dataExportSyncing) : description)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
           }
-
-          Text(buttonLabel)
-            .font(.tidexLabelStrong)
+        } icon: {
+          Image(systemName: icon)
+            .foregroundColor(.tidexBlue)
         }
-        .foregroundColor(.tidexTextOnBrand)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.md)
-            .fill(viewModel.canExport ? buttonColor : buttonColor.opacity(0.5))
-        )
+
+        Spacer(minLength: Spacing.xs)
+
+        if isLoading {
+          ProgressView()
+        } else {
+          Image(systemName: "square.and.arrow.down")
+            .foregroundColor(.tidexBlue)
+            .accessibilityHidden(true)
+        }
       }
-      .buttonStyle(.plain)
-      .disabled(!viewModel.canExport || isLoading)
+      .contentShape(Rectangle())
     }
-    .padding(Spacing.md)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.lg)
-        .fill(Color.tidexSurfacePrimary)
-    )
+    .disabled(!viewModel.canExport)
   }
 
-  // MARK: - About Section
+  // MARK: - Share Section
 
-  private var aboutSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.dataExportAboutTitle)
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextMuted)
+  private func shareSection(url: URL) -> some View {
+    Section {
+      ShareLink(item: url) {
+        Label {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
+            Text(.dataExportShare)
+              .foregroundColor(.tidexBlue)
 
-      Text(.dataExportAboutDescription)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+            Text(url.lastPathComponent)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
+          }
+        } icon: {
+          Image(systemName: "square.and.arrow.up")
+            .foregroundColor(.tidexBlue)
+        }
+      }
+    } header: {
+      Text(.dataExportReadyToShare)
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.top, Spacing.xs)
   }
 }
 

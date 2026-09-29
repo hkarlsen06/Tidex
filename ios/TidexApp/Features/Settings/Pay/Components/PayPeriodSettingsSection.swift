@@ -21,8 +21,8 @@ struct PayPeriodSettingsSection: View {
   @State private var payoutDelayDays = 5
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      labeledPicker(title: .settingsPayPeriodTitle, selection: $kind) {
+    VStack(alignment: .leading, spacing: 0) {
+      PaySettingsPickerRow(title: .settingsPayPeriodTitle, selection: $kind) {
         Text(.settingsPayPeriodCalendarMonth).tag(Kind.calendarMonth)
         Text(.settingsPayPeriodCustomMonthly).tag(Kind.customMonthly)
         Text(.settingsPayPeriodBiweekly).tag(Kind.biweekly)
@@ -32,8 +32,11 @@ struct PayPeriodSettingsSection: View {
 
       if let exampleText {
         Text(exampleText)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
+          .font(.tidexFootnote)
+          .foregroundStyle(Color.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.horizontal, Spacing.md)
+          .padding(.bottom, Spacing.sm)
       }
     }
     .onAppear { load(payPeriod) }
@@ -51,32 +54,41 @@ struct PayPeriodSettingsSection: View {
       EmptyView()
 
     case .customMonthly:
-      labeledPicker(title: .settingsPayPeriodStartDay, selection: $startDay) {
+      PaySettingsRowDivider()
+      PaySettingsPickerRow(title: .settingsPayPeriodStartDay, selection: $startDay) {
         ForEach(2...PayPeriod.startDayRange.upperBound, id: \.self) { day in
           Text(.settingsPayPeriodStartDayOption(Self.ordinal(day))).tag(day)
         }
       }
-      labeledPicker(title: .settingsPayPeriodPayoutMonth, selection: $payoutMonthOffset) {
-        Text(.settingsPayPeriodPayoutSameMonth).tag(0)
-        Text(.settingsPayPeriodPayoutNextMonth).tag(1)
+      // A payday on or before the period's last day is always paid the month after.
+      if PayoutSchedule.canPayInEndMonth(startDay: startDay, payrollDay: payrollDay) {
+        PaySettingsRowDivider()
+        PaySettingsPickerRow(title: .settingsPayPeriodPayoutMonth, selection: $payoutMonthOffset) {
+          Text(.settingsPayPeriodPayoutSameMonth).tag(0)
+          Text(.settingsPayPeriodPayoutNextMonth).tag(1)
+        }
       }
 
     case .biweekly:
-      DatePicker(
-        String(localized: .settingsPayPeriodLastPeriodEnd),
-        selection: $periodEnd,
-        displayedComponents: .date
-      )
-      .font(.tidexLabel)
-      .foregroundColor(.tidexTextSecondary)
-      DatePicker(
-        String(localized: .settingsPayPeriodPayday),
-        selection: paydayBinding,
-        in: periodEnd...(periodEnd.addingDays(PayPeriod.payoutDelayRange.upperBound)),
-        displayedComponents: .date
-      )
-      .font(.tidexLabel)
-      .foregroundColor(.tidexTextSecondary)
+      PaySettingsRowDivider()
+      PaySettingsRow(title: .settingsPayPeriodLastPeriodEnd) {
+        DatePicker(
+          String(localized: .settingsPayPeriodLastPeriodEnd),
+          selection: $periodEnd,
+          displayedComponents: .date
+        )
+        .labelsHidden()
+      }
+      PaySettingsRowDivider()
+      PaySettingsRow(title: .settingsPayPeriodPayday) {
+        DatePicker(
+          String(localized: .settingsPayPeriodPayday),
+          selection: paydayBinding,
+          in: periodEnd...(periodEnd.addingDays(PayPeriod.payoutDelayRange.upperBound)),
+          displayedComponents: .date
+        )
+        .labelsHidden()
+      }
     }
   }
 
@@ -105,7 +117,8 @@ struct PayPeriodSettingsSection: View {
     )
   }
 
-  /// "Work from 16 Aug to 15 Sep is paid on 25 Sep." for the period containing today.
+  /// "Work from 16 August to 15 September is paid on 25 September." for the period containing
+  /// today. Full month names, because Norwegian short names end in a period.
   private var exampleText: String? {
     let schedule = PayoutSchedule(period: draft, payrollDay: payrollDay)
     guard let window = schedule.window(containing: Date().toISODateString()),
@@ -114,7 +127,7 @@ struct PayPeriodSettingsSection: View {
     else {
       return nil
     }
-    let format = Date.FormatStyle.dateTime.day().month(.abbreviated).calendar(.gregorian)
+    let format = Date.FormatStyle.dateTime.day().month(.wide).calendar(.gregorian)
     return String(
       localized: .settingsPayPeriodExample(
         start.formatted(format), end.formatted(format), window.adjustedPayoutDate.formatted(format)))
@@ -158,27 +171,6 @@ struct PayPeriodSettingsSection: View {
     default:
       let suffixes = [1: "st", 2: "nd", 3: "rd"]
       return "\(day)\(suffixes[day % 10] ?? "th")"
-    }
-  }
-
-  private func labeledPicker<Value: Hashable, Content: View>(
-    title: LocalizedStringResource,
-    selection: Binding<Value>,
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(title)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      Picker(String(localized: title), selection: selection, content: content)
-        .labelsHidden()
-        .pickerStyle(.menu)
-        .tint(.tidexBlue)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.sm)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
   }
 }

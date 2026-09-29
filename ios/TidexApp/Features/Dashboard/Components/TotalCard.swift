@@ -118,12 +118,13 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       mainAmountDisplay
         .frame(height: usesFixedTypographyFrames ? 88 : nil)  // swiftlint:disable:this no_magic_numbers
 
-      comparisonRow
-        .frame(height: usesFixedTypographyFrames ? 32 : nil)  // swiftlint:disable:this no_magic_numbers
-        .padding(.bottom, Spacing.xs)
-
+      // The subtitle qualifies the amount, so it sits directly below it.
       subtitleContent
         .frame(height: usesFixedTypographyFrames ? 24 : nil)  // swiftlint:disable:this no_magic_numbers
+        .padding(.bottom, Spacing.xs)
+
+      comparisonRow
+        .frame(height: usesFixedTypographyFrames ? 32 : nil)  // swiftlint:disable:this no_magic_numbers
     }
     .frame(maxWidth: .infinity)
     .padding(.horizontal, isElevated ? Spacing.lg : 0)

@@ -222,6 +222,7 @@ struct ProfileSettingsView: View {
             pendingImage = nil
           }
         )
+        .ignoresSafeArea()
       }
     }
     .sheet(isPresented: $viewModel.showEmailChangeSheet) {

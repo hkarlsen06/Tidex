@@ -26,14 +26,14 @@ struct PaySettingsReviewCard: View {
     } label: {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(.settingsPayReviewTitle)
-          .font(.tidexTitle2)
+          .font(.tidexBodyMedium)
           .accessibilityAddTraits(.isHeader)
         // The date picker row shows the date once the card is open.
         if !isExpanded {
           Text(
             .settingsPayReviewActiveOn(
               workDate.formatted(.dateTime.day().month(.wide).year().calendar(.gregorian))))
-            .font(.tidexSubheadline)
+            .font(.tidexFootnote)
             .foregroundStyle(Color.tidexTextSecondary)
         }
       }

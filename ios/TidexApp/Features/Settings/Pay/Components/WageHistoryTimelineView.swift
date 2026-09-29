@@ -4,58 +4,33 @@ import SwiftUI
 
 /// Visual timeline displaying wage snapshots with change detection
 struct WageHistoryTimelineView: View {
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   let entries: [WageTimelineEntry]
   let currency: String
   let onAddNew: () -> Void
   let onEdit: (WageSnapshot) -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      // Header with add button
-      ViewThatFits(in: .horizontal) {
-        HStack(spacing: Spacing.sm) {
-          title
-          Spacer(minLength: Spacing.xs)
-          addChangeButton
-        }
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-          title
-          addChangeButton
-        }
-      }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.sm)
-
+    PaySettingsSection(
+      title: .settingsPayTimelineTitle, footer: Text(.settingsPayTimelineInfoTip)
+    ) {
       if entries.isEmpty {
         emptyState
-          .padding(.bottom, Spacing.md)
       } else {
-        VStack(spacing: 0) {
-          ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-            TimelineEntryRow(
-              entry: entry,
-              currency: currency,
-              isFirst: index == 0,
-              isLast: index == entries.count - 1,
-              hasFutureAbove: hasFutureAbove(at: index),
-              onEdit: { onEdit(entry.snapshot) }
-            )
-          }
+        ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+          TimelineEntryRow(
+            entry: entry,
+            currency: currency,
+            isFirst: index == 0,
+            isLast: index == entries.count - 1,
+            hasFutureAbove: hasFutureAbove(at: index),
+            onEdit: { onEdit(entry.snapshot) }
+          )
         }
-        .padding(.bottom, Spacing.md)
       }
-    }
-    .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-  }
 
-  private var title: some View {
-    Text(.settingsPayTimelineTitle)
-      .font(.tidexTitle2)
-      .foregroundColor(.tidexTextPrimary)
-      .fixedSize(horizontal: false, vertical: true)
-      .accessibilityAddTraits(.isHeader)
+      PaySettingsRowDivider()
+      addChangeButton
+    }
   }
 
   private var addChangeButton: some View {
@@ -64,13 +39,10 @@ struct WageHistoryTimelineView: View {
       onAddNew()
     }) {
       Label(.settingsPayTimelineAddChange, systemImage: "plus")
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
-        .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .background(Color.tidexBlue.opacity(0.12), in: Capsule())
-        .frame(minHeight: 44, alignment: .leading)
+        .font(.tidexBodyMedium)
+        .foregroundStyle(Color.tidexBlue)
+        .padding(.horizontal, Spacing.md)
+        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -305,7 +277,7 @@ private struct TimelineEntryRow: View {
       Text(nonWageChanges.map { rtlAdjustedChangeDescription($0.description) }.joined(separator: " · "))
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
-        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     }
   }
 

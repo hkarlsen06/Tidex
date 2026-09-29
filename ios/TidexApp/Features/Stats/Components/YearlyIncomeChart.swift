@@ -52,10 +52,10 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
 
   var body: some View {  // swiftlint:disable:this explicit_acl
     VStack(alignment: .leading, spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
-      // Title
-      Text(String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))))
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+      StatsChartHeader(
+        title: String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))),
+        value: CurrencyConfig.format(data.reduce(0) { $0 + $1.earnings }, currency: currency)
+      )
 
       // Chart
       Chart {
@@ -97,13 +97,10 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
               let shouldShow = index == 0 || index.isMultiple(of: 2)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
 
               if shouldShow {
+                let isEmphasized = isCurrentMonthLabel || isSelected  // swiftlint:disable:this explicit_type_interface
                 Text(label)
-                  .font(
-                    .system(
-                      size: 12, weight: (isCurrentMonthLabel || isSelected) ? .semibold : .regular)  // swiftlint:disable:this line_length multiline_arguments_brackets no_magic_numbers
-                  )
-                  .foregroundColor(
-                    (isCurrentMonthLabel || isSelected) ? .tidexBlue : .tidexTextPrimary)  // swiftlint:disable:this line_length multiline_arguments_brackets
+                  .font(isEmphasized ? .tidexCaptionStrong : .tidexCaptionRegular)
+                  .foregroundColor(isEmphasized ? .tidexBlue : .tidexTextSecondary)
               }
             }
           }
@@ -120,7 +117,7 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
               .locale(.appLocale)
           )
           .font(.tidexCaptionRegular)
-          .foregroundStyle(Color.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextSecondary)
         }
       }
       .chartYScale(domain: .automatic(includesZero: true))
@@ -181,15 +178,10 @@ struct YearlyIncomeChartEmpty: View {  // swiftlint:disable:this explicit_acl ex
   let focusYear: Int  // swiftlint:disable:this explicit_acl
 
   var body: some View {  // swiftlint:disable:this explicit_acl
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))))
-        .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.statsChartsYearlyIncomeNoData)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextSecondary)
-    }
+    StatsChartHeader(
+      title: String(localized: .statsChartsYearlyIncomeTitle(String(focusYear))),
+      caption: String(localized: .statsChartsYearlyIncomeNoData)
+    )
     .frame(maxWidth: .infinity, alignment: .leading)
     .statsPanelSurface()
   }

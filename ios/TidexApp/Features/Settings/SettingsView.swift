@@ -393,7 +393,7 @@ struct SettingsView: View {
       }
 
       NavigationLink(value: SettingsDestination.data) {
-        Label(String(localized: .settingsMenuDataLabel), systemImage: "externaldrive")
+        Label(String(localized: .settingsMenuDataLabel), systemImage: "doc.text")
       }
     }
   }

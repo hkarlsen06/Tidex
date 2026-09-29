@@ -18,6 +18,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   var onCreateAdjustment: ((PayrollAdjustmentDraft) async throws -> PayrollAdjustment)?  // swiftlint:disable:this explicit_acl line_length
   var onUpdateAdjustment: ((String, PayrollAdjustmentDraft) async throws -> PayrollAdjustment)?  // swiftlint:disable:this explicit_acl line_length
   var onDeleteAdjustment: ((String) async throws -> Void)?  // swiftlint:disable:this explicit_acl
+  /// Switches the sheet to the previous payout. The button is hidden when nil.
+  var onShowPreviousPayout: (() -> Void)?  // swiftlint:disable:this explicit_acl
 
   @Environment(\.dismiss) private var dismiss  // swiftlint:disable:this explicit_type_interface
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
@@ -64,7 +66,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   }
 
   var body: some View {  // swiftlint:disable:this explicit_acl
-    NavigationStack {
+    NavigationStack {  // swiftlint:disable:this closure_body_length
       ScrollView {
         VStack(spacing: Spacing.lg) {
           earningsSection
@@ -82,6 +84,15 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       .navigationTitle(String(localized: .dashboardPayrollDetailsTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
+        if let onShowPreviousPayout {
+          ToolbarItem(placement: .topBarLeading) {
+            Button(String(localized: .dashboardSeePreviousPayout)) {
+              Haptics.play(.light)
+              onShowPreviousPayout()
+            }
+            .accessibilityIdentifier("payroll-details.previous")
+          }
+        }
         ToolbarItem(placement: .topBarTrailing) {
           Button(String(localized: .commonDone)) {
             dismiss()

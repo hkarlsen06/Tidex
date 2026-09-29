@@ -148,9 +148,9 @@ struct PayoutSchedule: Equatable, Sendable {
   /// Windows whose nominal payday falls in the given month, earliest first.
   func windows(paidInYear year: Int, month: Int) -> [PayWindow] {
     switch period {
-    case .monthly(let startDay, let offset):
+    case .monthly(let startDay, let storedOffset):
       var endYM = (year: year, month: month)
-      for _ in 0..<offset {
+      for _ in 0..<payoutMonthOffset(startDay: startDay, stored: storedOffset) {
         endYM = PayPeriodCalendar.previousYearMonth(from: endYM)
       }
       let startYM = startDay == 1 ? endYM : PayPeriodCalendar.previousYearMonth(from: endYM)
@@ -182,18 +182,31 @@ struct PayoutSchedule: Equatable, Sendable {
     return self.window(containing: dayBefore)
   }
 
+  /// Whether a monthly period starting on `startDay` can be paid in the month it ends.
+  /// Payday has to come after the period's last day, so the calendar month never can.
+  static func canPayInEndMonth(startDay: Int, payrollDay: Int) -> Bool {
+    startDay > 1 && payrollDay >= startDay
+  }
+
+  /// The stored offset, except that a same-month payday before the period ends moves to the
+  /// next month. Otherwise work from 28 September to 27 October would be paid 10 October.
+  private func payoutMonthOffset(startDay: Int, stored: Int) -> Int {
+    Self.canPayInEndMonth(startDay: startDay, payrollDay: payrollDay) ? stored : 1
+  }
+
   private func monthlyWindow(startYM: (year: Int, month: Int), startDay: Int) -> PayWindow {
     let start = String(format: "%04d-%02d-%02d", startYM.year, startYM.month, startDay)
     let nextStartYM = PayPeriodCalendar.nextYearMonth(from: startYM)
     let nextStart = String(format: "%04d-%02d-%02d", nextStartYM.year, nextStartYM.month, startDay)
     let end = PayPeriodCalendar.adding(days: -1, to: nextStart) ?? start
 
-    guard case .monthly(_, let offset) = period, let endParts = PayPeriodCalendar.components(end)
+    guard case .monthly(_, let storedOffset) = period,
+      let endParts = PayPeriodCalendar.components(end)
     else {
       return PayWindow(start: start, end: end, payoutDate: end)
     }
     var payoutYM = (year: endParts.year, month: endParts.month)
-    for _ in 0..<offset {
+    for _ in 0..<payoutMonthOffset(startDay: startDay, stored: storedOffset) {
       payoutYM = PayPeriodCalendar.nextYearMonth(from: payoutYM)
     }
     let day = min(max(payrollDay, 1), PayPeriodCalendar.daysInMonth(year: payoutYM.year, month: payoutYM.month))
