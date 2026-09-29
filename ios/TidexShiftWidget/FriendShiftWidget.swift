@@ -7,7 +7,8 @@ import WidgetKit
 // MARK: - Friend Entity (for Widget Configuration)
 
 struct FriendEntity: AppEntity {
-  static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Friend")
+  // App Intents metadata needs literal keys, so these name catalog keys instead of symbols.
+  static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "widget.friend")
   static var defaultQuery = FriendEntityQuery()
 
   var id: String
@@ -111,10 +112,10 @@ struct FriendEntityQuery: EntityQuery {
 // MARK: - Widget Configuration Intent
 
 struct FriendShiftIntent: WidgetConfigurationIntent {
-  static var title: LocalizedStringResource = "Friend's Shift"
-  static var description: IntentDescription = "Select a friend to display their shift"
+  static var title: LocalizedStringResource = "widget.name.friendsShift"
+  static var description: IntentDescription = "widget.intent.friendShift.description"
 
-  @Parameter(title: "Friend")
+  @Parameter(title: "widget.friend")
   var friend: FriendEntity?
 }
 

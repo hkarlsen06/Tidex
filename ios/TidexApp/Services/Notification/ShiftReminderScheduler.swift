@@ -379,7 +379,7 @@ final class ShiftReminderScheduler {
     }
 
     // Mixed hours and minutes
-    return "\(hours) \(String(localized: .commonHoursShort)) \(mins) min"
+    return "\(hours) \(String(localized: .commonHoursShort)) \(mins) \(String(localized: .commonMinShort))"
   }
 
   /// Get stored shifts from App Group UserDefaults

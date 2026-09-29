@@ -455,21 +455,15 @@ private func extractCaptures(from content: String, using regexes: [NSRegularExpr
 
 /// Returns all localization references found in Swift files
 private func findLocalizationReferences(in directory: String) -> LocalizationReferences {
+  // The scripts mention symbols in comments and examples, which aren't real references
   let swiftFiles = findSwiftFiles(in: directory, includeSkippedPaths: true)
+    .filter { !$0.contains("/Scripts/") }
   var result = LocalizationReferences(symbols: [], directKeys: [], dynamicPrefixes: [])
 
+  // Generated symbols are always reached through member access: `.symbol` in any position
+  // (arguments, ternaries, case bodies, line starts) or `LocalizedStringResource.symbol`.
   let symbolRegexes = [
-    #"Text\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-    #"String\(localized:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-    #"\.([a-zA-Z][a-zA-Z0-9_]*)\("#,
-    #"Key:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-    #"\?\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-    #"\s[:?]\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-    #"return\s+\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-    #":\s+\.([a-zA-Z][a-zA-Z0-9_]*)\s*[,\)]"#,
-    #"=\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
-    #"\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*\)"#,
-    #"(?:^|\n)\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*(?:\n|$)"#,
+    #"\.([a-zA-Z_][a-zA-Z0-9_]*)"#
   ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
   let directKeyRegexes = [
@@ -493,7 +487,28 @@ private func findLocalizationReferences(in directory: String) -> LocalizationRef
     result.dynamicPrefixes.formUnion(extractCaptures(from: content, using: dynamicKeyRegexes))
   }
 
+  // Push payloads name catalog keys directly, e.g. { "loc-key": "liveActivity.pushStart.alertBody" }
+  for file in findServerFiles() {
+    guard let content = try? String(contentsOfFile: file, encoding: .utf8) else { continue }
+    result.directKeys.formUnion(extractCaptures(from: content, using: directKeyRegexes))
+  }
+
   return result
+}
+
+/// TypeScript sources of the Supabase edge functions, which send localized push notifications.
+private func findServerFiles() -> [String] {
+  let functionsDirectory = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent()
+    .appendingPathComponent("../../supabase/functions")
+    .standardizedFileURL
+    .path
+  guard let enumerator = FileManager.default.enumerator(atPath: functionsDirectory) else {
+    return []
+  }
+  return enumerator.compactMap { $0 as? String }
+    .filter { $0.hasSuffix(".ts") && !$0.contains("node_modules/") }
+    .map { (functionsDirectory as NSString).appendingPathComponent($0) }
 }
 
 // MARK: - Orphaned Key Detection
@@ -512,14 +527,8 @@ private func isDotNotationKey(_ key: String) -> Bool {
     })
 }
 
-private func isAdminOrDebugKey(_ key: String) -> Bool {
-  let lowercased = key.lowercased()
-  return lowercased.hasPrefix("admin.") || lowercased.hasPrefix("debug.")
-    || lowercased.contains("impersonate") || lowercased.contains("storekit")
-}
-
-/// Keys worth checking for references. Skips numbers, format strings, non-dot-notation keys and
-/// admin/debug keys.
+/// Keys worth checking for references. Skips numbers, format strings and non-dot-notation keys.
+/// Xcode marks unused non-dot keys stale on its own, because it extracts them from literals.
 private func isOrphanCandidate(_ key: String) -> Bool {
   // Just numbers or very short (likely placeholders or format strings)
   if key.allSatisfy({ $0.isNumber || $0 == "." || $0 == " " }) {
@@ -531,7 +540,7 @@ private func isOrphanCandidate(_ key: String) -> Bool {
     return false
   }
 
-  return isDotNotationKey(key) && !isAdminOrDebugKey(key)
+  return isDotNotationKey(key)
 }
 
 /// Checks whether the key is used via a symbol, a direct key or a dynamic prefix.

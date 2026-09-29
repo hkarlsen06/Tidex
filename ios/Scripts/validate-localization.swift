@@ -6,243 +6,183 @@
 // swiftlint:disable no_direct_print prefixed_toplevel_constant
 import Foundation
 
-private struct Catalog: Codable {
-  var sourceLanguage: String
-  var strings: [String: CatalogEntry]
-  var version: String
+// Checks that the string catalog is ready to ship:
+// - Every dot-notation key has English, Norwegian and a translator comment.
+// - Every dot-notation key has a translated value in every language the catalog uses.
+// - Every translation uses the same format specifiers as English.
+// - Every other key (symbols, format-only compositions, English-only admin text) is marked
+//   shouldTranslate = false, so the translator skips it.
+// - No entry is stale.
+
+private typealias JSON = [String: Any]
+
+private let requiredLocales = ["en", "nb"]
+
+private func isDotNotationKey(_ key: String) -> Bool {
+  key.range(of: #"^[a-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$"#, options: .regularExpression) != nil
 }
 
-private struct CatalogEntry: Codable {
-  var localizations: [String: CatalogLocalization]?
+private struct StringUnit {
+  let path: String
+  let state: String?
+  let value: String
 }
 
-private struct CatalogLocalization: Codable {
-  var stringUnit: CatalogStringUnit?
-  var variations: CatalogVariations?
-}
-
-private struct CatalogVariations: Codable {
-  var plural: [String: CatalogPluralCase]?
-}
-
-private struct CatalogPluralCase: Codable {
-  var stringUnit: CatalogStringUnit?
-}
-
-private struct CatalogStringUnit: Codable {
-  var value: String
-}
-
-private struct Config {
-  let catalogURL: URL
-}
-
-private struct PlaceholderSpec {
-  let placeholder: String
-  let specifier: String
-}
-
-private let placeholderMappings: [String: [PlaceholderSpec]] = [
-  "addShift.everyNWeeks": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
-  "addShift.monthPlural": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
-  "addShift.yearPlural": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
-  "appearance.info.systemActive": [PlaceholderSpec(placeholder: "{mode}", specifier: "%@")],
-  "onboarding.settings.payday.customValue": [
-    PlaceholderSpec(placeholder: "{day}", specifier: "%lld")
-  ],
-  "preview.conflictBadge": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
-  "preview.conflictWarningPlural": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
-  "preview.moreShifts": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
-  "preview.shiftsCount": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
-  "security.mfa.addedOn": [PlaceholderSpec(placeholder: "{date}", specifier: "%@")],
-  "stats.charts.employment.info": [PlaceholderSpec(placeholder: "{hours}", specifier: "%@")],
-  "stats.charts.weeklyChart.bestWeek": [PlaceholderSpec(placeholder: "{week}", specifier: "%lld")],
-  "stats.charts.yearlyIncome.title": [PlaceholderSpec(placeholder: "{year}", specifier: "%@")],
-]
-
-private enum ValidationError: Error, CustomStringConvertible {
-  case missingFile(String)
-
-  var description: String {
-    switch self {
-    case .missingFile(let name):
-      return "Missing file: \(name)"
+/// Flattens a localization into its string units, following plural, device and substitution
+/// variations. The path names the variation case, e.g. "plural.one/".
+private func units(in node: JSON, path: String = "") -> [StringUnit] {
+  var result: [StringUnit] = []
+  if let unit = node["stringUnit"] as? JSON, let value = unit["value"] as? String {
+    result.append(StringUnit(path: path, state: unit["state"] as? String, value: value))
+  }
+  for (kind, cases) in (node["variations"] as? JSON) ?? [:] {
+    for (name, child) in (cases as? JSON) ?? [:] {
+      if let child = child as? JSON { result += units(in: child, path: path + "\(kind).\(name)/") }
     }
   }
+  for (name, substitution) in (node["substitutions"] as? JSON) ?? [:] {
+    if let substitution = substitution as? JSON {
+      result += units(in: substitution, path: path + "sub.\(name)/")
+    }
+  }
+  return result
 }
 
-// Keys to skip validation (admin/debug strings, symbols, format specifiers)
-private let skipKeyPatterns: [String] = [
-  // Admin/debug views (matches audit-strings skipPaths)
-  "admin.",
-  "debug.",
-  "impersonate",
-  "storekit",
-  "validation",
-  "sync",
-  "cache",
-  "cursor",
-  "execute sql",
-  "deeplink",
-  "broadcast",
-  "grandfathered",
-  "legacy",
-  "tier",
-  "tieId",
-]
+private let specifierRegex = try? NSRegularExpression(
+  pattern: #"%(?:\d+\$)?[-+ #0]*\d*(?:\.\d+)?(?:ll|l|h)?[@dDuUxXoOfeEgGcCsSpaAi]|%#@\w+@"#)
 
-// Exact strings to skip (symbols, punctuation, format specifiers, admin/debug strings)
-private let skipExactStrings: Set<String> = [
-  // Symbols and separators (not localizable)
-  "·", "•", "−", "+", "–", "→", "—", "|", "%", "0",
-  // Punctuation
-  " ", "---", "--:--",
-  // App name
-  "Tidex",
-  // Admin/debug view strings
-  "Target User", "Idle", "Body", "Reason", "Conflict", "No logs yet",
-  "Local State Summary", "No data loaded", "Pending Delete",
-  "Owner (shares their shifts)", "Status", "Valid", "Last login",
-  "Active Impersonation", "Never", "Valid Until", "Previous Response",
-  "(initial)", "Expired", "Reason must be at least 5 characters", "Stop",
-  "Viewer (can see owner's shifts)", "About Impersonation", "Loading summary...",
-  "Create a new share between two users. The owner's shifts will be visible to the viewer.",
-  "Send Notification", "Conflicts", "User Settings", "Last Error", "Dirty",
-  "Title", "Clean", "(required for audit)",
-]
-
-private func shouldSkipKey(_ key: String) -> Bool {
-  // Skip exact matches
-  if skipExactStrings.contains(key) {
-    return true
-  }
-
-  // Skip keys matching patterns (case-insensitive)
-  let lowercaseKey = key.lowercased()
-  for pattern in skipKeyPatterns where lowercaseKey.contains(pattern.lowercased()) {
-    return true
-  }
-
-  // Skip format specifier strings (e.g., "%@", "%lld", "→ %@")
-  if key.contains("%@") || key.contains("%lld") || key.contains("%d") {
-    return true
-  }
-
-  // Skip strings that are just symbols/punctuation (no letters)
-  let letters = key.unicodeScalars.filter { CharacterSet.letters.contains($0) }
-  if letters.isEmpty {
-    return true
-  }
-
-  return false
+/// Format specifiers without positional indexes, sorted, so reordered arguments still match.
+private func specifiers(_ value: String) -> [String] {
+  let range = NSRange(value.startIndex..., in: value)
+  return (specifierRegex?.matches(in: value, range: range) ?? []).compactMap { match in
+    Range(match.range, in: value).map {
+      String(value[$0]).replacingOccurrences(of: #"\d+\$"#, with: "", options: .regularExpression)
+    }
+  }.sorted()
 }
 
-private func parseConfig() -> Config {
-  let scriptURL = URL(fileURLWithPath: #filePath)
-  let scriptsDir = scriptURL.deletingLastPathComponent()
-  let defaultCatalog =
-    scriptsDir
-    .appendingPathComponent("../Resources/Localization/App/Localizable.xcstrings")
-    .standardizedFileURL
+/// Plural cases other than "other" may spell out the count ("1 month"), so they only need a
+/// subset of the English specifiers.
+private func specifiersMatch(_ value: String, english: String, path: String) -> Bool {
+  let actual = specifiers(value)
+  let expected = specifiers(english)
+  guard path.contains("plural."), !path.contains("plural.other") else { return actual == expected }
+  var remaining = expected
+  for specifier in actual {
+    guard let index = remaining.firstIndex(of: specifier) else { return false }
+    remaining.remove(at: index)
+  }
+  return true
+}
 
-  var catalogURL = defaultCatalog
+private struct Report {
+  var problems: [String: [String]] = [:]
 
-  var iterator = CommandLine.arguments.dropFirst().makeIterator()
-  while let arg = iterator.next() {
-    switch arg {
-    case "--catalog":
-      if let value = iterator.next() { catalogURL = URL(fileURLWithPath: value) }
+  mutating func add(_ problem: String, _ detail: String) {
+    problems[problem, default: []].append(detail)
+  }
+}
 
-    default:
+private let translateHint = "(run bun ios/Scripts/translate-xcstrings.mjs)"
+
+private func validate(_ strings: JSON) -> Report {
+  var report = Report()
+  let locales = Set(
+    strings.flatMap { key, entry -> [String] in
+      guard isDotNotationKey(key), let entry = entry as? JSON else { return [] }
+      return Array(((entry["localizations"] as? JSON) ?? [:]).keys)
+    }
+  ).sorted()
+
+  for (key, entry) in strings {
+    guard let entry = entry as? JSON else { continue }
+    if entry["extractionState"] as? String == "stale" {
+      report.add("Stale entries (no longer in code, delete them)", key)
+    } else if !isDotNotationKey(key) {
+      if entry["shouldTranslate"] as? Bool != false {
+        report.add(
+          "Keys that are not dot notation (use a dot key, or mark shouldTranslate = false)", key)
+      }
+    } else if entry["shouldTranslate"] as? Bool != false {
+      validateEntry(key: key, entry: entry, locales: locales, report: &report)
+    }
+  }
+  return report
+}
+
+private func validateEntry(key: String, entry: JSON, locales: [String], report: inout Report) {
+  if ((entry["comment"] as? String) ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
+    report.add("Missing translator comment", key)
+  }
+  let localizations = (entry["localizations"] as? JSON) ?? [:]
+  for locale in requiredLocales where localizations[locale] == nil {
+    report.add("Missing \(locale)", key)
+  }
+  let englishUnits = Dictionary(
+    units(in: (localizations["en"] as? JSON) ?? [:]).map { ($0.path, $0.value) },
+    uniquingKeysWith: { first, _ in first })
+
+  for locale in locales {
+    guard let localization = localizations[locale] as? JSON else {
+      report.add("Missing translations \(translateHint)", "\(key) [\(locale)]")
       continue
     }
-  }
-
-  return Config(catalogURL: catalogURL)
-}
-
-private func findMissingLocalizations(in catalog: Catalog) -> [String] {
-  var missing: [String] = []
-  for (key, entry) in catalog.strings {
-    // Skip admin/debug/symbol strings
-    if shouldSkipKey(key) {
-      continue
-    }
-    guard let localizations = entry.localizations, !localizations.isEmpty else { continue }
-    let locales = localizations.keys
-    if !locales.contains("en") || !locales.contains("nb") {
-      missing.append(key)
+    for unit in units(in: localization) {
+      validateUnit(unit, key: key, locale: locale, englishUnits: englishUnits, report: &report)
     }
   }
-  return missing
 }
 
-private func validatePlaceholders(
-  in catalog: Catalog
-) -> (missingEntries: [String], missingSpecifiers: [String]) {
-  var missingEntries: [String] = []
-  var missingSpecifiers: [String] = []
-
-  for (base, replacements) in placeholderMappings {
-    guard let entry = catalog.strings[base],
-      let localizations = entry.localizations,
-      !localizations.isEmpty
-    else {
-      missingEntries.append(base)
-      continue
-    }
-
-    for (locale, localization) in localizations {
-      // A flat string carries the count itself, so it must always include the specifier.
-      if let value = localization.stringUnit?.value {
-        for replacement in replacements where !value.contains(replacement.specifier) {
-          missingSpecifiers.append("\(base) [\(locale)] missing \(replacement.specifier)")
-        }
-        continue
-      }
-      // A pluralized entry's "other" category always carries the count; "one" may legitimately
-      // spell it out without the specifier (e.g. "1 month" instead of "%lld month").
-      guard let otherValue = localization.variations?.plural?["other"]?.stringUnit?.value else {
-        missingSpecifiers.append("\(base) [\(locale)] missing value")
-        continue
-      }
-      for replacement in replacements where !otherValue.contains(replacement.specifier) {
-        missingSpecifiers.append("\(base) [\(locale)] missing \(replacement.specifier)")
-      }
-    }
+private func validateUnit(
+  _ unit: StringUnit, key: String, locale: String, englishUnits: [String: String],
+  report: inout Report
+) {
+  if unit.state != "translated" {
+    report.add(
+      "Translations not marked translated \(translateHint)",
+      "\(key) [\(locale)] \(unit.state ?? "no state")")
   }
-  return (missingEntries, missingSpecifiers)
-}
-
-private func printIssues(_ items: [String], header: String) {
-  guard !items.isEmpty else { return }
-  print("\(header): \(items.count)")
-  items.forEach { print("  \($0)") }
+  // A language can use plural cases English doesn't have (e.g. "few"), so compare with "other".
+  let englishOther = englishUnits.first { $0.key.hasSuffix("plural.other/") }?.value
+  let fallback = unit.path.contains("plural.") ? englishOther : nil
+  guard let english = englishUnits[unit.path] ?? fallback else { return }
+  if !specifiersMatch(unit.value, english: english, path: unit.path) {
+    report.add(
+      "Format specifiers differ from English",
+      "\(key) [\(locale)] \(unit.path)\"\(unit.value)\"")
+  }
 }
 
 private func run() throws {
-  let config = parseConfig()
-
-  guard FileManager.default.fileExists(atPath: config.catalogURL.path) else {
-    throw ValidationError.missingFile(config.catalogURL.path)
+  let scriptsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+  var catalogURL = scriptsDir.appendingPathComponent(
+    "../Resources/Localization/App/Localizable.xcstrings"
+  ).standardizedFileURL
+  var arguments = CommandLine.arguments.dropFirst().makeIterator()
+  while let argument = arguments.next() {
+    if argument == "--catalog", let value = arguments.next() {
+      catalogURL = URL(fileURLWithPath: value)
+    }
   }
 
-  let catalogData = try Data(contentsOf: config.catalogURL)
-  let catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
+  let data = try Data(contentsOf: catalogURL)
+  guard let catalog = try JSONSerialization.jsonObject(with: data) as? JSON,
+    let strings = catalog["strings"] as? JSON
+  else {
+    print("Could not read strings from \(catalogURL.path)")
+    exit(1)
+  }
 
-  let missingLocalizations = findMissingLocalizations(in: catalog)
-  let (missingEntries, missingSpecifiers) = validatePlaceholders(in: catalog)
-
-  let hasIssues =
-    !missingLocalizations.isEmpty || !missingEntries.isEmpty || !missingSpecifiers.isEmpty
-  guard hasIssues else {
-    print("Localization validation passed. Catalog entries: \(catalog.strings.count).")
+  let report = validate(strings)
+  guard !report.problems.isEmpty else {
+    print("Localization validation passed. Catalog entries: \(strings.count).")
     return
   }
-
-  printIssues(missingLocalizations, header: "Missing localizations for entries")
-  printIssues(missingEntries, header: "Missing placeholder entries")
-  printIssues(missingSpecifiers, header: "Missing placeholder specifiers")
+  for (problem, details) in report.problems.sorted(by: { $0.key < $1.key }) {
+    print("\(problem): \(details.count)")
+    for detail in details.sorted().prefix(25) { print("  \(detail)") }
+    if details.count > 25 { print("  ... and \(details.count - 25) more") }
+  }
   exit(1)
 }
 

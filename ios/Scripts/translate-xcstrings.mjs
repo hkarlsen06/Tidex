@@ -556,6 +556,8 @@ function needsTranslation(unit) {
   return unit?.value === undefined || unit.state === "needs_review" || unit.state === "new";
 }
 
+const DOT_NOTATION_KEY = /^[a-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$/;
+
 function collectTranslationWork(data) {
   // Collect ALL strings that need translation with unique IDs
   const stringsToTranslate = [];
@@ -563,6 +565,10 @@ function collectTranslationWork(data) {
   let idCounter = 0;
 
   for (const [key, value] of Object.entries(data.strings)) {
+    // Symbols, format-only compositions and English-only admin text are not translated.
+    // Only dot-notation keys are real strings; Xcode extracts the rest from literals.
+    if (value.shouldTranslate === false || !DOT_NOTATION_KEY.test(key)) continue;
+
     // Check for plural variations first (they take precedence)
     const enVariations = value.localizations?.en?.variations?.plural;
     const nbVariations = value.localizations?.nb?.variations?.plural;

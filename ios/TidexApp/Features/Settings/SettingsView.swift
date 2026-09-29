@@ -440,7 +440,7 @@ extension SettingsView {
   @ViewBuilder
   private var debugSection: some View {
     #if DEBUG
-      Section("Debug") {
+      Section {
         NavigationLink(value: SettingsDestination.debug) {
           Label("Debug", systemImage: "ladybug")
         }

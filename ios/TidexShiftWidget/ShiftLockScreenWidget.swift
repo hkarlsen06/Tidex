@@ -171,12 +171,14 @@ struct ShiftAccessoryInlineView: View {
       if entry.layoutState == .countdown {
         // Countdown mode: "5d 16:00-23:15"
         Label(
-          "\(entry.daysRemaining)d \(entry.startTime)-\(entry.endTime)", systemImage: "calendar")
+          String(
+            localized: .widgetInlineCountdown(entry.daysRemaining, entry.startTime, entry.endTime)),
+          systemImage: "calendar")
       } else if entry.layoutState == .pastShift {
         // Past shift from previous day: "3d ago"
-        let daysAgo = abs(entry.daysRemaining)
-        let agoText = String(localized: .widgetAgo)
-        Label("\(daysAgo)d \(agoText)", systemImage: "clock.arrow.circlepath")
+        Label(
+          String(localized: .widgetInlineDaysAgo(abs(entry.daysRemaining))),
+          systemImage: "clock.arrow.circlepath")
       } else if entry.shiftHasEnded {
         // Shift ended today: "Done"
         Label(String(localized: .widgetDoneCapitalized), systemImage: "checkmark.circle")

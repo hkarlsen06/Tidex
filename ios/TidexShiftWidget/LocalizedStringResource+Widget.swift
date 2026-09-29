@@ -1,77 +1,8 @@
 import Foundation
 
-// MARK: - Widget Localized String Resources
-// These mirror the pattern used in the main app for type-safe localization
+// Widget strings live in the app catalog as widget.* keys and use the generated symbols.
 
 extension LocalizedStringResource {
-  // MARK: - Common Labels
-  internal static var widgetDays: LocalizedStringResource { "days" }
-  internal static var widgetDay: LocalizedStringResource { "day" }
-  internal static var widgetAgo: LocalizedStringResource { "ago" }
-  internal static var widgetDone: LocalizedStringResource { "done" }
-  internal static var widgetDoneCapitalized: LocalizedStringResource { "Done" }
-  internal static var widgetLeft: LocalizedStringResource { "left" }
-  internal static var widgetStart: LocalizedStringResource { "start" }
-  internal static var widgetEnd: LocalizedStringResource { "end" }
-  internal static var widgetEnds: LocalizedStringResource { "Ends" }
-  internal static var widgetHours: LocalizedStringResource { "hours" }
-  internal static var widgetActive: LocalizedStringResource { "Active" }
-
-  // MARK: - Date Labels
-  internal static var widgetToday: LocalizedStringResource { "Today" }
-  internal static var widgetYesterday: LocalizedStringResource { "Yesterday" }
-  internal static var widgetTomorrow: LocalizedStringResource { "Tomorrow" }
-
-  // MARK: - Shift Labels
-  internal static var widgetNoShift: LocalizedStringResource { "No shift" }
-  internal static var widgetNoShifts: LocalizedStringResource { "No shifts" }
-  internal static var widgetShifts: LocalizedStringResource { "shifts" }
-
-  /// "1 shift" / "%lld shifts", pluralized per locale.
-  internal static func widgetShiftsCount(_ count: Int) -> LocalizedStringResource {
-    "\(count) shifts"
-  }
-
-  /// "1 shift planned" / "%lld shifts planned", pluralized per locale.
-  internal static func widgetShiftsPlannedCount(_ count: Int) -> LocalizedStringResource {
-    "\(count) shifts planned"
-  }
-
-  // MARK: - Friend Labels
-  internal static var widgetFriend: LocalizedStringResource { "Friend" }
-  internal static var widgetSelectAFriend: LocalizedStringResource { "Select a friend" }
-  internal static var widgetAddFriendsToSeeTheirShifts: LocalizedStringResource {
-    "Add friends to see their shifts"
-  }
-
-  // MARK: - Widget Names
-  internal static var widgetNameShift: LocalizedStringResource { "Shift" }
-  internal static var widgetNameNextShift: LocalizedStringResource { "Next Shift" }
-  internal static var widgetNameFriendsShift: LocalizedStringResource { "Friend's Shift" }
-  internal static var widgetNameFriendsShifts: LocalizedStringResource { "Friends' Shifts" }
-  internal static var widgetNameMonthlyTotal: LocalizedStringResource { "Monthly Total" }
-
-  // MARK: - Widget Descriptions
-  internal static var widgetDescLockScreen: LocalizedStringResource {
-    "See your next shift on the lock screen"
-  }
-  internal static var widgetDescNextShift: LocalizedStringResource {
-    "See your next shift at a glance"
-  }
-  internal static var widgetDescFriendsShift: LocalizedStringResource {
-    "See a friend's next shift"
-  }
-  internal static var widgetDescFriendsShifts: LocalizedStringResource {
-    "See your friends' upcoming shifts"
-  }
-  internal static var widgetDescMonthlyTotal: LocalizedStringResource {
-    "See your monthly total at a glance"
-  }
-
-  // MARK: - TotalCard Labels
-  internal static var widgetToDate: LocalizedStringResource { "to date" }
-  internal static var widgetBeforeTax: LocalizedStringResource { "before tax" }
-
   // MARK: - Motivational Salutes
   internal static let widgetSaluteKeys: [LocalizedStringResource] = [
     "salute.01",

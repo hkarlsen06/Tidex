@@ -205,6 +205,18 @@ for (const sourceLocale of ["en", "nb"]) {
   });
 }
 
+test("untranslatable and non-dot-notation keys are never queued", () => {
+  const data = catalog(["de"]);
+  const pay = data.strings["z.pay"];
+  data.strings = {
+    "z.flagged": { ...structuredClone(pay), shouldTranslate: false },
+    "%@ / %@": { localizations: { en: unit("%1$@ / %2$@") } },
+    "No messages": {},
+  };
+  expect(collectTranslationWork(data).stringsToTranslate).toHaveLength(0);
+  expect(collectTranslationWork(data).stringsNeedingEnglish).toHaveLength(0);
+});
+
 test("unchanged source text, metadata and target-only edits do not queue other translations", async () => {
   const original = catalog();
   const file = await writeCatalog(original);

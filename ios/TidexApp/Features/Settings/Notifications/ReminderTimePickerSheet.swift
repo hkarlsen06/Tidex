@@ -109,7 +109,7 @@ struct ReminderTimePickerSheet: View {
         // Minutes picker (0-59)
         Picker("", selection: $minutes) {
           ForEach(0..<60, id: \.self) { minute in
-            Text("\(minute) min")
+            Text("\(minute) \(String(localized: .commonMinShort))")
               .tag(minute)
           }
         }

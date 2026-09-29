@@ -41,3 +41,6 @@ bun run ios:l10n:validate
 - Dot-separated keys generate camelCase symbols; inspect generated signatures instead of guessing argument types. Preserve the existing Int32 wrapping where the generated symbol requires it.
 - For relevant changes, `./lint-strings` checks hardcoded UI strings and `ios/Scripts/validate-localization.sh` checks catalog integrity.
 - Keep `ios/Resources/Localization/App/Localizable.xcstrings` as the app catalog source and preserve system locale / FormatStyle conventions.
+- `bun run ios:l10n:validate` fails if a dot key lacks English, Norwegian or a translator comment, if any language is missing or not marked translated, if a translation's format specifiers differ from English, or if an entry is stale.
+- Xcode also extracts keys that aren't dot notation from literals such as `Text("·")`, `Text("\(a) / \(b)")`, `Text("Tidex")` and the English-only admin and debug screens. These stay English. Mark them `shouldTranslate: false` with no translations (in Xcode, "Mark for Translation" off), and the translator skips them. Any key with words that users see gets a dot key instead.
+- Widget strings are `widget.*` keys. App Intents metadata (`title`, `description`, `@Parameter(title:)`) needs compile-time literals, so it names the catalog key as a string, for example `"widget.name.friendsShift"`.
