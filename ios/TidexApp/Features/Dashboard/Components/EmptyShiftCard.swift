@@ -69,7 +69,7 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
 
           RoundedRectangle(cornerRadius: CornerRadius.xxs)
             .fill(Color.tidexTextMuted.opacity(0.2))  // swiftlint:disable:this no_magic_numbers
-            .frame(width: 72, height: 17)  // swiftlint:disable:this no_magic_numbers
+            .frame(width: 100, height: 17)  // swiftlint:disable:this no_magic_numbers
         }
       }
       .opacity(showsAddShiftButton ? 0.35 : 1)  // swiftlint:disable:this no_magic_numbers

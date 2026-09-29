@@ -1070,8 +1070,6 @@ async function main(args = process.argv.slice(2)) {
   Object.assign(stats, { translated: 0, skippedFormatMismatch: 0, skippedNoTranslation: 0, errors: [] });
   const defaultXcstringsFiles = [
     path.join(__dirname, "../Resources/Localization/App/Localizable.xcstrings"),
-    path.join(__dirname, "../Resources/Localization/ShareExtension/Localizable.xcstrings"),
-    path.join(__dirname, "../Resources/Localization/Widget/Localizable.xcstrings"),
   ];
   const cliXcstringsFiles = args
     .filter((file) => file.endsWith(".xcstrings"))

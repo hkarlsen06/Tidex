@@ -35,11 +35,6 @@ def parse_args() -> argparse.Namespace:
     --comment "Button that saves settings changes" \\
     --en "Save" \\
     --nb "Lagre"
-
-  scripts/xcstrings-set ios/Resources/Localization/Widget/Localizable.xcstrings widget.title \\
-    --comment "Widget display name" \\
-    --en "Tidex" \\
-    --nb "Tidex"
 """,
     )
     parser.add_argument(

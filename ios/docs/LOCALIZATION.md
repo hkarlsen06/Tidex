@@ -4,8 +4,7 @@ This document covers how Tidex iOS localization works and how to add a new langu
 
 ## Source of truth
 
-- **Main app**: `ios/Resources/Localization/App/Localizable.xcstrings`
-- **Widget extension**: `ios/Resources/Localization/Widget/Localizable.xcstrings`
+- `ios/Resources/Localization/App/Localizable.xcstrings` is the only catalog. The app, the widget, the share extension and Siri Intents all include it.
 - Symbols are generated automatically by Xcode when `STRING_CATALOG_GENERATE_SYMBOLS = YES`.
 - Runtime access: Xcode-generated `LocalizedStringResource` symbols and `String(localized:)`.
 
@@ -88,25 +87,17 @@ let title = String(localized: .widgetShifts)
 let greeting = String(localized: .commonGreeting)
 ```
 
-## Widget extension localization
+## Extension localization
 
-Each extension target has its own String Catalog. Symbols are scoped to the target's bundle:
-
-- Widgets use symbols like `.widgetToday`, `.widgetShifts`
-
-When the main app and extensions need the same strings (e.g., `common.hours.short`),
-add the key to each target's String Catalog.
+The extensions use the same catalog as the app, so every key is available in every target.
+Widget strings use the `widget.` prefix, for example `.widgetToday` and `.widgetShifts`.
 
 ## Adding a new language
 
-### 1) Add the language to each String Catalog
+### 1) Add the language to the String Catalog
 
-Open each `.xcstrings` file in Xcode, add the new language (Editor -> Add Localization),
-and fill in translations. Keep `state: translated` for each string unit.
-
-Files to update:
-- `ios/Resources/Localization/App/Localizable.xcstrings`
-- `ios/Resources/Localization/Widget/Localizable.xcstrings`
+Open `ios/Resources/Localization/App/Localizable.xcstrings` in Xcode, add the new language
+(Editor -> Add Localization), and fill in translations. Keep `state: translated` for each string unit.
 
 ### 2) Update formatter locale helpers
 

@@ -18,6 +18,12 @@ internal enum SyncState {
   case syncing(userId: String, startedAt: Date)
 }
 
+/// Where a table's pull starts, copied out of `LocalSyncState` before the pull task runs.
+private struct PullStartCursor: Sendable {
+  let updatedAt: SyncCursor
+  let revision: Int64
+}
+
 internal enum SyncStartDecision {
   case started
   case alreadySyncing
@@ -511,12 +517,13 @@ final class SyncCoordinator {
     into phase: PullPhase,
     tables: [SyncTable],
     userId: String,
-    syncState: LocalSyncState
+    startCursors: [SyncTable: PullStartCursor]
   ) async {
     for table in tables {
       if Task.isCancelled { return }
+      guard let start = startCursors[table] else { continue }
       do {
-        phase.tableResults.append(try await pullTable(table, userId: userId, syncState: syncState))
+        phase.tableResults.append(try await pullTable(table, userId: userId, start: start))
       } catch {
         logger.error("Pull of \(table.displayName) failed: \(error.localizedDescription)")
         if phase.error == nil { phase.error = error }
@@ -556,6 +563,16 @@ final class SyncCoordinator {
       try Task.checkCancellation()
 
       let syncState = try await storeActor.getOrCreateSyncState(userId: userId)
+      // Read the cursors here so the pull task does not capture the SwiftData model.
+      let startCursors = Dictionary(
+        uniqueKeysWithValues: tables.map { table in
+          (
+            table,
+            PullStartCursor(
+              updatedAt: syncState.updatedAtCursor(for: table),
+              revision: syncState.cursor(for: table))
+          )
+        })
       await storeActor.updateSyncState(userId: userId) { state in
         state.markSyncStarted(at: startTime)
       }
@@ -566,7 +583,7 @@ final class SyncCoordinator {
       let pullPhase = PullPhase()
       let pullFinished: Void? = await Self.withTimeout(nanoseconds: Self.pullTimeout) {
         await self.pullAllTables(
-          into: pullPhase, tables: tables, userId: userId, syncState: syncState)
+          into: pullPhase, tables: tables, userId: userId, startCursors: startCursors)
       }
       try Task.checkCancellation()
       if pullFinished == nil {
@@ -760,14 +777,14 @@ final class SyncCoordinator {
   private func pullTable(
     _ table: SyncTable,
     userId: String,
-    syncState: LocalSyncState
+    start: PullStartCursor
   ) async throws -> TablePullResult {
-    var cursor = syncState.updatedAtCursor(for: table)
+    var cursor = start.updatedAt
     var totalRows = 0
     var newConflicts = 0
     var autoMerged = 0
     var affectedMonths: Set<ShiftChangeAffectedMonth> = []
-    var maxRevision: Int64 = syncState.cursor(for: table)  // Legacy, for debugging
+    var maxRevision: Int64 = start.revision  // Legacy, for debugging
 
     logger.debug("Pulling \(table.displayName) from \(cursor.description)")
 

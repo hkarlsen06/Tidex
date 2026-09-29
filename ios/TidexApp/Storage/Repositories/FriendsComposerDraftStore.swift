@@ -508,7 +508,7 @@ extension FriendsComposerDraftStore {
     }
   }
 
-  static func resolvedAttachmentsDirectory(appGroupURL: URL?, fallbackBaseURL: URL) -> URL {
+  nonisolated static func resolvedAttachmentsDirectory(appGroupURL: URL?, fallbackBaseURL: URL) -> URL {
     if let appGroupURL {
       return
         appGroupURL

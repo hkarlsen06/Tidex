@@ -48,7 +48,7 @@
 		4B15848ACE7F18869FF4DF32 /* SyncPushMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3711A751DD492A879351F57 /* SyncPushMergeTests.swift */; };
 		4B3D7651AE9F32BEEA034C5C /* FriendsThreadExyteChatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22B2C74EE4D759997785799C /* FriendsThreadExyteChatTests.swift */; };
 		4E346A3A0E58579B880E41D7 /* FriendsThreadShareVisibilityResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E4A0F5573D74A1AF23E91D /* FriendsThreadShareVisibilityResolverTests.swift */; };
-		4E61778127607441CA2BF1FBF /* Resources/Localization/ShareExtension/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */; };
+		4E61778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
 		4ED7B1067119677EE782EF19 /* WorkSetupStatusResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F127D6D1264B4630495885E /* WorkSetupStatusResolverTests.swift */; };
 		52E5C48354F6DFB96205FB31 /* PayrollAdjustmentCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFFDB9FCC210711C89BECC5E /* PayrollAdjustmentCalculatorTests.swift */; };
 		54F4461E60171452C47629DE /* SMSUnavailableAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98EADBE6776C3205FCE196FA /* SMSUnavailableAuthTests.swift */; };
@@ -90,7 +90,7 @@
 		AB5C10013070000000F1E2D3 /* FriendShiftTimingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5C10023070000000F1E2D3 /* FriendShiftTimingTests.swift */; };
 		ABCD10003052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD10013052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift */; };
 		ABCD20023070000000ABCDEF /* TidexSiriIntents.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = ABCD20013070000000ABCDEF /* TidexSiriIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		ABCD200D3070000000ABCDEF /* Resources/Localization/ShareExtension/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */; };
+		ABCD200D3070000000ABCDEF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
 		ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */; };
 		AF93110130C8000000A1B2C3 /* AddShiftSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */; };
 		AF93110330C8000000A1B2C3 /* ScheduleListMonthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */; };
@@ -208,7 +208,6 @@
 		3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendCardMessagePreviewTimestampFormatterTests.swift; sourceTree = "<group>"; };
 		3FDD235FEE994CE22FFBC5F8 /* AuthErrorTranslationsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuthErrorTranslationsTests.swift; sourceTree = "<group>"; };
 		45FACC6CA659ACE3AE2483B9 /* FriendsChatMessageGroupingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsChatMessageGroupingTests.swift; sourceTree = "<group>"; };
-		4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/ShareExtension/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		4D53B6172993158CEC284C4F /* SharedShiftBreakAuditTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedShiftBreakAuditTests.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		568D0E37F2DA4AE43D386E42 /* FriendsComposerAttachmentControllerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsComposerAttachmentControllerTests.swift; sourceTree = "<group>"; };
@@ -302,7 +301,7 @@
 		115480372F3E9C1500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Localization/Widget/Localizable.xcstrings,
+				Localization/App/Localizable.xcstrings,
 			);
 			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
 		};
@@ -441,7 +440,6 @@
 			isa = PBXGroup;
 			children = (
 				855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */,
-				4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -882,7 +880,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4E61778127607441CA2BF1FBF /* Resources/Localization/ShareExtension/Localizable.xcstrings in Resources */,
+				4E61778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -912,7 +910,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ABCD200D3070000000ABCDEF /* Resources/Localization/ShareExtension/Localizable.xcstrings in Resources */,
+				ABCD200D3070000000ABCDEF /* Resources/Localization/App/Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
