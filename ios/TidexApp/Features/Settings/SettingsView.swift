@@ -736,11 +736,9 @@ extension SettingsView {
     payChooserPayrollDay = defaultJob?.payroll_day ?? settings?.effectivePayrollDay ?? 15
   }
 
+  // Same order as the job pickers elsewhere, so the order set here is the order users see.
   private func sortJobs(_ jobs: [Job]) -> [Job] {
     jobs.sorted { lhs, rhs in
-      if lhs.is_default != rhs.is_default {
-        return lhs.is_default && !rhs.is_default
-      }
       if lhs.sort_order == rhs.sort_order {
         return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
       }
@@ -770,6 +768,21 @@ extension SettingsView {
       message = String(localized: .commonErrorGeneric)
     }
     presentPayChooserError(message, title: (error as? JobsRepositoryError)?.alertTitle)
+  }
+
+  private func movePayJobs(from source: IndexSet, to destination: Int) {
+    guard let payChooserUserId else { return }
+
+    payChooserJobs.move(fromOffsets: source, toOffset: destination)
+    let orderedJobIds = payChooserJobs.map(\.id)
+    Task {
+      do {
+        try await jobsRepository.reorderJobs(userId: payChooserUserId, orderedJobIds: orderedJobIds)
+      } catch {
+        presentPayChooserError(error)
+        refreshPayJobLists(for: payChooserUserId)
+      }
+    }
   }
 
   private func archivePayJob(_ jobId: String) async {
@@ -1038,6 +1051,12 @@ extension SettingsView {
           }
         }
       }
+      // Rows use touch and hold for their context menu, so reordering goes through Edit.
+      if payChooserJobs.count > 1 {
+        ToolbarItem(placement: .primaryAction) {
+          EditButton()
+        }
+      }
     }
   }
 
@@ -1053,6 +1072,7 @@ extension SettingsView {
         ForEach(payChooserJobs, id: \.id) { job in
           payChooserWorkplaceRow(job, isDefault: job.id == defaultJob?.id)
         }
+        .onMove(perform: movePayJobs)
       }
 
       Button {

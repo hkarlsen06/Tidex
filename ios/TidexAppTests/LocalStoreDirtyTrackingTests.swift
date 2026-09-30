@@ -869,6 +869,43 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.toJob().pay_period, newPayPeriod)
   }
 
+  internal func testReorderJobsDirtiesOnlyJobsWhoseOrderChanged() async throws {
+    let store = try makeStoreActor()
+    var jobIds: [String] = []
+    for (index, name) in ["Cafe", "Shop", "Bar"].enumerated() {
+      let created = try await store.createJob(
+        userId: userId,
+        name: name,
+        color: nil,
+        currency: "kr",
+        isDefault: index == 0,
+        sortOrder: index,
+        payrollDay: 25,
+        halfTaxMonth: nil,
+        monthlyGoal: nil
+      )
+      await store.markJobClean(id: created.id)
+      jobIds.append(created.id)
+    }
+    try await store.save()
+
+    // Swap the last two: Cafe, Bar, Shop. Cafe keeps its place.
+    try await store.reorderJobs(userId: userId, orderedJobIds: [jobIds[0], jobIds[2], jobIds[1]])
+
+    let cafeRecord = try await store.getJob(id: jobIds[0])
+    let shopRecord = try await store.getJob(id: jobIds[1])
+    let barRecord = try await store.getJob(id: jobIds[2])
+    let cafe = try XCTUnwrap(cafeRecord)
+    let shop = try XCTUnwrap(shopRecord)
+    let bar = try XCTUnwrap(barRecord)
+    XCTAssertEqual([cafe.sortOrder, bar.sortOrder, shop.sortOrder], [0, 1, 2])
+    XCTAssertEqual(bar.syncStatus, .dirty)
+    XCTAssertEqual(bar.dirtyFieldKeys, Set([.sortOrder]))
+    XCTAssertEqual(shop.dirtyFieldKeys, Set([.sortOrder]))
+    XCTAssertEqual(cafe.syncStatus, .clean)
+    XCTAssertEqual(cafe.dirtyFieldKeys, [])
+  }
+
   internal func testUpdateJobMetadataTracksChangedFieldsAfterClean() async throws {
     let store = try makeStoreActor()
 
