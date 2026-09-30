@@ -10,6 +10,8 @@ final class SignupViewModel {
   // MARK: - Dependencies
 
   private let authService: AuthService
+  private let emailAuth: EmailAuthProviding
+  private let onAuthenticated: () async -> Void
   private let appleAuthProvider: AppleAuthProvider
   private let googleAuthProvider: GoogleAuthProvider
 
@@ -20,11 +22,14 @@ final class SignupViewModel {
   var emailOrPhone: String = ""
   var password: String = ""
   var confirmPassword: String = ""
+  var otpCode: String = ""
 
+  var step: Step = .form
   var isLoading = false
   var showEmailForm = false
 
   var errorMessage: String?
+  var successMessage: String?
 
   var fieldErrors = FieldErrors()
 
@@ -34,14 +39,27 @@ final class SignupViewModel {
 
   // MARK: - Types
 
+  enum Step {
+    /// Name, email and password.
+    case form
+    /// Code from the confirmation email, used when the server sends no session at signup.
+    case verifyEmail
+  }
+
+  /// Seconds before the server accepts another confirmation email for the same address.
+  static let resendCooldown: TimeInterval = 60
+  static let codeLength = 6
+
   struct FieldErrors {
     var firstName: String?
     var lastName: String?
     var emailOrPhone: String?
     var password: String?
     var confirmPassword: String?
+    var otp: String?
 
     mutating func clear() {
+      otp = nil
       firstName = nil
       lastName = nil
       emailOrPhone = nil
@@ -57,14 +75,29 @@ final class SignupViewModel {
     "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
   }
 
+  // MARK: - Private State
+
+  /// The address that received the confirmation code.
+  private(set) var pendingEmail = ""
+  private(set) var resendAvailableAt: Date?
+
   // MARK: - Initialization
 
   init(
     authService: AuthService? = nil,
+    emailAuth: EmailAuthProviding? = nil,
     appleAuthProvider: AppleAuthProvider? = nil,
-    googleAuthProvider: GoogleAuthProvider? = nil
+    googleAuthProvider: GoogleAuthProvider? = nil,
+    onAuthenticated: (() async -> Void)? = nil
   ) {
     self.authService = authService ?? AuthService.shared
+    self.emailAuth = emailAuth ?? AuthService.shared
+    self.onAuthenticated =
+      onAuthenticated ?? {
+        // The AppCoordinator listens to Supabase auth state changes
+        // and will automatically transition to the appropriate state
+        await AppCoordinator.shared.handleLoginSuccess()
+      }
     self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
     self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
   }
@@ -83,15 +116,108 @@ final class SignupViewModel {
 
     do {
       let email = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
-      _ = try await authService.signUpWithEmail(
+      let result = try await emailAuth.signUpWithEmail(
         email: email,
         password: password,
         fullName: fullName
       )
-      await handleSuccessfulSignup()
+      switch result {
+      case .signedIn:
+        await handleSuccessfulSignup()
+      case .needsVerification:
+        showEmailVerification(email: email)
+        startResendCooldown()
+      case .alreadyRegistered:
+        // Same message as the autoconfirm path, where GoTrue returns "User already registered".
+        errorMessage = String(localized: .authErrorUserAlreadyRegistered)
+      }
     } catch {
       handleError(error)
     }
+  }
+
+  /// Verify the code from the confirmation email, then continue like an immediate signup.
+  func verifyEmailCode() async {
+    guard !isLoading else { return }
+    clearMessages()
+    fieldErrors.clear()
+
+    guard otpCode.count == Self.codeLength else {
+      if otpCode.isEmpty {
+        fieldErrors.otp = String(localized: .otpErrorsCodeRequired)
+      } else {
+        fieldErrors.otp = String(localized: .otpErrorsCodeInvalid)
+      }
+      return
+    }
+
+    isLoading = true
+    defer { isLoading = false }
+
+    do {
+      try await emailAuth.verifySignupCode(email: pendingEmail, token: otpCode)
+      await handleSuccessfulSignup()
+    } catch {
+      otpCode = ""
+      if AuthService.isInvalidVerificationCode(error) {
+        fieldErrors.otp = String(localized: .signupVerifyErrorsInvalidCode)
+        Haptics.play(.error)
+      } else if AuthService.isRateLimited(error) {
+        errorMessage = String(localized: .signupVerifyErrorsTooManyRequests)
+      } else {
+        handleError(error)
+      }
+    }
+  }
+
+  /// Send a new confirmation code. Does nothing while the cooldown runs.
+  func resendCode() async {
+    guard !isLoading, resendSecondsRemaining() == 0 else { return }
+    clearMessages()
+    fieldErrors.clear()
+
+    isLoading = true
+    defer { isLoading = false }
+
+    do {
+      try await emailAuth.resendSignupCode(email: pendingEmail)
+      successMessage = String(localized: .signupVerifyResendSent)
+      startResendCooldown()
+    } catch {
+      if AuthService.isRateLimited(error) {
+        errorMessage = String(localized: .signupVerifyErrorsTooManyRequests)
+        startResendCooldown()
+      } else {
+        handleError(error)
+      }
+    }
+  }
+
+  /// Open the code step for an address that has a pending confirmation. Login uses this when the
+  /// server reports `email_not_confirmed`. The caller sends the fresh code with `resendCode()`.
+  func showEmailVerification(email: String) {
+    pendingEmail = email
+    emailOrPhone = email
+    otpCode = ""
+    fieldErrors.clear()
+    clearMessages()
+    resendAvailableAt = nil
+    showEmailForm = true
+    step = .verifyEmail
+  }
+
+  /// Leave the code step to fix the email address or the other fields.
+  func cancelEmailVerification() {
+    otpCode = ""
+    fieldErrors.clear()
+    clearMessages()
+    step = .form
+  }
+
+  /// Whole seconds until the resend button works again.
+  func resendSecondsRemaining(at now: Date = Date()) -> Int {
+    guard let resendAvailableAt else { return 0 }
+    return max(0, Int(resendAvailableAt.timeIntervalSince(now).rounded(.up)))
   }
 
   /// Sign up with Google
@@ -148,6 +274,8 @@ final class SignupViewModel {
 
     self.emailOrPhone = isEmail ? trimmed : ""
     self.password = isEmail ? password : ""
+    otpCode = ""
+    step = .form
     fieldErrors.clear()
     clearMessages()
     showEmailForm = isEmail
@@ -194,9 +322,11 @@ final class SignupViewModel {
   }
 
   private func handleSuccessfulSignup() async {
-    // The AppCoordinator listens to Supabase auth state changes
-    // and will automatically transition to the appropriate state
-    await AppCoordinator.shared.handleLoginSuccess()
+    await onAuthenticated()
+  }
+
+  private func startResendCooldown() {
+    resendAvailableAt = Date().addingTimeInterval(Self.resendCooldown)
   }
 
   private func handleError(_ error: Error) {
@@ -206,5 +336,6 @@ final class SignupViewModel {
 
   private func clearMessages() {
     errorMessage = nil
+    successMessage = nil
   }
 }

@@ -10,6 +10,7 @@ final class LoginViewModel {
   // MARK: - Dependencies
 
   private let authService: AuthService
+  private let emailAuth: EmailAuthProviding
   private let passkeyAuthService: PasskeyAuthService
   private let appleAuthProvider: AppleAuthProvider
   private let googleAuthProvider: GoogleAuthProvider
@@ -29,6 +30,11 @@ final class LoginViewModel {
   var accountCreationPromptMessage: String?
 
   var fieldErrors = FieldErrors()
+
+  // MARK: - Navigation Callback
+
+  /// Called with the email address when the server says the account's email is not confirmed yet.
+  var onEmailNotConfirmed: ((String) -> Void)?
 
   // MARK: - Types
 
@@ -71,11 +77,13 @@ final class LoginViewModel {
 
   init(
     authService: AuthService? = nil,
+    emailAuth: EmailAuthProviding? = nil,
     passkeyAuthService: PasskeyAuthService? = nil,
     appleAuthProvider: AppleAuthProvider? = nil,
     googleAuthProvider: GoogleAuthProvider? = nil,
   ) {
     self.authService = authService ?? AuthService.shared
+    self.emailAuth = emailAuth ?? AuthService.shared
     self.passkeyAuthService = passkeyAuthService ?? PasskeyAuthService.shared
     self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
     self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
@@ -231,7 +239,7 @@ final class LoginViewModel {
   // MARK: - Private Methods
 
   private func signInWithEmail() async throws {
-    _ = try await authService.signInWithPassword(email: emailOrPhone, password: password)
+    _ = try await emailAuth.signInWithPassword(email: emailOrPhone, password: password)
     await handleSuccessfulLogin()
   }
 
@@ -280,6 +288,11 @@ final class LoginViewModel {
   }
 
   private func handleSignInError(_ error: Error) {
+    if inputType == .email, AuthService.isEmailNotConfirmed(error), let onEmailNotConfirmed {
+      onEmailNotConfirmed(emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines))
+      return
+    }
+
     if shouldNavigateToSignup(for: error) {
       showEmailForm = true
       accountCreationPromptMessage = ErrorTranslations.translate(error)

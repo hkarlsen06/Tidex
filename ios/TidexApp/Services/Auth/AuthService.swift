@@ -1,3 +1,4 @@
+import Auth
 import Foundation
 import Supabase
 
@@ -13,6 +14,28 @@ enum AuthError: Error, LocalizedError {
   }
 }
 
+/// Result of an email signup.
+enum EmailSignupResult {
+  /// The server confirmed the email at once and the client holds a session.
+  case signedIn
+  /// The server sent a confirmation code and returned no session yet.
+  case needsVerification
+  /// The email already has a confirmed account. With autoconfirm off, GoTrue hides this
+  /// behind a user with no identities and sends no code.
+  case alreadyRegistered
+}
+
+/// The email and password calls that the signup and login view models make.
+/// `AuthService` conforms, and tests substitute a stub.
+@MainActor
+protocol EmailAuthProviding: AnyObject {
+  func signInWithPassword(email: String, password: String) async throws -> Session
+  func signUpWithEmail(email: String, password: String, fullName: String?) async throws
+    -> EmailSignupResult
+  func verifySignupCode(email: String, token: String) async throws
+  func resendSignupCode(email: String) async throws
+}
+
 /// Authentication service for native iOS login
 /// Wraps Supabase auth operations and handles session management
 ///
@@ -20,7 +43,7 @@ enum AuthError: Error, LocalizedError {
 /// all navigation state transitions (loading -> auth -> MFA -> authenticated).
 /// This service focuses purely on auth operations without duplicating state listening.
 @MainActor
-final class AuthService {
+final class AuthService: EmailAuthProviding {
   static let shared = AuthService()
   // ponytail: production has no SMS provider since the 2026-09 self-hosting move.
   // Flip back to true once GOTRUE_SMS_* is configured on the auth server.
@@ -93,9 +116,10 @@ final class AuthService {
   ///   - email: User's email address
   ///   - password: User's password
   ///   - fullName: User's full name (optional)
-  /// - Returns: The authenticated session (email verification disabled)
+  /// - Returns: `.signedIn` when the server confirms the email at once (autoconfirm on), or
+  ///   `.needsVerification` when it emailed a code that `verifySignupCode` must check.
   func signUpWithEmail(email: String, password: String, fullName: String? = nil) async throws
-    -> Session
+    -> EmailSignupResult
   {
     isLoading = true
     defer { isLoading = false }
@@ -117,11 +141,32 @@ final class AuthService {
       password: password,
       data: data
     )
-    // Email verification disabled - session is returned immediately
-    guard let session = response.session else {
+    if response.session != nil {
+      return .signedIn
+    }
+    if response.user.identities?.isEmpty == true {
+      return .alreadyRegistered
+    }
+    return .needsVerification
+  }
+
+  /// Verify the code from the signup confirmation email. The client stores the session it returns.
+  func verifySignupCode(email: String, token: String) async throws {
+    isLoading = true
+    defer { isLoading = false }
+
+    let response = try await supabase.auth.verifyOTP(email: email, token: token, type: .signup)
+    guard response.session != nil else {
       throw AuthError.sessionMissing
     }
-    return session
+  }
+
+  /// Send a new signup confirmation code.
+  func resendSignupCode(email: String) async throws {
+    isLoading = true
+    defer { isLoading = false }
+
+    try await supabase.auth.resend(email: email, type: .signup)
   }
 
   /// Record that the current authenticated user accepted the current terms.
@@ -396,5 +441,27 @@ final class AuthService {
     defer { isLoading = false }
 
     try await supabase.auth.signOut(scope: .global)
+  }
+}
+
+// MARK: - Error Classification
+
+extension AuthService {
+  /// True when GoTrue rejected a sign-in because the email has no confirmed code yet.
+  nonisolated static func isEmailNotConfirmed(_ error: Error) -> Bool {
+    (error as? Auth.AuthError)?.errorCode == .emailNotConfirmed
+  }
+
+  /// True when GoTrue rejected a verification code as wrong or expired.
+  /// It reports both cases the same way.
+  nonisolated static func isInvalidVerificationCode(_ error: Error) -> Bool {
+    guard let code = (error as? Auth.AuthError)?.errorCode else { return false }
+    return code == .otpExpired || code == .validationFailed
+  }
+
+  /// True when GoTrue refused a request because of a rate limit.
+  nonisolated static func isRateLimited(_ error: Error) -> Bool {
+    guard let code = (error as? Auth.AuthError)?.errorCode else { return false }
+    return code == .overRequestRateLimit || code == .overEmailSendRateLimit
   }
 }

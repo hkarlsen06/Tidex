@@ -120,6 +120,13 @@ struct SignupView: View {
           onDismiss: { viewModel.errorMessage = nil }
         )
       }
+
+      if let success = viewModel.successMessage {
+        SuccessBanner(
+          message: success,
+          onDismiss: { viewModel.successMessage = nil }
+        )
+      }
     }
   }
 
@@ -127,6 +134,16 @@ struct SignupView: View {
 
   @ViewBuilder
   private func inputStepContent(scrollProxy: ScrollViewProxy) -> some View {
+    switch viewModel.step {
+    case .form:
+      formStepContent(scrollProxy: scrollProxy)
+
+    case .verifyEmail:
+      EmailVerificationForm(viewModel: viewModel)
+    }
+  }
+
+  private func formStepContent(scrollProxy: ScrollViewProxy) -> some View {
     VStack(spacing: Spacing.md) {
       OAuthButtonsView(
         onGoogleTap: { Task { await viewModel.signUpWithGoogle() } },
