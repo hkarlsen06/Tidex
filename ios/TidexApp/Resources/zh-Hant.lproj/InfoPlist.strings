@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex 需要相機權限來拍攝個人資料照片。";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex 使用 Face ID 來保護您的收入數據的隱私。只有您應該看到您的收入。";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex 需要存取權限以將共享日曆和班次圖片保存到您的相機膠卷。";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex 需要完整存取你的行事曆，以同步班表。";
+"NSPhotoLibraryAddUsageDescription" = "Tidex 需要存取權限以將共享日曆、班次和聊天圖片儲存到您的照片圖庫。";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex 不會使用您的位置。聊天函式庫包含位置分享功能，但 Tidex 已停用此功能。";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "允許 Tidex 使用 Face ID，讓您安全又快速地解鎖 App。";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "允許 Tidex 存取您的行事曆，以查看並同步工作班次。";

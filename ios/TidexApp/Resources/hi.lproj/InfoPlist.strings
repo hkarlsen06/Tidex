@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex को प्रोफ़ाइल फ़ोटो लेने के लिए कैमरे की एक्सेस चाहिए।";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex आपके आय डेटा को सुरक्षित रखने के लिए Face ID का उपयोग करता है। केवल आप ही अपनी आय देख सकते हैं।";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex को शेयर किए गए कैलेंडर और शिफ्ट की तस्वीरें आपकी फ़ोटो लाइब्रेरी में सहेजने के लिए एक्सेस चाहिए।";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex को आपकी शिफ्ट और काम के समय को आपके कैलेंडर में जोड़ने और प्रबंधित करने के लिए पूर्ण कैलेंडर एक्सेस चाहिए।";
+"NSPhotoLibraryAddUsageDescription" = "Tidex को शेयर किए गए कैलेंडर, शिफ्ट और चैट की तस्वीरें आपकी फ़ोटो लाइब्रेरी में सहेजने के लिए एक्सेस चाहिए।";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex आपके स्थान का उपयोग नहीं करता। चैट लाइब्रेरी में स्थान साझा करने की सुविधा शामिल है, लेकिन Tidex में यह बंद है।";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex में सुरक्षित रूप से लॉग इन करने के लिए Face ID की अनुमति दें।";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "अपनी शिफ़्ट कैलेंडर में जोड़ने और अपडेट करने के लिए Tidex को कैलेंडर का पूरा ऐक्सेस दें।";

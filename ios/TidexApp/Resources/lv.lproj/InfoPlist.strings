@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex vajag kameras piekļuvi, lai uzņemtu profila fotoattēlu.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex izmanto Face ID, lai aizsargātu jūsu ienākumu datus no neatļautas piekļuves. Tikai jūs varat redzēt savu ienākumu informāciju.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex vajag piekļuvi fotoattēlu bibliotēkai, lai saglabātu koplietotus kalendārus un maiņu attēlus.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex nepieciešama pilna piekļuve kalendāram, lai pievienotu un pārvaldītu jūsu darba maiņas.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex vajag piekļuvi fotoattēlu bibliotēkai, lai saglabātu koplietotu kalendāru, maiņu un tērzēšanas attēlus.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex neizmanto jūsu atrašanās vietu. Tērzēšanas bibliotēkā ir iekļauta atrašanās vietas kopīgošana, taču Tidex tā ir atspējota.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex izmanto Face ID, lai jūs varētu droši pierakstīties.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex nepieciešama pilna piekļuve kalendāram, lai pievienotu un pārvaldītu darba maiņas.";

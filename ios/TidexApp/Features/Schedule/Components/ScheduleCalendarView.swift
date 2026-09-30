@@ -1016,7 +1016,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       .foregroundColor(.tidexTextSecondary)
       .frame(maxWidth: .infinity)
     } else {
-      Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
+      Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.up.and.down.and.arrow.left.and.right")
         .font(.tidexLabel)
         .foregroundColor(isCopyMode ? .tidexTextSecondary : .tidexWarning)
         .frame(width: 36)
@@ -1072,7 +1072,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       }
 
       singleSelectionButton(
-        systemImage: "arrow.left.arrow.right",
+        systemImage: "arrow.up.and.down.and.arrow.left.and.right",
         label: .shiftsMove,
         tint: .tidexWarning
       ) {

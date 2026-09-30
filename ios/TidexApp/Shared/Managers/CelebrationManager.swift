@@ -8,8 +8,7 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Manager for tracking and displaying celebration effects when shifts are added
-/// Handles passing newly added shift dates from AddShift tab to Shifts tab
+/// Highlights newly added shift dates in the Shifts tab for a few seconds.
 @MainActor
 @Observable
 final class CelebrationManager {
@@ -22,13 +21,6 @@ final class CelebrationManager {
 
   /// Set of newly added shift dates (ISO strings) that should be highlighted
   private(set) var newlyAddedDates: Set<String> = []
-
-  /// Whether confetti should be shown
-  private(set) var shouldShowConfetti: Bool = false
-
-  /// The month (year, month) where confetti should originate
-  /// This is the month the user was viewing when they hit the add button
-  private(set) var confettiOriginMonth: (year: Int, month: Int)?
 
   // MARK: - Private State
 
@@ -44,11 +36,9 @@ final class CelebrationManager {
 
   // MARK: - Public Methods
 
-  /// Trigger celebration for newly added shifts
-  /// - Parameters:
-  ///   - dates: ISO date strings of the newly added shifts
-  ///   - originMonth: The month the user was in when they hit add (year, month)
-  func celebrate(dates: Set<String>, originMonth: (year: Int, month: Int)) {
+  /// Highlight newly added shifts
+  /// - Parameter dates: ISO date strings of the newly added shifts
+  func celebrate(dates: Set<String>) {
     guard !dates.isEmpty else { return }
 
     // Cancel any existing timer
@@ -56,8 +46,6 @@ final class CelebrationManager {
 
     // Set the new celebration state
     newlyAddedDates = dates
-    confettiOriginMonth = originMonth
-    shouldShowConfetti = true
 
     // Start timer to clear celebration after duration
     clearTimer = Timer.scheduledTimer(withTimeInterval: Self.highlightDuration, repeats: false) {
@@ -75,26 +63,6 @@ final class CelebrationManager {
 
     withAnimation(.easeOut(duration: 0.3)) {
       newlyAddedDates.removeAll()
-      shouldShowConfetti = false
-      confettiOriginMonth = nil
     }
-  }
-
-  /// Mark confetti as shown (don't show again on re-render)
-  func confettiDidShow() {
-    shouldShowConfetti = false
-  }
-
-  /// Check if a specific date is newly added
-  func isNewlyAdded(_ dateISO: String) -> Bool {
-    newlyAddedDates.contains(dateISO)
-  }
-
-  /// Check if confetti should show for the given month
-  func shouldShowConfetti(forYear year: Int, month: Int) -> Bool {
-    guard shouldShowConfetti,
-      let origin = confettiOriginMonth
-    else { return false }
-    return origin.year == year && origin.month == month
   }
 }

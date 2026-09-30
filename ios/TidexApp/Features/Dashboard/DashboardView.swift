@@ -420,7 +420,15 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .navigationBarTitleDisplayMode(.inline)
       .toolbarBackground(.hidden, for: .navigationBar)
       .toolbar {
-        TabTitleToolbarItem(title: .tabsHome)
+        ToolbarItem(placement: .topBarLeading) {
+          Image("TidexLogo")
+            .resizable()
+            .scaledToFit()
+            .frame(height: Spacing.xl)
+            .accessibilityLabel(Text(.tabsHome))
+            .accessibilityAddTraits(.isHeader)
+        }
+        .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .topBarTrailing) {
           statsToolbarButton
         }
@@ -1341,7 +1349,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       canManuallySetPayrollStatus && !isLoading
       && Calendar.gregorianCurrent.isDateInToday(selectedVariant.payoutDate)
     let toggleReceived = {  // swiftlint:disable:this explicit_type_interface
-      Haptics.play(.medium)
+      Haptics.play(payrollMarkedReceived ? .medium : .success)
       if payrollMarkedReceived {
         viewModel.clearPayrollReceivedOverrideForDisplayedMonth(userId: payrollOverrideUserId)
       } else {
@@ -1374,7 +1382,26 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       selectedPayrollDetailsVariant = selectedVariant
     }
 
+    // Re-runs when another celebration closes or the payout turns positive, so payday waits
+    // its turn instead of being skipped.
+    let celebrationManager = ShiftCompletionCelebrationManager.shared  // swiftlint:disable:this explicit_type_interface
+    let paydayAmount: Double =
+      selectedVariant.taxEnabled ? (selectedVariant.net ?? selectedVariant.gross) : selectedVariant.gross
+    let paydayCelebrationID: String? =
+      showsReceivedToggle && paydayAmount > 0 && celebrationManager.celebrationData == nil
+      ? selectedVariant.payoutDate.toISODateString()
+      : nil
+
     card
+      .task(id: paydayCelebrationID) {
+        guard paydayCelebrationID != nil, let payrollOverrideUserId else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
+        celebrationManager.celebratePaydayIfNeeded(
+          userId: payrollOverrideUserId,
+          payoutDate: selectedVariant.payoutDate,
+          amount: paydayAmount,
+          currency: selectedVariant.currency
+        )
+      }
       .userCurrency(selectedVariant.currency)
       .accessibilityIdentifier("home.payroll-card")
       .contentShape(Rectangle())

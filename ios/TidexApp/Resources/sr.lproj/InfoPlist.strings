@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex potreban pristup kameri da bi snimio sliku profila.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex koristi Face ID da zaštiti vaše podatke o zaradama. Samo vi biste trebali videti vaš dohodak.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex potreban pristup da bi sačuvao deljeni kalendar i slike smena u vašu galeriju.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex traži pristup vašem kalendaru kako bi mogao da dodaje i uređuje vaše smene.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex-u je potreban pristup da bi sačuvao slike deljenog kalendara, smena i četa u vašu galeriju.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex ne koristi vašu lokaciju. Biblioteka za čet uključuje deljenje lokacije, ali je ono onemogućeno u aplikaciji Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex koristi Face ID za bezbednu prijavu.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex koristi pristup kalendaru da bi prikazivao i sinhronizovao vaše smene.";

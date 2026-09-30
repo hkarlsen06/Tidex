@@ -213,7 +213,7 @@ struct MainTabView: View {
       isPresented: $celebrationManager.shouldShowCelebration,
       onDismiss: {
         guard let userId = coordinator.userId else { return }
-        celebrationManager.dismissCelebration(userId: userId, month: Date.currentYearMonth())
+        celebrationManager.dismissCelebration(userId: userId)
         ReviewRequestManager.shared.requestReviewIfEligible(
           userId: userId,
           requestReview: { requestReview() }

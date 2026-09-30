@@ -746,11 +746,13 @@ final class TidexAppUITests: XCTestCase {
     let monthTitle = app.buttons["month-header.title"].firstMatch
     XCTAssertTrue(monthTitle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     monthTitle.tap()
-    let monthWheel = app.pickerWheels.element(boundBy: 0)
-    XCTAssertTrue(monthWheel.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    monthWheel.adjust(toPickerWheelValue: "December")
-    app.pickerWheels.element(boundBy: 1).adjust(toPickerWheelValue: "2025")
-    app.buttons["Done"].tap()
+    let previousYear = app.buttons["month-picker.year.previous"]
+    XCTAssertTrue(previousYear.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    let yearsBack = Calendar(identifier: .gregorian).component(.year, from: Date()) - 2_025
+    for _ in 0..<yearsBack {
+      previousYear.tap()
+    }
+    app.buttons["month-picker.month.12"].tap()
 
     let addShift = app.buttons["schedule-empty.add-shift"]
     XCTAssertTrue(addShift.waitForExistence(timeout: defaultTimeout), app.debugDescription)

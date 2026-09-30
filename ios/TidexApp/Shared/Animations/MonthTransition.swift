@@ -178,7 +178,7 @@ struct CardTransitionModifier: ViewModifier {
 
 // MARK: - Month Year Picker Sheet
 
-/// A sheet with wheel pickers for selecting month and year
+/// A sheet with a year stepper and a month grid. Tapping a month selects it and closes the sheet.
 struct MonthYearPickerSheet: View {
   @Binding var isPresented: Bool
   let currentYear: Int
@@ -186,20 +186,20 @@ struct MonthYearPickerSheet: View {
   let onSelect: (Int, Int) -> Void
 
   @State private var selectedYear: Int
-  @State private var selectedMonth: Int
+  @State private var contentHeight: CGFloat = 400
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-  @ScaledMetric(relativeTo: .body) private var yearWheelWidth: CGFloat = 112
+  @Environment(\.layoutDirection) private var layoutDirection
+  @ScaledMetric(relativeTo: .body) private var monthCellHeight: CGFloat = 48
 
-  // Year range: 5 years back to 5 years forward
-  private var yearRange: [Int] {
-    let currentCalendarYear = Calendar.gregorianCurrent.component(.year, from: Date())
-    return Array((currentCalendarYear - 5)...(currentCalendarYear + 5))
+  /// Five years back to five years forward, widened to include the displayed year.
+  private var yearBounds: ClosedRange<Int> {
+    let currentCalendarYear = realMonth.year
+    return min(currentYear, currentCalendarYear - 5)...max(currentYear, currentCalendarYear + 5)
   }
 
-  // Month names (localized)
-  private var monthNames: [String] {
+  private var shortMonthNames: [String] {
     FormatterCache.monthNameFormatter(locale: .appLocale)
-      .monthSymbols
+      .shortStandaloneMonthSymbols
       .map { $0.sentenceCased() }
   }
 
@@ -208,13 +208,15 @@ struct MonthYearPickerSheet: View {
     Date.currentYearMonth()
   }
 
-  /// Whether the picker is already showing the current month
   private var isShowingCurrentMonth: Bool {
-    selectedYear == realMonth.year && selectedMonth == realMonth.month
+    currentYear == realMonth.year && currentMonth == realMonth.month
   }
 
-  private var selectedMonthName: String {
-    monthNames[selectedMonth - 1]
+  private var columns: [GridItem] {
+    Array(
+      repeating: GridItem(.flexible(), spacing: Spacing.xs),
+      count: dynamicTypeSize.isAccessibilitySize ? 2 : 3
+    )
   }
 
   init(
@@ -226,140 +228,154 @@ struct MonthYearPickerSheet: View {
     self.currentMonth = currentMonth
     self.onSelect = onSelect
     self._selectedYear = State(initialValue: currentYear)
-    self._selectedMonth = State(initialValue: currentMonth)
   }
 
   var body: some View {
-    // The fixed-height sheet only fits the default text size. At accessibility sizes it opens
-    // full height and scrolls.
+    // Sized to its content at default text sizes. At accessibility sizes it opens full height
+    // and scrolls.
     ScrollView {
-      VStack(spacing: Spacing.md) {
-        sheetActions
-        selectedPeriodHeader
-        pickerWheels
+      VStack(spacing: Spacing.lg) {
+        yearStepper
+        monthGrid
+        thisMonthButton
       }
       .padding(.horizontal, Spacing.md)
       .padding(.top, Spacing.xl)
-      .padding(.bottom, Spacing.xl)
+      .padding(.bottom, Spacing.md)
       .frame(maxWidth: .infinity, alignment: .top)
+      .measureSheetContentHeight { contentHeight = $0 }
     }
     .scrollBounceBehavior(.basedOnSize)
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(Color.tidexBackground)
     .presentationBackground(Color.tidexBackground)
-    .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.height(342)])
+    .presentationDetents(
+      dynamicTypeSize.isAccessibilitySize ? [.large] : [.height(contentHeight)]
+    )
     .presentationDragIndicator(.visible)
   }
 
-  private var sheetActions: some View {
-    let layout =
-      dynamicTypeSize.isAccessibilitySize
-      ? AnyLayout(VStackLayout(spacing: Spacing.sm))
-      : AnyLayout(HStackLayout(spacing: Spacing.sm))
-    return layout {
-      Button {
-        isPresented = false
-      } label: {
-        Text(.commonCancel)
-      }
-      .buttonStyle(MonthPickerActionButtonStyle())
+  private var yearStepper: some View {
+    HStack(spacing: Spacing.xs) {
+      yearButton(
+        icon: layoutDirection == .rightToLeft ? "chevron.right" : "chevron.left",
+        label: .commonPreviousYear,
+        identifier: "month-picker.year.previous",
+        isEnabled: selectedYear > yearBounds.lowerBound
+      ) { selectedYear -= 1 }
 
-      if !dynamicTypeSize.isAccessibilitySize {
-        Spacer(minLength: Spacing.xxs)
-      }
-
-      Button {
-        onSelect(realMonth.year, realMonth.month)
-        isPresented = false
-      } label: {
-        Text(.commonThisMonth)
-      }
-      .buttonStyle(MonthPickerCurrentButtonStyle(isSelected: isShowingCurrentMonth))
-      .disabled(isShowingCurrentMonth)
-
-      if !dynamicTypeSize.isAccessibilitySize {
-        Spacer(minLength: Spacing.xxs)
-      }
-
-      Button {
-        onSelect(selectedYear, selectedMonth)
-        isPresented = false
-      } label: {
-        Text(.commonDone)
-      }
-      .buttonStyle(MonthPickerActionButtonStyle(isProminent: true))
-    }
-  }
-
-  private var selectedPeriodHeader: some View {
-    let layout =
-      dynamicTypeSize.isAccessibilitySize
-      ? AnyLayout(VStackLayout(spacing: Spacing.xxs))
-      : AnyLayout(HStackLayout(spacing: Spacing.xs))
-    return layout {
-      Text(selectedMonthName)
       Text(String(selectedYear))
+        .font(.title2.weight(.semibold).monospacedDigit())
+        .foregroundColor(.tidexTextPrimary)
+        .contentTransition(.numericText(value: Double(selectedYear)))
+        .frame(maxWidth: .infinity)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier("month-picker.year")
+
+      yearButton(
+        icon: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right",
+        label: .commonNextYear,
+        identifier: "month-picker.year.next",
+        isEnabled: selectedYear < yearBounds.upperBound
+      ) { selectedYear += 1 }
     }
-    .font(.title3.weight(.semibold))
-    .foregroundColor(.tidexTextPrimary)
-    .frame(maxWidth: .infinity)
-    .padding(.top, Spacing.xxs)
+    .sensoryFeedback(.selection, trigger: selectedYear)
   }
 
-  private var pickerWheels: some View {
-    VStack(spacing: 0) {
-      Divider()
-        .background(Color.tidexSeparator)
-
-      HStack(spacing: 0) {
-        Picker(String(localized: .commonMonth), selection: $selectedMonth) {
-          ForEach(1...12, id: \.self) { month in
-            Text(monthNames[month - 1])
-              .tag(month)
-          }
-        }
-        .pickerStyle(.wheel)
-        .frame(maxWidth: .infinity)
-        .clipped()
-
-        Picker(String(localized: .commonYear), selection: $selectedYear) {
-          ForEach(yearRange, id: \.self) { year in
-            Text(String(year))
-              .tag(year)
-          }
-        }
-        .pickerStyle(.wheel)
-        .frame(width: yearWheelWidth)
-        .clipped()
-      }
-      .frame(height: 174)
-
-      Divider()
-        .background(Color.tidexSeparator)
+  private func yearButton(
+    icon: String, label: LocalizedStringResource, identifier: String, isEnabled: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button {
+      withAnimation(.snappy, action)
+    } label: {
+      Image(systemName: icon)
+        .font(.body.weight(.semibold))
+        .foregroundStyle(Color.tidexBlueText)
+        .frame(width: monthCellHeight - Spacing.xs, height: monthCellHeight - Spacing.xs)
+        .background(Color.tidexBlue.opacity(0.1), in: Circle())
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
     }
+    .buttonStyle(.plain)
+    .buttonRepeatBehavior(.enabled)
+    .disabled(!isEnabled)
+    .opacity(isEnabled ? 1 : 0.3)
+    .accessibilityLabel(Text(label))
+    .accessibilityIdentifier(identifier)
+  }
+
+  private var monthGrid: some View {
+    LazyVGrid(columns: columns, spacing: Spacing.xs) {
+      ForEach(1...12, id: \.self) { month in
+        let isSelected = selectedYear == currentYear && month == currentMonth
+        let isToday = selectedYear == realMonth.year && month == realMonth.month
+        Button {
+          onSelect(selectedYear, month)
+          isPresented = false
+        } label: {
+          Text(shortMonthNames[month - 1])
+        }
+        .accessibilityLabel(monthAccessibilityLabel(month))
+        .buttonStyle(
+          MonthCellButtonStyle(isSelected: isSelected, isToday: isToday, minHeight: monthCellHeight)
+        )
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityIdentifier("month-picker.month.\(month)")
+      }
+    }
+  }
+
+  private func monthAccessibilityLabel(_ month: Int) -> Text {
+    let date = Calendar.gregorianCurrent.date(from: DateComponents(year: selectedYear, month: month))
+    let style = Date.FormatStyle(locale: .appLocale, calendar: .gregorianCurrent).month(.wide).year()
+    return Text(date ?? Date(), format: style)
+  }
+
+  private var thisMonthButton: some View {
+    Button {
+      onSelect(realMonth.year, realMonth.month)
+      isPresented = false
+    } label: {
+      Text(.commonThisMonth)
+    }
+    .buttonStyle(MonthPickerCurrentButtonStyle(isSelected: isShowingCurrentMonth))
+    .disabled(isShowingCurrentMonth)
   }
 }
 
-private struct MonthPickerActionButtonStyle: ButtonStyle {
-  var isProminent = false
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+private struct MonthCellButtonStyle: ButtonStyle {
+  let isSelected: Bool
+  let isToday: Bool
+  let minHeight: CGFloat
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.body.weight(isProminent ? .semibold : .regular))
-      .foregroundColor(.tidexBlueText)
-      .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-      .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.82)
-      .multilineTextAlignment(.center)
-      .frame(minWidth: 72, minHeight: 44)
-      .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
-      .padding(.horizontal, Spacing.xs)
-      .background(Color.tidexSurfacePrimary, in: Capsule())
-      .overlay(
-        Capsule()
-          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+      .font(.body.weight(isSelected || isToday ? .semibold : .regular))
+      .foregroundColor(foreground)
+      .lineLimit(1)
+      .minimumScaleFactor(0.7)
+      .frame(maxWidth: .infinity, minHeight: minHeight)
+      .background(
+        isSelected ? Color.tidexBlue : Color.tidexSurfacePrimary,
+        in: RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
       )
-      .opacity(configuration.isPressed ? 0.7 : 1)
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+          .stroke(border, lineWidth: isToday && !isSelected ? 1.5 : 1)
+      )
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+      .scaleEffect(configuration.isPressed ? 0.96 : 1)
+      .animation(.snappy(duration: 0.15), value: configuration.isPressed)
+  }
+
+  private var foreground: Color {
+    if isSelected { return .tidexTextOnBrand }
+    return isToday ? .tidexBlueText : .tidexTextPrimary
+  }
+
+  private var border: Color {
+    if isSelected { return .clear }
+    return isToday ? .tidexBlueText : .tidexBorderSubtle.opacity(0.4)
   }
 }
 
@@ -369,22 +385,15 @@ private struct MonthPickerCurrentButtonStyle: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.body.weight(.medium))
+      .font(.body.weight(.semibold))
       .foregroundColor(isSelected ? .tidexTextSecondary : .tidexBlueText)
       .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-      .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.82)
       .multilineTextAlignment(.center)
-      .frame(minWidth: 104, minHeight: 44)
-      .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
+      .frame(maxWidth: .infinity, minHeight: 48)
       .padding(.horizontal, Spacing.xs)
       .background(
-        isSelected ? Color.tidexSurfaceSecondary : Color.tidexBlue.opacity(0.08),
+        isSelected ? Color.tidexSurfaceSecondary : Color.tidexBlue.opacity(0.1),
         in: Capsule()
-      )
-      .overlay(
-        Capsule()
-          .stroke(
-            isSelected ? Color.tidexBorderSubtle : Color.tidexBlue.opacity(0.16), lineWidth: 1)
       )
       .opacity(configuration.isPressed ? 0.7 : 1)
   }

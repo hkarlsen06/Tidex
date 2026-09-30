@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex inahitaji umeme wa kamera ili kuchukua picha ya wasifu.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex inatumia Face ID ili kulinda data ya mapato yako kutokana na macho yasiyostahili. Wewe pekee ndio unaofaa kuona mapato yako.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex inahitaji umeme wa ufikaji wa picha ili kuhifadhi kalenda iliyoshirikishwa na picha za zamu kwenye maktaba yako ya picha.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex inahitaji ufikiaji wa kalenda yako ili kusawazisha zamu zako na ratiba yako.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex inahitaji ruhusa ili kuhifadhi picha za kalenda iliyoshirikiwa, zamu na gumzo kwenye maktaba yako ya picha.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex haitumii eneo lako. Maktaba ya mazungumzo inajumuisha kushiriki eneo, lakini kipengele hiki kimezimwa katika Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Ruhusu Tidex kutumia Face ID ili uingie kwa usalama.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Ruhusu Tidex kufikia kalenda yako ili kusawazisha zamu zako za kazi.";

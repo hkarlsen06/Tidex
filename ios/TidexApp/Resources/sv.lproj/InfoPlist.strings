@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex behöver kameraåtkomst för att ta ett profilbild.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex använder Face ID för att skydda dina inkomstuppgifter. Endast du bör se din inkomst.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex behöver åtkomst för att spara delade kalender- och skiftbilder i ditt fotobibliotek.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex behöver åtkomst till din kalender för att lägga till och hantera dina arbetspass.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex behöver åtkomst för att spara delade kalender-, skift- och chattbilder i ditt fotobibliotek.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex använder inte din platsinformation. Chattbiblioteket har stöd för platsdelning, men funktionen är inaktiverad i Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex använder Face ID för att låsa upp appen.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex behöver full åtkomst till dina kalendrar för att visa och hantera dina arbetspass.";

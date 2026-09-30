@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex ha bisogno dell'accesso alla fotocamera per scattare una foto profilo.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex usa Face ID per proteggere i tuoi dati di guadagno. Solo tu dovresti vedere il tuo reddito.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex ha bisogno dell'accesso alla libreria foto per salvare immagini di calendario e turni condivisi.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex ha bisogno dell’accesso completo al calendario per aggiungere e gestire i tuoi turni di lavoro.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex ha bisogno dell'accesso alla libreria foto per salvare immagini di calendario e turni condivisi e immagini della chat.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex non utilizza la tua posizione. La libreria della chat include la condivisione della posizione, disabilitata in Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex usa Face ID per proteggere l'accesso ai tuoi turni.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex accede ai tuoi calendari per aggiungere e aggiornare i turni di lavoro.";

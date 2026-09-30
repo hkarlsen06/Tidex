@@ -13,16 +13,16 @@
 "CFBundleName" = "Tidex";
 
 /* Camera usage description */
-"NSCameraUsageDescription" = "Tidex trenger tilgang til kameraet for å ta profilbilder og legge ved bilder i chat.";
+"NSCameraUsageDescription" = "Tidex trenger tilgang til kameraet for å ta profilbilder.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex bruker Face ID for å beskytte inntektsdataene dine mot nysgjerrige blikk. Bare du bør se inntekten din.";
-
-/* Required by the bundled chat library. Location sharing is disabled in Tidex. */
+/* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex bruker ikke posisjonen din. Chatbiblioteket har støtte for posisjonsdeling, men dette er deaktivert i Tidex.";
 
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex trenger tilgang til å lagre delte kalendre og skiftbilder i fotobiblioteket ditt.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex trenger tilgang til å lagre delte kalendre, skiftbilder og chatbilder i fotobiblioteket ditt.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex bruker Face ID for å låse opp appen sikkert.";
 
 /* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex trenger tilgang til kalenderen din for å legge til og oppdatere vakter.";
+"NSCalendarsFullAccessUsageDescription" = "Tidex trenger full tilgang til kalenderen din for å vise og administrere arbeidsvaktene dine.";

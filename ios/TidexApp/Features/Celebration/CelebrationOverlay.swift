@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Celebration sheet shown after a shift completes, presented as a growing bottom sheet
+/// Celebration sheet shown after a shift completes or on payday, presented as a growing bottom sheet
 struct CelebrationOverlay: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
@@ -20,11 +20,36 @@ struct CelebrationOverlay: View {
     + 24  // spacing before button
     + 56 + 12  // button height + bottom padding
 
-  private static let expandedExtraHeight: CGFloat = 24 + 140 + 16 + 24 + 16  // card + spacing + "great job" text
+  private static let messageExtraHeight: CGFloat = 24 + 24 + 16  // spacing + message text
+  private static let cardExtraHeight: CGFloat = 140 + 16  // card + spacing
 
   private static let compactDetent: PresentationDetent = .height(compactContentHeight)
-  private static let expandedDetent: PresentationDetent = .height(
-    compactContentHeight + expandedExtraHeight)
+
+  private var expandedDetent: PresentationDetent {
+    .height(
+      Self.compactContentHeight + Self.messageExtraHeight
+        + (data.featuredShift == nil ? 0 : Self.cardExtraHeight))
+  }
+
+  private var isPayday: Bool {
+    data.message == .payday
+  }
+
+  private var isMonthRecord: Bool {
+    data.message == .bestShiftThisMonth
+  }
+
+  private var messageText: LocalizedStringResource {
+    switch data.message {
+    case .firstShiftThisMonth: .celebrationMessageFirstShift
+    case .bestShiftThisMonth: .celebrationMessageBestShift
+    case .greatJob: .celebrationGreatJob
+    case .niceWork: .celebrationMessageNiceWork
+    case .wellEarned: .celebrationMessageWellEarned
+    case .keepItUp: .celebrationMessageKeepItUp
+    case .payday: .celebrationPaydayMessage
+    }
+  }
 
   init(data: CelebrationData) {
     self.data = data
@@ -76,7 +101,7 @@ struct CelebrationOverlay: View {
       if skipsReveal {
         displayedAmount = data.newDisplayValue
         showCard = true
-        sheetDetent = Self.expandedDetent
+        sheetDetent = expandedDetent
         AccessibilityNotification.LayoutChanged().post()
       } else {
         // Start count-up after the sheet slides in
@@ -89,14 +114,14 @@ struct CelebrationOverlay: View {
         try? await Task.sleep(for: .seconds(1.5))
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
           showCard = true
-          sheetDetent = Self.expandedDetent
+          sheetDetent = expandedDetent
         }
         AccessibilityNotification.LayoutChanged().post()
       }
     }
     .userCurrency(data.currency)
     .presentationDetents(
-      usesAdaptiveLayout ? [.large] : [Self.compactDetent, Self.expandedDetent],
+      usesAdaptiveLayout ? [.large] : [Self.compactDetent, expandedDetent],
       selection: detentSelection
     )
     .presentationDragIndicator(.visible)
@@ -107,7 +132,7 @@ struct CelebrationOverlay: View {
     VStack(spacing: 0) {  // swiftlint:disable:this closure_body_length
       // Header with large number
       VStack(spacing: Spacing.sm) {
-        Text(.celebrationYouEarned)
+        Text(isPayday ? .celebrationPaydayTitle : .celebrationYouEarned)
           .font(.tidexHeadline)
           .foregroundColor(.tidexTextSecondary)
           .accessibilityAddTraits(.isHeader)
@@ -124,7 +149,7 @@ struct CelebrationOverlay: View {
           // The visible number counts up, so speak the final amount from the start.
           .accessibilityLabel(CurrencyConfig.format(data.newDisplayValue, currency: data.currency))
 
-        Text(.celebrationSoFarThisMonth)
+        Text(isPayday ? .celebrationPaydaySubtitle : .celebrationSoFarThisMonth)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
@@ -133,22 +158,25 @@ struct CelebrationOverlay: View {
       .frame(maxWidth: contentMaxWidth)
       .frame(maxWidth: .infinity)
 
-      // Expandable content - card and "great job"
+      // Expandable content - card and closing message
       if showCard {
         VStack(spacing: Spacing.md) {
-          FeaturedShiftCard(
-            shift: data.featuredShift,
-            isToday: false,
-            isBestShift: false,
-            countdownText: nil,
-            progress: nil,
-            showIncreaseHighlight: true,
-            showFooter: false
-          )
+          if let featuredShift = data.featuredShift {
+            FeaturedShiftCard(
+              shift: featuredShift,
+              isToday: false,
+              isBestShift: isMonthRecord,
+              countdownText: nil,
+              progress: nil,
+              showIncreaseHighlight: true,
+              showFooter: isMonthRecord
+            )
+          }
 
-          Text(.celebrationGreatJob)
+          Text(messageText)
             .font(.tidexHeadline)
             .foregroundColor(.tidexTextPrimary)
+            .multilineTextAlignment(.center)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.xl)  // More gap to differentiate sections
@@ -225,7 +253,8 @@ private let previewCelebrationData = CelebrationData(
   ),
   completedShiftCount: 1,
   currency: "kr",
-  animateFrom: 12_000
+  animateFrom: 12_000,
+  message: .bestShiftThisMonth
 )
 
 private struct CelebrationOverlayPreview: View {

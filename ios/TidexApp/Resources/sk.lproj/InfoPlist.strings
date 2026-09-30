@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex potrebuje prístup k fotoaparátu, aby ste si mohli urobiť profilovú fotografiu.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex používa Face ID na ochranu vašich údajov o výdavkoch pred cudzím pohľadom. Vaše príjmy by mal vidieť len vy.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex potrebuje prístup k uloženiu zdieľaného kalendára a obrázkov zmien do vašej knižnice fotografií.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex potrebuje prístup k vašim kalendárom, aby mohol pridávať a spravovať vaše pracovné zmeny.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex potrebuje prístup na ukladanie zdieľaného kalendára, obrázkov zmien a obrázkov z chatu do vašej knižnice fotografií.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex nepoužíva vašu polohu. Knižnica chatu obsahuje zdieľanie polohy, ktoré je v aplikácii Tidex vypnuté.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex používa Face ID na bezpečné odomykanie aplikácie.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex potrebuje prístup ku kalendáru, aby mohol pridávať a synchronizovať vaše pracovné zmeny.";

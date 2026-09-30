@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Kailangan ng Tidex ng access sa camera upang kumuha ng profile picture.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Gumagamit ang Tidex ng Face ID upang protektahan ang iyong earnings data. Ikaw lang ang dapat makakita ng iyong kita.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Kailangan ng Tidex ng access sa photo library upang magsave ng shared calendar at shift images.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Kailangan ng Tidex ng ganap na access sa iyong Kalendaryo para maidagdag at mapamahalaan ang iyong mga shift.";
+"NSPhotoLibraryAddUsageDescription" = "Kailangan ng Tidex ng access sa photo library upang mag-save ng shared calendar, shift at chat images.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Hindi ginagamit ng Tidex ang iyong lokasyon. May kasamang pagbabahagi ng lokasyon ang chat library, ngunit hindi ito pinagana sa Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Gamitin ang Face ID para ligtas na mabuksan ang Tidex.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Payagan ang Tidex na i-access ang iyong kalendaryo para maidagdag at ma-update ang iyong mga shift.";

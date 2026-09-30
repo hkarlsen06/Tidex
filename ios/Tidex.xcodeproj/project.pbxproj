@@ -106,6 +106,7 @@
 		CA1E5E000000000000000001 /* CalendarSemanticsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E5E000000000000000002 /* CalendarSemanticsUITests.swift */; };
 		CA1E5E000000000000000003 /* CalendarSemanticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E5E000000000000000004 /* CalendarSemanticsTests.swift */; };
 		CD50000030B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */; };
+		CE1EB8A70000000000000001 /* CelebrationDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE1EB8A70000000000000002 /* CelebrationDetectorTests.swift */; };
 		CE6A572385D358D6118E6A56 /* ProfileAvatarPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C2C17EEC256EA2C671E15 /* ProfileAvatarPersistenceTests.swift */; };
 		D4B0A0013050111100A1B2C3 /* ShiftReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */; };
 		DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */; };
@@ -272,6 +273,7 @@
 		CA1E5E000000000000000002 /* CalendarSemanticsUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarSemanticsUITests.swift; sourceTree = "<group>"; };
 		CA1E5E000000000000000004 /* CalendarSemanticsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarSemanticsTests.swift; sourceTree = "<group>"; };
 		CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftDetailsPresentationPolicyTests.swift; sourceTree = "<group>"; };
+		CE1EB8A70000000000000002 /* CelebrationDetectorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CelebrationDetectorTests.swift; sourceTree = "<group>"; };
 		D0101D84EA694A80B323B9F0 /* FriendsBootstrapDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsBootstrapDecodingTests.swift; sourceTree = "<group>"; };
 		D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftReminderPlannerTests.swift; sourceTree = "<group>"; };
 		DA87CB237E9D3D643F34BB55 /* ShiftsListPlaceholderPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftsListPlaceholderPolicyTests.swift; sourceTree = "<group>"; };
@@ -484,6 +486,7 @@
 				F00DC0023059000000ABCDEF /* OnboardingCurrencyResolverTests.swift */,
 				A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */,
 				FA11E1000000000000000002 /* OnboardingFunnelRecorderTests.swift */,
+				CE1EB8A70000000000000002 /* CelebrationDetectorTests.swift */,
 				AA31C0023051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift */,
 				A7F10A0230C6000000DAD001 /* HomeScheduleLoadingHelperTests.swift */,
 				AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */,
@@ -1025,6 +1028,7 @@
 				F00DC0013059000000ABCDEF /* OnboardingCurrencyResolverTests.swift in Sources */,
 				A9B8C7D63041ABCD00A1B2C3 /* OnboardingSaveManagerTests.swift in Sources */,
 				FA11E1000000000000000001 /* OnboardingFunnelRecorderTests.swift in Sources */,
+				CE1EB8A70000000000000001 /* CelebrationDetectorTests.swift in Sources */,
 				AA31C0013051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift in Sources */,
 				A7F10A0130C6000000DAD001 /* HomeScheduleLoadingHelperTests.swift in Sources */,
 				AA31C0033051222200B4C5D6 /* EventReminderPlannerTests.swift in Sources */,
@@ -1504,8 +1508,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = TidexApp/Supporting/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1533,8 +1535,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = TidexApp/Supporting/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

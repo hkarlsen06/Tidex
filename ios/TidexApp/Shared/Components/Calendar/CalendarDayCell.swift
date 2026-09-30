@@ -62,6 +62,12 @@ enum CalendarCellMarker: Equatable {
   case newlyAdded
   case deepLink
 
+  /// Conflicts always show their symbol. The brief highlights only show one with
+  /// Differentiate Without Color, because the symbol covers part of the shift times.
+  func isVisible(differentiateWithoutColor: Bool) -> Bool {
+    self == .conflict || differentiateWithoutColor
+  }
+
   var systemImage: String {
     switch self {
     case .conflict:
@@ -114,6 +120,7 @@ struct CalendarDayCell<Content: View>: View {
   @ScaledMetric(relativeTo: .caption) private var metricDynamicTypeScale: CGFloat = 1
   @ScaledMetric(relativeTo: .body) private var defaultTopRowHeight: CGFloat = 17
   @ScaledMetric(relativeTo: .body) private var todayTopRowHeight: CGFloat = 20
+  @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
 
   let dayInfo: CalendarDayInfo
   let style: CalendarCellStyle
@@ -212,7 +219,7 @@ struct CalendarDayCell<Content: View>: View {
       }
     }
     .overlay(alignment: .bottomTrailing) {
-      if let marker = style.marker {
+      if let marker = style.marker, marker.isVisible(differentiateWithoutColor: differentiateWithoutColor) {
         Image(systemName: marker.systemImage)
           .font(.tidexMicro)
           .imageScale(.small)

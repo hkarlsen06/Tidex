@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex þarf aðgang að myndavélinni til að taka prófílmynd.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex notar Face ID til að vernda tekjugögn þín fyrir óheimilum aðilum. Aðeins þú ættir að sjá tekjur þínar.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex þarf aðgang til að vista deildar dagatals- og vaktamyndir á myndasafnið þitt.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex þarf aðgang að dagatalinu þínu til að bæta við og halda utan um vaktir.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex þarf aðgang til að vista deildar dagatals-, vakta- og spjallmyndir á myndasafnið þitt.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex notar ekki staðsetningu þína. Spjallkerfið býður upp á staðsetningardeilingu, en hún er óvirk í Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex notar Face ID til að þú getir skráð þig inn á öruggan hátt.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex þarf fullan aðgang að dagatalinu þínu til að bæta við og uppfæra vaktir.";

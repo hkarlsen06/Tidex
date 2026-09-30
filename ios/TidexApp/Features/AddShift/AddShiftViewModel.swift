@@ -1435,12 +1435,8 @@ internal final class AddShiftViewModel {
   private func finishSingleSubmission(createdDates: Set<String>, userId: String) async {
     kLogger.info("Created \(createdDates.count) shifts")
 
-    // Trigger celebration with the dates that were added
-    // Use the current display month as the origin for confetti
-    CelebrationManager.shared.celebrate(
-      dates: createdDates,
-      originMonth: (year: displayYear, month: displayMonthNumber)
-    )
+    // Highlight the added dates in the Shifts tab
+    CelebrationManager.shared.celebrate(dates: createdDates)
 
     // Clear form
     clearForm()
@@ -1672,12 +1668,8 @@ internal final class AddShiftViewModel {
     // Get non-excluded dates for celebration (the ones actually created)
     let createdDates = Set(cachedProjectedDates).subtracting(conflicts)
 
-    // Trigger celebration with created dates
-    // Use the current display month as the origin for confetti
-    CelebrationManager.shared.celebrate(
-      dates: createdDates,
-      originMonth: (year: displayYear, month: displayMonthNumber)
-    )
+    // Highlight the created dates in the Shifts tab
+    CelebrationManager.shared.celebrate(dates: createdDates)
 
     refreshDistinctShiftTimePairCount(for: userId)
 

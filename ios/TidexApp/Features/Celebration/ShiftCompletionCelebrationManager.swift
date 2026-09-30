@@ -10,9 +10,18 @@ final class ShiftCompletionCelebrationManager {
   var celebrationData: CelebrationData?
 
   @ObservationIgnored private var pendingState: CelebrationState?
+  /// Where `pendingState` is saved on dismiss. The month can change while the sheet is open.
+  @ObservationIgnored private var pendingStateKey: String?
   @ObservationIgnored private var checkTask: Task<Void, Never>?
+  /// Checks again when the next shift ends, so a shift that ends while the app is open is celebrated.
+  @ObservationIgnored private var nextShiftEndTask: Task<Void, Never>?
 
   private init() {}
+
+  /// The sheet binding turns false before its onDismiss runs, so the data counts as showing too.
+  private var isBusy: Bool {
+    shouldShowCelebration || celebrationData != nil
+  }
 
   func checkForCelebration(
     userId: String,
@@ -24,7 +33,7 @@ final class ShiftCompletionCelebrationManager {
     includeVirtual: Bool = true
   ) {
     guard !userId.isEmpty else { return }
-    guard !shouldShowCelebration else { return }
+    guard !isBusy else { return }
 
     checkTask?.cancel()
 
@@ -41,28 +50,78 @@ final class ShiftCompletionCelebrationManager {
     checkTask = Task.detached(priority: .utility) { [weak self] in
       let stateKey = input.stateKey
       let result = CelebrationEvaluator.evaluate(input)
+      let nextShiftEnd = CelebrationDetector.nextShiftEnd(
+        shifts: input.shifts,
+        after: Date(),
+        includeVirtual: input.includeVirtual
+      )
 
       guard !Task.isCancelled else { return }
 
       await MainActor.run { [weak self] in
         guard let self else { return }
+        scheduleCheck(at: nextShiftEnd, userId: input.userId, month: input.month)
         // swiftlint:disable:next conditional_returns_on_newline
-        if shouldShowCelebration { return }
+        if isBusy { return }
         apply(result: result, stateKey: stateKey)
       }
     }
   }
 
-  func checkForCelebrationFromLocal(userId: String) {
+  /// Show the payday sheet once per payout date, the first time the dashboard shows payday.
+  func celebratePaydayIfNeeded(userId: String, payoutDate: Date, amount: Double, currency: String) {
+    guard !userId.isEmpty, amount > 0, !isBusy else { return }
+    guard Calendar.gregorianCurrent.isDateInToday(payoutDate) else { return }
+    #if DEBUG
+      if AppStoreScreenshotFixture.isActive { return }
+    #endif
+
+    let key = "payday_celebrated.\(userId)"
+    let payoutDateISO = payoutDate.toISODateString()
+    guard UserDefaults.standard.string(forKey: key) != payoutDateISO else { return }
+    UserDefaults.standard.set(payoutDateISO, forKey: key)
+
+    pendingState = nil
+    pendingStateKey = nil
+    celebrationData = CelebrationData(
+      previousDisplayValue: 0,
+      newDisplayValue: amount,
+      featuredShift: nil,
+      completedShiftCount: 0,
+      currency: currency,
+      animateFrom: nil,
+      message: .payday
+    )
+    shouldShowCelebration = true
+  }
+
+  /// Checks the month the shift belongs to, so a shift that ends after midnight on the
+  /// last day of the month is still found.
+  private func scheduleCheck(at date: Date?, userId: String, month: (year: Int, month: Int)) {
+    nextShiftEndTask?.cancel()
+    guard let date else {
+      nextShiftEndTask = nil
+      return
+    }
+
+    nextShiftEndTask = Task { [weak self] in
+      // A few seconds late, so the shift counts as ended when the check runs.
+      try? await Task.sleep(for: .seconds(max(date.timeIntervalSinceNow, 0) + 5))
+      guard !Task.isCancelled, AppCoordinator.shared.userId == userId else { return }
+      self?.checkForCelebrationFromLocal(userId: userId, month: month)
+    }
+  }
+
+  func checkForCelebrationFromLocal(userId: String, month: (year: Int, month: Int)? = nil) {
     guard !userId.isEmpty else { return }
-    guard !shouldShowCelebration else { return }
+    guard !isBusy else { return }
 
     checkTask?.cancel()
 
     let userIdSnapshot = userId
 
     checkTask = Task.detached(priority: .utility) { [weak self] in
-      let current = Date.currentYearMonth()
+      let current = month ?? Date.currentYearMonth()
 
       guard
         let data = await LocalCelebrationData.loadWithRetry(userId: userIdSnapshot, month: current)
@@ -87,18 +146,20 @@ final class ShiftCompletionCelebrationManager {
     }
   }
 
-  func dismissCelebration(userId: String, month: (year: Int, month: Int)) {
+  func dismissCelebration(userId: String) {
     guard !userId.isEmpty else { return }
-    let stateKey = CelebrationPersistence.stateKey(
-      userId: userId, year: month.year, month: month.month)
 
-    if let pendingState {
-      CelebrationPersistence.saveState(pendingState, forKey: stateKey)
+    if let pendingState, let pendingStateKey {
+      CelebrationPersistence.saveState(pendingState, forKey: pendingStateKey)
     }
 
     pendingState = nil
+    pendingStateKey = nil
     celebrationData = nil
     shouldShowCelebration = false
+
+    // A timed check that fired while the sheet was open was skipped, so check again and re-arm it.
+    checkForCelebrationFromLocal(userId: userId)
   }
 
   #if DEBUG
@@ -120,12 +181,14 @@ final class ShiftCompletionCelebrationManager {
         if AppStoreScreenshotFixture.isActive { return }
       #endif
       pendingState = state
+      pendingStateKey = stateKey
       celebrationData = data
       shouldShowCelebration = true
 
     case .store(let state):
       CelebrationPersistence.saveState(state, forKey: stateKey)
       pendingState = nil
+      pendingStateKey = nil
       celebrationData = nil
       shouldShowCelebration = false
 
@@ -133,21 +196,6 @@ final class ShiftCompletionCelebrationManager {
       break
     }
   }
-}
-
-struct CelebrationData: Equatable {
-  let previousDisplayValue: Double
-  let newDisplayValue: Double
-  let featuredShift: ShiftWithComputations
-  let completedShiftCount: Int
-  let currency: String
-  let animateFrom: Double?
-}
-
-struct CelebrationState: Codable, Equatable {
-  let lastDisplayValue: Double
-  let completedShiftIds: [String]
-  let displayTaxEnabled: Bool
 }
 
 private enum CelebrationResult {
@@ -173,7 +221,8 @@ private struct CelebrationInput {
     featuredShift: ShiftWithComputations,
     completedShiftCount: Int,
     previousDisplayValue: Double,
-    taxBasisChanged: Bool
+    taxBasisChanged: Bool,
+    message: CelebrationMessage
   ) -> CelebrationData {
     CelebrationData(
       previousDisplayValue: previousDisplayValue,
@@ -181,7 +230,8 @@ private struct CelebrationInput {
       featuredShift: featuredShift,
       completedShiftCount: completedShiftCount,
       currency: currency,
-      animateFrom: taxBasisChanged ? displayValue : nil
+      animateFrom: taxBasisChanged ? displayValue : nil,
+      message: message
     )
   }
 }
@@ -240,13 +290,24 @@ private enum CelebrationEvaluator {
       return .store(state: baselineState)
     }
 
+    let completedIds = Set(baselineState.completedShiftIds)
+    let newlyCompletedIds = Set(newlyCompleted.map(\.id))
+    let earlierCompleted = input.shifts.filter {
+      completedIds.contains($0.id) && !newlyCompletedIds.contains($0.id)
+    }
+
     // Avoid a misleading count-up when the tax basis changed.
     let taxBasisChanged = previousState.displayTaxEnabled != input.displayTaxEnabled
     let data = input.celebrationData(
       featuredShift: featuredShift,
       completedShiftCount: newlyCompleted.count,
       previousDisplayValue: previousState.lastDisplayValue,
-      taxBasisChanged: taxBasisChanged
+      taxBasisChanged: taxBasisChanged,
+      message: CelebrationDetector.message(
+        featuredShift: featuredShift,
+        earlierCompleted: earlierCompleted,
+        newlyCompletedCount: newlyCompleted.count
+      )
     )
     return .show(data: data, state: baselineState)
   }
@@ -281,7 +342,12 @@ private enum CelebrationEvaluator {
       completedShiftCount: completedShifts.count,
       // swiftlint:disable:next no_magic_numbers
       previousDisplayValue: previousState?.lastDisplayValue ?? max(0, input.displayValue - 1_000),
-      taxBasisChanged: previousState?.displayTaxEnabled != input.displayTaxEnabled
+      taxBasisChanged: previousState?.displayTaxEnabled != input.displayTaxEnabled,
+      message: CelebrationDetector.message(
+        featuredShift: featuredShift,
+        earlierCompleted: completedShifts.filter { $0.id != featuredShift.id },
+        newlyCompletedCount: 1
+      )
     )
     return .show(data: data, state: baselineState)
   }

@@ -123,17 +123,20 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
     .background(Color.tidexBlue, in: Capsule())
   }
 
-  /// Fills the whole card so any tap on the placeholder adds a shift.
+  /// Fills the whole card so any tap on the placeholder adds a shift. A tap gesture instead of a
+  /// Button, because a Button also fires at the end of a drag and would beat the month swipe.
   private func addShiftButton(action: @escaping () -> Void) -> some View {
-    Button {
+    let addShift = {  // swiftlint:disable:this explicit_type_interface
       Haptics.play(.light)
       action()
-    } label: {
-      addShiftLabel
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
     }
-    .buttonStyle(.plain)
+    return addShiftLabel
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .contentShape(Rectangle())
+      .onTapGesture(perform: addShift)
+      .accessibilityElement(children: .combine)
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction(.default, addShift)
   }
 }
 

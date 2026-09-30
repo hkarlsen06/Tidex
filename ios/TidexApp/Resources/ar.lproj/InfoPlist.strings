@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "يحتاج Tidex إلى الوصول للكاميرا لالتقاط صورة ملف التعريف الخاص بك.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "يستخدم Tidex Face ID لحماية بيانات أرباحك من العيون الفضولية. يجب أن تكون أنت فقط من يرى دخلك.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "يحتاج Tidex إلى الوصول لحفظ صور التقويم والنوبات المشتركة في مكتبة الصور لديك.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "يحتاج Tidex إلى الوصول الكامل إلى التقويم لمزامنة نوبات عملك وإدارتها بسهولة.";
+"NSPhotoLibraryAddUsageDescription" = "يحتاج Tidex إلى الوصول لحفظ صور التقويم والنوبات المشتركة وصور الدردشة في مكتبة الصور لديك.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "لا يستخدم Tidex موقعك. تتضمن مكتبة الدردشة ميزة مشاركة الموقع، لكنها معطّلة في Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "يستخدم Tidex بصمة الوجه لفتح التطبيق بأمان.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "يحتاج Tidex إلى الوصول إلى تقاويمك لإضافة ورديات عملك ومزامنتها.";

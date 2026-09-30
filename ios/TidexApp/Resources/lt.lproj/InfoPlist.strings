@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex reikalinga prieiga prie fotoaparato, kad būtų galima nufotografuoti profilio nuotrauką.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex naudoja Face ID, kad apsaugotų jūsų pajamų duomenis nuo nepageidaujamų žvilgsnių. Tik jūs turėtumėte matyti savo pajamas.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex reikalinga prieiga, kad išsaugotų bendrinamus kalendoriaus ir pamainų vaizdulius jūsų nuotraukų bibliotekoje.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex reikia prieigos prie jūsų kalendoriaus, kad galėtų pridėti ir tvarkyti darbo pamainas.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex reikalinga prieiga, kad išsaugotų bendrinamus kalendoriaus, pamainų ir pokalbių vaizdus jūsų nuotraukų bibliotekoje.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex nenaudoja jūsų buvimo vietos. Pokalbių bibliotekoje yra vietos bendrinimo funkcija, tačiau Tidex ji išjungta.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex naudoja „Face ID“, kad galėtumėte saugiai prisijungti.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex reikia visos prieigos prie kalendoriaus, kad galėtumėte peržiūrėti ir įtraukti darbo pamainas.";

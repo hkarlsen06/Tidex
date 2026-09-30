@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex, profil fotoğrafı çekmek için kamera erişimine ihtiyaç duyuyor.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex, kazanç verilerinizi korumak için Face ID kullanıyor. Sadece siz gelir bilgilerinizi görebilmelisiniz.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex, paylaşılan takvim ve vardiya görüntülerini fotoğraf kitaplığınıza kaydetmek için erişim izni gerektirir.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex, vardiyalarınızı takviminize eklemek ve yönetmek için takviminize tam erişim ister.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex, paylaşılan takvim, vardiya ve sohbet görüntülerini fotoğraf kitaplığınıza kaydetmek için erişim izni gerektirir.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex konumunuzu kullanmaz. Sohbet kütüphanesinde konum paylaşımı bulunur, ancak bu özellik Tidex'te devre dışıdır.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex, hızlı ve güvenli giriş yapmanız için Face ID kullanır.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex, vardiyalarınızı takviminize eklemek ve güncellemek için takviminize tam erişim ister.";

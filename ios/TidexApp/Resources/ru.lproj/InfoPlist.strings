@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex требует доступ к камере для создания фотографии профиля.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex использует Face ID для защиты данных о вашем заработке от посторонних глаз. Только вы должны видеть вашу зарплату.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex требует доступ к фотопленке для сохранения календарей и изображений смен.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex нужен доступ к вашим календарям, чтобы добавлять и обновлять рабочие смены.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex требует доступ к медиатеке для сохранения календарей, изображений смен и изображений из чата.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex не использует вашу геопозицию. Библиотека чата поддерживает передачу геопозиции, но в Tidex эта функция отключена.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Разрешите Tidex использовать Face ID для быстрого и безопасного входа.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Разрешите Tidex доступ к календарю, чтобы добавлять и обновлять ваши смены.";

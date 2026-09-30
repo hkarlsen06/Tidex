@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex cần quyền truy cập camera để chụp ảnh hồ sơ của bạn.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex sử dụng Face ID để bảo vệ dữ liệu thu nhập của bạn khỏi những người không được phép. Chỉ có bạn mới có thể xem thu nhập của mình.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex cần quyền truy cập thư viện ảnh để lưu các hình ảnh lịch và ca làm việc được chia sẻ.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex cần quyền truy cập đầy đủ vào Lịch để đồng bộ và quản lý ca làm của bạn.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex cần quyền truy cập thư viện ảnh để lưu hình ảnh lịch, ca làm việc được chia sẻ và hình ảnh trò chuyện.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex không sử dụng vị trí của bạn. Thư viện trò chuyện có tính năng chia sẻ vị trí, nhưng tính năng này đã bị tắt trong Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Cho phép Tidex dùng Face ID để đăng nhập nhanh và an toàn.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Cho phép Tidex truy cập lịch để thêm và quản lý ca làm của bạn.";

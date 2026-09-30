@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex membutuhkan akses kamera untuk mengambil foto profil.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex menggunakan Face ID untuk melindungi data penghasilan Anda dari orang yang tidak berhak. Hanya Anda yang dapat melihat pendapatan Anda.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex membutuhkan akses untuk menyimpan kalender bersama dan gambar shift ke galeri foto Anda.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex memerlukan akses ke kalender Anda untuk menambahkan dan mengelola jadwal kerja.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex membutuhkan akses untuk menyimpan gambar kalender bersama, shift, dan chat ke galeri foto Anda.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex tidak menggunakan lokasi Anda. Pustaka chat menyertakan fitur berbagi lokasi, tetapi fitur ini dinonaktifkan di Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Izinkan Tidex menggunakan Face ID untuk masuk dengan aman.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Izinkan Tidex mengakses kalender Anda untuk menambahkan dan mengelola jadwal shift kerja.";

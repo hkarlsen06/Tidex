@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex heeft cameratoegang nodig om een profielfoto te maken.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex gebruikt Face ID om je inkomstengegevens te beschermen. Alleen jij zou je inkomsten moeten kunnen zien.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex heeft toegang nodig om gedeelde kalender- en roosterafbeeldingen op te slaan in je fototheek.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex gebruikt je agenda om diensten toe te voegen en te beheren.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex heeft toegang nodig om gedeelde kalender-, rooster- en chatafbeeldingen op te slaan in je fototheek.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex gebruikt je locatie niet. De chatbibliotheek ondersteunt het delen van je locatie, maar deze functie is uitgeschakeld in Tidex.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex gebruikt Face ID om je account te beveiligen.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex heeft volledige toegang tot je agenda nodig om je diensten te synchroniseren.";

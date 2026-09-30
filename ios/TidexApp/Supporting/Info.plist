@@ -43,22 +43,16 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>FRIENDS_SHIFT_SNAPSHOTS_ENABLED</key>
-	<true/>
-	<key>FRIENDS_SHIFT_SNAPSHOTS_MINIMUM_APP_VERSION</key>
-	<string>2.4.1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Tidex needs camera access to take profile pictures and attach images in chat.</string>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.</string>
+	<string>Tidex needs camera access to take profile pictures.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Tidex does not use your location. The chat library includes location sharing, which is disabled in Tidex.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Tidex needs access to save shared calendar and shift images to your photo library.</string>
+	<string>Tidex needs access to save shared calendar, shift and chat images to your photo library.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSUserActivityTypes</key>
@@ -85,12 +79,6 @@
 		<key>UIImageName</key>
 		<string>TidexLaunchLogo</string>
 	</dict>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>armv7</string>
-	</array>
-	<key>UIStatusBarStyle</key>
-	<string></string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

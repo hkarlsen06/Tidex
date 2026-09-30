@@ -290,18 +290,26 @@ extension Date {
     endTime: String,
     referenceDate: Date = Date()
   ) -> Bool {
+    guard let endDate = shiftEndDate(shiftDate: shiftDate, startTime: startTime, endTime: endTime)
+    else {
+      return false
+    }
+    return endDate <= referenceDate
+  }
+
+  /// The moment a shift ends. A shift that ends at or before its start time ends the next day.
+  static func shiftEndDate(shiftDate: String, startTime: String, endTime: String) -> Date? {
     guard var endDate = fromDateAndTime(shiftDate, time: endTime),
       let startDate = fromDateAndTime(shiftDate, time: startTime)
     else {
-      return false
+      return nil
     }
 
     // Handle cross-midnight shifts (e.g., 22:00-06:00)
     if endDate <= startDate {
       endDate = Self.gregorianCalendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
     }
-
-    return endDate <= referenceDate
+    return endDate
   }
 }
 

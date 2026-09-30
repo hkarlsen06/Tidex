@@ -15,14 +15,14 @@
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex vajab kameralubasust profiilipildi tegemiseks.";
 
-/* Face ID usage description */
-"NSFaceIDUsageDescription" = "Tidex kasutab Face ID-d teie sissetulekuandmete kaitsmiseks. Ainult teie peaksite nägema oma tulu.";
-
 /* Photo library save description */
-"NSPhotoLibraryAddUsageDescription" = "Tidex vajab juurdepääsu, et salvestada jagatud kalendri ja vahetuse pilte teie fotogaleriisse.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex kasutab kalendri täisjuurdepääsu, et lisada ja hallata teie töövahetusi.";
+"NSPhotoLibraryAddUsageDescription" = "Tidex vajab juurdepääsu, et salvestada jagatud kalendri, vahetuste ja vestluse pilte teie fotogaleriisse.";
 
 /* NSLocationWhenInUseUsageDescription */
 "NSLocationWhenInUseUsageDescription" = "Tidex ei kasuta sinu asukohta. Vestlusteek sisaldab asukoha jagamise võimalust, kuid Tidexis on see keelatud.";
+
+/* Face ID usage description */
+"NSFaceIDUsageDescription" = "Tidex kasutab Face ID-d, et saaksid turvaliselt sisse logida.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex vajab täielikku juurdepääsu sinu kalendrile, et lisada ja hallata töövahetusi.";
