@@ -161,23 +161,38 @@ struct FriendsThreadComposerHostedView: View {
   }
 
   var body: some View {
-    // A drag down on the composer drives the interactive keyboard dismissal the
-    // same way a drag on the message list does, and a pull up focuses it.
-    ScrollView {
-      composerContent
+    // Rows above the field sit outside the scroll view. A scroll view lays its
+    // content out from the top, so a row appearing inside it would shift the
+    // field and drawer for a frame before they settle.
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      modeBanner
+
+      stagedAttachmentPreview
+
+      readOnlyNotice
+
+      composerMeta
+
+      composerScrollView
     }
-    .scrollDismissesKeyboard(.interactively)
-    .onScrollGeometryChange(for: Bool.self) { geometry in
-      geometry.contentOffset.y > FriendsThreadChatViewportResolver.pullUpToFocusThreshold
-    } action: { _, isPulledUp in
-      if isPulledUp, !isComposerFocused {
-        composerFocusTrigger += 1
-      }
-    }
-    .scrollBounceBehavior(.always, axes: .vertical)
-    .scrollIndicators(.hidden)
-    .scrollClipDisabled()
+    // The preview row grows and shrinks the composer, so ease it in and out
+    // instead of snapping.
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86),
+      value: configuration.stagedAttachments
+    )
+    // Size every row to its content. The chat overlay offers the full screen height.
     .fixedSize(horizontal: false, vertical: true)
+    .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+    .frame(maxWidth: .infinity, alignment: .bottom)
+    .background(
+      GeometryReader { geometry in
+        Color.clear.preference(
+          key: FriendsThreadComposerHeightPreferenceKey.self,
+          value: geometry.size.height
+        )
+      }
+    )
     .onPreferenceChange(FriendsThreadComposerHeightPreferenceKey.self) { height in
       bridge.reportHeight(height)
     }
@@ -200,10 +215,14 @@ struct FriendsThreadComposerHostedView: View {
         await handleSelectedPhotoItems(newItems)
       }
     }
+    .onChange(of: configuration.stagedAttachments) { _, stagedAttachments in
+      // A thumbnail removed or a message sent also clears the photo's checkmark.
+      deselectUnstagedPhotos(in: stagedAttachments)
+    }
     .photosPicker(
       isPresented: $attachmentController.isShowingPhotoLibrary,
       selection: $selectedPhotoItems,
-      maxSelectionCount: remainingImageSelectionCapacity,
+      maxSelectionCount: max(1, photoPickerSelectionLimit),
       matching: .images,
       photoLibrary: .shared()
     )
@@ -222,45 +241,51 @@ struct FriendsThreadComposerHostedView: View {
     }
   }
 
-  private var composerContent: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      modeBanner
+  /// A drag down on the field or drawer drives the interactive keyboard dismissal
+  /// the same way a drag on the message list does, and a pull up focuses the field.
+  private var composerScrollView: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        composerField
 
-      if !configuration.stagedAttachments.isEmpty {
-        FriendsThreadComposerAttachmentPreview(
-          attachments: configuration.stagedAttachments,
-          onRemove: removeStagedAttachment(at:)
-        )
-        .padding(.horizontal, Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        attachmentDrawer
       }
-
-      readOnlyNotice
-
-      composerMeta
-
-      composerField
-
-      attachmentDrawer
+      .animation(
+        reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86),
+        value: attachmentController.isDrawerOpen
+      )
+      .fixedSize(horizontal: false, vertical: true)
+      .visualEffect { content, proxy in
+        // Cancel the scroll so only the keyboard follows the finger.
+        content.offset(y: -proxy.frame(in: .scrollView).minY)
+      }
     }
-    .animation(
-      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86),
-      value: attachmentController.isDrawerOpen
-    )
-    .fixedSize(horizontal: false, vertical: true)
-    .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
-    .frame(maxWidth: .infinity, alignment: .bottom)
-    .background(
-      GeometryReader { geometry in
-        Color.clear.preference(
-          key: FriendsThreadComposerHeightPreferenceKey.self,
-          value: geometry.size.height
-        )
+    .scrollDismissesKeyboard(.interactively)
+    .onScrollGeometryChange(for: Bool.self) { geometry in
+      geometry.contentOffset.y > FriendsThreadChatViewportResolver.pullUpToFocusThreshold
+    } action: { _, isPulledUp in
+      if isPulledUp, !isComposerFocused {
+        composerFocusTrigger += 1
       }
-    )
-    .visualEffect { content, proxy in
-      // Cancel the scroll so only the keyboard follows the finger.
-      content.offset(y: -proxy.frame(in: .scrollView).minY)
+    }
+    .scrollBounceBehavior(.always, axes: .vertical)
+    .scrollIndicators(.hidden)
+    .scrollClipDisabled()
+    .fixedSize(horizontal: false, vertical: true)
+  }
+
+  @ViewBuilder
+  private var stagedAttachmentPreview: some View {
+    if !configuration.stagedAttachments.isEmpty {
+      FriendsThreadComposerAttachmentPreview(
+        attachments: configuration.stagedAttachments,
+        onRemove: removeStagedAttachment(at:)
+      )
+      .padding(.horizontal, Spacing.md)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .transition(
+        reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9, anchor: .bottom))
+      )
     }
   }
 
@@ -277,24 +302,6 @@ struct FriendsThreadComposerHostedView: View {
     } else if configuration.mode == .edit {
       FriendsThreadComposerEditBanner(onCancel: bridge.cancelMode)
         .padding(.horizontal, Spacing.md)
-    }
-  }
-
-  @ViewBuilder
-  private var readOnlyNotice: some View {
-    if configuration.isThreadReadOnly {
-      HStack(spacing: Spacing.xs) {
-        Image(systemName: "hand.raised.fill")
-          .foregroundColor(.tidexWarning)
-          .accessibilityHidden(true)
-
-        Text(.friendsChatBlockedReadOnly)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-
-        Spacer()
-      }
-      .padding(.horizontal, Spacing.md)
     }
   }
 
@@ -334,13 +341,14 @@ struct FriendsThreadComposerHostedView: View {
     if attachmentController.isDrawerOpen {
       FriendsThreadComposerAttachmentDrawer(
         selectedPhotoItems: $selectedPhotoItems,
-        remainingImageSelectionCapacity: remainingImageSelectionCapacity,
+        photoPickerSelectionLimit: max(1, photoPickerSelectionLimit),
+        canUsePhotoPicker: canUsePhotoPicker,
         isProcessingAttachment: attachmentController.isProcessingAttachment,
         showsShiftCalendarAction: configuration.canSendShiftSnapshots,
         stagedAttachments: configuration.stagedAttachments,
         canAddMoreImages: canAddMoreImages,
         onOpenPhotoLibrary: {
-          guard canAddMoreImages else { return }
+          guard canUsePhotoPicker else { return }
           attachmentController.isShowingPhotoLibrary = true
         },
         onOpenCamera: {
@@ -351,9 +359,12 @@ struct FriendsThreadComposerHostedView: View {
           attachmentController.openShiftCalendar()
         }
       )
-      .padding(.horizontal, Spacing.md)
+      // Match the unfocused field row so the panel lines up with the plus button.
+      .padding(.horizontal, MonthPickerLayout.horizontalPadding)
       .padding(.bottom, Spacing.sm)
-      .transition(MotionTokens.mirroredMoveTransition(edge: .bottom, reduceMotion: reduceMotion))
+      .transition(
+        reduceMotion ? .opacity : .opacity.combined(with: .offset(y: Spacing.lg))
+      )
     }
   }
 
@@ -409,6 +420,24 @@ struct FriendsThreadComposerHostedView: View {
 }
 
 extension FriendsThreadComposerHostedView {
+  @ViewBuilder
+  private var readOnlyNotice: some View {
+    if configuration.isThreadReadOnly {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "hand.raised.fill")
+          .foregroundColor(.tidexWarning)
+          .accessibilityHidden(true)
+
+        Text(.friendsChatBlockedReadOnly)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+
+        Spacer()
+      }
+      .padding(.horizontal, Spacing.md)
+    }
+  }
+
   private var composerText: String {
     text.wrappedValue
   }
@@ -460,8 +489,18 @@ extension FriendsThreadComposerHostedView {
       && stagedImageCount < FriendsComposerAttachmentLimits.maxImagesPerMessage
   }
 
-  private var remainingImageSelectionCapacity: Int {
-    max(1, FriendsComposerAttachmentLimits.maxImagesPerMessage - stagedImageCount)
+  /// How many photos the picker may hold: the image limit minus the images that did not
+  /// come from the picker, such as camera shots and restored drafts.
+  private var photoPickerSelectionLimit: Int {
+    let pickedAttachmentIDs = Set(attachmentController.pickedAttachmentIDs.values)
+    let otherImageCount = configuration.stagedAttachments.imageAttachments
+      .filter { !pickedAttachmentIDs.contains($0.id) }
+      .count
+    return FriendsComposerAttachmentLimits.maxImagesPerMessage - otherImageCount
+  }
+
+  private var canUsePhotoPicker: Bool {
+    !hasShiftSnapshotAttachment && photoPickerSelectionLimit > 0
   }
 
   private func sendMessage() {
@@ -498,34 +537,78 @@ extension FriendsThreadComposerHostedView {
     }
   }
 
+  /// The picker selection mirrors the photos in the draft: a newly selected photo is
+  /// attached, and a deselected one is removed.
   private func handleSelectedPhotoItems(_ items: [PhotosPickerItem]) async {
-    guard !items.isEmpty else { return }
     let shouldRestoreFocus = isComposerFocused
-    var imageAttachments: [ImageAttachment] = []
+    let deselectedAttachmentIDs = attachmentController.releaseDeselectedPhotos(
+      selectedPickerItemIDs: Set(items.compactMap(\.itemIdentifier))
+    )
+    let newItems = items.filter { item in
+      guard let pickerItemID = item.itemIdentifier else { return true }
+      return attachmentController.pickedAttachmentIDs[pickerItemID] == nil
+    }
 
-    for item in items.prefix(remainingImageSelectionCapacity) {
-      guard let imageAttachment = await attachmentController.makeImageAttachment(from: item) else {
+    var pickedImages: [(pickerItemID: String?, image: ImageAttachment)] = []
+    var itemsToDeselect: [PhotosPickerItem] = []
+    for item in newItems {
+      guard let image = await attachmentController.makeImageAttachment(from: item) else {
+        itemsToDeselect.append(item)
         continue
       }
-      imageAttachments.append(imageAttachment)
+      pickedImages.append((item.itemIdentifier, image))
+    }
+    // Another run may have deselected a photo while it loaded. Attaching it anyway
+    // would put a photo in the draft that shows no checkmark.
+    pickedImages.removeAll { picked in
+      guard let pickerItemID = picked.pickerItemID else { return false }
+      return !selectedPhotoItems.contains { $0.itemIdentifier == pickerItemID }
     }
 
-    guard !imageAttachments.isEmpty else {
-      await MainActor.run {
-        selectedPhotoItems = []
-      }
-      return
+    if !deselectedAttachmentIDs.isEmpty || !pickedImages.isEmpty {
+      stagePickedImages(pickedImages, removingAttachmentIDs: deselectedAttachmentIDs)
     }
 
-    let updatedAttachments = bridge.addImageAttachments(
-      imageAttachments,
-      to: bridge.currentStagedAttachments()
-    )
-    bridge.onStagedAttachmentsChanged?(updatedAttachments)
-    await MainActor.run {
-      selectedPhotoItems = []
+    itemsToDeselect += newItems.filter { $0.itemIdentifier == nil }
+    if !itemsToDeselect.isEmpty {
+      selectedPhotoItems.removeAll { itemsToDeselect.contains($0) }
+    }
+
+    if !pickedImages.isEmpty {
       attachmentController.completeAttachmentSelection(shouldCloseDrawer: false)
       restoreComposerFocusIfNeeded(shouldRestoreFocus)
+    }
+  }
+
+  private func stagePickedImages(
+    _ pickedImages: [(pickerItemID: String?, image: ImageAttachment)],
+    removingAttachmentIDs removedAttachmentIDs: Set<String>
+  ) {
+    var stagedAttachments = bridge.currentStagedAttachments()
+    stagedAttachments.removeAll { attachment in
+      attachment.imageAttachment.map { removedAttachmentIDs.contains($0.id) } ?? false
+    }
+    for picked in pickedImages {
+      // A photo without a library identifier can't stay selected, so it is only attached.
+      guard let pickerItemID = picked.pickerItemID else { continue }
+      attachmentController.recordPickedAttachment(picked.image.id, forPickerItemID: pickerItemID)
+    }
+    let updatedAttachments = bridge.addImageAttachments(
+      pickedImages.map(\.image),
+      to: stagedAttachments
+    )
+    bridge.onStagedAttachmentsChanged?(updatedAttachments)
+    // Duplicates and photos over the limit are dropped, so deselect them too.
+    deselectUnstagedPhotos(in: updatedAttachments)
+  }
+
+  private func deselectUnstagedPhotos(in stagedAttachments: [FriendsComposerAttachmentDraft]) {
+    let unstagedPickerItemIDs = attachmentController.releaseUnstagedPhotos(
+      stagedAttachmentIDs: Set(stagedAttachments.imageAttachments.map(\.id))
+    )
+    guard !unstagedPickerItemIDs.isEmpty else { return }
+    selectedPhotoItems.removeAll { item in
+      item.itemIdentifier.map { unstagedPickerItemIDs.contains($0) } ?? false
     }
   }
 
@@ -615,16 +698,13 @@ private struct FriendsThreadComposerPlusButton: View {
     Button(action: action) {
       Image(systemName: "plus")
         .font(.system(size: iconSize, weight: .semibold))
-        .foregroundColor(isDisabled ? .tidexTextMuted : .tidexBlueText)
+        .foregroundColor(isDisabled ? .tidexTextMuted : (isOpen ? .tidexBlueText : .tidexTextPrimary))
         .rotationEffect(.degrees(isOpen ? 45 : 0))
-        .frame(minWidth: 44, minHeight: 44)
-        .background(
-          Circle()
-            .fill(isOpen ? Color.tidexBlue.opacity(0.28) : Color.tidexBlue.opacity(0.2))
-        )
+        .frame(width: Spacing.buttonHeight, height: Spacing.buttonHeight)
         .contentShape(Circle())
     }
     .buttonStyle(.plain)
+    .tidexGlass(shape: .circle, tint: isOpen ? .tidexBlue.opacity(0.35) : nil, interactive: !isDisabled)
     .disabled(isDisabled)
     .accessibilityLabel(
       Text(
@@ -642,11 +722,13 @@ private struct FriendsThreadComposerPlusButton: View {
 
 private struct FriendsThreadComposerAttachmentDrawer: View {
   private enum Layout {
-    static let previewHeight: CGFloat = 192
+    static let previewHeight: CGFloat = 168
+    static let panelCornerRadius: CGFloat = 28
   }
 
   @Binding var selectedPhotoItems: [PhotosPickerItem]
-  let remainingImageSelectionCapacity: Int
+  let photoPickerSelectionLimit: Int
+  let canUsePhotoPicker: Bool
   let isProcessingAttachment: Bool
   let showsShiftCalendarAction: Bool
   let stagedAttachments: [FriendsComposerAttachmentDraft]
@@ -655,7 +737,8 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
   let onOpenCamera: () -> Void
   let onOpenShiftCalendar: () -> Void
 
-  @ScaledMetric(relativeTo: .body) private var actionIconSize: CGFloat = 18
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @ScaledMetric(relativeTo: .body) private var actionIconSize: CGFloat = 20
 
   private var hasShiftSnapshotAttachment: Bool {
     stagedAttachments.hasShiftSnapshot
@@ -671,45 +754,49 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      actionButtons
-
       photoCarousel
+
+      actionButtons
     }
-    .padding(Spacing.md)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .fill(Color.tidexSurfacePrimary)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .stroke(Color.tidexBorder, lineWidth: 1)
-    )
+    .padding(Spacing.sm)
+    // Glass sits behind the panel instead of wrapping it, so the embedded photo
+    // picker is not rendered inside the glass effect.
+    .background {
+      Color.clear.tidexGlass(shape: .rect(cornerRadius: Layout.panelCornerRadius))
+    }
   }
 
   private var actionButtons: some View {
-    HStack(spacing: Spacing.sm) {
+    // At accessibility sizes the tiles become full-width rows so the labels
+    // keep their width and the drawer stays short enough to fit on screen.
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(alignment: .top, spacing: Spacing.xs))
+
+    return layout {
       actionButton(
         systemName: "photo.on.rectangle.angled",
+        title: String(localized: .friendsChatComposerPhotoLibrary),
         isActive: hasImageAttachments,
-        isDisabled: !canAddMoreImages,
-        accessibilityLabel: String(localized: .friendsChatComposerPhotoLibrary),
+        isDisabled: !canUsePhotoPicker,
         action: onOpenPhotoLibrary
       )
 
       actionButton(
         systemName: "camera",
+        title: String(localized: .friendsChatComposerCamera),
         isActive: false,
         isDisabled: !canAddMoreImages,
-        accessibilityLabel: String(localized: .friendsChatComposerCamera),
         action: onOpenCamera
       )
 
       if showsShiftCalendarAction {
         actionButton(
           systemName: "calendar",
+          title: String(localized: .friendsChatComposerShiftCalendar),
           isActive: hasShiftSnapshotAttachment,
           isDisabled: !canStageShiftSnapshot,
-          accessibilityLabel: String(localized: .friendsChatComposerShiftCalendar),
           action: onOpenShiftCalendar
         )
       }
@@ -717,19 +804,28 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
   }
 
   private var photoCarousel: some View {
+    // With the accessories hidden there is no Add button, so each tap has to
+    // update the selection right away.
+    // The shared library gives each item an identifier, which lets the selection stay
+    // in sync with the draft. It does not ask for Photos access.
     PhotosPicker(
       selection: $selectedPhotoItems,
-      maxSelectionCount: remainingImageSelectionCapacity,
-      matching: .images
+      maxSelectionCount: photoPickerSelectionLimit,
+      selectionBehavior: .continuous,
+      matching: .images,
+      photoLibrary: .shared()
     ) {
       EmptyView()
     }
     .photosPickerStyle(.compact)
     .photosPickerAccessoryVisibility(.hidden, edges: .all)
-    .disabled(isProcessingAttachment || !canAddMoreImages)
-    .opacity(isProcessingAttachment || !canAddMoreImages ? 0.55 : 1)
+    .disabled(isProcessingAttachment || !canUsePhotoPicker)
+    .opacity(isProcessingAttachment || !canUsePhotoPicker ? 0.55 : 1)
     .frame(maxWidth: .infinity)
     .frame(height: Layout.previewHeight)
+    .clipShape(
+      RoundedRectangle(cornerRadius: Layout.panelCornerRadius - Spacing.sm, style: .continuous)
+    )
     .overlay {
       FriendsChatGestureTargetSurface(targetKind: .attachmentPhotoCarousel)
         .allowsHitTesting(false)
@@ -738,31 +834,53 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
 
   private func actionButton(
     systemName: String,
+    title: String,
     isActive: Bool,
     isDisabled: Bool,
-    accessibilityLabel: String,
     action: @escaping () -> Void
   ) -> some View {
-    Button(action: action) {
-      Image(systemName: systemName)
-        .font(.system(size: actionIconSize, weight: .semibold))
-        .foregroundColor(
-          isDisabled ? .tidexTextMuted : (isActive ? .tidexBlueText : .tidexTextPrimary)
+    let isUnavailable = isProcessingAttachment || isDisabled
+    let tileShape = RoundedRectangle(
+      cornerRadius: Layout.panelCornerRadius - Spacing.sm, style: .continuous)
+
+    let isRow = dynamicTypeSize.isAccessibilitySize
+    let contentLayout =
+      isRow
+      ? AnyLayout(HStackLayout(spacing: Spacing.xs))
+      : AnyLayout(VStackLayout(spacing: Spacing.xxs))
+
+    return Button(action: action) {
+      contentLayout {
+        Image(systemName: systemName)
+          .font(.system(size: actionIconSize, weight: .semibold))
+          .accessibilityHidden(true)
+
+        Text(title)
+          .font(.tidexFootnote)
+          .multilineTextAlignment(isRow ? .leading : .center)
+          .lineLimit(isRow ? 1 : 2)
+          .minimumScaleFactor(isRow ? 0.8 : 1)
+      }
+      .foregroundColor(
+        isUnavailable ? .tidexTextMuted : (isActive ? .tidexBlueText : .tidexTextPrimary)
+      )
+      .frame(
+        maxWidth: .infinity, minHeight: isRow ? 44 : 64, alignment: isRow ? .leading : .center
+      )
+      .padding(.horizontal, isRow ? Spacing.sm : Spacing.xxs)
+      .padding(.vertical, Spacing.xs)
+      .background(
+        tileShape.fill(
+          isActive && !isUnavailable
+            ? Color.tidexBlue.opacity(0.16)
+            : Color.tidexTextPrimary.opacity(isUnavailable ? 0.03 : 0.07)
         )
-        .frame(minWidth: 40, minHeight: 40)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-            .fill(
-              isDisabled
-                ? Color.tidexSurfaceSecondary.opacity(0.65)
-                : (isActive ? Color.tidexBlue.opacity(0.14) : Color.tidexSurfaceSecondary)
-            )
-        )
-        .contentShape(Rectangle().inset(by: -2))
+      )
+      .contentShape(tileShape)
     }
     .buttonStyle(.plain)
-    .disabled(isProcessingAttachment || isDisabled)
-    .accessibilityLabel(Text(accessibilityLabel))
+    .disabled(isUnavailable)
+    .accessibilityAddTraits(isActive ? .isSelected : [])
   }
 }
 
@@ -908,6 +1026,7 @@ private struct FriendsThreadComposerImageThumbnail: View {
         .stroke(Color.tidexBorder, lineWidth: 1)
 
     }
+    .frame(width: sideLength, height: sideLength)
   }
 
   private var removeButton: some View {
@@ -991,32 +1110,13 @@ private struct FriendsThreadComposerReplyBanner: View {
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .fill(Color.tidexSurfaceSecondary.opacity(0.72))
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .stroke(Color.tidexBorder, lineWidth: 1)
-    )
+    .tidexGlass(shape: .rect(cornerRadius: CornerRadius.card))
     .overlay(alignment: .topTrailing) {
-      Button(action: onCancel) {
-        Image(systemName: "xmark")
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
-          .frame(width: 28, height: 28)
-          .background(
-            Circle()
-              .fill(Color.tidexSurfaceSecondary)
-          )
-          .overlay(
-            Circle()
-              .stroke(Color.tidexBorder, lineWidth: 1)
-          )
-          .contentShape(Rectangle().inset(by: -8))
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel(Text(.friendsAccessibilityCancelReply))
+      FriendsThreadComposerCloseButton(
+        diameter: 28,
+        accessibilityLabel: Text(.friendsAccessibilityCancelReply),
+        action: onCancel
+      )
       .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyCancelButton)
       .padding(Spacing.xs)
     }
@@ -1034,14 +1134,7 @@ private struct FriendsThreadComposerDismissibleCard<Content: View>: View {
       .padding(.trailing, 40)
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-          .fill(Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-          .stroke(Color.tidexBorder, lineWidth: 1)
-      )
+      .tidexGlass(shape: .rect(cornerRadius: CornerRadius.card))
       .overlay(alignment: .topTrailing) {
         dismissButton
           .padding(Spacing.xs)
@@ -1059,23 +1152,11 @@ private struct FriendsThreadComposerDismissibleCard<Content: View>: View {
   }
 
   private var dismissButtonBody: some View {
-    Button(action: onDismiss) {
-      Image(systemName: "xmark")
-        .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextMuted)
-        .frame(width: 32, height: 32)
-        .background(
-          Circle()
-            .fill(Color.tidexSurfacePrimary.opacity(0.96))
-        )
-        .overlay(
-          Circle()
-            .stroke(Color.tidexBorder, lineWidth: 1)
-        )
-        .contentShape(Rectangle().inset(by: -6))
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel(Text(accessibilityLabel))
+    FriendsThreadComposerCloseButton(
+      diameter: 32,
+      accessibilityLabel: Text(accessibilityLabel),
+      action: onDismiss
+    )
   }
 }
 
@@ -1083,58 +1164,50 @@ private struct FriendsThreadComposerEditBanner: View {
   let onCancel: () -> Void
 
   var body: some View {
-    HStack(alignment: .center, spacing: Spacing.sm) {
-      HStack(spacing: Spacing.xs) {
-        Image(systemName: "pencil")
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexBlueText)
-          .accessibilityHidden(true)
+    HStack(alignment: .center, spacing: Spacing.xs) {
+      Image(systemName: "pencil")
+        .font(.tidexCaptionStrong)
+        .foregroundColor(.tidexBlueText)
+        .accessibilityHidden(true)
 
-        Text(
-          String(localized: .friendsChatComposerEditingMessage)
-        )
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextPrimary)
-
-        Spacer(minLength: 0)
-      }
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.sm)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .fill(Color.tidexSurfaceSecondary.opacity(0.72))
+      Text(
+        String(localized: .friendsChatComposerEditingMessage)
       )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(Color.tidexBorder, lineWidth: 1)
-      )
+      .font(.tidexFootnote)
+      .foregroundColor(.tidexTextPrimary)
 
-      Button(action: onCancel) {
-        Image(systemName: "xmark")
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
-          .frame(width: 32, height: 32)
-          .background(
-            Circle()
-              .fill(Color.tidexSurfaceSecondary)
-          )
-          .contentShape(Rectangle().inset(by: -6))
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel(
-        Text(.friendsChatComposerCancelEdit)
+      Spacer(minLength: 0)
+
+      FriendsThreadComposerCloseButton(
+        diameter: 32,
+        accessibilityLabel: Text(.friendsChatComposerCancelEdit),
+        action: onCancel
       )
     }
-    .padding(.horizontal, Spacing.sm)
-    .padding(.vertical, Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .fill(Color.tidexSurfacePrimary)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
-        .stroke(Color.tidexBorder, lineWidth: 1)
-    )
+    .padding(.leading, Spacing.md)
+    .padding(.trailing, Spacing.xs)
+    .padding(.vertical, Spacing.xs)
+    .tidexGlass(shape: .rect(cornerRadius: CornerRadius.card))
+  }
+}
+
+private struct FriendsThreadComposerCloseButton: View {
+  let diameter: CGFloat
+  let accessibilityLabel: Text
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: "xmark")
+        .font(.tidexCaptionStrong)
+        .foregroundColor(.tidexTextSecondary)
+        .frame(width: diameter, height: diameter)
+        .background(Circle().fill(Color.tidexTextPrimary.opacity(0.08)))
+        // The visible circle stays small. The tap area is at least 44pt.
+        .contentShape(Rectangle().inset(by: -8))
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(accessibilityLabel)
   }
 }
 

@@ -11,7 +11,8 @@ import SwiftUI
 struct ChatComposerField<LeadingAccessory: View>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  private let composerControlHeight: CGFloat = 56
+  private let composerControlHeight: CGFloat = Spacing.buttonHeight
+  private let sendButtonDiameter: CGFloat = 36
 
   @Binding private var text: String
   private let placeholder: String
@@ -85,9 +86,12 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   }
 
   var body: some View {
-    HStack(alignment: .center, spacing: Spacing.xsm) {
-      leadingAccessory
-      composerField
+    // One container lets the leading accessory and the field blend as glass.
+    GlassEffectContainer(spacing: Spacing.xs) {
+      HStack(alignment: .bottom, spacing: Spacing.xs) {
+        leadingAccessory
+        composerField
+      }
     }
     .padding(.horizontal, effectiveHorizontalPadding)
     .padding(.top, topPadding)
@@ -127,16 +131,16 @@ struct ChatComposerField<LeadingAccessory: View>: View {
         guard triggersSubmit, canPerformAction else { return }
         onAction()
       }
-      .padding(.vertical, Spacing.xs)
+      .padding(.vertical, Spacing.xsm)
 
       sendButton
     }
-    .padding(.horizontal, Spacing.msm)
-    .padding(.vertical, Spacing.sm)
+    .padding(.leading, Spacing.md)
+    .padding(.trailing, Spacing.micro)
+    .padding(.vertical, Spacing.micro)
     .frame(minHeight: composerControlHeight)
-    .background(Color.tidexSurfacePrimary)
-    .overlay(composerBorder)
-    .clipShape(RoundedRectangle(cornerRadius: composerCornerRadius, style: .continuous))
+    .tidexGlass(shape: .rect(cornerRadius: composerCornerRadius))
+    .overlay(composerFocusRing)
     .contentShape(RoundedRectangle(cornerRadius: composerCornerRadius, style: .continuous))
     .onTapGesture {
       guard !disabled else { return }
@@ -150,18 +154,20 @@ struct ChatComposerField<LeadingAccessory: View>: View {
         if isSending {
           ProgressView()
             .progressViewStyle(.circular)
-            .tint(.tidexTextOnBrand)
+            .tint(.tidexTextSecondary)
         } else {
           Image(systemName: actionSystemImage)
-            .font(.system(size: 17, weight: .semibold))
+            .font(.system(size: 16, weight: .bold))
             .foregroundColor(canPerformAction ? actionForegroundColor : .tidexTextMuted)
         }
       }
-      .frame(width: 44, height: 44)
+      .frame(width: sendButtonDiameter, height: sendButtonDiameter)
       .background(
         Circle()
-          .fill(canPerformAction ? actionBackgroundColor : Color.tidexSurfaceSecondary)
+          .fill(canPerformAction ? actionBackgroundColor : Color.tidexTextMuted.opacity(0.16))
       )
+      // The visible circle stays 36pt. The tap area is 44pt.
+      .frame(width: 44, height: 44)
       .contentShape(Circle())
     }
     .disabled(!canPerformAction)
@@ -170,9 +176,10 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     .opacity((disabled && !canPerformAction) ? 0.6 : 1)
   }
 
-  private var composerBorder: some View {
+  private var composerFocusRing: some View {
     RoundedRectangle(cornerRadius: composerCornerRadius, style: .continuous)
-      .stroke(isFocused ? Color.tidexBlue : Color.tidexBorder, lineWidth: 1)
+      .stroke(Color.tidexBlue.opacity(isFocused ? 0.7 : 0), lineWidth: 1)
+      .allowsHitTesting(false)
   }
 
 }

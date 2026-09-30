@@ -11,6 +11,9 @@ final class FriendsComposerAttachmentController {
   var isShowingCamera = false
   var isShowingShiftCalendar = false
   private(set) var isProcessingAttachment = false
+  /// Staged attachment IDs keyed by the photo library identifier they were picked from,
+  /// so the photo picker keeps showing which photos are attached.
+  private(set) var pickedAttachmentIDs: [String: String] = [:]
 
   func toggleDrawer() {
     isDrawerOpen.toggle()
@@ -49,6 +52,30 @@ final class FriendsComposerAttachmentController {
         return ImageAttachment(data: compressed.data, mediaType: compressed.mediaType)
       }.value
     }
+  }
+
+  func recordPickedAttachment(_ attachmentID: String, forPickerItemID pickerItemID: String) {
+    pickedAttachmentIDs[pickerItemID] = attachmentID
+  }
+
+  /// Forgets photos that are no longer selected and returns their attachment IDs,
+  /// which should leave the draft.
+  func releaseDeselectedPhotos(selectedPickerItemIDs: Set<String>) -> Set<String> {
+    let deselected = pickedAttachmentIDs.filter { !selectedPickerItemIDs.contains($0.key) }
+    for pickerItemID in deselected.keys {
+      pickedAttachmentIDs[pickerItemID] = nil
+    }
+    return Set(deselected.values)
+  }
+
+  /// Forgets photos whose attachment left the draft some other way (removed, sent)
+  /// and returns their picker identifiers, which should be deselected.
+  func releaseUnstagedPhotos(stagedAttachmentIDs: Set<String>) -> Set<String> {
+    let unstaged = pickedAttachmentIDs.filter { !stagedAttachmentIDs.contains($0.value) }
+    for pickerItemID in unstaged.keys {
+      pickedAttachmentIDs[pickerItemID] = nil
+    }
+    return Set(unstaged.keys)
   }
 
   func completeAttachmentSelection(shouldCloseDrawer: Bool = true) {

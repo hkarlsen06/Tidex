@@ -1922,10 +1922,101 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       }
 
       handledScrollRequest = scrollRequest
+      reportHandledScrollRequest(scrollRequest, animated: animated)
+      reportLatestVisiblePresentedMessageIDIfNeeded()
+    }
+
+    private func reportHandledScrollRequest(
+      _ scrollRequest: FriendsThreadChatViewportScrollRequest,
+      animated: Bool
+    ) {
+      guard scrollRequest.kind != .reply else {
+        settleReplyScroll(scrollRequest, animated: animated, attempt: 1, lastOffsetY: nil)
+        return
+      }
       DispatchQueue.main.async { [weak self] in
         self?.onDidHandleScrollRequest?(scrollRequest)
       }
-      reportLatestVisiblePresentedMessageIDIfNeeded()
+    }
+
+    private static let maxReplyScrollAttempts = 4
+
+    /// Rows self-size as they scroll into view, and a table reload (pagination, the highlight
+    /// flash) stops an animated scroll where it is. Both leave a reply jump short of its target,
+    /// most often for image rows. So this waits for the offset to stop moving, scrolls again if
+    /// the target is not centered, and only then reports the request as handled, which starts
+    /// the highlight reload.
+    private func settleReplyScroll(
+      _ request: FriendsThreadChatViewportScrollRequest,
+      animated: Bool,
+      attempt: Int,
+      lastOffsetY: CGFloat?
+    ) {
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        guard let self, scrollRequest == request else { return }
+
+        let finish = { [weak self] in
+          DispatchQueue.main.async { [weak self] in
+            guard let self, scrollRequest == request else { return }
+            onDidHandleScrollRequest?(request)
+          }
+        }
+
+        guard let tableView else { return finish() }
+        // The user took over: stop correcting, and hold the highlight reload until the
+        // scroll stops so it doesn't cut their deceleration short.
+        guard !isUserInteracting(with: tableView) else {
+          return settleReplyScroll(
+            request, animated: animated, attempt: Self.maxReplyScrollAttempts, lastOffsetY: nil)
+        }
+        let offsetY = tableView.contentOffset.y
+        guard offsetY == lastOffsetY else {
+          return settleReplyScroll(
+            request, animated: animated, attempt: attempt, lastOffsetY: offsetY)
+        }
+        guard
+          attempt < Self.maxReplyScrollAttempts,
+          let indexPath = offCenterRow(for: request, in: tableView)
+        else { return finish() }
+
+        if animated {
+          tableView.scrollToRow(at: indexPath, at: .middle, animated: true)
+        } else {
+          UIView.performWithoutAnimation {
+            tableView.scrollToRow(at: indexPath, at: .middle, animated: false)
+            tableView.layoutIfNeeded()
+          }
+        }
+        settleReplyScroll(request, animated: animated, attempt: attempt + 1, lastOffsetY: nil)
+      }
+    }
+
+    /// Returns the request's row when it sits more than a point away from where `.middle`
+    /// would put it, clamped to the scrollable range.
+    private func offCenterRow(
+      for request: FriendsThreadChatViewportScrollRequest,
+      in tableView: UITableView
+    ) -> IndexPath? {
+      guard
+        let layoutSnapshot = resolvedLayoutSnapshot(),
+        let indexPath = FriendsThreadChatViewportResolver.indexPath(
+          for: request.presentedMessageID,
+          in: layoutSnapshot
+        ),
+        tableView.numberOfSections > indexPath.section,
+        tableView.numberOfRows(inSection: indexPath.section) > indexPath.row
+      else { return nil }
+
+      let rowRect = tableView.rectForRow(at: indexPath)
+      let minOffsetY = -tableView.adjustedContentInset.top
+      let maxOffsetY = max(
+        minOffsetY,
+        tableView.contentSize.height - tableView.bounds.height
+          + tableView.adjustedContentInset.bottom
+      )
+      let targetOffsetY = min(
+        max(rowRect.midY - tableView.bounds.height / 2, minOffsetY), maxOffsetY)
+      return abs(targetOffsetY - tableView.contentOffset.y) > 1 ? indexPath : nil
     }
 
     private func isUserInteracting(with tableView: UITableView) -> Bool {

@@ -67,6 +67,39 @@ final class FriendsComposerAttachmentControllerTests: XCTestCase {
     XCTAssertFalse(controller.isProcessingAttachment)
   }
 
+  func testReleaseDeselectedPhotosReturnsOnlyDeselectedAttachments() {
+    let controller = FriendsComposerAttachmentController()
+    controller.recordPickedAttachment("attachment-a", forPickerItemID: "photo-a")
+    controller.recordPickedAttachment("attachment-b", forPickerItemID: "photo-b")
+
+    let removed = controller.releaseDeselectedPhotos(selectedPickerItemIDs: ["photo-b"])
+
+    XCTAssertEqual(removed, ["attachment-a"])
+    XCTAssertEqual(controller.pickedAttachmentIDs, ["photo-b": "attachment-b"])
+  }
+
+  func testReleaseUnstagedPhotosReturnsPhotosToDeselect() {
+    let controller = FriendsComposerAttachmentController()
+    controller.recordPickedAttachment("attachment-a", forPickerItemID: "photo-a")
+    controller.recordPickedAttachment("attachment-b", forPickerItemID: "photo-b")
+
+    // The thumbnail for photo A was removed from the composer.
+    let deselected = controller.releaseUnstagedPhotos(stagedAttachmentIDs: ["attachment-b"])
+
+    XCTAssertEqual(deselected, ["photo-a"])
+    XCTAssertEqual(controller.pickedAttachmentIDs, ["photo-b": "attachment-b"])
+  }
+
+  func testReleaseUnstagedPhotosClearsEverythingAfterSend() {
+    let controller = FriendsComposerAttachmentController()
+    controller.recordPickedAttachment("attachment-a", forPickerItemID: "photo-a")
+
+    let deselected = controller.releaseUnstagedPhotos(stagedAttachmentIDs: [])
+
+    XCTAssertEqual(deselected, ["photo-a"])
+    XCTAssertTrue(controller.pickedAttachmentIDs.isEmpty)
+  }
+
   private func makeImage() -> UIImage {
     UIGraphicsImageRenderer(size: CGSize(width: 12, height: 12)).image { context in
       UIColor.systemBlue.setFill()

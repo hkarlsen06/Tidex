@@ -2392,8 +2392,8 @@ final class ShiftsViewModel: MonthNavigable {
     self.excludedFromTotalIds = analysis.excludedIds
     self.conflictDates = analysis.conflictDates
 
-    // Update shared context for MainTabView to show conflict indicator on list button
-    SharedMonthContext.shared.hasConflictsInMonth = !analysis.conflictDates.isEmpty
+    // Update the month context so MainTabView can show the conflict indicator on the list button
+    monthContext.hasConflictsInMonth = !analysis.conflictDates.isEmpty
 
     if !analysis.conflictingIds.isEmpty {
       kScheduleLogger.info(

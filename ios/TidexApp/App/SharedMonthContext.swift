@@ -73,7 +73,8 @@ final class SharedMonthContext {
 
   // MARK: - Initialization
 
-  private init() {
+  /// Use `shared` for the tabs. A separate instance keeps a picker's month apart from them.
+  init() {
     // Initialize to current month
     let current = Date.currentYearMonth()
     self.displayYear = current.year
