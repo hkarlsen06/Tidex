@@ -4,6 +4,7 @@
     "@supabase/server": "npm:@supabase/server@1.4.0",
     "@supabase/server/core": "npm:@supabase/server@1.4.0/core",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2.110.7",
+    "standardwebhooks": "npm:standardwebhooks@1.0.0",
     "zod": "npm:zod@4.3.6"
   },
   "nodeModulesDir": "auto"

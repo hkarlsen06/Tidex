@@ -605,12 +605,14 @@ async function upsertSubscriptionFromNotification(
     if (error) {
       // Handle unique constraint violation
       if (error.code === "23505") {
-        // subscriptions has one row per user. The user already has a row from
-        // another provider (Stripe, admin trial), so take it over.
-        const { error: updateError } = await supabaseAdmin
+        // subscriptions has one row per user. Only refresh a row that is
+        // already Apple's. A Stripe or admin-granted row stays untouched.
+        const { data: updatedRows, error: updateError } = await supabaseAdmin
           .from("subscriptions")
           .update(payload)
-          .eq("user_id", userId);
+          .eq("user_id", userId)
+          .eq("provider", "apple")
+          .select("id");
 
         if (updateError) {
           console.error(
@@ -618,6 +620,14 @@ async function upsertSubscriptionFromNotification(
             updateError.message,
           );
           return { success: false, error: updateError.message };
+        }
+
+        if (!updatedRows?.length) {
+          // Acknowledge so Apple does not retry a write that can never apply.
+          console.warn(
+            `[apple-notifications] User ${userId} has a non-Apple subscription row, not overwriting`,
+          );
+          return { success: true };
         }
       } else {
         console.error("[apple-notifications] Insert failed:", error.message);
@@ -769,6 +779,25 @@ async function handleRequest(req: Request): Promise<Response> {
       await markNotificationError(notificationUUID, "No transaction info");
       return new Response(
         JSON.stringify({ received: true, warning: "No transaction info" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Sandbox and TestFlight purchases must not write production rows.
+    // Acknowledge them so Apple does not retry.
+    if (
+      data.environment !== "Production" ||
+      transactionInfo.environment !== "Production"
+    ) {
+      console.log(
+        `[apple-notifications] Ignoring ${notificationType} from non-production environment=${transactionInfo.environment}`,
+      );
+      await markNotificationProcessed(notificationUUID);
+      return new Response(
+        JSON.stringify({ received: true, ignored: "non-production" }),
         {
           status: 200,
           headers: { "Content-Type": "application/json" },

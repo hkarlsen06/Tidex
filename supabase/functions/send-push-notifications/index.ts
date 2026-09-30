@@ -7,15 +7,12 @@
 // - NO message building - titles/bodies are pre-computed by app
 
 import { withSupabase } from "@supabase/server";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { processLiveActivityTransitions } from "../_shared/live-activity-delivery.ts";
 
 // ---------- Env ----------
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   "";
-const SEND_PUSH_NOTIFICATIONS_SECRET =
-  Deno.env.get("SEND_PUSH_NOTIFICATIONS_SECRET") ??
-    Deno.env.get("CRON_SECRET") ??
-    "";
 
 // FCM HTTP v1 credentials (from Google service account JSON)
 const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID") ?? "";
@@ -157,19 +154,18 @@ function bearerToken(req: Request): string | null {
   return authHeader.slice("Bearer ".length).trim() || null;
 }
 
+// Hash both sides so timingSafeEqual gets equal-length buffers.
+function safeEqual(a: string, b: string): boolean {
+  return timingSafeEqual(
+    createHash("sha256").update(a).digest(),
+    createHash("sha256").update(b).digest(),
+  );
+}
+
 function hasTrustedCaller(req: Request): boolean {
   const token = bearerToken(req);
-  if (token && token === SUPABASE_SERVICE_ROLE_KEY) {
-    return true;
-  }
-
-  if (!SEND_PUSH_NOTIFICATIONS_SECRET) {
-    return false;
-  }
-
-  const sharedSecret = req.headers.get("x-send-push-secret") ??
-    req.headers.get("x-cron-secret");
-  return sharedSecret === SEND_PUSH_NOTIFICATIONS_SECRET;
+  return !!token && !!SUPABASE_SERVICE_ROLE_KEY &&
+    safeEqual(token, SUPABASE_SERVICE_ROLE_KEY);
 }
 
 function asNonEmptyString(value: unknown): string | null {
@@ -1433,13 +1429,13 @@ async function handleRequest(
   authenticatedWithSecretKey: boolean,
 ) {
   try {
-    // Only allow POST requests (or GET for cron health checks)
-    if (req.method !== "POST" && req.method !== "GET") {
-      return res("Method Not Allowed", 405);
-    }
-
+    // UptimeBot polls GET without credentials to check the edge runtime is up.
     if (req.method === "GET") {
       return json({ ok: true, service: "send-push-notifications" });
+    }
+
+    if (req.method !== "POST") {
+      return res("Method Not Allowed", 405);
     }
 
     if (!authenticatedWithSecretKey && !hasTrustedCaller(req)) {

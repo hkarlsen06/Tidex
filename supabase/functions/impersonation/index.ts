@@ -46,12 +46,8 @@ const SUPERADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
 const IMPERSONATION_ENC_KEY = Deno.env.get("IMPERSONATION_ENC_KEY") ?? "";
 
 // ---------- Supabase Clients ----------
-let supabaseAdmin: any = null;
-
-function getSupabaseAdmin(): any {
-  return supabaseAdmin;
-}
-
+// Every helper takes the service-role client for its request as "db". Module
+// level state would leak between concurrent requests in a reused worker.
 function createRequestScopedAdminClient(): any {
   try {
     const createServerAdminClient = createAdminClient as unknown as () => any;
@@ -159,10 +155,13 @@ interface ImpersonationSession {
   admin_refresh_token_enc: string;
 }
 
-async function checkRateLimit(adminUserId: string): Promise<boolean> {
-  if (!supabaseAdmin) return false;
+async function checkRateLimit(
+  db: any,
+  adminUserId: string,
+): Promise<boolean> {
+  if (!db) return false;
 
-  const { data, error } = await supabaseAdmin.rpc(
+  const { data, error } = await db.rpc(
     "check_impersonation_rate_limit",
     {
       p_admin_user_id: adminUserId,
@@ -171,19 +170,20 @@ async function checkRateLimit(adminUserId: string): Promise<boolean> {
 
   if (error) {
     console.error("[impersonation] Rate limit check failed:", error);
-    return true; // Fail open but log
+    return false; // Fail closed
   }
 
   return data === true;
 }
 
 async function recordAttempt(
+  db: any,
   adminUserId: string,
   success: boolean,
 ): Promise<void> {
-  if (!supabaseAdmin) return;
+  if (!db) return;
 
-  const { error } = await supabaseAdmin.rpc("record_impersonation_attempt", {
+  const { error } = await db.rpc("record_impersonation_attempt", {
     p_admin_user_id: adminUserId,
     p_success: success,
   });
@@ -193,11 +193,14 @@ async function recordAttempt(
   }
 }
 
-async function isUserBeingImpersonated(userId: string): Promise<boolean> {
-  if (!supabaseAdmin) return false;
+async function isUserBeingImpersonated(
+  db: any,
+  userId: string,
+): Promise<boolean> {
+  if (!db) return false;
 
   // Use RPC function to check if user is being impersonated (SECURITY DEFINER)
-  const { data, error } = await supabaseAdmin.rpc(
+  const { data, error } = await db.rpc(
     "is_user_being_impersonated",
     {
       p_user_id: userId,
@@ -216,12 +219,13 @@ async function isUserBeingImpersonated(userId: string): Promise<boolean> {
 }
 
 async function getActiveSessionForAdmin(
+  db: any,
   adminUserId: string,
 ): Promise<ImpersonationSession | null> {
-  if (!supabaseAdmin) return null;
+  if (!db) return null;
 
   // Use RPC function to get active session (SECURITY DEFINER)
-  const { data, error } = await supabaseAdmin.rpc(
+  const { data, error } = await db.rpc(
     "get_active_impersonation_for_admin",
     {
       p_admin_user_id: adminUserId,
@@ -242,15 +246,16 @@ async function getActiveSessionForAdmin(
 }
 
 async function endImpersonationSession(
+  db: any,
   sessionId: string,
   endedByUserId: string,
 ): Promise<void> {
-  if (!supabaseAdmin) return;
+  if (!db) return;
 
   // Use RPC function to end session (SECURITY DEFINER)
   // Note: The column is named ended_by_admin_user_id but we store the actual caller's ID
   // This could be the admin OR the impersonated user (target) who ended the session
-  const { data, error } = await supabaseAdmin.rpc(
+  const { data, error } = await db.rpc(
     "mark_impersonation_session_ended",
     {
       p_session_id: sessionId,
@@ -268,17 +273,20 @@ async function endImpersonationSession(
   }
 }
 
-async function createImpersonationSession(params: {
-  adminUserId: string;
-  targetUserId: string;
-  reason: string;
-  adminRefreshToken?: string;
-  adminIp: string | null;
-  adminUserAgent: string | null;
-  adminEmail?: string | null;
-  targetEmail?: string | null;
-}): Promise<{ id: string; expiresAt: Date }> {
-  if (!supabaseAdmin) {
+async function createImpersonationSession(
+  db: any,
+  params: {
+    adminUserId: string;
+    targetUserId: string;
+    reason: string;
+    adminRefreshToken?: string;
+    adminIp: string | null;
+    adminUserAgent: string | null;
+    adminEmail?: string | null;
+    targetEmail?: string | null;
+  },
+): Promise<{ id: string; expiresAt: Date }> {
+  if (!db) {
     throw new Error("Database not configured");
   }
 
@@ -292,7 +300,7 @@ async function createImpersonationSession(params: {
   // Use RPC function to create session (SECURITY DEFINER)
   // The RPC function handles session creation, audit logging, and rate limit recording
   // Returns table with (session_id, expires_at) to avoid clock skew issues
-  const { data, error } = await supabaseAdmin.rpc(
+  const { data, error } = await db.rpc(
     "create_impersonation_session",
     {
       p_admin_user_id: params.adminUserId,
@@ -346,6 +354,7 @@ function accessTokenSessionId(accessToken: string): string | null {
 // is_impersonation_session() only matches that session, and ending or
 // expiring the record revokes it.
 async function bindImpersonationAuthSession(
+  db: any,
   sessionId: string,
   accessToken: string,
 ): Promise<void> {
@@ -354,7 +363,7 @@ async function bindImpersonationAuthSession(
     throw new Error("Minted access token has no session_id");
   }
 
-  const { error } = await supabaseAdmin.rpc(
+  const { error } = await db.rpc(
     "bind_impersonation_auth_session",
     {
       p_session_id: sessionId,
@@ -367,12 +376,13 @@ async function bindImpersonationAuthSession(
 }
 
 async function getImpersonationSession(
+  db: any,
   sessionId: string,
 ): Promise<ImpersonationSession | null> {
-  if (!supabaseAdmin) return null;
+  if (!db) return null;
 
   // Use RPC function to get session (SECURITY DEFINER)
-  const { data, error } = await supabaseAdmin.rpc(
+  const { data, error } = await db.rpc(
     "get_impersonation_session_full",
     {
       p_session_id: sessionId,
@@ -392,17 +402,20 @@ async function getImpersonationSession(
   return (Array.isArray(data) ? data[0] : data) as ImpersonationSession;
 }
 
-async function validateTargetUser(targetUserId: string): Promise<{
+async function validateTargetUser(
+  db: any,
+  targetUserId: string,
+): Promise<{
   exists: boolean;
   isAdmin: boolean;
   email: string | null;
   displayName: string | null;
 }> {
-  if (!supabaseAdmin) {
+  if (!db) {
     return { exists: false, isAdmin: false, email: null, displayName: null };
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.getUserById(
+  const { data, error } = await db.auth.admin.getUserById(
     targetUserId,
   );
 
@@ -423,20 +436,23 @@ async function validateTargetUser(targetUserId: string): Promise<{
   };
 }
 
-async function insertAuditLog(params: {
-  sessionId: string;
-  adminUserId: string;
-  targetUserId: string;
-  action: "start" | "stop";
-  reason?: string;
-  adminIp?: string | null;
-  adminUserAgent?: string | null;
-  metadata?: Record<string, unknown>;
-}): Promise<void> {
-  if (!supabaseAdmin) return;
+async function insertAuditLog(
+  db: any,
+  params: {
+    sessionId: string;
+    adminUserId: string;
+    targetUserId: string;
+    action: "start" | "stop";
+    reason?: string;
+    adminIp?: string | null;
+    adminUserAgent?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  if (!db) return;
 
   // Use RPC function to insert audit log (SECURITY DEFINER)
-  const { error } = await supabaseAdmin.rpc("insert_impersonation_audit_log", {
+  const { error } = await db.rpc("insert_impersonation_audit_log", {
     p_session_id: params.sessionId,
     p_admin_user_id: params.adminUserId,
     p_target_user_id: params.targetUserId,
@@ -458,10 +474,9 @@ async function handleStart(
   req: Request,
   caller: User,
   callerAal: unknown,
+  db: any,
 ): Promise<Response> {
-  // Initialize long-lived DB/RPC client (lazy initialization)
-  const dbClient = getSupabaseAdmin();
-  if (!dbClient) {
+  if (!db) {
     return json({ ok: false, error: "Service not configured" }, 503);
   }
 
@@ -479,7 +494,7 @@ async function handleStart(
   }
 
   // 2. Check if caller is currently being impersonated (prevent nested impersonation)
-  const isBeingImpersonated = await isUserBeingImpersonated(caller.id);
+  const isBeingImpersonated = await isUserBeingImpersonated(db, caller.id);
   if (isBeingImpersonated) {
     return json(
       { ok: false, error: "Nested impersonation is not allowed" },
@@ -524,9 +539,9 @@ async function handleStart(
   }
 
   // 5. Check rate limit
-  const withinRateLimit = await checkRateLimit(caller.id);
+  const withinRateLimit = await checkRateLimit(db, caller.id);
   if (!withinRateLimit) {
-    await recordAttempt(caller.id, false);
+    await recordAttempt(db, caller.id, false);
     return json(
       {
         ok: false,
@@ -538,30 +553,30 @@ async function handleStart(
   }
 
   // 6. Auto-end any existing active impersonation session
-  const activeSession = await getActiveSessionForAdmin(caller.id);
+  const activeSession = await getActiveSessionForAdmin(db, caller.id);
   if (activeSession) {
     console.log(
       "[impersonation] Auto-ending previous session:",
       activeSession.id,
     );
-    await endImpersonationSession(activeSession.id, caller.id);
+    await endImpersonationSession(db, activeSession.id, caller.id);
   }
 
   // 7. Validate target user exists and only superadmin can impersonate admins
-  const targetValidation = await validateTargetUser(targetUserId);
+  const targetValidation = await validateTargetUser(db, targetUserId);
   if (!targetValidation.exists) {
-    await recordAttempt(caller.id, false);
+    await recordAttempt(db, caller.id, false);
     return json({ ok: false, error: "Target user not found" }, 404);
   }
 
   if (targetValidation.isAdmin && caller.id !== SUPERADMIN_USER_ID) {
-    await recordAttempt(caller.id, false);
+    await recordAttempt(db, caller.id, false);
     return json({ ok: false, error: "Cannot impersonate admin users" }, 403);
   }
 
   // 8. Verify target user has an email (required for generateLink)
   if (!targetValidation.email) {
-    await recordAttempt(caller.id, false);
+    await recordAttempt(db, caller.id, false);
     return json(
       {
         ok: false,
@@ -586,7 +601,7 @@ async function handleStart(
 
   if (linkError || !linkData?.properties?.hashed_token) {
     console.error("[impersonation] Failed to generate link:", linkError);
-    await recordAttempt(caller.id, false);
+    await recordAttempt(db, caller.id, false);
     return json(
       { ok: false, error: "Failed to create impersonation session" },
       500,
@@ -602,7 +617,7 @@ async function handleStart(
 
   if (verifyError || !verifyData.session) {
     console.error("[impersonation] Failed to verify OTP:", verifyError);
-    await recordAttempt(caller.id, false);
+    await recordAttempt(db, caller.id, false);
     return json(
       { ok: false, error: "Failed to create impersonation session" },
       500,
@@ -620,7 +635,7 @@ async function handleStart(
   // The RPC function handles session creation, audit logging, and rate limit recording.
   let dbSession: { id: string; expiresAt: Date };
   try {
-    dbSession = await createImpersonationSession({
+    dbSession = await createImpersonationSession(db, {
       adminUserId: caller.id,
       targetUserId,
       reason: reason.trim(),
@@ -645,12 +660,13 @@ async function handleStart(
 
   try {
     await bindImpersonationAuthSession(
+      db,
       dbSession.id,
       verifyData.session.access_token,
     );
   } catch (error) {
     console.error("[impersonation] Failed to bind auth session:", error);
-    await endImpersonationSession(dbSession.id, caller.id);
+    await endImpersonationSession(db, dbSession.id, caller.id);
     await authClient.auth.admin
       .signOut(verifyData.session.access_token, "local")
       .catch(() => {});
@@ -692,10 +708,12 @@ async function handleStart(
   });
 }
 
-async function handleStop(req: Request, caller: User): Promise<Response> {
-  // Initialize Supabase client (lazy initialization)
-  const adminClient = getSupabaseAdmin();
-  if (!adminClient) {
+async function handleStop(
+  req: Request,
+  caller: User,
+  db: any,
+): Promise<Response> {
+  if (!db) {
     return json({ ok: false, error: "Service not configured" }, 503);
   }
 
@@ -714,7 +732,7 @@ async function handleStop(req: Request, caller: User): Promise<Response> {
   }
 
   // 2. Load the session
-  const dbSession = await getImpersonationSession(sessionId);
+  const dbSession = await getImpersonationSession(db, sessionId);
   if (!dbSession) {
     return json({ ok: false, error: "Session not found" }, 404);
   }
@@ -739,7 +757,7 @@ async function handleStop(req: Request, caller: User): Promise<Response> {
   }
 
   // 5. End the session - record the actual caller who ended it (admin or target user)
-  await endImpersonationSession(sessionId, caller.id);
+  await endImpersonationSession(db, sessionId, caller.id);
 
   // 6. Insert audit log
   const adminIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -747,7 +765,7 @@ async function handleStop(req: Request, caller: User): Promise<Response> {
     null;
   const adminUserAgent = req.headers.get("user-agent") || null;
 
-  await insertAuditLog({
+  await insertAuditLog(db, {
     sessionId,
     adminUserId: dbSession.admin_user_id,
     targetUserId: dbSession.target_user_id,
@@ -804,7 +822,6 @@ export default {
     { auth: "user" },
     async (req, ctx) => {
       console.log("[impersonation] Request received:", req.method, req.url);
-      supabaseAdmin = ctx.supabaseAdmin;
 
       try {
         if (req.method !== "POST") {
@@ -826,18 +843,28 @@ export default {
 
         switch (action) {
           case "start":
-            return await handleStart(req, caller, ctx.jwtClaims?.aal);
+            return await handleStart(
+              req,
+              caller,
+              ctx.jwtClaims?.aal,
+              ctx.supabaseAdmin,
+            );
           case "stop":
-            return await handleStop(req, caller);
+            return await handleStop(req, caller, ctx.supabaseAdmin);
           default:
             // If no action specified, try parsing from body
             // This supports calling just /impersonation with { action: "start", ... }
             try {
               const body = await req.clone().json();
               if (body.action === "start") {
-                return await handleStart(req, caller, ctx.jwtClaims?.aal);
+                return await handleStart(
+                  req,
+                  caller,
+                  ctx.jwtClaims?.aal,
+                  ctx.supabaseAdmin,
+                );
               } else if (body.action === "stop") {
-                return await handleStop(req, caller);
+                return await handleStop(req, caller, ctx.supabaseAdmin);
               }
             } catch {
               // Ignore parse errors

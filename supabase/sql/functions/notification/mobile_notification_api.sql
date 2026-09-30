@@ -47,11 +47,15 @@ BEGIN
     LIMIT 1;
   END IF;
 
+  -- Only reuse the caller's own row. If another user's row holds this fcm_token,
+  -- the insert below hits the unique constraint and returns 'already_registered'
+  -- without touching that row.
   IF v_existing_id IS NULL AND p_fcm_token IS NOT NULL THEN
     SELECT id
     INTO v_existing_id
     FROM internal.push_devices
     WHERE fcm_token = p_fcm_token
+      AND user_id = v_user_id
     LIMIT 1;
   END IF;
 
@@ -129,73 +133,9 @@ $function$;
 
 GRANT EXECUTE ON FUNCTION public.register_push_device(text, text, text, text, text, text) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.register_push_device(
-  p_user_id uuid,
-  p_fcm_token text,
-  p_platform text,
-  p_device_id text DEFAULT NULL,
-  p_device_model text DEFAULT NULL,
-  p_app_version text DEFAULT NULL
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public', 'internal'
-AS $function$
-DECLARE
-  max_tokens_per_user CONSTANT int := 3;
-  current_token_count int;
-BEGIN
-  IF auth.uid() IS NULL OR p_user_id IS DISTINCT FROM auth.uid() THEN
-    RAISE EXCEPTION 'not authorized'
-      USING ERRCODE = '42501';
-  END IF;
-
-  INSERT INTO internal.push_devices (
-    user_id,
-    fcm_token,
-    platform,
-    device_id,
-    device_model,
-    app_version,
-    last_seen_at
-  ) VALUES (
-    p_user_id,
-    p_fcm_token,
-    p_platform,
-    p_device_id,
-    p_device_model,
-    p_app_version,
-    now()
-  )
-  ON CONFLICT (fcm_token) DO UPDATE SET
-    user_id = EXCLUDED.user_id,
-    platform = EXCLUDED.platform,
-    device_id = EXCLUDED.device_id,
-    device_model = EXCLUDED.device_model,
-    app_version = EXCLUDED.app_version,
-    last_seen_at = now();
-
-  SELECT COUNT(*) INTO current_token_count
-  FROM internal.push_devices
-  WHERE user_id = p_user_id;
-
-  IF current_token_count > max_tokens_per_user THEN
-    DELETE FROM internal.push_devices
-    WHERE id IN (
-      SELECT id
-      FROM internal.push_devices
-      WHERE user_id = p_user_id
-      ORDER BY last_seen_at DESC
-      OFFSET max_tokens_per_user
-    );
-  END IF;
-END;
-$function$;
-
-REVOKE EXECUTE ON FUNCTION public.register_push_device(uuid, text, text, text, text, text) FROM public;
-REVOKE EXECUTE ON FUNCTION public.register_push_device(uuid, text, text, text, text, text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.register_push_device(uuid, text, text, text, text, text) TO authenticated;
+-- The legacy register_push_device(p_user_id uuid, p_fcm_token text, ...) overload was
+-- dropped in 20260930170000_security_audit_hardening.sql. It let a caller who knew
+-- another user's fcm_token take over that row.
 
 CREATE OR REPLACE FUNCTION public.unregister_push_device(p_fcm_token text)
 RETURNS void

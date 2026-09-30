@@ -34,10 +34,8 @@ BEGIN
     v_identifier := btrim(p_identifier);
 
     IF position('@' IN v_identifier) > 0 AND left(v_identifier, 1) <> '@' THEN
-      SELECT id INTO v_target_id
-      FROM auth.users
-      WHERE lower(email) = lower(v_identifier)
-      LIMIT 1;
+      -- Only match a user who proved ownership of the address.
+      v_target_id := public.find_user_by_email(v_identifier);
     ELSE
       v_identifier := lower(v_identifier);
       IF left(v_identifier, 1) = '@' THEN

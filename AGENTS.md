@@ -140,15 +140,16 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 - **Shared code**: `supabase/functions/_shared/`
 - **Deployment**: Sync the function to `/srv/tidex/tidex-sb/volumes/functions/` on `mdr` and restart the `functions` service
 
-**`verify_jwt` settings:**
+**JWT enforcement:**
 
-| Function                       | `verify_jwt` | Reason      |
-| ------------------------------ | -------------- | ----------- |
-| `apple-server-notifications` | `false`      | Webhook     |
-| `send-push-notifications`    | `false`      | pg_cron     |
-| `before-user-created`        | `false`      | Auth hook   |
+The router at `supabase/ops/edge-router/main/` (deployed as `volumes/functions/main/` on `mdr`) enforces JWTs. It ignores the `VERIFY_JWT` env var and `verify_jwt` in `supabase/config.toml`, which only matter for `supabase functions serve`. Keep both in sync with the router's `PUBLIC_FUNCTIONS` list.
 
-Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jwt: true` only for direct user calls.
+- Public, no JWT check: `apple-server-notifications` (Apple signature), `before-user-created` (Standard Webhooks signature), `calendar-feed` (calendar token), `wagey-chat-v2` (shutdown stub for old app versions). A new webhook or public function must be added to `PUBLIC_FUNCTIONS` in the router and to `config.toml` with `verify_jwt = false`.
+- UptimeBot polls `GET /functions/v1/send-push-notifications` with only the publishable key, so the router's `PUBLIC_GET_FUNCTIONS` lets unauthenticated GETs through to it and the function answers with a static status. Keep that path working, or change the monitor first. Removing it on 2026-09-30 caused a 2 minute outage alert.
+- Every other function needs a valid, unexpired JWT with role `authenticated` or `service_role`. The router accepts ES256/RS256 tokens signed with a key in `SUPABASE_JWKS` (what GoTrue issues) and HS256 tokens signed with `JWT_SECRET` (the legacy service role key that pg_cron sends from the vault). The router rejects the `sb_publishable_` key and the anon JWTs, so a signed-out call fails on protected functions.
+- The router returns 404 for any first path segment that is not a directory under `volumes/functions/` with an `index.ts` (so `_shared`, `main` and `node_modules` are not routable).
+- Functions still check the caller themselves, for example with `withSupabase({ auth: "user" })`. The router is the first check, not the only one.
+- To deploy the router, copy `supabase/ops/edge-router/main/` to `/srv/tidex/tidex-sb/volumes/functions/main/` on `mdr`, back up the old files first, and restart the `functions` service. Run `ssh mdr /srv/tidex/auth-smoke.sh` and check that the `process-pending-push-notifications` cron still gets 200s in `net._http_response`.
 
 ## Supabase SQL Functions & Cron Jobs
 

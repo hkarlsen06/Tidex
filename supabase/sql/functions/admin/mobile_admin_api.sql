@@ -1437,7 +1437,9 @@ GRANT EXECUTE ON FUNCTION public.admin_respond_feedback_api(uuid, text) TO authe
 GRANT EXECUTE ON FUNCTION public.admin_get_reports_api(integer, integer, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_report_status_api(uuid, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_report_messages_api(uuid, integer) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_get_report_messages_api(uuid, integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_delete_message_api(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_delete_message_api(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_get_audit_log_api(integer, text, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_shares_api(text, integer, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_create_share_api(uuid, uuid, boolean) TO authenticated;

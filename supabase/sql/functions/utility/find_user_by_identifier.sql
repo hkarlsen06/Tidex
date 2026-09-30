@@ -1,14 +1,23 @@
--- Efficient user lookup by email (case-insensitive)
+-- User lookup by email (case-insensitive)
 -- Returns user ID or null
--- Used by sharing API to find users when adding friends
+-- Used by manage_sharing_action to find users when adding friends.
+-- Matches only a user who proved the address: a verified email identity, or a
+-- google/apple identity carrying that email. auth.identities.email is the
+-- generated, indexed lower(identity_data ->> 'email').
 CREATE OR REPLACE FUNCTION public.find_user_by_email(search_email text)
 RETURNS uuid
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  SELECT id FROM auth.users
-  WHERE lower(email) = lower(search_email)
+  SELECT i.user_id
+  FROM auth.identities i
+  WHERE i.email = lower(search_email)
+    AND (
+      (i.provider = 'email' AND i.identity_data ->> 'email_verified' = 'true')
+      OR i.provider IN ('google', 'apple')
+    )
+  ORDER BY i.created_at NULLS LAST, i.id
   LIMIT 1;
 $$;
 

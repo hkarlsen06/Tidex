@@ -150,6 +150,7 @@ export class DenoSignedDataVerifier extends SignedDataVerifier {
       jsLeaf.getIssuerHex() === jsIntermediate.getSubjectHex() &&
       certificateSignedBy(jsLeaf, jsIntermediate) &&
       jsIntermediate.getExtBasicConstraints()?.cA === true &&
+      jsLeaf.getExtBasicConstraints()?.cA !== true &&
       jsLeaf.getExtInfo("1.2.840.113635.100.6.11.1") !== undefined &&
       jsIntermediate.getExtInfo("1.2.840.113635.100.6.2.1") !== undefined;
 
@@ -192,7 +193,7 @@ const SIGNATURE_ALGORITHM_HASHES: Record<string, string> = {
 function certificateSignedBy(certificate: JSRX509, issuer: JSRX509): boolean {
   try {
     const algorithmOid = ASN1HEX.hextooidstr(
-      ASN1HEX.getVbyList(certificate.hex, 0, [1, 0], "06"),
+      ASN1HEX.getVbyList(certificate.hex, 0, [1, 0], "06") as string,
     );
     const hash = SIGNATURE_ALGORITHM_HASHES[algorithmOid];
     const tbsHex = ASN1HEX.getTLVbyList(certificate.hex, 0, [0]);

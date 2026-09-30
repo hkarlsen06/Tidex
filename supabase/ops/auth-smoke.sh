@@ -28,6 +28,9 @@ ext = s.get("external", {})
 bad = [f"{p} sign-in disabled" for p in ("apple", "google", "email") if not ext.get(p)]
 if not s.get("mailer_autoconfirm"):
     bad.append("email autoconfirm is off (new email sign-ups get no session)")
+# No SMS provider is configured, so phone autoconfirm would let anyone claim any phone number.
+if s.get("phone_autoconfirm"):
+    bad.append("phone autoconfirm is on (unverified phone sign-ups)")
 if s.get("disable_signup"):
     bad.append("sign-ups are disabled")
 for b in bad:

@@ -5,7 +5,7 @@
 // - Always returns 204 to allow signup to proceed
 
 import { createAdminClient } from "@supabase/server/core";
-import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
+import { Webhook } from "standardwebhooks";
 
 // ---------- Env ----------
 const HOOK_SECRET = Deno.env.get("BEFORE_USER_CREATED_HOOK_SECRET")?.replace(

@@ -78,6 +78,18 @@ BEGIN
       RAISE EXCEPTION 'Diagnostic rate limit exceeded';
     END IF;
 
+    -- Callers can invent install ids, so the per-install cap above does not bound
+    -- writes. Also cap all anonymous rows per hour. The observed peak is 272 an
+    -- hour, so 3000 leaves room for a real auth outage.
+    IF (
+      SELECT COUNT(*)
+      FROM internal.auth_diagnostic_events
+      WHERE user_id IS NULL
+        AND occurred_at >= now() - interval '1 hour'
+    ) >= 3000 THEN
+      RAISE EXCEPTION 'Diagnostic rate limit exceeded';
+    END IF;
+
     -- The caller can claim any user id here, so keep it in metadata as
     -- diagnostic context instead of user_id.
     IF p_user_id IS NOT NULL THEN
@@ -120,3 +132,8 @@ BEGIN
   RETURN jsonb_build_object('success', true);
 END;
 $$;
+
+-- Supports the global anonymous-row count above.
+CREATE INDEX IF NOT EXISTS auth_diagnostic_events_anon_time_idx
+  ON internal.auth_diagnostic_events (occurred_at DESC)
+  WHERE user_id IS NULL;

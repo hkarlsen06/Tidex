@@ -28,6 +28,19 @@ BEGIN
     RAISE EXCEPTION 'You can only delete your own account';
   END IF;
 
+  -- An admin impersonating a user must not be able to delete that user's account.
+  IF public.is_impersonation_session() THEN
+    RAISE EXCEPTION 'Accounts cannot be deleted during an impersonation session'
+      USING ERRCODE = '42501';
+  END IF;
+
+  -- Users with a verified MFA factor need an aal2 session. delete-account checks
+  -- this too, but authenticated users can call this RPC directly.
+  IF public.check_mfa_aal() IS NOT TRUE THEN
+    RAISE EXCEPTION 'Multi-factor authentication required'
+      USING ERRCODE = '42501';
+  END IF;
+
   -- Clear report reviewer references, then remove reports that cannot outlive either side.
   UPDATE public.abuse_reports
   SET reviewed_by = NULL

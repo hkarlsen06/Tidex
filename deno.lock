@@ -1,12 +1,16 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@panva/jose@6": "6.2.12",
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "npm:@supabase/supabase-js@2.45.4": "2.45.4",
     "npm:husky@^9.1.7": "9.1.7"
   },
   "jsr": {
+    "@panva/jose@6.2.12": {
+      "integrity": "45dd3888cff0c45dbd91ca5279f7fd4324227042d19df91504aa2c0678b3edcc"
+    },
     "@std/assert@1.0.19": {
       "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
       "dependencies": [
@@ -226,6 +230,8 @@
     "packageJson": {
       "dependencies": [
         "npm:husky@^9.1.7",
+        "npm:playwright@1.58.1",
+        "npm:three@0.186.1",
         "npm:wrangler@4.118.0"
       ],
       "overrides": {
@@ -263,6 +269,7 @@
             "npm:@types/node@^20.12.7",
             "npm:@types/react-dom@19.2.2",
             "npm:@types/react@19.2.2",
+            "npm:@types/three@0.186",
             "npm:class-variance-authority@~0.7.1",
             "npm:clsx@^2.1.1",
             "npm:lucide-react@0.473",
@@ -272,6 +279,7 @@
             "npm:react@19.2.0",
             "npm:tailwind-merge@^3.3.1",
             "npm:tailwindcss@^4.1.18",
+            "npm:three@0.186.1",
             "npm:typescript@^5.4.4"
           ]
         }

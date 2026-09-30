@@ -229,9 +229,9 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# Disables JWT authentication for push notifications (invoked by cron job with service role key)
+# pg_cron calls this with the service role JWT, which passes JWT verification
 [functions.send-push-notifications]
-verify_jwt = false
+verify_jwt = true
 
 # Public token-protected iCalendar feed for calendar app subscriptions
 [functions.calendar-feed]
@@ -243,6 +243,10 @@ verify_jwt = false
 
 # Supabase Auth authenticates hook requests with a Standard Webhooks signature
 [functions.before-user-created]
+verify_jwt = false
+
+# Shutdown stub that old app versions still call, including when signed out
+[functions.wagey-chat-v2]
 verify_jwt = false
 
 [analytics]

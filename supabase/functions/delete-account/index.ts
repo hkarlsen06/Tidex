@@ -161,6 +161,51 @@ export default {
         });
       }
 
+      // Reject before touching storage. An admin holding an impersonation
+      // session must not be able to delete the target's account. The
+      // per-session check (is_impersonation_session) is not executable by
+      // authenticated callers, so refuse while any impersonation of this
+      // user is active.
+      const { data: beingImpersonated, error: impersonationError } = await ctx
+        .supabaseAdmin.rpc("is_user_being_impersonated", {
+          p_user_id: user.id,
+        });
+      if (impersonationError) {
+        console.error(
+          "[delete-account] impersonation check failed",
+          impersonationError,
+        );
+        return jsonResponse(500, {
+          success: false,
+          error: "Failed to verify account state",
+        });
+      }
+      if (beingImpersonated === true) {
+        return jsonResponse(403, {
+          success: false,
+          error: "Account deletion is not allowed during impersonation",
+        });
+      }
+
+      // Users with a verified MFA factor need an aal2 session, the same rule
+      // as the check_mfa_aal() RLS helper.
+      const { data: mfaSatisfied, error: mfaError } = await ctx.supabase.rpc(
+        "check_mfa_aal",
+      );
+      if (mfaError) {
+        console.error("[delete-account] MFA check failed", mfaError);
+        return jsonResponse(500, {
+          success: false,
+          error: "Failed to verify account state",
+        });
+      }
+      if (mfaSatisfied !== true) {
+        return jsonResponse(403, {
+          success: false,
+          error: "Multi-factor authentication required",
+        });
+      }
+
       let ownedObjects: StorageObjectRow[];
       try {
         ownedObjects = [
