@@ -105,7 +105,6 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
       .navigationBarTitleDisplayMode(.inline)
-      .toolbar(isChatTabBarHidden ? .hidden : .automatic, for: .tabBar)
       .toolbar {
         friendsToolbarContent
       }
@@ -115,7 +114,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       .navigationDestination(for: FriendChatRoute.self) { route in
         friendChatDestination(for: route)
       }
-      .addShiftDestination(in: .friends)
+      .addShiftDestination(in: .friends, hidesTabBar: isChatTabBarHidden)
       .iPadToolbarTransaction()
     }
     .task(id: startupTaskID) {

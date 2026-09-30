@@ -653,24 +653,23 @@ struct FriendsThreadView: View {
     viewModel.requestComposerFocus()
   }
 
-  @ViewBuilder
+  /// Floats above the composer at zero height. ExyteChat sizes the list's content inset from this
+  /// view, so a button with height changed the inset mid-scroll each time the list left or reached
+  /// the bottom, which stalled the table right after a flick.
   private var chatFooterAccessory: some View {
-    if shouldShowScrollToLatestButton {
-      VStack(spacing: 0) {
-        HStack {
-          Spacer(minLength: 0)
+    Color.clear
+      .frame(height: 0)
+      .overlay(alignment: .bottom) {
+        if shouldShowScrollToLatestButton {
           scrollToLatestButton
-          Spacer(minLength: 0)
+            .padding(.bottom, Spacing.xs)
+            .transition(
+              MotionTokens.mirroredMoveTransition(edge: .bottom, reduceMotion: reduceMotion)
+            )
         }
-        .padding(.top, Spacing.xs)
-        .padding(.bottom, Spacing.xs)
-        .transition(
-          MotionTokens.mirroredMoveTransition(edge: .bottom, reduceMotion: reduceMotion)
-        )
       }
       .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
       .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: isPinnedToBottom)
-    }
   }
 
   @ViewBuilder

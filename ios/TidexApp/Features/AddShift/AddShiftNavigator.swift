@@ -19,13 +19,16 @@ internal final class AddShiftNavigator {
 extension View {
   /// Lets the Add screen be pushed onto this tab's navigation stack.
   /// Apply inside the tab's root `NavigationStack`. Pass nil where the view isn't a tab root.
-  internal func addShiftDestination(in tab: MainTabView.Tab?) -> some View {
-    modifier(AddShiftDestinationModifier(tab: tab))
+  /// Pass `hidesTabBar` instead of adding another `.toolbar(_:for: .tabBar)` to the same root.
+  /// Two of them on the same view conflict, and the chat hide stopped working that way.
+  internal func addShiftDestination(in tab: MainTabView.Tab?, hidesTabBar: Bool = false) -> some View {
+    modifier(AddShiftDestinationModifier(tab: tab, hidesTabBar: hidesTabBar))
   }
 }
 
 private struct AddShiftDestinationModifier: ViewModifier {
   let tab: MainTabView.Tab?
+  let hidesTabBar: Bool
   @Environment(AppCoordinator.self) private var coordinator
   private let navigator: AddShiftNavigator = .shared
 
@@ -33,7 +36,7 @@ private struct AddShiftDestinationModifier: ViewModifier {
     content
       // Hide the tab bar from the root, like Friends does for chats. Hiding it from the
       // pushed screen instead makes it pop back in only after the back transition ends.
-      .toolbar(isPresented.wrappedValue ? .hidden : .automatic, for: .tabBar)
+      .toolbar(hidesTabBar || isPresented.wrappedValue ? .hidden : .automatic, for: .tabBar)
       .navigationDestination(isPresented: isPresented) {
         AddShiftView { createdSingleDates in
           navigator.hostTab = nil
