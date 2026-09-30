@@ -2332,7 +2332,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
 
     viewModel.reloadFromCache()
-    await viewModel.updateLatestVisibleMessage(messageId: "message-2")
+    viewModel.updateLatestVisibleMessage(messageId: "message-2")
     try? await Task.sleep(for: .milliseconds(250))
 
     XCTAssertEqual(mockService.markThreadReadCallCount, 1)
@@ -2431,7 +2431,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
 
     viewModel.reloadFromCache()
-    await viewModel.updateLatestVisibleMessage(messageId: "message-2")
+    viewModel.updateLatestVisibleMessage(messageId: "message-2")
     try? await Task.sleep(for: .milliseconds(250))
 
     XCTAssertEqual(mockService.markThreadReadCallCount, 0)
@@ -2533,9 +2533,9 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
 
     viewModel.reloadFromCache()
-    await viewModel.updateLatestVisibleMessage(messageId: "message-1")
-    await viewModel.updateLatestVisibleMessage(messageId: "message-2")
-    await viewModel.updateLatestVisibleMessage(messageId: "message-3")
+    viewModel.updateLatestVisibleMessage(messageId: "message-1")
+    viewModel.updateLatestVisibleMessage(messageId: "message-2")
+    viewModel.updateLatestVisibleMessage(messageId: "message-3")
     try? await Task.sleep(for: .milliseconds(250))
 
     XCTAssertEqual(mockService.markThreadReadCallCount, 1)

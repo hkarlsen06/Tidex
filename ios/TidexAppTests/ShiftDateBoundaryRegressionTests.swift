@@ -48,7 +48,7 @@ final class ShiftDateBoundaryRegressionTests: XCTestCase {
   /// because BE year 2026 is CE year 1483. `Date.fromISODateString` must keep parsing "2026-09-28"
   /// as Gregorian 2026 regardless.
   func testISODateParsingIsIndependentOfDeviceCalendar() throws {
-    var buggyFormatter = DateFormatter()
+    let buggyFormatter = DateFormatter()
     buggyFormatter.locale = Locale(identifier: "th_TH")
     buggyFormatter.calendar = Calendar(identifier: .buddhist)
     buggyFormatter.dateFormat = "yyyy-MM-dd"
@@ -70,7 +70,7 @@ final class ShiftDateBoundaryRegressionTests: XCTestCase {
     let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
     let time = try XCTUnwrap(FormatterCache.hourMinuteFormatter(timeZone: timeZone).date(from: "14:30"))
 
-    var buggyFormatter = DateFormatter()
+    let buggyFormatter = DateFormatter()
     buggyFormatter.locale = Locale(identifier: "ar_SA")
     buggyFormatter.calendar = Calendar(identifier: .gregorian)
     buggyFormatter.timeZone = timeZone
