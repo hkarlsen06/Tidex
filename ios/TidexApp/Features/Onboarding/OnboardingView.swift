@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Pre-auth onboarding flow container (Screens 1-3)
+/// Pre-auth onboarding flow container: the welcome screen, then the add-shift simulator.
 /// Shows value proposition before requiring authentication
 struct OnboardingView: View {
   let onNavigateToSignup: () -> Void
@@ -9,40 +9,19 @@ struct OnboardingView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var currentPage = 0
-  @State private var simulatorBaselineTotals: CalendarHeaderTotals?
   @State private var preAuthCurrency: String = {
     OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
       ?? OnboardingCurrencyResolver.detectDefaultCurrency()
   }()
-  @State private var howItWorksFromTotals: CalendarHeaderTotals?
-  @State private var howItWorksToTotals: CalendarHeaderTotals?
-  @State private var howItWorksShouldShowConfetti = false
-  @State private var howItWorksShouldAnimateFromPrevious = false
-  @State private var howItWorksTotalCardSeed = 0
-  @State private var isAdvancingFromSimulatorAdd = false
   @State private var shouldPreloadSimulatorScreen = false
-  @State private var shouldPreloadHowItWorksScreen = false
   @State private var isCompletingPreAuth = false
 
-  private let totalPages = 3
+  private let totalPages = 2
   private let simulatorPage = 1
-  private let howItWorksPage = 2
   private let completionHandoffDelay: TimeInterval = 0.32
 
   private var isSimulatorPage: Bool {
     currentPage == simulatorPage
-  }
-
-  private var shouldShowTopHeader: Bool {
-    currentPage != simulatorPage
-  }
-
-  private var fallbackHowItWorksTotals: CalendarHeaderTotals {
-    // Match simulator baseline defaults: 5 shifts * 7.5 paid hours at currency-tier default wage.
-    let hourlyRate = OnboardingCurrencyResolver.defaultHourlyWage(for: preAuthCurrency)
-    let gross = hourlyRate * 37.5
-    let net = gross * 0.8
-    return CalendarHeaderTotals(primary: net, secondary: gross)
   }
 
   var body: some View {
@@ -55,10 +34,6 @@ struct OnboardingView: View {
         preloadedSimulatorScreen
       }
 
-      if shouldPreloadHowItWorksScreen {
-        preloadedHowItWorksScreen
-      }
-
       VStack(spacing: 0) {
         // Page content - takes full height, skip button overlaid
         pageTabs
@@ -68,14 +43,14 @@ struct OnboardingView: View {
           bottomControls
         }
       }
-      .opacity(isCompletingPreAuth && currentPage != howItWorksPage ? 0 : 1)
-      .scaleEffect(isCompletingPreAuth && currentPage != howItWorksPage ? 0.985 : 1)
-      .offset(y: isCompletingPreAuth && currentPage != howItWorksPage ? -18 : 0)
+      .opacity(isCompletingPreAuth ? 0 : 1)
+      .scaleEffect(isCompletingPreAuth ? 0.985 : 1)
+      .offset(y: isCompletingPreAuth ? -18 : 0)
       .motionAnimation(.emphasis, value: isCompletingPreAuth, reduceMotion: reduceMotion)
       .allowsHitTesting(!isCompletingPreAuth)
     }
     .safeAreaInset(edge: .top, spacing: 0) {
-      if shouldShowTopHeader {
+      if !isSimulatorPage {
         topHeader
           .opacity(isCompletingPreAuth ? 0 : 1)
           .offset(
@@ -89,51 +64,14 @@ struct OnboardingView: View {
     }
     .onAppear {
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(preAuthCurrency)
-      preloadUpcomingScreen(after: currentPage)
+      shouldPreloadSimulatorScreen = currentPage < simulatorPage
       recordFunnelStep(for: currentPage)
     }
   }
 
   private func recordFunnelStep(for page: Int) {
-    let name: String
-    switch page {
-    case simulatorPage: name = "add_shift_simulator"
-    case howItWorksPage: name = "how_it_works"
-    default: name = "welcome"
-    }
-    OnboardingFunnelRecorder.shared.recordPreAuth(name)
-  }
-
-  private func completeSimulatorAndAdvance(
-    fromTotals: CalendarHeaderTotals?,
-    toTotals: CalendarHeaderTotals?,
-    currency: String
-  ) {
-    isAdvancingFromSimulatorAdd = true
-    preAuthCurrency = currency
-    howItWorksFromTotals = fromTotals ?? simulatorBaselineTotals
-    howItWorksToTotals = toTotals ?? fromTotals ?? simulatorBaselineTotals
-    howItWorksShouldShowConfetti = true
-    howItWorksShouldAnimateFromPrevious = true
-    howItWorksTotalCardSeed += 1
-
-    MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-      currentPage = min(currentPage + 1, howItWorksPage)
-    }
-  }
-
-  private func skipFromSimulator() {
-    let baseline = simulatorBaselineTotals ?? fallbackHowItWorksTotals
-    isAdvancingFromSimulatorAdd = true
-    howItWorksFromTotals = baseline
-    howItWorksToTotals = baseline
-    howItWorksShouldShowConfetti = false
-    howItWorksShouldAnimateFromPrevious = false
-    howItWorksTotalCardSeed += 1
-
-    MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-      currentPage = howItWorksPage
-    }
+    OnboardingFunnelRecorder.shared.recordPreAuth(
+      page == simulatorPage ? "add_shift_simulator" : "welcome")
   }
 
   private func advanceToNextPage() {
@@ -162,49 +100,6 @@ struct OnboardingView: View {
       onNavigateToSignup()
     }
   }
-
-  private func handlePageTransition(from oldPage: Int, to newPage: Int) {
-    if newPage == howItWorksPage {
-      let baseline = simulatorBaselineTotals ?? fallbackHowItWorksTotals
-      howItWorksFromTotals = howItWorksFromTotals ?? baseline
-      howItWorksToTotals = howItWorksToTotals ?? howItWorksFromTotals ?? baseline
-    }
-
-    if oldPage == simulatorPage, newPage == simulatorPage + 1 {
-      if isAdvancingFromSimulatorAdd {
-        isAdvancingFromSimulatorAdd = false
-      } else {
-        let baseline = simulatorBaselineTotals
-        howItWorksFromTotals = baseline
-        howItWorksToTotals = baseline
-        howItWorksShouldShowConfetti = false
-        howItWorksShouldAnimateFromPrevious = false
-      }
-    }
-
-    if oldPage == simulatorPage, newPage != simulatorPage + 1 {
-      isAdvancingFromSimulatorAdd = false
-    }
-
-    if oldPage == simulatorPage + 1, newPage != simulatorPage + 1 {
-      howItWorksShouldShowConfetti = false
-      howItWorksShouldAnimateFromPrevious = false
-    }
-  }
-
-  private func preloadUpcomingScreen(after page: Int) {
-    if page < simulatorPage {
-      shouldPreloadSimulatorScreen = true
-    } else {
-      shouldPreloadSimulatorScreen = false
-    }
-
-    if page == simulatorPage {
-      shouldPreloadHowItWorksScreen = true
-    } else if page >= howItWorksPage {
-      shouldPreloadHowItWorksScreen = false
-    }
-  }
 }
 
 extension OnboardingView {
@@ -215,27 +110,12 @@ extension OnboardingView {
         .tag(0)
 
       simulatorScreen
-        .tag(1)
-
-      HowItWorksScreen(
-        totalFrom: howItWorksFromTotals,
-        totalTo: howItWorksToTotals,
-        currency: preAuthCurrency,
-        isActive: currentPage == 2,
-        shouldShowConfetti: howItWorksShouldShowConfetti,
-        shouldAnimateTotalFromPrevious: howItWorksShouldAnimateFromPrevious,
-        totalCardSeed: howItWorksTotalCardSeed,
-        isExiting: isCompletingPreAuth,
-        showsTitle: false
-      )
-      .tag(2)
-
+        .tag(simulatorPage)
     }
     .tabViewStyle(.page(indexDisplayMode: .never))
     .motionAnimation(.pageTransition, value: currentPage, reduceMotion: reduceMotion)
-    .onChange(of: currentPage) { oldPage, newPage in
-      handlePageTransition(from: oldPage, to: newPage)
-      preloadUpcomingScreen(after: newPage)
+    .onChange(of: currentPage) { _, newPage in
+      shouldPreloadSimulatorScreen = newPage < simulatorPage
       recordFunnelStep(for: newPage)
     }
   }
@@ -246,19 +126,12 @@ extension OnboardingView {
       onCurrencyChanged: { currency in
         preAuthCurrency = currency
       },
-      onContinue: { fromTotals, toTotals, currency in
-        completeSimulatorAndAdvance(
-          fromTotals: fromTotals,
-          toTotals: toTotals,
-          currency: currency
-        )
+      onContinue: {
+        OnboardingFunnelRecorder.shared.recordPreAuth("demo_shift_added")
+        completeAndNavigateToSignup()
       },
       onSkip: {
-        skipFromSimulator()
-      },
-      onBaselineReady: { baselineTotals, currency in
-        simulatorBaselineTotals = baselineTotals
-        preAuthCurrency = currency
+        completeAndNavigateToSignup()
       },
       isPreloaded: false,
       onBack: {
@@ -271,9 +144,8 @@ extension OnboardingView {
     PreAuthAddShiftSimulatorScreen(
       initialCurrency: preAuthCurrency,
       onCurrencyChanged: { _ in },
-      onContinue: { _, _, _ in },
+      onContinue: {},
       onSkip: {},
-      onBaselineReady: { _, _ in },
       isPreloaded: true
     )
     .frame(width: 1, height: 1)
@@ -283,113 +155,50 @@ extension OnboardingView {
     .accessibilityHidden(true)
   }
 
-  private var preloadedHowItWorksScreen: some View {
-    HowItWorksScreen(
-      totalFrom: howItWorksFromTotals ?? simulatorBaselineTotals ?? fallbackHowItWorksTotals,
-      totalTo: howItWorksToTotals ?? howItWorksFromTotals ?? simulatorBaselineTotals
-        ?? fallbackHowItWorksTotals,
-      currency: preAuthCurrency,
-      isActive: false,
-      shouldShowConfetti: false,
-      shouldAnimateTotalFromPrevious: false,
-      totalCardSeed: howItWorksTotalCardSeed,
-      showsTitle: false
-    )
-    .frame(width: 1, height: 1)
-    .clipped()
-    .opacity(0.001)
-    .allowsHitTesting(false)
-    .accessibilityHidden(true)
-  }
-
-  @ViewBuilder
   private var topHeader: some View {
-    ZStack(alignment: .center) {
-      HStack(alignment: .center, spacing: Spacing.sm) {
-        if currentPage == 0 {
-          Image("MarketingAppIcon")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 54, height: 54)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .accessibilityLabel(Text("Tidex"))
-        } else if currentPage == howItWorksPage {
-          Text(.onboardingHowTitle)
-            .font(.tidexScreenTitle)
-            .foregroundColor(.tidexTextPrimary)
-            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-            .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.72)
-            .accessibilityAddTraits(.isHeader)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
+    HStack(alignment: .center, spacing: Spacing.sm) {
+      Image("MarketingAppIcon")
+        .resizable()
+        .scaledToFit()
+        .frame(width: 54, height: 54)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityLabel(Text("Tidex"))
 
-        Spacer(minLength: 0)
+      Spacer(minLength: 0)
 
-        OnboardingCurrencyCapsuleSelector(
-          selectedCurrency: Binding(
-            get: { preAuthCurrency },
-            set: { selectedCurrency in
-              guard selectedCurrency != preAuthCurrency else { return }
-              preAuthCurrency = selectedCurrency
-              OnboardingCurrencyCarryoverStore.writePreferredCurrency(selectedCurrency)
-            }
-          )
+      OnboardingCurrencyCapsuleSelector(
+        selectedCurrency: Binding(
+          get: { preAuthCurrency },
+          set: { selectedCurrency in
+            guard selectedCurrency != preAuthCurrency else { return }
+            preAuthCurrency = selectedCurrency
+            OnboardingCurrencyCarryoverStore.writePreferredCurrency(selectedCurrency)
+          }
         )
-        .fixedSize(horizontal: true, vertical: false)
-      }
+      )
+      .fixedSize(horizontal: true, vertical: false)
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .frame(maxWidth: .infinity)
     .padding(.horizontal, Spacing.lg)
     .padding(.top, Spacing.lg)
-    .padding(.bottom, currentPage == howItWorksPage ? Spacing.sm : Spacing.xl)
+    .padding(.bottom, Spacing.xl)
     .background(Color.tidexBackground)
   }
 
   private var bottomControls: some View {
     VStack(spacing: Spacing.sm) {
-      primaryBottomAction
+      firstPageActionRow
 
       PageIndicator(totalPages: totalPages, currentPage: currentPage)
-        .onboardingHowExitStep(
-          isExiting: isCompletingPreAuth && currentPage == howItWorksPage,
-          delay: 0.205
-        )
         .padding(.top, Spacing.xxs)
 
-      if currentPage == 0 {
-        loginButton
-      } else if currentPage == howItWorksPage {
-        backButton
-      }
+      loginButton
     }
     .padding(.horizontal, Spacing.lg)
     .adaptiveContentWidth()
     .padding(.bottom, Spacing.xs)
     .motionAnimation(.emphasis, value: currentPage, reduceMotion: reduceMotion)
-  }
-
-  @ViewBuilder
-  private var primaryBottomAction: some View {
-    if currentPage < totalPages - 1 {
-      if currentPage == 0 {
-        firstPageActionRow
-      } else {
-        OnboardingButton(
-          title: String(localized: .commonContinue),
-          action: advanceToNextPage
-        )
-      }
-    } else {
-      OnboardingButton(
-        title: String(localized: .onboardingHowTakeControl),
-        action: completeAndNavigateToSignup
-      )
-      .onboardingHowExitStep(
-        isExiting: isCompletingPreAuth && currentPage == howItWorksPage,
-        delay: 0.165
-      )
-    }
   }
 
   @ViewBuilder
@@ -466,28 +275,10 @@ extension OnboardingView {
     }
     .buttonStyle(.plain)
   }
-
-  /// Steps back to the previous page without needing a swipe.
-  private var backButton: some View {
-    Button {
-      Haptics.play(.light)
-      goBackToPreviousPage()
-    } label: {
-      Text(.commonBack)
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlueText)
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.xxs)
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-  }
 }
 
 #Preview {
   OnboardingView(
     onNavigateToSignup: {}
   )
-}  // swiftlint:disable:this file_length
+}

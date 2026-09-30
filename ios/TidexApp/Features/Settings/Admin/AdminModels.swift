@@ -11,7 +11,7 @@ private func adminDate(_ value: String?) -> Date? {
 }
 
 /// Parses a Postgres `date` such as "2026-09-28" as midnight in the device's time zone.
-private func adminDay(_ value: String?) -> Date? {
+func adminDay(_ value: String?) -> Date? {
   guard let value else { return nil }
   return try? Date.ISO8601FormatStyle(timeZone: .current).year().month().day().parse(value)
 }
@@ -36,6 +36,10 @@ struct AdminUser: Decodable, Identifiable, Hashable, Sendable {
   /// "no" or "en", the language this user gets broadcasts in.
   var language: String?
   var lastActiveAt: String?
+  var appVersion: String?
+  var shiftCount: Int?
+  var messageCount: Int?
+  var friendCount: Int?
 
   var broadcastLanguage: AdminLanguage { language == "no" ? .norwegian : .english }
 
@@ -59,6 +63,9 @@ enum AdminUserSort: String, CaseIterable, Identifiable, Sendable {
   case newest
   case lastSignIn = "last_sign_in"
   case lastActive = "last_active"
+  case shifts
+  case messages
+  case friends
 
   var id: String { rawValue }
 
@@ -68,31 +75,18 @@ enum AdminUserSort: String, CaseIterable, Identifiable, Sendable {
     case .newest: return "Signed up"
     case .lastSignIn: return "Last sign-in"
     case .lastActive: return "Last active"
+    case .shifts: return "Shifts"
+    case .messages: return "Messages"
+    case .friends: return "Friends"
     }
   }
-}
 
-/// Matches `p_filter` in `admin_list_users_api`.
-enum AdminUserFilter: String, CaseIterable, Identifiable, Sendable {
-  case all
-  case active
-  case new
-  case admins
-  case banned
-  case norwegian
-  case english
-
-  var id: String { rawValue }
-
-  var title: String {
+  /// The server's order, then the reversed one.
+  var directionTitles: (normal: String, reversed: String) {
     switch self {
-    case .all: return "All users"
-    case .active: return "Active in last 7 days"
-    case .new: return "Signed up in last 7 days"
-    case .admins: return "Admins"
-    case .banned: return "Banned"
-    case .norwegian: return "Norwegian"
-    case .english: return "English"
+    case .name: return ("A to Z", "Z to A")
+    case .newest, .lastSignIn, .lastActive: return ("Newest first", "Oldest first")
+    case .shifts, .messages, .friends: return ("Most first", "Fewest first")
     }
   }
 }
@@ -206,6 +200,8 @@ struct AdminActiveUsersChart: Decodable, Sendable {
 struct AdminUsersPage: Decodable, Sendable {
   let users: [AdminUser]
   let totalCount: Int
+  /// Every app version users have reported, most recently used first.
+  let appVersions: [String]
 }
 
 struct AdminFeedback: Decodable, Identifiable, Hashable, Sendable {

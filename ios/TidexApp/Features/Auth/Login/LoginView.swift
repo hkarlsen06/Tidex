@@ -42,6 +42,9 @@ struct LoginView: View {
       UIApplication.shared.sendAction(
         #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
+    .onAppear {
+      OnboardingFunnelRecorder.shared.recordPreAuth("login_screen")
+    }
   }
 
   private func scrollContent(geometry: GeometryProxy) -> some View {

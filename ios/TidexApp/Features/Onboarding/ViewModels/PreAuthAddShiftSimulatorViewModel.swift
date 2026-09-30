@@ -241,7 +241,12 @@ extension PreAuthAddShiftSimulatorViewModel {
       hourly_wage: hourlyWage,
       wage_level: nil,
       tariff_type_id: nil,
-      supplements: SupplementRulesSnapshot(rules: []),
+      // Showcase evening and weekend supplements. Percentages work for every currency.
+      supplements: SupplementRulesSnapshot(rules: [
+        SupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "24:00", percent: 20),
+        SupplementRule(days: [6], from: "13:00", to: "24:00", percent: 30),
+        SupplementRule(days: [7], from: "00:00", to: "24:00", percent: 50),
+      ]),
       tax_enabled: true,
       tax_percentage: 20,
       break_enabled: true,

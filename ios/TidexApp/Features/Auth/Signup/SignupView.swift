@@ -41,6 +41,7 @@ struct SignupView: View {
     .onAppear {
       viewModel.onNavigateToLogin = onNavigateToLogin
       runEntranceAnimationIfNeeded()
+      OnboardingFunnelRecorder.shared.recordPreAuth("signup_screen")
     }
   }
 
@@ -73,6 +74,7 @@ struct SignupView: View {
         title: .signupTitle,
         logoSize: 132,
         currency: currency,
+        subtitle: .signupSubtitle,
         onLogoTap: restartOnboarding
       )
       .padding(.bottom, heroControlsGap)
@@ -208,8 +210,10 @@ struct SignupView: View {
     viewModel.showEmailForm ? Spacing.lg : Spacing.sm
   }
 
+  /// Smaller than on login because the subtitle under the title takes that room, so the
+  /// screen still fits without scrolling.
   private var heroControlsGap: CGFloat {
-    viewModel.showEmailForm ? 0 : Spacing.huge + Spacing.lg
+    viewModel.showEmailForm ? 0 : Spacing.xxxl
   }
 
   private var authSectionSpacing: CGFloat {

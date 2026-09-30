@@ -6,6 +6,7 @@ struct AuthHeroVisual: View {
   let title: LocalizedStringResource
   let logoSize: CGFloat
   let currency: String
+  var subtitle: LocalizedStringResource?
   var onLogoTap: (() -> Void)?
 
   var body: some View {
@@ -17,6 +18,15 @@ struct AuthHeroVisual: View {
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
+
+      if let subtitle {
+        Text(subtitle)
+          .font(.tidexBody)
+          .foregroundColor(.tidexTextSecondary)
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.top, -Spacing.sm)
+      }
     }
   }
 

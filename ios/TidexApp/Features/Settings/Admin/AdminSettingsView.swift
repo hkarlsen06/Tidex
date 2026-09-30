@@ -5,6 +5,7 @@ import SwiftUI
 enum AdminTab: String, CaseIterable, Identifiable, Hashable {
   case feedback
   case reports
+  case stats
   case users
   case shares
   case broadcast
@@ -16,6 +17,7 @@ enum AdminTab: String, CaseIterable, Identifiable, Hashable {
     switch self {
     case .feedback: return "Feedback"
     case .reports: return "Reports"
+    case .stats: return "Stats"
     case .users: return "Users"
     case .shares: return "Shares"
     case .broadcast: return "Broadcast"
@@ -27,6 +29,7 @@ enum AdminTab: String, CaseIterable, Identifiable, Hashable {
     switch self {
     case .feedback: return "bubble.left.and.text.bubble.right"
     case .reports: return "flag"
+    case .stats: return "chart.bar.xaxis"
     case .users: return "person.2"
     case .shares: return "person.2.wave.2"
     case .broadcast: return "megaphone"
@@ -38,6 +41,7 @@ enum AdminTab: String, CaseIterable, Identifiable, Hashable {
     switch self {
     case .feedback: return .tidexBlueText
     case .reports: return .tidexError
+    case .stats: return .tidexBlueText
     case .users: return .tidexPurple
     case .shares: return .tidexSuccess
     case .broadcast: return .tidexWarning
@@ -85,6 +89,10 @@ struct AdminSettingsView: View {
           link(.reports, count: summary.openReports)
         }
 
+        Section("Insights") {
+          link(.stats)
+        }
+
         Section("People") {
           link(.users)
           link(.shares)
@@ -123,12 +131,10 @@ struct AdminSettingsView: View {
   }
 
   private var activeUsersSection: some View {
-    Section {
+    Section("Users who opened the app") {
       AdminActiveUsersCharts(chart: activeUsers)
         .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
-    } footer: {
-      Text("Users who opened the app. Counts start from the first build that records app opens.")
     }
   }
 
@@ -191,6 +197,7 @@ private struct AdminDestination: View {
     switch tab {
     case .feedback: AdminFeedbackView()
     case .reports: AdminReportsView(initialReportID: initialReportID)
+    case .stats: AdminStatsView()
     case .users: AdminUsersView()
     case .shares: AdminSharesView()
     case .broadcast: AdminBroadcastView()

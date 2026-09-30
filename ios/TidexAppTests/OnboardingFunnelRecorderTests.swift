@@ -9,7 +9,9 @@ final class OnboardingFunnelRecorderTests: XCTestCase {
   private var defaults: UserDefaults!
   private var signedInUserId: String?
   private var sentBatches: [[OnboardingFunnelStepRow]] = []
+  private var preAuthSends: [(installId: String, step: String)] = []
   private var shouldFailSend = false
+  private var shouldFailPreAuthSend = false
 
   override func setUp() {
     super.setUp()
@@ -17,7 +19,9 @@ final class OnboardingFunnelRecorderTests: XCTestCase {
     defaults.removePersistentDomain(forName: suiteName)
     signedInUserId = nil
     sentBatches = []
+    preAuthSends = []
     shouldFailSend = false
+    shouldFailPreAuthSend = false
   }
 
   override func tearDown() {
@@ -28,7 +32,7 @@ final class OnboardingFunnelRecorderTests: XCTestCase {
   func testPreAuthStepsWaitForFirstPostAuthStep() async {
     let recorder = makeRecorder()
     recorder.recordPreAuth("welcome")
-    recorder.recordPreAuth("how_it_works")
+    recorder.recordPreAuth("add_shift_simulator")
     await drainTasks()
     XCTAssertTrue(sentBatches.isEmpty)
 
@@ -39,10 +43,38 @@ final class OnboardingFunnelRecorderTests: XCTestCase {
     XCTAssertEqual(sentBatches.count, 1)
     XCTAssertEqual(
       sentSteps(inBatch: 0),
-      ["preauth_welcome", "preauth_how_it_works", "postauth_purpose"]
+      ["preauth_welcome", "preauth_add_shift_simulator", "postauth_purpose"]
     )
     XCTAssertTrue(sentBatches[0].allSatisfy { $0.user_id == userId })
     XCTAssertTrue(pendingSteps.isEmpty)
+  }
+
+  func testPreAuthStepsAreSentAnonymouslyOnceWithOneInstallId() async {
+    let recorder = makeRecorder()
+    recorder.recordPreAuth("welcome")
+    await drainTasks()
+    recorder.recordPreAuth("welcome")
+    await drainTasks()
+    recorder.recordPreAuth("signup_screen")
+    await drainTasks()
+
+    XCTAssertEqual(preAuthSends.map(\.step).sorted(), ["signup_screen", "welcome"])
+    XCTAssertEqual(Set(preAuthSends.map(\.installId)).count, 1)
+    XCTAssertNotNil(UUID(uuidString: preAuthSends[0].installId))
+  }
+
+  func testFailedAnonymousSendIsRetriedWithNextPreAuthStep() async {
+    shouldFailPreAuthSend = true
+    let recorder = makeRecorder()
+    recorder.recordPreAuth("welcome")
+    await drainTasks()
+    XCTAssertTrue(preAuthSends.isEmpty)
+
+    shouldFailPreAuthSend = false
+    recorder.recordPreAuth("add_shift_simulator")
+    await drainTasks()
+
+    XCTAssertEqual(preAuthSends.map(\.step).sorted(), ["add_shift_simulator", "welcome"])
   }
 
   func testSameStepIsSentOnlyOnce() async {
@@ -113,6 +145,10 @@ final class OnboardingFunnelRecorderTests: XCTestCase {
       send: { [unowned self] rows in
         if shouldFailSend { throw URLError(.notConnectedToInternet) }
         sentBatches.append(rows)
+      },
+      sendPreAuth: { [unowned self] installId, step, _ in
+        if shouldFailPreAuthSend { throw URLError(.notConnectedToInternet) }
+        preAuthSends.append((installId, step))
       }
     )
   }

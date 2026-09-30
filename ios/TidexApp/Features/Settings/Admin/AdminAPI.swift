@@ -15,18 +15,15 @@ enum AdminAPI {
   // MARK: Users
 
   static func users(
-    page: Int, perPage: Int, search: String?, sort: AdminUserSort = .name,
-    filter: AdminUserFilter = .all
+    page: Int, perPage: Int, search: String?, query: AdminUserQuery = AdminUserQuery()
   ) async throws -> AdminUsersPage {
     try await rpc(
       "admin_list_users_api",
-      [
+      query.rpcParams.merging([
         "p_page": .integer(page),
         "p_per_page": .integer(perPage),
         "p_search": search.map(AnyJSON.string) ?? .null,
-        "p_sort": .string(sort.rawValue),
-        "p_filter": .string(filter.rawValue),
-      ])
+      ]) { _, new in new })
   }
 
   static func setBanned(_ banned: Bool, for user: AdminUser) async throws {
@@ -54,6 +51,11 @@ enum AdminAPI {
   /// Days follow the admin's own time zone.
   static func activeUsersChart() async throws -> AdminActiveUsersChart {
     try await rpc("admin_get_active_users_chart_api", ["p_time_zone": .string(TimeZone.current.identifier)])
+  }
+
+  /// Weeks and months follow the admin's own time zone.
+  static func stats() async throws -> AdminStats {
+    try await rpc("admin_get_stats_api", ["p_time_zone": .string(TimeZone.current.identifier)])
   }
 
   // MARK: Feedback

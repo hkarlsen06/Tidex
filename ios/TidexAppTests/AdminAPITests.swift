@@ -22,6 +22,24 @@ internal final class AdminAPITests: XCTestCase {
     AdminBroadcastDraft(title: "Hi", body: "News", titleNo: "Hei", bodyNo: "Nytt")
   }
 
+  // MARK: Users query
+
+  internal func testUserQueryMapsActivityAndClearsOnlyFilters() {
+    var query: AdminUserQuery = AdminUserQuery(sort: .shifts, reversed: true)
+    XCTAssertFalse(query.hasFilters)
+
+    query.activity = .inactiveFor(.month)
+    query.provider = .apple
+    let params: [String: AnyJSON] = query.rpcParams
+    XCTAssertTrue(query.hasFilters)
+    XCTAssertEqual(params["p_active_days"], .null)
+    XCTAssertEqual(params["p_inactive_days"], .integer(30))
+    XCTAssertEqual(params["p_provider"], .string("apple"))
+    XCTAssertEqual(params["p_reverse"], .bool(true))
+
+    XCTAssertEqual(query.withoutFilters, AdminUserQuery(sort: .shifts, reversed: true))
+  }
+
   // MARK: Broadcast draft
 
   internal func testDraftNeedsBothLanguages() {

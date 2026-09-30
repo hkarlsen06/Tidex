@@ -12,9 +12,10 @@ struct OnboardingFunnelStepRow: Encodable, Equatable {
 ///
 /// Rows go to `public.onboarding_funnel_steps`, where the insert ignores duplicates so the
 /// first timestamp wins. Pre-auth pages wait in UserDefaults until post-auth onboarding
-/// records its first step. Writes run in the background and never block onboarding. A
-/// failed write stays pending and goes out with the next recorded step. Each step is sent
-/// at most once per user from this device.
+/// records its first step. Each pre-auth page is also sent right away without a user,
+/// keyed by a random install id, so people who never sign up are counted too. Writes run
+/// in the background and never block onboarding. A failed write stays pending and goes out
+/// with the next recorded step. Each step is sent at most once per user from this device.
 @MainActor
 final class OnboardingFunnelRecorder {
   static let shared = OnboardingFunnelRecorder()
@@ -26,10 +27,13 @@ final class OnboardingFunnelRecorder {
   static let firstShiftMethodPrefix = "first_shift_via_"
   static let pendingDefaultsKey = "onboardingFunnel.pendingSteps"
   static let sentDefaultsKeyPrefix = "onboardingFunnel.sentSteps."
+  static let installIdDefaultsKey = "onboardingFunnel.installId"
+  static let anonymousSentDefaultsKey = "onboardingFunnel.anonymousSentSteps"
 
   private let defaults: UserDefaults
   private let currentUserId: () -> String?
   private let send: ([OnboardingFunnelStepRow]) async throws -> Void
+  private let sendPreAuth: (_ installId: String, _ step: String, _ reachedAt: String) async throws -> Void
   private var isSending = false
   private var hasQueuedSend = false
 
@@ -42,16 +46,41 @@ final class OnboardingFunnelRecorder {
         .from("onboarding_funnel_steps")
         .upsert(rows, onConflict: "user_id,step", returning: .minimal, ignoreDuplicates: true)
         .execute()
-    }
+    },
+    sendPreAuth: @escaping (_ installId: String, _ step: String, _ reachedAt: String) async throws
+      -> Void = { installId, step, reachedAt in
+        let params: [String: AnyJSON] = [
+          "p_install_id": .string(installId),
+          "p_step": .string(step),
+          "p_reached_at": .string(reachedAt),
+        ]
+        _ = try await supabase.rpc("record_onboarding_preauth_step", params: params).execute()
+      }
   ) {
     self.defaults = defaults
     self.currentUserId = currentUserId
     self.send = send
+    self.sendPreAuth = sendPreAuth
   }
 
-  /// Keeps a pre-auth page locally. It is sent once post-auth onboarding records a step.
+  /// Sends a pre-auth page without a user and keeps it locally until post-auth onboarding
+  /// records a step. Pages whose anonymous send failed are retried with the next page.
   func recordPreAuth(_ page: String) {
     addPending(Self.preAuthPrefix + page, userId: nil)
+    let anonymousSent = Set(defaults.stringArray(forKey: Self.anonymousSentDefaultsKey) ?? [])
+    let installId = self.installId
+    for (step, reachedAt) in pending
+    where step.hasPrefix(Self.preAuthPrefix) && !anonymousSent.contains(step) {
+      Task {
+        do {
+          try await sendPreAuth(installId, String(step.dropFirst(Self.preAuthPrefix.count)), reachedAt)
+          let sent = Set(defaults.stringArray(forKey: Self.anonymousSentDefaultsKey) ?? [])
+          defaults.set(Array(sent.union([step])), forKey: Self.anonymousSentDefaultsKey)
+        } catch {
+          // Stays unsent. The next pre-auth page retries it.
+        }
+      }
+    }
   }
 
   /// Records a post-auth onboarding step and sends everything pending.
@@ -85,6 +114,13 @@ final class OnboardingFunnelRecorder {
 
   private func sentSteps(for userId: String) -> Set<String> {
     Set(defaults.stringArray(forKey: Self.sentDefaultsKeyPrefix + userId) ?? [])
+  }
+
+  private var installId: String {
+    if let existing = defaults.string(forKey: Self.installIdDefaultsKey) { return existing }
+    let created = UUID().uuidString
+    defaults.set(created, forKey: Self.installIdDefaultsKey)
+    return created
   }
 
   private func addPending(_ step: String, userId: String?) {

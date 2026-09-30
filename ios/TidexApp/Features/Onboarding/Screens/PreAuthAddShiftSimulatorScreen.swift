@@ -5,11 +5,8 @@ import UIKit
 struct PreAuthAddShiftSimulatorScreen: View {
   let initialCurrency: String
   let onCurrencyChanged: (String) -> Void
-  let onContinue:
-    (_ fromTotals: CalendarHeaderTotals?, _ toTotals: CalendarHeaderTotals?, _ currency: String)
-      -> Void
+  let onContinue: () -> Void
   let onSkip: () -> Void
-  let onBaselineReady: (_ baselineTotals: CalendarHeaderTotals?, _ currency: String) -> Void
   let isPreloaded: Bool
   let onBack: () -> Void
 
@@ -25,13 +22,8 @@ struct PreAuthAddShiftSimulatorScreen: View {
   init(
     initialCurrency: String,
     onCurrencyChanged: @escaping (String) -> Void,
-    onContinue:
-      @escaping (
-        _ fromTotals: CalendarHeaderTotals?, _ toTotals: CalendarHeaderTotals?, _ currency: String
-      ) -> Void,
+    onContinue: @escaping () -> Void,
     onSkip: @escaping () -> Void,
-    onBaselineReady:
-      @escaping (_ baselineTotals: CalendarHeaderTotals?, _ currency: String) -> Void,
     isPreloaded: Bool = false,
     onBack: @escaping () -> Void = {}
   ) {
@@ -39,7 +31,6 @@ struct PreAuthAddShiftSimulatorScreen: View {
     self.onCurrencyChanged = onCurrencyChanged
     self.onContinue = onContinue
     self.onSkip = onSkip
-    self.onBaselineReady = onBaselineReady
     self.isPreloaded = isPreloaded
     self.onBack = onBack
     _viewModel = State(
@@ -123,7 +114,6 @@ struct PreAuthAddShiftSimulatorScreen: View {
     }
     .onAppear {
       guard !isPreloaded else { return }
-      onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(viewModel.currency)
       scheduleFocusRelaxIfNeeded()
       DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -163,11 +153,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
       startTime: viewModel.startTime,
       endTime: viewModel.endTime
     )
-    onContinue(
-      viewModel.baselineToolbarTotals,
-      viewModel.toolbarTotals ?? viewModel.baselineToolbarTotals,
-      viewModel.currency
-    )
+    onContinue()
   }
 
   private func handleTotalsAcknowledged() {
@@ -185,13 +171,11 @@ struct PreAuthAddShiftSimulatorScreen: View {
     viewModel.applyCurrency(selectedCurrency)
     onCurrencyChanged(viewModel.currency)
     OnboardingCurrencyCarryoverStore.writePreferredCurrency(viewModel.currency)
-    onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
   }
 
   private func syncCurrencyFromParent(_ selectedCurrency: String) {
     guard selectedCurrency != viewModel.currency else { return }
     viewModel.applyCurrency(selectedCurrency)
-    onBaselineReady(viewModel.baselineToolbarTotals, viewModel.currency)
   }
 
   private func triggerHintShimmer() {
@@ -467,8 +451,7 @@ extension PreAuthAddShiftSimulatorScreen {
   PreAuthAddShiftSimulatorScreen(
     initialCurrency: "kr",
     onCurrencyChanged: { _ in },
-    onContinue: { _, _, _ in },
-    onSkip: {},
-    onBaselineReady: { _, _ in }
+    onContinue: {},
+    onSkip: {}
   )
 }  // swiftlint:disable:this file_length

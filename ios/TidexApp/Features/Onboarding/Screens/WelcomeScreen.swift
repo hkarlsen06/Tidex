@@ -240,6 +240,15 @@ struct WelcomeScreen: View {
         .fixedSize(horizontal: false, vertical: true)
         .opacity(showSubheadline ? 1 : 0)
         .offset(y: showSubheadline || reduceMotion ? 0 : 6)
+
+      Text(.onboardingWelcomeFree)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexBlueText)
+        .multilineTextAlignment(textAlignment)
+        .frame(maxWidth: .infinity, alignment: frameAlignment)
+        .fixedSize(horizontal: false, vertical: true)
+        .opacity(showSubheadline ? 1 : 0)
+        .offset(y: showSubheadline || reduceMotion ? 0 : 6)
     }
     .frame(maxWidth: 350, alignment: frameAlignment)
     .frame(maxWidth: .infinity, alignment: frameAlignment)
