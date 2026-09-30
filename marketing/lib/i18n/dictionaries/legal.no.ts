@@ -17,7 +17,7 @@ export const legalNo = {
     },
     title: 'Vilkår for bruk',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-05-30',
+    lastUpdatedDate: '2026-09-30',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -60,34 +60,16 @@ export const legalNo = {
           { text: 'Forsøke å få uautorisert tilgang til andres kontoer eller data.' },
           { text: 'Forstyrre eller skade tjenestens funksjonalitet.' },
           { text: 'Automatisere tilgang til tjenesten uten uttrykkelig tillatelse.' },
-          { text: 'Misbruke eller omgå betalingssystemet.' },
           { text: 'Bruke chat, deling, profilinformasjon, bilder eller andre sosiale funksjoner til å trakassere, mobbe, true, spamme, stalke eller utgi deg for å være andre brukere.' },
           { text: 'Dele hatefult, seksuelt utnyttende, voldelig eller på annen måte støtende innhold gjennom meldinger, vedlegg, profilinformasjon eller andre flater for brukergenerert innhold i Tidex.' },
         ],
         closingParagraph: 'Det er nulltoleranse for støtende innhold og abusive brukere. Vi kan undersøke rapportert atferd, begrense funksjoner, fjerne innhold, suspendere meldings- eller delingstilgang, blokkere brukere eller avslutte kontoer når vi mottar misbruksrapporter eller på annen måte blir kjent med misbruk.',
       },
       {
-        heading: '6. Abonnement og betaling',
+        heading: '6. Pris',
         paragraphs: [
-          'Tidex tilbyr betalte abonnementer som gir tilgang til premium-funksjoner. Betalingsvilkårene varierer avhengig av plattform:',
-        ],
-        list: [
-          { boldLabel: 'Eldre nettabonnementer:', text: 'Tidex selger eller administrerer ikke lenger abonnementer på nettsiden. Hvis du fortsatt har et eldre nettabonnement, kontakt support på contact@tidex.no så hjelper vi deg manuelt.' },
-          { boldLabel: 'iOS-appen:', text: 'Abonnementer kjøpt i iOS-appen håndteres av Apple via In-App Purchase. Abonnementer fornyes automatisk med mindre du sier opp minst 24 timer før gjeldende periode utløper. Du administrerer og sier opp abonnementet i App Store-innstillingene på enheten din (Innstillinger → Apple-ID → Abonnementer).' },
-        ],
-        subsections: [
-          {
-            subheading: 'Automatisk fornyelse',
-            text: 'Alle abonnementer fornyes automatisk med mindre de sies opp før neste fakturaperiode.',
-          },
-          {
-            subheading: 'Prisendringer',
-            text: 'For eldre nettabonnementer håndteres spørsmål om pris og eventuelle endringer direkte via support. For iOS-abonnementer følger prisendringer Apples prosesser, og du kan bli bedt om å godta nye priser før fornyelse.',
-          },
-          {
-            subheading: 'Refusjoner',
-            text: 'For eldre nettabonnementer vurderes refusjoner individuelt – kontakt oss på contact@tidex.no. For iOS-kjøp håndteres refusjoner av Apple i henhold til App Store-retningslinjene. Besøk reportaproblem.apple.com for å be om refusjon.',
-          },
+          'Tidex er gratis. Det finnes ingen abonnementer og ingen kjøp i appen.',
+          'Abonnementer kjøpt i iOS-appen før 28. september 2026 fornyes ikke lenger og avsluttes når gjeldende periode er over. Apple håndterer refusjon for disse kjøpene på reportaproblem.apple.com. Har du et eldre nettabonnement, kontakt oss på contact@tidex.no.',
         ],
       },
       {
@@ -195,7 +177,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-09-29',
+    lastUpdatedDate: '2026-09-30',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -213,7 +195,7 @@ export const legalNo = {
           { boldLabel: 'Skiftdata:', text: 'Arbeidstider, pauser, lønnsinnstillinger og relatert informasjon du registrerer.' },
           { boldLabel: 'Vennemeldinger:', text: 'Meldinger, svarreferanser, bildevedlegg, misbruksrapporter, blokkeringer, trådmetadata og lese-/mute-status når du bruker vennemeldinger.' },
           { boldLabel: 'Autentiseringsinformasjon:', text: 'Økttokens og autentiseringstilstand som trengs for å holde deg innlogget, inkludert informasjon om innloggingsleverandør når du bruker Logg inn med Apple eller Google-innlogging.' },
-          { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Apple for kjøp i appen på iOS. Vi lagrer ikke kortinformasjon.' },
+          { boldLabel: 'Tidligere kjøp:', text: 'Tidex er gratis og selger ingenting. Hvis du kjøpte et abonnement før 28. september 2026, beholder vi abonnementsopplysningene Apple eller Stripe sendte oss, som produkt, status, periodedatoer og transaksjons-ID-er. Vi har aldri mottatt kortinformasjon.' },
           { boldLabel: 'Varslingsmetadata:', text: 'Hvis du aktiverer pushvarsler, kan varslingspayloaden inneholde avsenderidentitet, begrenset meldingsforhåndsvisning, skjermbildevarsler og trådidentifikatorer slik at appen kan vise og åpne riktig samtale.' },
           { boldLabel: 'Enhets- og bruksdata:', text: 'Når du åpner appen, sender den appversjon, iOS-versjon, enhetsmodell, språk, region og tidssone, noen av innstillingene dine (tillatelse til varsler og bakgrunnsoppdatering, hvilke Tidex-widgeter du bruker, lys eller mørk modus, tekststørrelse og Reduser bevegelse), og tidspunktet du åpnet den. Appen sender også tekniske rapporter om oppstart og innlogging, for eksempel om du er logget inn og eventuelle feilmeldinger, slik at vi kan rette innloggingsproblemer.' },
         ],
@@ -226,7 +208,6 @@ export const legalNo = {
           { text: 'Tilby vennemeldinger, bildevedlegg, skjermbildevarsler, misbruksrapportering, sikkerhetsfunksjoner og blokkering av brukere.' },
           { text: 'Autentisere og administrere kontoen din.' },
           { text: 'Støtte valgfri innlogging med Apple og Google.' },
-          { text: 'Behandle abonnementsbetalinger via Apple (iOS-appen).' },
           { text: 'Levere pushvarsler og relaterte varsler i appen dersom du aktiverer dem.' },
           { text: 'Kommunisere med deg om tjenesten.' },
           { text: 'Gi brukerstøtte, rette feil og telle hvor mange som bruker appen og funksjonene i den.' },
@@ -271,7 +252,7 @@ export const legalNo = {
           },
           {
             boldLabel: 'Apple:',
-            text: 'In-App Purchase og betalingsbehandling for iOS-kjøp, Logg inn med Apple og Apple Push Notification service for levering av pushvarsler. Les deres {link}.',
+            text: 'Logg inn med Apple og Apple Push Notification service for levering av pushvarsler. Les deres {link}.',
             link: {
               href: 'https://www.apple.com/legal/privacy/',
               text: 'personvernerklæring',
@@ -286,7 +267,7 @@ export const legalNo = {
             },
           },
         ],
-        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging, kjøp eller pushvarsler. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
+        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging eller pushvarsler. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',
@@ -371,7 +352,6 @@ export const legalNo = {
         paragraphs: ['Vi er interessert i sårbarheter som påvirker:'],
         list: [
           { text: 'Autentiserings- og autorisasjonsfeil.' },
-          { text: 'Betalingsbehandlingssikkerhet.' },
           { text: 'API-sikkerhetsproblemer.' },
           { text: 'Dataeksponering eller lekkasje.' },
           { text: 'Cross-site scripting (XSS) og injeksjonssårbarheter.' },

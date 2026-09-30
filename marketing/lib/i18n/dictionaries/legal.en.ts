@@ -17,7 +17,7 @@ export const legalEn = {
     },
     title: 'Terms of use',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-05-30',
+    lastUpdatedDate: '2026-09-30',
     dateLocale: 'en-US',
     sections: [
       {
@@ -60,34 +60,16 @@ export const legalEn = {
           { text: 'Attempt to gain unauthorised access to other accounts or data.' },
           { text: 'Disrupt or harm the functionality of the service.' },
           { text: 'Automate access to the service without explicit permission.' },
-          { text: 'Abuse or bypass the payment system.' },
           { text: 'Use chat, sharing, profile information, images, or other social features to harass, bully, threaten, spam, stalk, or impersonate other users.' },
           { text: 'Share hateful, sexually exploitative, violent, or otherwise objectionable content through messages, attachments, profile data, or any user-generated content surface in Tidex.' },
         ],
         closingParagraph: 'There is zero tolerance for objectionable content or abusive users. We may investigate reported behaviour, limit features, remove content, suspend messaging or sharing access, block users, or terminate accounts when we receive abuse reports or otherwise become aware of abusive behaviour.',
       },
       {
-        heading: '6. Subscription and payment',
+        heading: '6. Price',
         paragraphs: [
-          'Tidex offers paid subscriptions that unlock premium features. Payment terms vary by platform:',
-        ],
-        list: [
-          { boldLabel: 'Legacy website subscriptions:', text: 'Tidex no longer sells or self-manages subscriptions on the website. If you still have an older website subscription, contact support at contact@tidex.no and we will assist manually.' },
-          { boldLabel: 'iOS app:', text: 'Subscriptions purchased in the iOS app are handled by Apple via In-App Purchase. Subscriptions renew automatically unless you cancel at least 24 hours before the current period ends. You manage and cancel your subscription in the App Store settings on your device (Settings → Apple ID → Subscriptions).' },
-        ],
-        subsections: [
-          {
-            subheading: 'Auto-renewal',
-            text: 'All subscriptions renew automatically unless cancelled before the next billing period.',
-          },
-          {
-            subheading: 'Price changes',
-            text: "For legacy website subscriptions, any pricing questions or changes are handled directly through support. For iOS subscriptions, price changes follow Apple's processes, and you may be asked to consent to new pricing before renewal.",
-          },
-          {
-            subheading: 'Refunds',
-            text: 'For legacy website subscriptions, refunds are evaluated individually—contact us at contact@tidex.no. For iOS purchases, refunds are handled by Apple under App Store policies. Visit reportaproblem.apple.com to request a refund.',
-          },
+          'Tidex is free. There are no subscriptions and no in-app purchases.',
+          'Subscriptions bought in the iOS app before 28 September 2026 no longer renew and end when their current period ends. Apple handles refunds for these purchases at reportaproblem.apple.com. If you have an older website subscription, contact us at contact@tidex.no.',
         ],
       },
       {
@@ -195,7 +177,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-09-29',
+    lastUpdatedDate: '2026-09-30',
     dateLocale: 'en-US',
     sections: [
       {
@@ -213,7 +195,7 @@ export const legalEn = {
           { boldLabel: 'Shift data:', text: 'Working hours, breaks, salary settings and related information you register.' },
           { boldLabel: 'Friends messaging data:', text: 'Messages, reply references, image attachments, abuse reports, block actions, thread metadata, and read/mute state when you use Friends messaging.' },
           { boldLabel: 'Authentication data:', text: 'Session tokens and authentication state needed to keep you signed in, including login provider information when you use Sign in with Apple or Google Sign-In.' },
-          { boldLabel: 'Payment data:', text: 'Handled by Apple for iOS in-app purchases. We do not store card information.' },
+          { boldLabel: 'Earlier purchases:', text: 'Tidex is free and sells nothing. If you bought a subscription before 28 September 2026, we keep the subscription details Apple or Stripe sent us, such as product, status, period dates and transaction IDs. We never received card information.' },
           { boldLabel: 'Notification metadata:', text: 'If you enable push notifications, notification payloads may include sender identity, limited message preview text, screenshot alerts, and thread identifiers so the app can show and open the correct conversation.' },
           { boldLabel: 'Device and usage data:', text: 'When you open the app, it sends the app version, iOS version, device model, language, region and time zone, some of your settings (notification and background refresh permissions, which Tidex widgets you use, light or dark mode, text size and Reduce Motion), and the time you opened it. The app also sends technical reports about launches and sign-in, such as whether you are signed in and any error messages, so we can fix sign-in problems.' },
         ],
@@ -226,7 +208,6 @@ export const legalEn = {
           { text: 'Provide Friends messaging, image attachments, screenshot alerts, abuse reports, safety tooling, and user blocking.' },
           { text: 'Authenticate and manage your account.' },
           { text: 'Support optional sign-in with Apple and Google.' },
-          { text: 'Process subscription payments via Apple (iOS app).' },
           { text: 'Deliver push notifications and related in-app alerts if you enable them.' },
           { text: 'Communicate with you about the service.' },
           { text: 'Give support, fix problems, and count how many people use the app and its features.' },
@@ -271,7 +252,7 @@ export const legalEn = {
           },
           {
             boldLabel: 'Apple:',
-            text: 'In-App Purchase and payment processing for iOS purchases, Sign in with Apple, and Apple Push Notification service for push delivery. Read their {link}.',
+            text: 'Sign in with Apple and Apple Push Notification service for push delivery. Read their {link}.',
             link: {
               href: 'https://www.apple.com/legal/privacy/',
               text: 'privacy policy',
@@ -286,7 +267,7 @@ export const legalEn = {
             },
           },
         ],
-        closingParagraph: 'Data is only shared with Google if you choose Google Sign-In, with Apple when you use Apple sign-in, purchases, or push notifications. No data is shared with third parties beyond those listed above.',
+        closingParagraph: 'Data is only shared with Google if you choose Google Sign-In, with Apple when you use Apple sign-in or push notifications. No data is shared with third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',
@@ -371,7 +352,6 @@ export const legalEn = {
         paragraphs: ['We are interested in vulnerabilities affecting:'],
         list: [
           { text: 'Authentication and authorisation flaws.' },
-          { text: 'Payment processing security.' },
           { text: 'API security issues.' },
           { text: 'Data exposure or leakage.' },
           { text: 'Cross-site scripting (XSS) and injection vulnerabilities.' },
