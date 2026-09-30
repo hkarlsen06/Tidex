@@ -4,7 +4,7 @@ iOS-specific development guidance for the Tidex native app.
 
 ## iOS Development Rules
 
-**Deployment target: iOS 27.0** for every target, so don't add `#available` checks or fallbacks for iOS 27 or earlier. Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
+**Deployment target: iOS 26.0** for every target, so don't add `#available` checks or fallbacks for iOS 26 or earlier. An API introduced in iOS 27 needs an `#available(iOS 27, *)` check and an iOS 26 fallback, because about half of active users were still on iOS 26 in September 2026. Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
 
 Run commands from the repository root unless explicitly stated otherwise.
 
