@@ -225,11 +225,6 @@ BEGIN
     enriched AS (
       SELECT
         f.*,
-        COALESCE(p.before_paywall, false) AS is_grandfathered,
-        s.provider,
-        s.product_id,
-        s.price_id,
-        s.status,
         -- Same fallback as counterpart avatars in get_thread_summary.
         COALESCE(us.profile_picture_url, f.oauth_avatar_url) AS avatar_url,
         lower(COALESCE(f.name, f.email, f.phone, '')) AS name_key,
@@ -242,15 +237,7 @@ BEGIN
           WHEN 'friends' THEN f.friend_count
         END AS sort_value
       FROM filtered f
-      LEFT JOIN public.profiles p ON p.id = f.id
       LEFT JOIN public.user_settings us ON us.user_id = f.id
-      LEFT JOIN LATERAL (
-        SELECT provider, product_id, price_id, status, current_period_end
-        FROM public.subscriptions s
-        WHERE s.user_id = f.id
-        ORDER BY COALESCE(s.current_period_end, '2099-12-31'::timestamptz) DESC
-        LIMIT 1
-      ) s ON true
     ),
     ordered AS (
       -- Dates and counts run newest or highest first, names A to Z. p_reverse flips the order.
@@ -292,24 +279,10 @@ BEGIN
             'bannedUntil', banned_until,
             'isAdmin', is_admin,
             'isSuperAdmin', is_super_admin,
-            'isGrandfathered', is_grandfathered,
             'appVersion', app_version,
             'shiftCount', shift_count,
             'messageCount', message_count,
-            'friendCount', friend_count,
-            'plan',
-              CASE
-                WHEN provider = 'admin_trial' AND status = 'active' THEN 'trial'
-                WHEN status IN ('active', 'trialing', 'grace')
-                  AND (
-                    COALESCE(product_id, '') ILIKE '%max%'
-                    OR COALESCE(price_id, '') ILIKE '%max%'
-                    OR COALESCE(product_id, '') IN ('no.tidex.max', 'no.tidex.max.year')
-                    OR COALESCE(price_id, '') IN ('no.tidex.max', 'no.tidex.max.year')
-                  ) THEN 'max'
-                WHEN status IN ('active', 'trialing', 'grace') THEN 'pro'
-                ELSE 'free'
-              END
+            'friendCount', friend_count
           )
           ORDER BY position
         ),
@@ -478,252 +451,6 @@ BEGIN
       )
       FROM (SELECT v_today - i AS day FROM generate_series(0, 29) AS i) AS d
     )
-  );
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.admin_toggle_grandfathered_api(
-  p_target_user_id uuid,
-  p_target_email text,
-  p_grant boolean
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public', 'auth'
-AS $function$
-DECLARE
-  v_old_value boolean;
-BEGIN
-  PERFORM public.assert_is_admin();
-
-  SELECT before_paywall
-  INTO v_old_value
-  FROM public.profiles
-  WHERE id = p_target_user_id;
-
-  IF v_old_value IS NULL AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_target_user_id) THEN
-    RETURN jsonb_build_object('success', false, 'message', 'User not found');
-  END IF;
-
-  UPDATE public.profiles
-  SET before_paywall = p_grant,
-      updated_at = now()
-  WHERE id = p_target_user_id;
-
-  PERFORM public.admin_log_action_rpc(
-    CASE WHEN p_grant THEN 'grant_grandfathered' ELSE 'revoke_grandfathered' END,
-    p_target_user_id,
-    p_target_email,
-    jsonb_build_object('old_value', v_old_value, 'new_value', p_grant)
-  );
-
-  RETURN jsonb_build_object(
-    'success', true,
-    'message', CASE WHEN p_grant THEN 'Lifetime access granted' ELSE 'Lifetime access revoked' END
-  );
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.admin_manage_trial_api(
-  p_target_user_id uuid,
-  p_target_email text,
-  p_action text,
-  p_duration_days integer DEFAULT 7
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public', 'auth'
-AS $function$
-DECLARE
-  v_now timestamptz := now();
-  v_expires_at timestamptz := now() + make_interval(days => GREATEST(COALESCE(p_duration_days, 7), 1));
-  v_existing public.subscriptions%ROWTYPE;
-  v_product_id text := 'admin_trial_' || GREATEST(COALESCE(p_duration_days, 7), 1)::text || 'd';
-BEGIN
-  PERFORM public.assert_is_admin();
-
-  IF p_action NOT IN ('create', 'revoke') THEN
-    RETURN jsonb_build_object('success', false, 'message', 'Invalid action. Must be "create" or "revoke"');
-  END IF;
-
-  SELECT *
-  INTO v_existing
-  FROM public.subscriptions
-  WHERE user_id = p_target_user_id
-  ORDER BY COALESCE(current_period_end, '2099-12-31'::timestamptz) DESC
-  LIMIT 1;
-
-  IF p_action = 'create' THEN
-    IF FOUND
-      AND v_existing.provider <> 'admin_trial'
-      AND v_existing.status IN ('active', 'trialing', 'grace')
-      AND (v_existing.current_period_end IS NULL OR v_existing.current_period_end > v_now) THEN
-      RETURN jsonb_build_object('success', false, 'message', 'User already has an active paid subscription');
-    END IF;
-
-    IF FOUND THEN
-      UPDATE public.subscriptions
-      SET
-        provider = 'admin_trial',
-        provider_subscription_id = 'admin_trial_' || p_target_user_id::text || '_' || extract(epoch from v_now)::bigint::text,
-        status = 'active',
-        product_id = v_product_id,
-        current_period_start = v_now,
-        current_period_end = v_expires_at,
-        updated_at = v_now,
-        cancel_at_period_end = true,
-        cancellation_reason = 'Free trial only'
-      WHERE id = v_existing.id;
-    ELSE
-      INSERT INTO public.subscriptions (
-        user_id,
-        provider,
-        provider_subscription_id,
-        status,
-        product_id,
-        current_period_start,
-        current_period_end,
-        created_at,
-        updated_at,
-        cancel_at_period_end,
-        cancellation_reason,
-        stripe_customer_id
-      ) VALUES (
-        p_target_user_id,
-        'admin_trial',
-        'admin_trial_' || p_target_user_id::text || '_' || extract(epoch from v_now)::bigint::text,
-        'active',
-        v_product_id,
-        v_now,
-        v_expires_at,
-        v_now,
-        v_now,
-        true,
-        'Free trial only',
-        'cus_admintrial' || left(replace(p_target_user_id::text, '-', ''), 8)
-      );
-    END IF;
-
-    PERFORM public.admin_log_action_rpc(
-      'create_trial_subscription',
-      p_target_user_id,
-      p_target_email,
-      jsonb_build_object('duration_days', GREATEST(COALESCE(p_duration_days, 7), 1))
-    );
-
-    RETURN jsonb_build_object('success', true, 'message', 'Trial subscription created');
-  END IF;
-
-  UPDATE public.subscriptions
-  SET
-    status = 'canceled',
-    current_period_end = v_now,
-    updated_at = v_now,
-    cancel_at_period_end = true,
-    cancellation_reason = 'Revoked by admin'
-  WHERE user_id = p_target_user_id
-    AND provider = 'admin_trial';
-
-  PERFORM public.admin_log_action_rpc(
-    'revoke_trial_subscription',
-    p_target_user_id,
-    p_target_email,
-    '{}'::jsonb
-  );
-
-  RETURN jsonb_build_object('success', true, 'message', 'Trial subscription revoked');
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.admin_get_subscribers_api(
-  p_filter text DEFAULT 'all'
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public', 'auth'
-AS $function$
-BEGIN
-  PERFORM public.assert_is_admin();
-
-  RETURN (
-    WITH base AS (
-      SELECT
-        u.id AS user_id,
-        u.email,
-        u.phone,
-        COALESCE(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name') AS name,
-        s.provider,
-        s.product_id,
-        s.price_id,
-        s.status,
-        s.current_period_end,
-        COALESCE(p.before_paywall, false) AS is_grandfathered
-      FROM auth.users u
-      LEFT JOIN LATERAL (
-        SELECT provider, product_id, price_id, status, current_period_end
-        FROM public.subscriptions s
-        WHERE s.user_id = u.id
-        ORDER BY COALESCE(current_period_end, '2099-12-31'::timestamptz) DESC
-        LIMIT 1
-      ) s ON true
-      LEFT JOIN public.profiles p ON p.id = u.id
-      WHERE
-        COALESCE(p.before_paywall, false) = true
-        OR (
-          s.status IN ('active', 'trialing', 'grace')
-          AND (s.current_period_end IS NULL OR s.current_period_end > now())
-        )
-    ),
-    decorated AS (
-      SELECT *,
-        CASE
-          WHEN provider = 'admin_trial' AND status = 'active' THEN 'trial'
-          WHEN status IN ('active', 'trialing', 'grace')
-            AND (
-              COALESCE(product_id, '') ILIKE '%max%'
-              OR COALESCE(price_id, '') ILIKE '%max%'
-              OR COALESCE(product_id, '') IN ('no.tidex.max', 'no.tidex.max.year')
-              OR COALESCE(price_id, '') IN ('no.tidex.max', 'no.tidex.max.year')
-            ) THEN 'max'
-          WHEN status IN ('active', 'trialing', 'grace') THEN 'pro'
-          ELSE 'free'
-        END AS plan
-      FROM base
-    ),
-    filtered AS (
-      SELECT *
-      FROM decorated
-      WHERE
-        COALESCE(p_filter, 'all') = 'all'
-        OR (p_filter = 'grandfathered' AND is_grandfathered = true)
-        OR (p_filter IN ('pro', 'max', 'trial') AND plan = p_filter)
-    )
-    SELECT jsonb_build_object(
-      'success', true,
-      'subscribers', COALESCE(
-        jsonb_agg(
-          jsonb_build_object(
-            'userId', user_id,
-            'email', email,
-            'phone', phone,
-            'name', name,
-            'provider', provider,
-            'productId', product_id,
-            'priceId', price_id,
-            'status', status,
-            'currentPeriodEnd', current_period_end,
-            'isGrandfathered', is_grandfathered,
-            'plan', plan
-          )
-          ORDER BY lower(COALESCE(name, email, phone, ''))
-        ),
-        '[]'::jsonb
-      )
-    )
-    FROM filtered
   );
 END;
 $function$;
@@ -1529,12 +1256,6 @@ BEGIN
     INTO v_count
     FROM internal.push_devices pd
     WHERE p_include_self OR pd.user_id <> auth.uid();
-  ELSIF p_target = 'pro' THEN
-    SELECT COUNT(DISTINCT pd.user_id)::integer
-    INTO v_count
-    FROM internal.push_devices pd
-    INNER JOIN public.subscriptions s ON s.user_id = pd.user_id
-    WHERE s.status IN ('active', 'trialing');
   ELSIF p_target = 'active' THEN
     SELECT COUNT(DISTINCT pd.user_id)::integer
     INTO v_count
@@ -1547,7 +1268,7 @@ BEGIN
     INNER JOIN auth.users u ON u.id = pd.user_id
     WHERE u.created_at >= now() - interval '7 days';
   ELSE
-    RAISE EXCEPTION 'Invalid target. Must be all, pro, active, new, or specific';
+    RAISE EXCEPTION 'Invalid target. Must be all, active, new, or specific';
   END IF;
 
   RETURN jsonb_build_object('count', v_count);
@@ -1605,12 +1326,6 @@ BEGIN
     INTO v_target_user_ids
     FROM internal.push_devices pd
     WHERE p_include_self OR pd.user_id <> v_admin_id;
-  ELSIF p_target = 'pro' THEN
-    SELECT array_agg(DISTINCT pd.user_id)
-    INTO v_target_user_ids
-    FROM internal.push_devices pd
-    INNER JOIN public.subscriptions s ON s.user_id = pd.user_id
-    WHERE s.status IN ('active', 'trialing');
   ELSIF p_target = 'active' THEN
     SELECT array_agg(DISTINCT pd.user_id)
     INTO v_target_user_ids
@@ -1717,9 +1432,6 @@ $function$;
 
 GRANT EXECUTE ON FUNCTION public.admin_log_action_rpc(text, uuid, text, jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_list_users_api(integer, integer, text, text, text, boolean, text, text, text, integer, integer, integer, text, text, text, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_toggle_grandfathered_api(uuid, text, boolean) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_manage_trial_api(uuid, text, text, integer) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_get_subscribers_api(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_feedback_api(integer, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_respond_feedback_api(uuid, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_reports_api(integer, integer, text) TO authenticated;

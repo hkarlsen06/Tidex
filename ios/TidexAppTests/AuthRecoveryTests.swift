@@ -3,7 +3,7 @@ import XCTest
 
 @testable import Tidex
 
-internal final class AuthAndPurchaseRecoveryTests: XCTestCase {
+internal final class AuthRecoveryTests: XCTestCase {
   // MARK: - Password recovery callback
 
   internal func testPKCERecoveryCallbackWithoutTypeIsRecovery() throws {

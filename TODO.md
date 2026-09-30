@@ -2,6 +2,7 @@
 - [x] Remove legacy Friends tab bootstrap RPCs once unsupported iOS clients are retired: `get_my_sharers`, `get_sharing_friends_api`, and `get_my_sharer_preview_payloads`. Migration SQL: `DROP FUNCTION IF EXISTS public.get_my_sharer_preview_payloads(uuid[], date, date); DROP FUNCTION IF EXISTS public.get_my_sharers(); DROP FUNCTION IF EXISTS public.get_sharing_friends_api();`
 - [ ] Remove retired monthly-goal persistence after old app versions no longer need it: drop the Supabase goal columns/defaults/function plumbing in a forward migration, then remove the matching iOS local/sync/sharing compatibility.
 - [ ] Drop `user_settings.ai_data_sharing_enabled` and `user_settings.wagey_showcase_seen` once iOS 2.7.1 and older are retired. Those builds still write both columns when they push settings, so dropping them earlier breaks their settings sync. The app stopped using them in the release after 2.7.1.
+- [ ] Remove the server paywall plumbing once pre-3.0.0 iOS builds are retired: `get_my_entitlement`, `user_entitlements`, `get_paywall_config` + `internal.paywall_config`, `profiles.before_paywall`, and (after 2026-10-18) `apple-server-notifications` with `_shared/deno-signed-data-verifier.ts`, `@apple/app-store-server-library`, `get_or_create_app_account_token`, `internal.app_account_tokens`, `internal.apple_notifications` and `internal.apple_orphan_notifications`.
 
 ## iOS 27 foreground-auth lifecycle false positive
 

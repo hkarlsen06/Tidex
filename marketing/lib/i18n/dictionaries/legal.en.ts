@@ -90,7 +90,7 @@ export const legalEn = {
           { text: 'Downtime or unavailability of the service.' },
           { text: 'Any damage arising from your use of the service.' },
         ],
-        closingParagraph: 'You use the service at your own risk. Our maximum liability is limited to the amount you paid during the last 12 months.',
+        closingParagraph: 'You use the service at your own risk. Tidex is free, and we are not liable for indirect losses such as lost income. These limits do not apply if we cause a loss intentionally or through gross negligence, and nothing in these terms limits your rights under mandatory consumer law.',
       },
       {
         heading: '9. Termination',

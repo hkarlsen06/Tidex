@@ -144,7 +144,6 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 
 | Function                       | `verify_jwt` | Reason      |
 | ------------------------------ | -------------- | ----------- |
-| `stripe_webhook`             | `false`      | Webhook     |
 | `apple-server-notifications` | `false`      | Webhook     |
 | `send-push-notifications`    | `false`      | pg_cron     |
 | `before-user-created`        | `false`      | Auth hook   |

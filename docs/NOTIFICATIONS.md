@@ -63,7 +63,7 @@ User locale is stored in: `auth.users.raw_user_meta_data->>'locale'`
 
 Choose a descriptive `snake_case` name following the pattern `feature_action`:
 
-Examples: `friend_request_received`, `subscription_expired`, `goal_achieved`
+Examples: `friend_request_received`, `shared_shift_added`, `goal_achieved`
 
 ### Step 2: Create Trigger Function
 

@@ -280,7 +280,7 @@ The chat composer is a signature control because it combines input, state, and a
 - **Do** keep pay totals inspectable with nearby row-level detail for supplements, overtime, breaks, tax, and manual adjustments.
 - **Do** use SF Pro, Dynamic Type, VoiceOver labels, and 44pt minimum touch targets for tappable controls.
 - **Do** use status colors only when the state is real and named in text, iconography, or layout.
-- **Do** make loading, sync, validation, subscription limits, and disabled states explicit.
+- **Do** make loading, sync, validation, and disabled states explicit.
 - **Do** use tonal layers before shadows, and keep shadows restrained enough that the ledger still feels calm.
 
 ### Don't:

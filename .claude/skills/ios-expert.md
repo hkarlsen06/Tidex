@@ -26,7 +26,6 @@ ios/
 │   │   ├── Stats/             # Statistics & analytics
 │   │   ├── Settings/          # User settings, pay config, appearance
 │   │   ├── Sharing/           # Share shifts with friends
-│   │   ├── Paywall/           # Premium subscription UI
 │   │   └── Celebration/       # Achievement celebrations
 │   ├── Services/              # API clients, payroll, auth, notifications
 │   ├── Storage/               # SwiftData models, repositories, sync
@@ -56,7 +55,7 @@ ios/
 - **Repositories**: Data access layer over SwiftData (ShiftsRepository, SettingsRepository, etc.)
 - **ViewModels**: `@MainActor`, `ObservableObject` with repository/service dependencies
 - **AppCoordinator**: Singleton managing auth state and navigation flow
-- **Services**: Network, payroll calculation, notifications, StoreKit
+- **Services**: Network, payroll calculation, notifications
 
 ### State Management
 - `@State` for view-local state

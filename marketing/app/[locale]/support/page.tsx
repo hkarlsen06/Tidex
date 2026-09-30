@@ -14,28 +14,28 @@ function supportCopy(locale: Locale) {
   if (locale == 'en') {
     return {
       title: 'Support',
-      description: 'Contact Tidex support for help with your account, subscriptions, billing, or app issues.',
+      description: 'Contact Tidex support for help with your account or the app.',
       emailLabel: 'Email',
       responseLabel: 'Response time',
       responseValue: 'Usually within 2 business days',
       retiredTitle: 'Web app retired',
       retiredBody: 'The old Tidex web app has been retired. app.tidex.no now only exists to redirect old links and preserve Apple associated-domain support.',
-      accountTitle: 'Account and billing',
-      accountBody: 'Include the email address or phone number tied to your Tidex account when you contact us. Legacy website billing issues are handled manually by support.',
+      accountTitle: 'Account',
+      accountBody: 'Include the email address or phone number tied to your Tidex account when you contact us. Questions about earlier purchases are handled manually by support.',
       legalTitle: 'Legal documents',
     };
   }
 
   return {
     title: 'Support',
-    description: 'Kontakt Tidex-support for hjelp med konto, abonnement, betaling eller problemer i appen.',
+    description: 'Kontakt Tidex-support for hjelp med kontoen eller appen.',
     emailLabel: 'E-post',
     responseLabel: 'Svartid',
     responseValue: 'Vanligvis innen 2 virkedager',
     retiredTitle: 'Nettappen er avviklet',
     retiredBody: 'Den gamle Tidex-nettappen er avviklet. app.tidex.no brukes nå bare til å videresende gamle lenker og bevare Apple-tilknyttede domener.',
-    accountTitle: 'Konto og betaling',
-    accountBody: 'Oppgi e-postadressen eller telefonnummeret som er knyttet til Tidex-kontoen din når du kontakter oss. Eldre webbetalinger håndteres manuelt av support.',
+    accountTitle: 'Konto',
+    accountBody: 'Oppgi e-postadressen eller telefonnummeret som er knyttet til Tidex-kontoen din når du kontakter oss. Spørsmål om tidligere kjøp håndteres manuelt av support.',
     legalTitle: 'Juridiske dokumenter',
   };
 }

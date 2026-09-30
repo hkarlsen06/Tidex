@@ -23,7 +23,7 @@ The iOS app and its supporting web infrastructure share a common self-hosted Sup
 
 ### Shared
 - **Database & Auth**: Self-hosted Supabase on `mdr`
-- **Payments**: Apple IAP (iOS) + legacy Stripe subscriptions handled manually via support
+- **Payments**: None. Tidex is free since 2026-09-28; earlier purchases are handled manually via support
 - **Push Notifications**: Firebase Cloud Messaging
 
 ## Repository Structure

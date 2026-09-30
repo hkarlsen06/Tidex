@@ -450,7 +450,7 @@ struct FriendsThreadView: View {
         }
       }
 
-      Button(String(localized: .paywallPrivacyPolicy)) {
+      Button(String(localized: .acceptTermsViewPrivacy)) {
         if let url = URL(
           string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
         {
@@ -458,7 +458,7 @@ struct FriendsThreadView: View {
         }
       }
 
-      Button(String(localized: .paywallTermsOfUse)) {
+      Button(String(localized: .acceptTermsViewTerms)) {
         if let url = URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms")
         {
           openURL(url, prefersInApp: true)

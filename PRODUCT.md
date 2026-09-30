@@ -26,7 +26,7 @@ The product voice should be direct, plain-spoken, and calm. It should avoid cute
 
 Tidex should not look like a joke, a toy calculator, a gamified budgeting app, or a casual student side project. It should not rely on playful mascots, novelty illustration, meme-adjacent copy, exaggerated celebration, or decorative complexity that weakens trust.
 
-It should also avoid opaque "magic number" presentation. Totals, reports, sync status, subscription limits, privacy choices, and payroll assumptions should not feel hidden, minimized, or manipulated.
+It should also avoid opaque "magic number" presentation. Totals, reports, sync status, privacy choices, and payroll assumptions should not feel hidden, minimized, or manipulated.
 
 ## Design Principles
 

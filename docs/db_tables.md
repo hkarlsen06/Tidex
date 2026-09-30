@@ -126,13 +126,15 @@ Each user can have many of these records.
 | Column | Type | Constraints |
 |--------|------|-------------|
 | **id** | `uuid` | PK, FK → auth.users |
-| before_paywall | `boolean` | default: false |
+| before_paywall | `boolean` | default: true (legacy, true for every user since Tidex went free) |
 | created_at | `timestamptz` | |
 | updated_at | `timestamptz` | |
 
 ---
 
 ### subscriptions
+
+Legacy. Tidex has been free since 2026-09-28. The table keeps earlier purchase records, and nothing creates new rows.
 
 | Column | Type | Constraints |
 |--------|------|-------------|
@@ -343,6 +345,8 @@ Each user can have many of these records.
 ---
 
 ### app_account_tokens
+
+Legacy. Only `apple-server-notifications` reads it, and both go away after 2026-10-18.
 
 | Column | Type | Constraints |
 |--------|------|-------------|

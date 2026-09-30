@@ -90,7 +90,7 @@ export const legalNo = {
           { text: 'Nedetid eller utilgjengelighet av tjenesten.' },
           { text: 'Skader som følge av din bruk av tjenesten.' },
         ],
-        closingParagraph: 'Du bruker tjenesten på eget ansvar. Vårt maksimale ansvar er begrenset til beløpet du har betalt de siste 12 månedene.',
+        closingParagraph: 'Du bruker tjenesten på eget ansvar. Tidex er gratis, og vi er ikke ansvarlige for indirekte tap, for eksempel tapt inntekt. Begrensningene gjelder ikke hvis vi har forårsaket tapet med forsett eller grov uaktsomhet, og ingenting i vilkårene begrenser rettighetene dine etter ufravikelig forbrukerlovgivning.',
       },
       {
         heading: '9. Oppsigelse',
