@@ -41,13 +41,14 @@ struct AddJobSheet: View {
   @State private var savedBasicJob: Job?
 
   @State private var name = ""
-  @State private var selectedColor = Color(red: 59 / 255, green: 130 / 255, blue: 246 / 255)
+  @State private var selectedColorHex = OnboardingData.defaultJobColor
   @State private var existingJobName = ""
-  @State private var existingJobColor = Color(red: 59 / 255, green: 130 / 255, blue: 246 / 255)
+  @State private var existingJobColorHex = OnboardingData.defaultJobColor
   @State private var payrollDay: Int
   @State private var showingPaydayInput = false
   @State private var paydayInputText = ""
   @FocusState private var isPaydayInputFocused: Bool
+  @FocusState private var isNameFocused: Bool
   @State private var isSaving = false
   @State private var validationError: String?
   @State private var showSaveError = false
@@ -108,12 +109,12 @@ struct AddJobSheet: View {
         ?? initialCurrency
       onboardingData.payrollDay = payrollDay
       if let color = prefilledBasicJob?.color {
-        selectedColor = colorFromHex(color)
+        selectedColorHex = color
       }
       if let existingJobNeedingSetup {
         existingJobName = existingJobNeedingSetup.name
         if let color = existingJobNeedingSetup.color {
-          existingJobColor = colorFromHex(color)
+          existingJobColorHex = color
         }
       }
     }
@@ -135,14 +136,17 @@ extension AddJobSheet {
   private var jobDetailsStep: some View {
     AddJobStepPage(
       icon: "building.2",
+      iconTint: WorkplaceColor.hexToUIColor(selectedColorHex).map { Color(uiColor: $0) }
+        ?? .tidexBlueText,
       title: .settingsPayAddJobTitle,
       continueTitle: String(localized: .commonContinue),
       isContinueEnabled: !isSaving && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
       validationError: validationError,
+      isContinueHidden: isNameFocused || isPaydayInputFocused,
       onContinue: { Task { await goToWageSetup() } }
     ) {
       HStack {
-        Button(String(localized: .commonCancel)) {
+        Button(dismissTitle) {
           dismiss()
         }
         .font(.tidexBody)
@@ -172,14 +176,7 @@ extension AddJobSheet {
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
-        TextField(
-          "",
-          text: $existingJobName,
-          prompt: Text(.settingsPayAddJobName)
-        )
-        .accessibilityLabel(Text(.settingsPayAddJobName))
-        .textInputAutocapitalization(.words)
-        .foregroundColor(.tidexTextPrimary)
+        nameField(text: $existingJobName)
       }
 
       VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -187,7 +184,7 @@ extension AddJobSheet {
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
-        colorSelectionRow(selectedColor: $existingJobColor)
+        WorkplaceColorGrid(selectedHex: existingJobColorHex) { existingJobColorHex = $0 }
       }
     }
     .addJobCardChrome()
@@ -199,12 +196,20 @@ extension AddJobSheet {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      TextField("", text: $name, prompt: Text(.settingsPayAddJobName))
-        .accessibilityLabel(Text(.settingsPayAddJobName))
-        .textInputAutocapitalization(.words)
-        .foregroundColor(.tidexTextPrimary)
+      nameField(text: $name)
     }
     .addJobCardChrome()
+  }
+
+  /// Return closes the keyboard so the color and payday cards show before Continue does.
+  private func nameField(text: Binding<String>) -> some View {
+    TextField("", text: text, prompt: Text(.onboardingJobBasicsNamePlaceholder))
+      .accessibilityLabel(Text(.settingsPayAddJobName))
+      .textInputAutocapitalization(.words)
+      .submitLabel(.done)
+      .focused($isNameFocused)
+      .onSubmit { isNameFocused = false }
+      .foregroundColor(.tidexTextPrimary)
   }
 
   private var colorCard: some View {
@@ -213,7 +218,7 @@ extension AddJobSheet {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      colorSelectionRow(selectedColor: $selectedColor)
+      WorkplaceColorGrid(selectedHex: selectedColorHex) { selectedColorHex = $0 }
     }
     .addJobCardChrome()
   }
@@ -238,19 +243,12 @@ extension AddJobSheet {
           step = .deductions
         }
       },
-      onBack: wageBackAction,
+      onBack: { step = .jobDetails },
       topTrailingTitle: dismissTitle,
       onTopTrailingAction: {
         dismiss()
       }
     )
-  }
-
-  private var wageBackAction: (() -> Void)? {
-    guard savedBasicJob == nil else { return nil }
-    return {
-      step = .jobDetails
-    }
   }
 
   private var supplementsStep: some View {
@@ -276,6 +274,7 @@ extension AddJobSheet {
       continueTitle: String(localized: .commonSave),
       isContinueEnabled: !isSaving,
       validationError: validationError,
+      isContinueHidden: isNameFocused,
       onContinue: { Task { await submit() } }
     ) {
       HStack {
@@ -354,7 +353,7 @@ extension AddJobSheet {
     let createdJob = await onSaveBasics(
       AddJobBasicsInput(
         name: trimmedName,
-        color: normalizedHex(from: selectedColor),
+        color: selectedColorHex,
         currency: resolvedCurrency,
         payrollDay: payrollDay,
         halfTaxMonth: nil
@@ -398,7 +397,7 @@ extension AddJobSheet {
       existingJobSetupInput = ExistingJobSetupInput(
         id: savedBasicJob.id,
         name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-        color: normalizedHex(from: selectedColor)
+        color: selectedColorHex
       )
     } else if let existingJobNeedingSetup {
       let trimmedExistingName = existingJobName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -410,7 +409,7 @@ extension AddJobSheet {
       existingJobSetupInput = ExistingJobSetupInput(
         id: existingJobNeedingSetup.id,
         name: trimmedExistingName,
-        color: normalizedHex(from: existingJobColor)
+        color: existingJobColorHex
       )
     }
 
@@ -433,7 +432,7 @@ extension AddJobSheet {
       AddJobSetupInput(
         existingJobSetup: setup.existingJobSetup,
         name: setup.name,
-        color: normalizedHex(from: selectedColor),
+        color: selectedColorHex,
         currency: resolvedCurrency,
         payrollDay: payrollDay,
         halfTaxMonth: nil,

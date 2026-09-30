@@ -2,15 +2,21 @@ import SwiftUI
 
 /// Shared layout of the add job pages. It shows a header row, an icon with a title, a stack
 /// of cards, an optional validation error and a continue button pinned to the bottom.
+/// Pass `isContinueHidden` while a text field has focus, so the button doesn't sit on top of
+/// the keyboard and skip the cards below the field.
 struct AddJobStepPage<Header: View, Cards: View>: View {
   let icon: String
+  var iconTint: Color = .tidexBlueText
   let title: LocalizedStringResource
   let continueTitle: String
   let isContinueEnabled: Bool
   let validationError: String?
+  var isContinueHidden = false
   let onContinue: () -> Void
   @ViewBuilder let header: Header
   @ViewBuilder let cards: Cards
+
+  @ScaledMetric(relativeTo: .title3) private var iconBadgeSize: CGFloat = 64
 
   var body: some View {
     ZStack {
@@ -23,7 +29,9 @@ struct AddJobStepPage<Header: View, Cards: View>: View {
         }
         .scrollDismissesKeyboard(.interactively)
 
-        continueBar
+        if !isContinueHidden {
+          continueBar
+        }
       }
     }
   }
@@ -66,10 +74,12 @@ struct AddJobStepPage<Header: View, Cards: View>: View {
   }
 
   private var titleBlock: some View {
-    VStack(spacing: Spacing.xxxs) {
+    VStack(spacing: Spacing.sm) {
       Image(systemName: icon)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexBlueText)
+        .font(.tidexTitle)
+        .foregroundColor(iconTint)
+        .frame(width: iconBadgeSize, height: iconBadgeSize)
+        .background(iconTint.opacity(0.16), in: Circle())
         .accessibilityHidden(true)
       Text(title)
         .font(.tidexScreenTitle)

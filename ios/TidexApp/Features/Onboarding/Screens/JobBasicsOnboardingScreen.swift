@@ -27,7 +27,10 @@ struct JobBasicsOnboardingScreen: View {
 
       VStack(spacing: 0) {
         scrollArea
-        continueBar
+        // Hidden while typing so Continue doesn't sit on the keyboard and skip the colors.
+        if !isJobNameFocused {
+          continueBar
+        }
       }
     }
     .onAppear {
@@ -91,7 +94,7 @@ struct JobBasicsOnboardingScreen: View {
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
-        WorkplaceColorCarousel(
+        WorkplaceColorGrid(
           selectedHex: data.jobColor ?? OnboardingData.defaultJobColor
         ) { hex in
           data.jobColor = hex

@@ -108,14 +108,14 @@ struct WorkplaceNameText: View {
   }
 }
 
-/// Horizontal curated color picker for workplace colors.
-struct WorkplaceColorCarousel: View {
+/// Grid of the curated workplace colors. The selected swatch gets a ring and a check mark.
+struct WorkplaceColorGrid: View {
   let selectedHex: String?
   let onSelect: (String) -> Void
 
   private static let swatchControlSize: CGFloat = 44
   private static let swatchSize: CGFloat = 32
-  private static let selectedRingSize: CGFloat = 36
+  private static let selectedRingSize: CGFloat = 42
 
   private var normalizedSelectedHex: String? {
     guard var selectedHex else { return nil }
@@ -127,88 +127,48 @@ struct WorkplaceColorCarousel: View {
     return "#\(selectedHex.uppercased())"
   }
 
-  private var selectedSwatchColor: Color? {
-    guard
-      let normalizedSelectedHex,
-      let uiColor = WorkplaceColor.hexToUIColor(normalizedSelectedHex)
-    else {
-      return nil
-    }
-    return Color(uiColor: uiColor)
-  }
-
   var body: some View {
-    HStack(spacing: Spacing.xs) {
-      Group {
-        if let selectedSwatchColor {
-          ZStack {
-            Circle()
-              .fill(selectedSwatchColor)
-              .frame(width: Self.swatchSize, height: Self.swatchSize)
-
-            selectedRing
-
-            Image(systemName: "checkmark")
-              .font(.system(size: 11, weight: .bold))
-              .foregroundColor(swatchForegroundColor(for: normalizedSelectedHex))
-          }
-        } else {
-          Circle()
-            .stroke(Color.tidexBorder, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-            .frame(width: Self.swatchSize, height: Self.swatchSize)
-        }
-      }
-      .frame(width: Self.swatchControlSize, height: Self.swatchControlSize)
-      .accessibilityHidden(true)
-
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: Spacing.xs) {
-          ForEach(WorkplaceColor.curatedHexPalette, id: \.self) { hex in
-            let swatchColor = Color(uiColor: WorkplaceColor.hexToUIColor(hex) ?? .systemBlue)
-            let isSelected = normalizedSelectedHex == hex
-
-            Button {
-              onSelect(hex)
-            } label: {
-              ZStack {
-                Circle()
-                  .fill(swatchColor)
-                  .frame(width: Self.swatchSize, height: Self.swatchSize)
-
-                if isSelected {
-                  selectedRing
-
-                  Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(swatchForegroundColor(for: hex))
-                }
-              }
-              .frame(width: Self.swatchControlSize, height: Self.swatchControlSize)
-              .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(WorkplaceColor.accessibilityName(for: hex))
-            .accessibilityInputLabels([WorkplaceColor.accessibilityName(for: hex)])
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
-          }
-        }
-        .padding(.vertical, 1)
-        .padding(.horizontal, 1)
+    LazyVGrid(
+      columns: [GridItem(.adaptive(minimum: Self.swatchControlSize), spacing: Spacing.xxs)],
+      spacing: Spacing.xxs
+    ) {
+      ForEach(WorkplaceColor.curatedHexPalette, id: \.self) { hex in
+        swatch(hex: hex, isSelected: normalizedSelectedHex == hex)
       }
     }
     .accessibilityElement(children: .contain)
     .accessibilityLabel(Text(.settingsPayAddJobColorLabel))
+    .sensoryFeedback(.selection, trigger: normalizedSelectedHex)
   }
 
-  private var selectedRing: some View {
-    Circle()
-      .stroke(Color.tidexSurfacePrimary.opacity(0.98), lineWidth: 2)
-      .frame(width: Self.selectedRingSize, height: Self.selectedRingSize)
-      .overlay {
+  private func swatch(hex: String, isSelected: Bool) -> some View {
+    let swatchColor = Color(uiColor: WorkplaceColor.hexToUIColor(hex) ?? .systemBlue)
+
+    return Button {
+      onSelect(hex)
+    } label: {
+      ZStack {
         Circle()
-          .stroke(Color.tidexTextPrimary.opacity(0.28), lineWidth: 1)
-          .frame(width: Self.selectedRingSize, height: Self.selectedRingSize)
+          .fill(swatchColor)
+          .frame(width: Self.swatchSize, height: Self.swatchSize)
+
+        if isSelected {
+          Circle()
+            .stroke(swatchColor, lineWidth: 2)
+            .frame(width: Self.selectedRingSize, height: Self.selectedRingSize)
+
+          Image(systemName: "checkmark")
+            .font(.system(size: 13, weight: .bold))
+            .foregroundColor(swatchForegroundColor(for: hex))
+        }
       }
+      .frame(width: Self.swatchControlSize, height: Self.swatchControlSize)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(WorkplaceColor.accessibilityName(for: hex))
+    .accessibilityInputLabels([WorkplaceColor.accessibilityName(for: hex)])
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 
   private func swatchForegroundColor(for hex: String?) -> Color {

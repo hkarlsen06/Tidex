@@ -13,7 +13,7 @@ extension View {
   }
 }
 
-/// Payday picker with the common days and a free entry field for other days.
+/// Payday picker with the common days in a grid and a row below for any other day.
 struct AddJobPayDetailsCard: View {
   @Binding var payrollDay: Int
   @Binding var showingPaydayInput: Bool
@@ -22,81 +22,54 @@ struct AddJobPayDetailsCard: View {
   let onApplyPaydayInput: () -> Void
 
   private let payrollDayOptions = [1, 10, 15, 20, 25, 31]
-  @ScaledMetric(relativeTo: .headline) private var paydayInputWidth: CGFloat = 44
 
   private var isCustomPayday: Bool {
     !payrollDayOptions.contains(payrollDay)
   }
 
+  // Three columns keep long translations of "Last" readable on small phones.
+  private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xs), count: 3)
+
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(.settingsPayAddJobPayrollDay)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      Text(.settingsPayAddJobPayrollDay)
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextSecondary)
 
-        paydayOptions
-
-        if isCustomPayday, !showingPaydayInput {
-          Text(String(localized: .onboardingSettingsPaydayCustomValue(payrollDay)))
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexBlueText)
+      LazyVGrid(columns: columns, spacing: Spacing.xs) {
+        ForEach(payrollDayOptions, id: \.self) { day in
+          AddJobPaydayButton(
+            day: day,
+            isLast: day == 31,
+            isSelected: payrollDay == day && !showingPaydayInput,
+            action: {
+              showingPaydayInput = false
+              payrollDay = day
+            }
+          )
         }
       }
 
+      if showingPaydayInput {
+        paydayTextField
+      } else {
+        otherPaydayButton
+      }
     }
     .addJobCardChrome()
     .sensoryFeedback(.impact(weight: .light), trigger: showingPaydayInput) { _, new in new }
     .sensoryFeedback(.selection, trigger: payrollDay)
   }
 
-  private var paydayOptions: some View {
-    ZStack(alignment: .trailing) {
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: Spacing.xs) {
-          ForEach(payrollDayOptions, id: \.self) { day in
-            AddJobPaydayButton(
-              day: day,
-              isLast: day == 31,
-              isSelected: payrollDay == day && !showingPaydayInput,
-              action: {
-                showingPaydayInput = false
-                payrollDay = day
-              }
-            )
-          }
-
-          if showingPaydayInput {
-            paydayTextField
-          } else {
-            otherPaydayButton
-          }
-        }
-        .padding(.horizontal, Spacing.micro)
-        .padding(.vertical, Spacing.xxs)
-        .padding(.trailing, Spacing.lg)
-      }
-
-      LinearGradient(
-        colors: [Color.tidexSurfaceSecondary.opacity(0), Color.tidexSurfaceSecondary],
-        startPoint: .leading,
-        endPoint: .trailing
-      )
-      .frame(width: 32)
-      .allowsHitTesting(false)
-    }
-  }
-
   private var paydayTextField: some View {
-    TextField("", text: $paydayInputText)
+    TextField("", text: $paydayInputText, prompt: Text(.settingsPayAddJobPayrollDay))
       .accessibilityLabel(Text(.settingsPayAddJobPayrollDay))
       .font(.tidexButton)
       .foregroundColor(.tidexBlueText)
       .keyboardType(.numberPad)
       .multilineTextAlignment(.center)
       .focused(isPaydayInputFocused)
-      .frame(width: paydayInputWidth)
-      .frame(minHeight: 44)
+      .frame(maxWidth: .infinity, minHeight: 44)
       .background(Color.tidexBlue.opacity(0.15))
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       .overlay(
@@ -131,11 +104,15 @@ struct AddJobPayDetailsCard: View {
         Image(systemName: "pencil")
           .font(.tidexCaptionRegular)
           .accessibilityHidden(true)
-        Text(.onboardingSettingsPaydayOther)
+        if isCustomPayday {
+          Text(.onboardingSettingsPaydayCustomValue(payrollDay))
+        } else {
+          Text(.onboardingSettingsPaydayOther)
+        }
       }
       .font(isCustomPayday ? .tidexLabelStrong : .tidexLabel)
       .foregroundColor(isCustomPayday ? .tidexTextOnBrand : .tidexTextSecondary)
-      .frame(minWidth: 56, minHeight: 44)
+      .frame(maxWidth: .infinity, minHeight: 44)
       .padding(.horizontal, Spacing.xs)
       .background(
         isCustomPayday
@@ -156,17 +133,12 @@ private struct AddJobPaydayButton: View {
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: Spacing.micro) {
-        if isSelected {
-          Image(systemName: "checkmark")
-            .font(.tidexMicro.weight(.bold))
-            .accessibilityHidden(true)
-        }
-        Text(dayText)
-      }
+      Text(dayText)
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
         .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
-        .frame(minWidth: 56, minHeight: 44)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .frame(maxWidth: .infinity, minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }

@@ -255,7 +255,7 @@ private struct AdminUserFilterBar: View {
 
   @ViewBuilder private var sortChips: some View {
     Menu {
-      Picker("Sort by", selection: $query.sort) {
+      Picker("Sort by", selection: afterMenuCloses($query.sort)) {
         ForEach(AdminUserSort.allCases) { Text($0.title).tag($0) }
       }
     } label: {
@@ -316,7 +316,7 @@ private struct AdminUserFilterBar: View {
     let isActive: Bool = selection.wrappedValue != options.first?.0
     let selected: String? = options.first { $0.0 == selection.wrappedValue }?.1
     return Menu {
-      Picker(name, selection: selection) {
+      Picker(name, selection: afterMenuCloses(selection)) {
         ForEach(options, id: \.0) { Text($0.1).tag($0.0) }
       }
     } label: {
@@ -325,6 +325,21 @@ private struct AdminUserFilterBar: View {
         isActive: isActive)
     }
     .accessibilityLabel(isActive ? "\(name): \(selected ?? name)" : name)
+  }
+
+  /// Applies a menu pick once the menu has closed. The menu shrinks back into its chip as it
+  /// closes, and if the chip changes width or moves (the Clear chip appearing) during that
+  /// animation, the menu lands on the old frame and then jumps.
+  private func afterMenuCloses<Value>(_ selection: Binding<Value>) -> Binding<Value> {
+    Binding {
+      selection.wrappedValue
+    } set: { value in
+      Task { @MainActor in
+        // ponytail: fixed guess at the close animation; SwiftUI has no menu-closed callback.
+        try? await Task.sleep(for: .milliseconds(350))
+        withAnimation(.snappy) { selection.wrappedValue = value }
+      }
+    }
   }
 }
 

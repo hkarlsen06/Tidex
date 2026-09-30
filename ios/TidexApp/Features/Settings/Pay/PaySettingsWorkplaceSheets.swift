@@ -68,7 +68,7 @@ struct EditWorkplaceSheet: View {
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
 
-            WorkplaceColorCarousel(selectedHex: Self.normalizedHex(from: selectedColor)) { hex in
+            WorkplaceColorGrid(selectedHex: Self.normalizedHex(from: selectedColor)) { hex in
               selectedColor = Self.colorFromHex(hex) ?? .tidexBlue
             }
           }
@@ -136,9 +136,9 @@ struct EditWorkplaceSheet: View {
 
     return String(
       format: "#%02X%02X%02X",
-      Int(red * 255),
-      Int(green * 255),
-      Int(blue * 255)
+      Int((red * 255).rounded()),
+      Int((green * 255).rounded()),
+      Int((blue * 255).rounded())
     )
   }
 
