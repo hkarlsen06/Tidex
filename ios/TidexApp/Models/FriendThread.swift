@@ -19,6 +19,9 @@ internal struct FriendThread: Identifiable, Codable, Equatable {
   internal let unreadCount: Int
   internal let muted: Bool
   internal let createdAt: Date
+  /// When the viewer's state row that `unreadCount` and `muted` come from was last updated. Only
+  /// inbox snapshots and inbox events send it.
+  internal let viewerStateUpdatedAt: Date?
 
   internal init(
     id: String,
@@ -38,7 +41,8 @@ internal struct FriendThread: Identifiable, Codable, Equatable {
     lastMessageHasImage: Bool = false,
     unreadCount: Int = 0,
     muted: Bool = false,
-    createdAt: Date
+    createdAt: Date,
+    viewerStateUpdatedAt: Date? = nil
   ) {
     self.id = id
     self.kind = kind
@@ -58,6 +62,7 @@ internal struct FriendThread: Identifiable, Codable, Equatable {
     self.unreadCount = unreadCount
     self.muted = muted
     self.createdAt = createdAt
+    self.viewerStateUpdatedAt = viewerStateUpdatedAt
   }
 
   internal var counterpartAvatarUrl: String? {
@@ -101,6 +106,8 @@ internal struct FriendThreadState: Codable, Equatable {
   internal let lastReadAt: Date?
   internal let muted: Bool
   internal let updatedAt: Date
+  /// The viewer's unread count in this revision. Only the viewer's own state rows send it.
+  internal var unreadCount: Int?
 }
 
 internal struct FriendMessageAttachment: Identifiable, Codable, Equatable, Hashable {

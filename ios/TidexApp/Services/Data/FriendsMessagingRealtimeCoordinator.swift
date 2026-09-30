@@ -1,6 +1,6 @@
 import Foundation
-import os.log
 import Supabase
+import os.log
 
 private let realtimeLogger = Logger(
   subsystem: "com.tidex.app", category: "FriendsMessagingRealtime")
@@ -159,6 +159,9 @@ final class FriendsMessagingRealtimeCoordinator {
   private var typingRetryTasks: [String: Task<Void, Never>] = [:]
   private var threadChannels: [String: RealtimeChannelV2] = [:]
   private var threadTasks: [String: [Task<Void, Never>]] = [:]
+  /// Threads with a detail subscribe in flight. The client returns the same channel for a topic,
+  /// so a second subscribe would share it and register its handlers twice.
+  private var pendingThreadDetailSubscriptions: Set<String> = []
   private let refreshRunner = SerializedRefreshRunner()
 
   struct ThreadTypingPayload: Codable, Equatable {
@@ -386,6 +389,9 @@ final class FriendsMessagingRealtimeCoordinator {
   }
 
   private func startThreadDetailSubscription(threadId: String, viewerUserId: String) async {
+    // The pending subscribe keeps the channel when the thread is active again once it finishes.
+    guard pendingThreadDetailSubscriptions.insert(threadId).inserted else { return }
+    defer { pendingThreadDetailSubscriptions.remove(threadId) }
     await teardownThreadDetailChannel(threadId: threadId)
     let channel = supabase.channel("friends-thread-detail:\(threadId)") { config in
       config.broadcast.receiveOwnBroadcasts = true
@@ -401,28 +407,38 @@ final class FriendsMessagingRealtimeCoordinator {
       }
       threadChannels[threadId] = channel
 
-      threadTasks[threadId] = makeThreadDetailTasks(
-        for: channel,
-        threadId: threadId,
-        viewerUserId: viewerUserId,
-        streams: streams
-      )
-
-      // Realtime changes replay the event log from the stored cursor. Without one, the first
-      // change would fall back to a snapshot of the newest page and move the cursor past edits
-      // to older loaded messages, so set the cursor now.
-      if await repository.getMessagingSyncState(
-        viewerUserId: viewerUserId,
-        scope: .thread(threadId: threadId)
-      ) == nil {
-        await refreshThreadSnapshot(threadId: threadId, viewerUserId: viewerUserId)
-      }
+      threadTasks[threadId] =
+        makeThreadDetailTasks(
+          for: channel,
+          threadId: threadId,
+          viewerUserId: viewerUserId,
+          streams: streams
+        ) + [makeInitialThreadSnapshotTask(threadId: threadId, viewerUserId: viewerUserId)]
     } catch {
       realtimeLogger.error(
         "Failed to subscribe thread detail realtime: \(error.localizedDescription)")
       await supabase.removeChannel(channel)
       if activeThreadId == threadId {
         scheduleTypingChannelRepair(threadId: threadId, reason: error.localizedDescription)
+      }
+    }
+  }
+
+  /// Realtime changes replay the event log from the stored cursor. Without one, the first change
+  /// would fall back to a snapshot of the newest page and move the cursor past edits to older
+  /// loaded messages, so this sets the cursor right after subscribing. It runs in a task so opening
+  /// the thread doesn't wait for it; refreshRunner queues changes that arrive meanwhile.
+  private func makeInitialThreadSnapshotTask(
+    threadId: String,
+    viewerUserId: String
+  ) -> Task<Void, Never> {
+    Task { [weak self] in
+      guard let self else { return }
+      if await repository.getMessagingSyncState(
+        viewerUserId: viewerUserId,
+        scope: .thread(threadId: threadId)
+      ) == nil {
+        await refreshThreadSnapshot(threadId: threadId, viewerUserId: viewerUserId)
       }
     }
   }

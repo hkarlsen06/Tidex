@@ -93,6 +93,11 @@ final class LocalThreadState {
   /// The server's `thread_user_state.updated_at` for the stored read marker. It grows with every
   /// update of the row, so it orders states that arrive out of order.
   var serverUpdatedAt: Date?
+  /// The viewer's unread count at `unreadCountUpdatedAt`. Nil until a source with a count arrives.
+  var unreadCount: Int?
+  /// The server revision of `unreadCount` and `muted`. Inbox threads carry a count without a read
+  /// marker, so this can be newer than `serverUpdatedAt`.
+  var unreadCountUpdatedAt: Date?
 
   init(
     threadId: String,
@@ -111,6 +116,8 @@ final class LocalThreadState {
     self.muted = muted
     self.updatedAt = updatedAt
     self.serverUpdatedAt = serverUpdatedAt
+    self.unreadCount = nil
+    self.unreadCountUpdatedAt = nil
   }
 }
 
@@ -409,15 +416,59 @@ extension LocalThreadState {
   func apply(state: FriendThreadState) {
     lastReadMessageId = state.lastReadMessageId
     lastReadAt = state.lastReadAt
-    muted = state.muted
     updatedAt = state.updatedAt
     serverUpdatedAt = state.updatedAt
+    if let unreadCount = state.unreadCount {
+      recordServerCount(unreadCount, muted: state.muted, at: state.updatedAt)
+    } else if !hasNewerServerCount(than: state.updatedAt) {
+      muted = state.muted
+    }
   }
 
-  /// True when the stored state is a newer server version than one from `updatedAt`, for example
-  /// when a mark-read response arrives after a newer realtime event.
+  /// True when the stored read marker is a newer server version than one from `updatedAt`, for
+  /// example when a mark-read response arrives after a newer realtime event.
   func isNewer(than updatedAt: Date) -> Bool {
     serverUpdatedAt.map { updatedAt < $0 } ?? false
+  }
+
+  /// True when the stored unread count and mute are a newer server version than `updatedAt`.
+  func hasNewerServerCount(than updatedAt: Date) -> Bool {
+    unreadCountUpdatedAt.map { updatedAt < $0 } ?? false
+  }
+
+  /// True when this row's unread count and mute beat those of a thread summary from `revision`.
+  /// A summary without a revision can't be ordered, so any stored server revision beats it.
+  func beatsSummary(from revision: Date?) -> Bool {
+    guard let revision else { return serverUpdatedAt != nil || unreadCountUpdatedAt != nil }
+    return isNewer(than: revision) || hasNewerServerCount(than: revision)
+  }
+
+  /// The unread count to keep when a summary older than this row arrives with a thread whose last
+  /// message is `lastMessageId`. `revision` is the summary's, or nil when it has none. Nil when this
+  /// row can't tell.
+  func unreadCount(forLastMessageId lastMessageId: String?, olderThan revision: Date?) -> Int? {
+    if let unreadCount, let unreadCountUpdatedAt,
+      revision.map({ $0 < unreadCountUpdatedAt }) ?? true,
+      !isNewer(than: unreadCountUpdatedAt)
+    {
+      return unreadCount
+    }
+    // A newer mark-read of the snapshot's last message, which the snapshot can bring in first.
+    if lastMessageId != nil, lastReadMessageId == lastMessageId {
+      return 0
+    }
+    return nil
+  }
+
+  /// Stores the unread count and mute of a server revision unless newer ones are stored.
+  /// Returns true when it stored them.
+  @discardableResult
+  func recordServerCount(_ count: Int, muted: Bool, at revision: Date) -> Bool {
+    guard !hasNewerServerCount(than: revision) else { return false }
+    unreadCount = count
+    self.muted = muted
+    unreadCountUpdatedAt = revision
+    return true
   }
 }
 

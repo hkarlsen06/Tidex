@@ -1,0 +1,20 @@
+STAGED_SWIFT_FILES=$(git diff --cached --name-only --diff-filter=d -- '*.swift')
+
+if [ -n "$STAGED_SWIFT_FILES" ]; then
+  echo "$STAGED_SWIFT_FILES" | xargs xcrun swift-format format --configuration .swift-format --in-place --parallel
+  echo "$STAGED_SWIFT_FILES" | xargs swiftlint lint --quiet
+  SWIFTLINT_STATUS=$?
+  echo "$STAGED_SWIFT_FILES" | xargs git add
+
+  if [ $SWIFTLINT_STATUS -ne 0 ]; then
+    echo "swiftlint found issues. Please fix them before committing."
+    exit 1
+  fi
+fi
+
+STAGED_XCSTRINGS_FILES=$(git diff --cached --name-only --diff-filter=d -- 'ios/**/*.xcstrings')
+
+if [ -n "$STAGED_XCSTRINGS_FILES" ]; then
+  bun run localize -- $STAGED_XCSTRINGS_FILES
+  echo "$STAGED_XCSTRINGS_FILES" | xargs git add
+fi

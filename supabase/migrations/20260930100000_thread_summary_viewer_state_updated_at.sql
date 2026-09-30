@@ -1,6 +1,8 @@
--- Function: build_thread_summary_sync_payload_v2
--- Description: Builds the caller-specific thread-list summary payload used by messaging sync V2
-
+-- Adds viewer_state_updated_at to the thread summary payload that inbox snapshots and inbox
+-- events carry. unread_count and muted in the payload come from that thread_user_state row, so
+-- the iOS app compares the timestamp with the read state it has stored and keeps the stored
+-- unread count and mute when they are newer, for example after a mark-read that finished while
+-- an inbox snapshot was loading. Older app versions ignore the extra key.
 CREATE OR REPLACE FUNCTION internal.build_thread_summary_sync_payload_v2(
   p_thread_id uuid,
   p_viewer_user_id uuid,

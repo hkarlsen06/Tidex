@@ -956,6 +956,8 @@ private struct MessagingThreadSummaryRow: Decodable {
   let unreadCount: Int
   let muted: Bool
   let createdAt: Date
+  /// Parsed with ISO8601Timestamp to keep the microseconds it is compared at.
+  let viewerStateUpdatedAt: String?
 
   enum CodingKeys: String, CodingKey {
     case threadId = "thread_id"
@@ -976,6 +978,7 @@ private struct MessagingThreadSummaryRow: Decodable {
     case unreadCount = "unread_count"
     case muted
     case createdAt = "created_at"
+    case viewerStateUpdatedAt = "viewer_state_updated_at"
   }
 
   func toFriendThread() -> FriendThread {
@@ -997,7 +1000,8 @@ private struct MessagingThreadSummaryRow: Decodable {
       lastMessageHasImage: lastMessageHasImage,
       unreadCount: unreadCount,
       muted: muted,
-      createdAt: createdAt
+      createdAt: createdAt,
+      viewerStateUpdatedAt: viewerStateUpdatedAt.flatMap(ISO8601Timestamp.date(from:))
     )
   }
 
@@ -1212,7 +1216,8 @@ private struct MessagingThreadSyncViewerStateRow: Decodable {
       lastReadMessageId: lastReadMessageId,
       lastReadAt: lastReadAt,
       muted: muted,
-      updatedAt: updatedAt
+      updatedAt: updatedAt,
+      unreadCount: unreadCount
     )
   }
 }
@@ -1513,6 +1518,7 @@ struct MessagingThreadUserStateRow: Decodable {
   let lastReadAt: Date?
   let muted: Bool
   let updatedAt: Date
+  let unreadCount: Int?
 
   enum CodingKeys: String, CodingKey {
     case threadId = "thread_id"
@@ -1521,6 +1527,7 @@ struct MessagingThreadUserStateRow: Decodable {
     case lastReadAt = "last_read_at"
     case muted
     case updatedAt = "updated_at"
+    case unreadCount = "unread_count"
   }
 
   func toFriendThreadState() -> FriendThreadState {
@@ -1530,7 +1537,8 @@ struct MessagingThreadUserStateRow: Decodable {
       lastReadMessageId: lastReadMessageId,
       lastReadAt: lastReadAt,
       muted: muted,
-      updatedAt: updatedAt
+      updatedAt: updatedAt,
+      unreadCount: unreadCount
     )
   }
 }  // swiftlint:disable:this file_length

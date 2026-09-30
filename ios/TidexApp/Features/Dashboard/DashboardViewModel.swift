@@ -2664,7 +2664,11 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     if showLoadingState {
       isLoading = true
     }
-    error = nil
+    // A navigation load clears the error only once settings exist, so it doesn't hide the
+    // noLocalData error of a full load that is still waiting for them.
+    if expectedDisplayYM == nil {
+      error = nil
+    }
 
     do {
       // Get or cache user ID
@@ -2719,6 +2723,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
         self.isLoading = false
         return
       }
+      error = nil
 
       updateUserAvatarFromSettings()
       logger.info("📋 Loaded snapshots: \(self.snapshots.count)")

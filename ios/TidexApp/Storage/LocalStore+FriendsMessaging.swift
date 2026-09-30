@@ -212,42 +212,42 @@ extension LocalStoreActor {
     try modelContext.save()
   }
 
-  /// Pass `viewerStateUpdatedAt` when the thread comes from a thread snapshot. Its unread count
-  /// and mute come from the viewer's state row at that revision, so a stored newer state keeps
-  /// them, for example after a mark-read that finished while the snapshot was loading.
+  /// Pass `viewerStateUpdatedAt` when the thread comes from a thread snapshot; inbox threads
+  /// carry it in `thread.viewerStateUpdatedAt`. Their unread count and mute come from the viewer's
+  /// state row at that revision, so a stored newer state keeps them, for example after a mark-read
+  /// that finished while the snapshot was loading, or an inbox that loaded after the snapshot.
+  /// A summary without a revision, such as a delete_message response or a cached copy restored
+  /// after a failed delete, can't be ordered, so stored server values win over it.
   func saveThreadSummary(
     _ thread: FriendThread,
     for viewerUserId: String,
     viewerStateUpdatedAt: Date? = nil
   ) throws {
-    let threadId = thread.id
-    let descriptor = FetchDescriptor<LocalThread>(
-      predicate: #Predicate { localThread in
-        localThread.id == threadId && localThread.viewerUserId == viewerUserId
-      }
-    )
-    let newerStoredState = try viewerStateUpdatedAt.flatMap { updatedAt in
-      try fetchThreadState(threadId: threadId, userId: viewerUserId)
-        .flatMap { $0.isNewer(than: updatedAt) ? $0 : nil }
-    }
-    let storedStateIsNewer = newerStoredState != nil
+    let stateUpdatedAt = viewerStateUpdatedAt ?? thread.viewerStateUpdatedAt
+    let storedState = try fetchThreadState(threadId: thread.id, userId: viewerUserId)
 
-    if let existing = try modelContext.fetch(descriptor).first {
-      let (storedUnreadCount, storedMuted) = (existing.unreadCount, existing.muted)
+    let localThread: LocalThread
+    let cachedUnreadCount: Int?
+    if let existing = try fetchThread(id: thread.id, viewerUserId: viewerUserId) {
+      cachedUnreadCount = existing.unreadCount
       existing.apply(thread: thread)
-      if let newerStoredState {
-        // The stored state can be a mark-read of a message this snapshot first brings in.
-        let hasReadLastMessage =
-          thread.lastMessageId != nil && newerStoredState.lastReadMessageId == thread.lastMessageId
-        existing.unreadCount = hasReadLastMessage ? 0 : storedUnreadCount
-        existing.muted = storedMuted
-      }
+      localThread = existing
     } else {
-      insertThreadSummary(thread, for: viewerUserId)
+      // The state can be stored before the thread, for example by a mark-read from a
+      // notification.
+      cachedUnreadCount = nil
+      localThread = insertThreadSummary(thread, for: viewerUserId)
     }
 
-    guard !storedStateIsNewer else { return }
-    try upsertThreadState(
+    if let storedState, storedState.beatsSummary(from: stateUpdatedAt) {
+      localThread.unreadCount =
+        storedState.unreadCount(forLastMessageId: thread.lastMessageId, olderThan: stateUpdatedAt)
+        ?? cachedUnreadCount ?? thread.unreadCount
+      localThread.muted = storedState.muted
+      return
+    }
+
+    let savedState = try upsertThreadState(
       FriendThreadState(
         threadId: thread.id,
         userId: viewerUserId,
@@ -258,31 +258,36 @@ extension LocalStoreActor {
       ),
       updateReadMarker: false
     )
+    if let stateUpdatedAt {
+      savedState.recordServerCount(thread.unreadCount, muted: thread.muted, at: stateUpdatedAt)
+    }
   }
 
-  private func insertThreadSummary(_ thread: FriendThread, for viewerUserId: String) {
-    modelContext.insert(
-      LocalThread(
-        id: thread.id,
-        viewerUserId: viewerUserId,
-        kindRaw: thread.kind.rawValue,
-        title: thread.title,
-        avatarUrl: thread.avatarUrl,
-        metadataData: thread.metadataData ?? Data(),
-        counterpartUserId: thread.counterpartUserId,
-        counterpartDisplayName: thread.counterpartDisplayName,
-        counterpartProfilePictureUrl: thread.counterpartProfilePictureUrl,
-        counterpartOAuthAvatarUrl: thread.counterpartOAuthAvatarUrl,
-        lastMessageId: thread.lastMessageId,
-        lastMessageSenderId: thread.lastMessageSenderId,
-        lastMessageAt: thread.lastMessageAt,
-        lastMessageBody: thread.lastMessageBody,
-        lastMessagePreviewKindRaw: thread.lastMessagePreviewKind?.rawValue,
-        lastMessageHasImage: thread.lastMessageHasImage,
-        unreadCount: thread.unreadCount,
-        muted: thread.muted,
-        createdAt: thread.createdAt
-      ))
+  private func insertThreadSummary(_ thread: FriendThread, for viewerUserId: String) -> LocalThread
+  {
+    let localThread = LocalThread(
+      id: thread.id,
+      viewerUserId: viewerUserId,
+      kindRaw: thread.kind.rawValue,
+      title: thread.title,
+      avatarUrl: thread.avatarUrl,
+      metadataData: thread.metadataData ?? Data(),
+      counterpartUserId: thread.counterpartUserId,
+      counterpartDisplayName: thread.counterpartDisplayName,
+      counterpartProfilePictureUrl: thread.counterpartProfilePictureUrl,
+      counterpartOAuthAvatarUrl: thread.counterpartOAuthAvatarUrl,
+      lastMessageId: thread.lastMessageId,
+      lastMessageSenderId: thread.lastMessageSenderId,
+      lastMessageAt: thread.lastMessageAt,
+      lastMessageBody: thread.lastMessageBody,
+      lastMessagePreviewKindRaw: thread.lastMessagePreviewKind?.rawValue,
+      lastMessageHasImage: thread.lastMessageHasImage,
+      unreadCount: thread.unreadCount,
+      muted: thread.muted,
+      createdAt: thread.createdAt
+    )
+    modelContext.insert(localThread)
+    return localThread
   }
 
   func saveMessages(_ messages: [FriendMessage], in threadId: String, for viewerUserId: String)
@@ -552,35 +557,34 @@ extension LocalStoreActor {
     try modelContext.save()
   }
 
-  private func upsertThreadState(_ state: FriendThreadState, updateReadMarker: Bool) throws {
+  @discardableResult
+  private func upsertThreadState(
+    _ state: FriendThreadState,
+    updateReadMarker: Bool
+  ) throws -> LocalThreadState {
     let existing = try fetchThreadState(threadId: state.threadId, userId: state.userId)
     // Responses and realtime events can arrive out of order. Drop a state older than the stored
     // one, so "Seen" and unread counts don't move back.
-    if updateReadMarker, existing?.isNewer(than: state.updatedAt) == true {
-      return
+    if updateReadMarker, let existing, existing.isNewer(than: state.updatedAt) {
+      return existing
     }
 
+    let stored: LocalThreadState
     if let existing {
-      if updateReadMarker {
-        existing.apply(state: state)
-      } else {
-        existing.muted = state.muted
-        existing.updatedAt = state.updatedAt
-      }
+      stored = existing
     } else {
-      modelContext.insert(
-        LocalThreadState(
-          threadId: state.threadId,
-          userId: state.userId,
-          lastReadMessageId: updateReadMarker ? state.lastReadMessageId : nil,
-          lastReadAt: updateReadMarker ? state.lastReadAt : nil,
-          muted: state.muted,
-          updatedAt: state.updatedAt,
-          serverUpdatedAt: updateReadMarker ? state.updatedAt : nil
-        ))
+      stored = LocalThreadState(threadId: state.threadId, userId: state.userId)
+      modelContext.insert(stored)
+    }
+    if updateReadMarker {
+      stored.apply(state: state)
+    } else {
+      stored.muted = state.muted
+      stored.updatedAt = state.updatedAt
     }
 
-    try applyThreadState(state, updateReadMarker: updateReadMarker)
+    try applyThreadState(stored, from: state, updateReadMarker: updateReadMarker)
+    return stored
   }
 
   private func fetchThreadState(threadId: String, userId: String) throws -> LocalThreadState? {
@@ -591,9 +595,13 @@ extension LocalStoreActor {
     return try modelContext.fetch(descriptor).first
   }
 
-  /// Copies a saved state onto the viewer's thread row: mute, and a zero unread count once the
-  /// viewer has read the last message.
-  private func applyThreadState(_ state: FriendThreadState, updateReadMarker: Bool) throws {
+  /// Copies a saved state onto the viewer's thread row: mute, and the unread count when the state
+  /// brought the newest one, or zero once the viewer has read the last message.
+  private func applyThreadState(
+    _ stored: LocalThreadState,
+    from state: FriendThreadState,
+    updateReadMarker: Bool
+  ) throws {
     let stateUserId = state.userId
     let stateThreadId = state.threadId
     let threadDescriptor = FetchDescriptor<LocalThread>(
@@ -603,12 +611,17 @@ extension LocalStoreActor {
     )
 
     if let localThread = try modelContext.fetch(threadDescriptor).first {
-      localThread.muted = state.muted
-      if updateReadMarker,
-        let lastReadMessageId = state.lastReadMessageId,
-        lastReadMessageId == localThread.lastMessageId
-      {
-        localThread.unreadCount = 0
+      // The stored mute stays when an inbox or snapshot stored a newer one.
+      localThread.muted = stored.muted
+      // A newer count from an inbox or snapshot beats this state's read marker.
+      if updateReadMarker, !stored.hasNewerServerCount(than: state.updatedAt) {
+        if let unreadCount = state.unreadCount {
+          localThread.unreadCount = unreadCount
+        } else if let lastReadMessageId = state.lastReadMessageId,
+          lastReadMessageId == localThread.lastMessageId
+        {
+          localThread.unreadCount = 0
+        }
       }
       localThread.updatedAt = Date()
     }

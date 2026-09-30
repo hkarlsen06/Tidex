@@ -1660,7 +1660,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
   }
 
   @MainActor
-  final class Coordinator {
+  final class Coordinator: NSObject {
     struct UpdateInput {
       let messages: [ExyteChat.Message]
       let scrollRequest: FriendsThreadChatViewportScrollRequest?
@@ -1753,6 +1753,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       self.tableView = tableView
       // Lets short threads overscroll so the pull-up-to-type gesture still works.
       tableView.alwaysBounceVertical = true
+      tableView.panGestureRecognizer.addTarget(self, action: #selector(handleTablePan(_:)))
       contentOffsetObservation = tableView.observe(\.contentOffset, options: [.initial, .new]) {
         [weak self] tableView, _ in
         Task { @MainActor [weak self] in
@@ -1776,6 +1777,16 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       reportPinnedToBottomIfNeeded()
       reportLatestVisiblePresentedMessageIDIfNeeded()
       reportObservedPresentedMessageVisibleIfNeeded()
+    }
+
+    /// A drag that ends without moving the table sends no content offset change after it, so the
+    /// flags are cleared when the next drag begins instead.
+    @objc private func handleTablePan(_ recognizer: UIPanGestureRecognizer) {
+      guard recognizer === tableView?.panGestureRecognizer, recognizer.state == .began else {
+        return
+      }
+      didReportPullUpInCurrentDrag = false
+      didStartDragAtBottomEdge = nil
     }
 
     private func reportPulledUpPastBottomIfNeeded(for tableView: UITableView) {

@@ -320,7 +320,9 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     friendUserId: String = "friend-1",
     lastMessageId: String?,
     lastMessageAt: Date = Date(timeIntervalSince1970: 1_700_000_000),
-    unreadCount: Int = 0
+    unreadCount: Int = 0,
+    muted: Bool = false,
+    viewerStateUpdatedAt: Date? = nil
   ) -> FriendThread {
     FriendThread(
       id: id,
@@ -338,8 +340,9 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
       lastMessageBody: lastMessageId == nil ? nil : "Hello",
       lastMessageHasImage: false,
       unreadCount: unreadCount,
-      muted: false,
-      createdAt: Date(timeIntervalSince1970: 1_699_999_900)
+      muted: muted,
+      createdAt: Date(timeIntervalSince1970: 1_699_999_900),
+      viewerStateUpdatedAt: viewerStateUpdatedAt
     )
   }
 
@@ -681,7 +684,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     let storedThread = try XCTUnwrap(
       repository.getThread(id: "thread-1", viewerUserId: viewerUserId))
     XCTAssertEqual(storedThread.lastMessagePreviewKind, .shiftSnapshot)
-    XCTAssertEqual(storedThread.lastMessagePreviewText, String(localized: .friendsChatPreviewSharedShift))
+    XCTAssertEqual(
+      storedThread.lastMessagePreviewText, String(localized: .friendsChatPreviewSharedShift))
     XCTAssertFalse(storedThread.lastMessageHasImage)
   }
 
@@ -887,6 +891,315 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     XCTAssertEqual(thread?.unreadCount, 0)
   }
 
+  func testSaveThreadFromStaleSnapshotKeepsStoredCountWhenNewerStateReadAnEarlierMessage()
+    async throws
+  {
+    let repository = try makeRepository()
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-2", unreadCount: 1), for: viewerUserId)
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: true,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_020)
+      ))
+
+    await repository.saveThread(
+      from: makeSnapshot(
+        thread: makeThread(lastMessageId: "message-2", unreadCount: 3),
+        viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_010)
+      ),
+      for: viewerUserId
+    )
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 1)
+    XCTAssertEqual(thread?.muted, true)
+  }
+
+  func testSaveThreadFromStaleSnapshotKeepsNewerStateWhenThreadIsNotCached() async throws {
+    let repository = try makeRepository()
+    // A notification mark-read before the thread list was ever loaded.
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: true,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_020)
+      ))
+
+    await repository.saveThread(
+      from: makeSnapshot(
+        thread: makeThread(lastMessageId: "message-1", unreadCount: 1),
+        viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_010)
+      ),
+      for: viewerUserId
+    )
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 0)
+    XCTAssertEqual(thread?.muted, true)
+    let state = repository.getThreadState(threadId: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(state?.lastReadMessageId, "message-1")
+  }
+
+  func testSaveThreadsFromStaleInboxKeepsNewerReadState() async throws {
+    let repository = try makeRepository()
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-1", unreadCount: 1), for: viewerUserId)
+    // A mark-read that finished while the inbox snapshot was loading.
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: false,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_020)
+      ))
+
+    await repository.saveThreads(
+      [
+        makeThread(
+          lastMessageId: "message-1",
+          unreadCount: 1,
+          viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_010)
+        )
+      ],
+      for: viewerUserId
+    )
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 0)
+  }
+
+  func testSaveThreadsAcceptsInboxAtTheStoredStateRevision() async throws {
+    let repository = try makeRepository()
+    let stateUpdatedAt = Date(timeIntervalSince1970: 1_700_000_020)
+    // A cached count that drifted from the server, for example from an older unguarded save.
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-3", unreadCount: 3), for: viewerUserId)
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-2",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: false,
+        updatedAt: stateUpdatedAt
+      ))
+
+    // The inbox holds the count of that same state revision.
+    await repository.saveThreads(
+      [
+        makeThread(
+          lastMessageId: "message-3",
+          unreadCount: 1,
+          viewerStateUpdatedAt: stateUpdatedAt
+        )
+      ],
+      for: viewerUserId
+    )
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 1)
+  }
+
+  func testSaveThreadFromSnapshotOlderThanInboxKeepsInboxCount() async throws {
+    let repository = try makeRepository()
+    await repository.saveThreads(
+      [
+        makeThread(
+          lastMessageId: "message-2",
+          unreadCount: 2,
+          viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_030)
+        )
+      ],
+      for: viewerUserId
+    )
+
+    // A thread snapshot that started before the inbox load and finished after it.
+    await repository.saveThread(
+      from: makeSnapshot(
+        thread: makeThread(lastMessageId: "message-1", unreadCount: 1),
+        viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_020)
+      ),
+      for: viewerUserId
+    )
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 2)
+  }
+
+  func testSaveThreadFromStaleSnapshotUsesNewerStateCountWhenThreadIsNotCached() async throws {
+    let repository = try makeRepository()
+    // A notification mark-read of message-1 while message-2 stays unread.
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: false,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_020),
+        unreadCount: 1
+      ))
+
+    await repository.saveThread(
+      from: makeSnapshot(
+        thread: makeThread(lastMessageId: "message-2", unreadCount: 2),
+        viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_010)
+      ),
+      for: viewerUserId
+    )
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 1)
+  }
+
+  func testSaveThreadStateAppliesItsUnreadCount() async throws {
+    let repository = try makeRepository()
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-3", unreadCount: 3), for: viewerUserId)
+
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-2",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: false,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_020),
+        unreadCount: 1
+      ))
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 1)
+  }
+
+  func testSaveThreadStateOlderThanInboxKeepsInboxCountButTakesReadMarker() async throws {
+    let repository = try makeRepository()
+    await repository.saveThreads(
+      [
+        makeThread(
+          lastMessageId: "message-3",
+          unreadCount: 2,
+          muted: true,
+          viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_030)
+        )
+      ],
+      for: viewerUserId
+    )
+
+    // A mark-read response that finished after the newer inbox load.
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: false,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_025),
+        unreadCount: 0
+      ))
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 2)
+    XCTAssertEqual(thread?.muted, true)
+    let state = repository.getThreadState(threadId: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(state?.lastReadMessageId, "message-1")
+  }
+
+  func testOlderMarkReadOfRestoredLastMessageKeepsNewerInboxCount() async throws {
+    let repository = try makeRepository()
+    await repository.saveThreads(
+      [
+        makeThread(
+          lastMessageId: "m2",
+          unreadCount: 1,
+          viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_030)
+        )
+      ],
+      for: viewerUserId
+    )
+    // A snapshot from before m2 arrives late and sets the preview back to m1.
+    await repository.saveThread(
+      from: makeSnapshot(
+        thread: makeThread(lastMessageId: "m1", unreadCount: 1),
+        viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_020)
+      ),
+      for: viewerUserId
+    )
+
+    // The mark-read of m1 was sent before m2 arrived and its response comes last.
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "m1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: false,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_025),
+        unreadCount: 0
+      ))
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 1)
+  }
+
+  func testSaveThreadWithoutRevisionKeepsStoredServerCountAndMute() async throws {
+    let repository = try makeRepository()
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-2", unreadCount: 2), for: viewerUserId)
+    await repository.saveThreadState(
+      FriendThreadState(
+        threadId: "thread-1",
+        userId: viewerUserId,
+        lastReadMessageId: "message-1",
+        lastReadAt: Date(timeIntervalSince1970: 1_700_000_000),
+        muted: true,
+        updatedAt: Date(timeIntervalSince1970: 1_700_000_020),
+        unreadCount: 1
+      ))
+
+    // A delete_message response, which has no state revision, that was sent earlier.
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-2", unreadCount: 2, muted: false), for: viewerUserId)
+
+    let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(thread?.unreadCount, 1)
+    XCTAssertEqual(thread?.muted, true)
+    let state = repository.getThreadState(threadId: "thread-1", viewerUserId: viewerUserId)
+    XCTAssertEqual(state?.muted, true)
+  }
+
+  private func makeSnapshot(thread: FriendThread, viewerStateUpdatedAt: Date)
+    -> FriendThreadSyncSnapshot
+  {
+    FriendThreadSyncSnapshot(
+      thread: thread,
+      viewerState: FriendThreadState(
+        threadId: thread.id,
+        userId: viewerUserId,
+        lastReadMessageId: nil,
+        lastReadAt: nil,
+        muted: thread.muted,
+        updatedAt: viewerStateUpdatedAt
+      ),
+      counterpartPresence: nil,
+      messages: [],
+      nextCursor: nil,
+      snapshotVersion: 1,
+      retainedFromVersion: 0,
+      hasMore: false
+    )
+  }
+
   func testSaveThreadStateAcceptsNewerServerStateWithEarlierReadMarker() async throws {
     let repository = try makeRepository()
 
@@ -1005,8 +1318,10 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     }
     let beforeSave = Date()
     await repository.saveMessages(
-      [message("m1", second: 1), message("m2", second: 2), message("m3", second: 3),
-       message("m4", second: 4)],
+      [
+        message("m1", second: 1), message("m2", second: 2), message("m3", second: 3),
+        message("m4", second: 4),
+      ],
       in: "thread-1",
       for: viewerUserId
     )
@@ -1047,6 +1362,68 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
 
     await prune(snapshot: [message("m3", second: 3)], olderHistory: true, cutoff: .distantFuture)
     XCTAssertEqual(cachedIds(), ["m3", "local-q"])
+  }
+
+  func testDeleteSentMessagesMissingFromSnapshotKeepsOwnRowsUnlessSnapshotHasAllHistory()
+    async throws
+  {
+    let repository = try makeRepository()
+    func message(_ id: String, second: TimeInterval, senderUserId: String) -> FriendMessage {
+      FriendMessage(
+        id: id,
+        threadId: "thread-1",
+        senderUserId: senderUserId,
+        messageType: .user,
+        body: id,
+        clientId: "client-\(id)",
+        replyToMessageId: nil,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_000 + second),
+        editedAt: nil,
+        deletedAt: nil,
+        sendState: .sent
+      )
+    }
+    let serverMessage = message("m1", second: 1, senderUserId: "friend-1")
+    await repository.saveMessages(
+      [
+        serverMessage,
+        // Newer than the window start, but its device send time can differ from server time.
+        message("own-2", second: 2, senderUserId: viewerUserId),
+      ],
+      in: "thread-1",
+      for: viewerUserId
+    )
+    func prune(hasMore: Bool) async {
+      let snapshot = FriendThreadSyncSnapshot(
+        thread: makeThread(lastMessageId: "m1"),
+        viewerState: FriendThreadState(
+          threadId: "thread-1",
+          userId: viewerUserId,
+          lastReadMessageId: nil,
+          lastReadAt: nil,
+          muted: false,
+          updatedAt: Date()
+        ),
+        counterpartPresence: nil,
+        messages: [serverMessage],
+        nextCursor: nil,
+        snapshotVersion: 1,
+        retainedFromVersion: 0,
+        hasMore: hasMore
+      )
+      await repository.deleteSentMessagesMissingFromSnapshot(
+        snapshot, includingOlderHistory: false, writtenBefore: .distantFuture, for: viewerUserId)
+    }
+    func cachedIds() -> [String] {
+      repository.getMessages(threadId: "thread-1", viewerUserId: viewerUserId).map(\.id)
+    }
+
+    await prune(hasMore: true)
+    XCTAssertEqual(cachedIds(), ["m1", "own-2"])
+
+    // A snapshot without more pages holds the whole thread, so a missing row was deleted.
+    await prune(hasMore: false)
+    XCTAssertEqual(cachedIds(), ["m1"])
   }
 
   func testGetMessagesFiltersDeletedMessages() async throws {

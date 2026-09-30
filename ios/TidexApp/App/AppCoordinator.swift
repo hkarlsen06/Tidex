@@ -182,6 +182,7 @@ final class AppCoordinator {
   @ObservationIgnored private var appActiveObserver: AnyCancellable?
   @ObservationIgnored private var backgroundTasks: [UUID: Task<Void, Never>] = [:]
   @ObservationIgnored private var foregroundTask: Task<Void, Never>?
+  @ObservationIgnored private var isRetryingLaunchRouting = false
   @ObservationIgnored private var didReceiveInitialSession = false
   @ObservationIgnored private var isUpdatingAuthState = false
   @ObservationIgnored private var isUserInitiatedSignOutInProgress = false
@@ -280,35 +281,42 @@ final class AppCoordinator {
     runTrackedTask { [weak self] in
       try? await Task.sleep(nanoseconds: Self.maxLoadingTimeout)
       guard let self, !Task.isCancelled, appState == .loading else { return }
+      // Not tracked, for the reason in leaveLoadingAfterTimeout.
+      Task { @MainActor [weak self] in await self?.leaveLoadingAfterTimeout() }
+    }
+  }
 
-      isUpdatingAuthState = false
+  /// Runs outside the tracked tasks, like retryLaunchRouting. Routing can restore the admin session
+  /// after an invalid impersonation, which calls prepareForUserSwitch. That cancels tracked tasks,
+  /// and a cancelled restore signs the user out. Sign-out can still cancel the wait before this.
+  private func leaveLoadingAfterTimeout() async {
+    isUpdatingAuthState = false
 
-      let session = await AuthSessionManager.shared.getSessionOrLocal()
-      // The normal launch flow may have finished while the stored session loaded.
-      guard appState == .loading else { return }
+    let session = await AuthSessionManager.shared.getSessionOrLocal()
+    // The normal launch flow may have finished while the stored session loaded.
+    guard appState == .loading else { return }
 
-      if let session {
-        if await routeToMFAIfRequired(session) { return }
-        launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
-        AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
-        await enterAuthenticatedState(user: session.user)
-      } else {
-        launchLog.error(
-          "[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
-        AuthDiagnosticsReporter.shared.record(
-          .forcedUnauthenticated,
-          severity: .error,
-          appState: String(describing: appState),
-          metadata: [
-            "reason": .string("hard_loading_timeout"),
-            "timeout_ms": .integer(Int(Self.maxLoadingTimeout / 1_000_000)),
-            "did_receive_initial_session": .bool(didReceiveInitialSession),
-            "is_updating_auth_state": .bool(isUpdatingAuthState),
-            "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
-          ]
-        )
-        appState = .unauthenticated
-      }
+    if let session {
+      if await routeToMFAIfRequired(session) { return }
+      launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
+      AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
+      await enterAuthenticatedState(user: session.user)
+    } else {
+      launchLog.error(
+        "[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
+      AuthDiagnosticsReporter.shared.record(
+        .forcedUnauthenticated,
+        severity: .error,
+        appState: String(describing: appState),
+        metadata: [
+          "reason": .string("hard_loading_timeout"),
+          "timeout_ms": .integer(Int(Self.maxLoadingTimeout / 1_000_000)),
+          "did_receive_initial_session": .bool(didReceiveInitialSession),
+          "is_updating_auth_state": .bool(isUpdatingAuthState),
+          "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
+        ]
+      )
+      appState = .unauthenticated
     }
   }
 
@@ -530,9 +538,10 @@ final class AppCoordinator {
         $0.factorType == "totp" && $0.status == .verified
       })
     {
-      return .verification(AuthService.MFAFactor(
-        id: factor.id, type: factor.factorType,
-        friendlyName: factor.friendlyName, status: factor.status.rawValue))
+      return .verification(
+        AuthService.MFAFactor(
+          id: factor.id, type: factor.factorType,
+          friendlyName: factor.friendlyName, status: factor.status.rawValue))
     }
     return wasImpersonating ? .resume(resolvedSession) : .notRequired
   }
@@ -545,6 +554,12 @@ final class AppCoordinator {
       isImpersonating: { impersonation.isImpersonating },
       validateImpersonation: { await impersonation.validateSessionOnLaunch() },
       currentSession: { await AuthSessionManager.shared.getSessionOrLocal() })
+    // A sign-out during impersonation validation has already routed the app. The .signedOut
+    // route still sets it, since its own sign-out event can be queued behind this handler.
+    let isSignedOutRoute = if case .signedOut = route { true } else { false }
+    if !isSignedOutRoute, AuthSessionManager.shared.localSession() == nil {
+      return true
+    }
     switch route {
     case .notRequired:
       return false
@@ -555,10 +570,37 @@ final class AppCoordinator {
       appState = .mfaRequired
     case .retry:
       appState = .loading
+      retryLaunchRoutingWhileLoading()
     case .signedOut:
       appState = .unauthenticated
     }
     return true
+  }
+
+  /// Impersonation validation hit a transient error, such as no network, and left the app loading.
+  /// The loading watchdog fires only once, so try again until the route resolves.
+  private func retryLaunchRoutingWhileLoading() {
+    guard !isRetryingLaunchRouting else { return }
+    isRetryingLaunchRouting = true
+    runTrackedTask { [weak self] in
+      try? await Task.sleep(for: .seconds(5))
+      guard let self else { return }
+      isRetryingLaunchRouting = false
+      guard !Task.isCancelled, appState == .loading else { return }
+      // Not tracked, for the reason in leaveLoadingAfterTimeout.
+      Task { @MainActor [weak self] in await self?.retryLaunchRouting() }
+    }
+  }
+
+  private func retryLaunchRouting() async {
+    let session = await AuthSessionManager.shared.getSessionOrLocal(allowProactiveRefresh: false)
+    guard appState == .loading else { return }
+    guard let session else {
+      appState = .unauthenticated
+      return
+    }
+    if await routeToMFAIfRequired(session) { return }
+    await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
   }
 
   /// Decodes the `aal` claim from a JWT access token without verifying it.
@@ -615,6 +657,9 @@ final class AppCoordinator {
           needsReAcceptanceImmediate = false
           isTermsRecheckPending = true
         }
+        // The launch watchdog and retry route outside the auth listener, so a sign-out can land
+        // during the await above. It has already routed the app.
+        guard AuthSessionManager.shared.localSession() != nil else { return }
       }
 
       if needsReAcceptanceImmediate {
