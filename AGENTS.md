@@ -189,6 +189,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 | `process-live-activities`           | `1,16,31,46 * * * *` | Process Live Activity updates          |
 | `purge-auth-diagnostic-events`      | `45 4 * * 0`        | Purge auth diagnostics older than 90 days |
 | `purge-app-activity-hours`          | `50 4 * * *`        | Purge hourly app activity older than 32 days |
+| `purge-cron-run-details`            | `20 4 * * *`        | Purge pg_cron run history older than 10 days |
 
 ## Agent Behavior Guidelines
 
