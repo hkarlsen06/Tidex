@@ -10,29 +10,40 @@ The iOS app uses a **local-first, sync-based architecture** with clear separatio
 TidexApp/
 ├── App/                     # App-wide coordination & lifecycle
 │   ├── AppCoordinator       # Central auth state & navigation (singleton)
-│   └── RootView             # Root navigation based on auth state
+│   ├── RootView             # Root navigation based on auth state
+│   └── MainTabView          # Tab bar
 ├── Features/                # Feature-specific screens & view models
+│   ├── AddShift/            # Shift creation/editing, addShiftDestination
 │   ├── Auth/                # Login, signup, MFA, password reset
-│   ├── Dashboard/           # Main dashboard with month navigation
-│   ├── AddShift/            # Shift creation/editing
-│   ├── Shifts/              # Shift list views
-│   ├── Stats/               # Statistics & analytics
-│   └── Onboarding/          # Pre & post-auth onboarding
+│   ├── CalendarImport/      # Import shifts from ICS files
+│   ├── Celebration/         # Milestone celebrations
+│   ├── Dashboard/           # Home tab with month navigation
+│   ├── Friends/             # Friends list, sharing, Messages/ (chat)
+│   ├── Onboarding/          # Pre & post-auth onboarding
+│   ├── Schedule/            # Shifts tab (ShiftsViewModel, ShiftsCalendarView)
+│   ├── Settings/            # Settings, Pay (jobs), Admin, Profile, etc.
+│   └── Stats/               # Statistics & analytics
 ├── Services/                # Business logic & data operations
 │   ├── Auth/                # Authentication operations
 │   ├── Data/                # Supabase data fetching (ShiftsService, SnapshotsService)
+│   ├── Diagnostics/         # App activity & auth diagnostics reporting
+│   ├── LiveActivity/        # Live Activity push tokens
 │   ├── Network/             # API configuration & Supabase client
+│   ├── Notification/        # Reminders & notification scheduling
 │   └── Payroll/             # Wage calculations (PayrollCalculator, PayrollEngine)
 ├── Storage/                 # Local data persistence
 │   ├── LocalStore           # SwiftData container & actor
 │   ├── Models/              # SwiftData model definitions
 │   ├── Repositories/        # Local-first data access (ShiftsRepository, etc.)
-│   └── Sync/                # Bidirectional sync (SyncCoordinator)
+│   ├── Sync/                # Bidirectional sync (SyncCoordinator)
+│   └── Testing/             # Design-review screens, debug view, screenshot fixtures
 ├── Models/                  # Data models (Codable)
-├── Shared/                  # Reusable components & utilities
-├── Resources/               # Assets, localization, sounds
-└── Supporting/              # Info.plist, entitlements, storyboard
+├── Shared/                  # Components, Animations, Managers, design tokens
+├── Resources/               # Assets, InfoPlist.strings, sounds (catalog is in ios/Resources)
+└── Supporting/              # Info.plist, entitlements, privacy manifest
 ```
+
+The string catalog is `ios/Resources/Localization/App/Localizable.xcstrings`. Cross-target code is in `ios/Shared/`, and the extensions are `ios/TidexShiftWidget`, `ios/TidexShareExtension`, `ios/TidexSiriIntents` and `ios/TidexNotificationService`.
 
 ## Core Patterns
 

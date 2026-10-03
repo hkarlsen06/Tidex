@@ -38,8 +38,10 @@ bun run ios:l10n:validate
 
 ## Validation and conventions
 
-- Dot-separated keys generate camelCase symbols; inspect generated signatures instead of guessing argument types. Preserve the existing Int32 wrapping where the generated symbol requires it.
-- For relevant changes, `./lint-strings` checks hardcoded UI strings and `ios/Scripts/validate-localization.sh` checks catalog integrity.
+- Dot-separated keys generate camelCase symbols, and underscores also start a new word: `settings.pay.add_job.title` becomes `.settingsPayAddJobTitle`. Older keys mix `snake_case` and `camelCase` segments, so search the catalog with `bun run ios:l10n:search` instead of guessing the key.
+- Argument types of generated symbols vary (`Int` or `Int32`). After a build, read them in `~/Library/Developer/Xcode/DerivedData/Tidex-*/Build/Intermediates.noindex/Tidex.build/Debug-iphonesimulator/TidexApp.build/DerivedSources/GeneratedStringSymbols_Localizable.swift`, or copy an existing call site of the same symbol.
+- Permission purpose strings are not in the catalog. They are in `ios/TidexApp/Supporting/Info.plist` and in `ios/TidexApp/Resources/<locale>.lproj/InfoPlist.strings`.
+- For relevant changes, `ios/lint-strings` checks hardcoded UI strings and `ios/Scripts/validate-localization.sh` checks catalog integrity.
 - Keep `ios/Resources/Localization/App/Localizable.xcstrings` as the app catalog source and preserve system locale / FormatStyle conventions.
 - `bun run ios:l10n:validate` fails if a dot key lacks English, Norwegian or a translator comment, if any language is missing or not marked translated, if a translation's format specifiers differ from English, or if an entry is stale.
 - Xcode also extracts keys that aren't dot notation from literals such as `Text("·")`, `Text("\(a) / \(b)")`, `Text("Tidex")` and the English-only admin and debug screens. These stay English. Mark them `shouldTranslate: false` with no translations (in Xcode, "Mark for Translation" off), and the translator skips them. Any key with words that users see gets a dot key instead.

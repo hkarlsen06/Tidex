@@ -26,7 +26,7 @@ The rules above exist because parallel agents used to build, test and start or s
 
 You may build, run tests, and boot, shut down, restart, erase or reinstall apps on simulators without asking when both of these hold:
 
-- Nothing else is building, testing or using a simulator. Check right before you act. `pgrep -lf "xcodebuild|xcode-test-agent|xcode-build-agent|simctl"` must print nothing, `/tmp/xcode-agent.lock` must not exist, and `xcrun simctl list devices booted` must not show a simulator in use by someone else.
+- Nothing else is building, testing or using a simulator. Check right before you act. `pgrep -lf "xcodebuild|xcode-test-agent|xcode-build-agent|simctl"` must print nothing, `/tmp/xcode-agent.lock` must not exist, and `xcrun simctl list devices booted` must not show a simulator in use by someone else. These checks don't see the Xcode app. If a run fails with `build.db: database is locked`, the user is probably building in Xcode, so stop and hand off without retrying.
 - The action helps the task, and you don't need a decision from the user to take it. Examples are confirming a fix compiles, running the tests you wrote, and restarting a simulator that fails with "Simulator device failed to launch no.tidex.app" and 0 tests run.
 
 While you do it, keep using the wrappers and their lock, run the smallest set of tests that answers your question, and shut down any simulator you booted when you're done. If another agent starts during your work, go back to the rules above.
@@ -106,11 +106,19 @@ Use Homebrew Ruby at `/opt/homebrew/opt/ruby@3.4/bin`; the system Ruby is
 too old for the installed bundle. From the repository root, bundled commands
 use `BUNDLE_GEMFILE=ios/Gemfile BUNDLE_PATH=Vendor/bundle`.
 
+The upload lane in `ios/fastlane/Fastfile` copies screenshots from
+`ios/ASConnectScreenshots/<version>/3d/<locale>/` without converting them.
+For raw App Store Connect API calls, Spaceship paths need the `v1/` or `v2/`
+prefix and Spaceship can retry for minutes, so curl with the API key JWT is
+faster (use `curl -g` for `[]` in queries). Screenshot sets can all report
+`COMPLETE` while a few are stuck. Adding the version to a review submission
+returns the stuck screenshot IDs in its error.
+
 ## Local Chat Package Workflow
 
 The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned locally at `../Chat` for day-to-day development.
 
-- Default local development workflow: compile Tidex against the sibling `../Chat` clone.
+- The committed project is usually in `remote` mode. Check the current mode with `./scripts/check-chat-package-source.sh` before you rely on `../Chat`. Edits in `../Chat` only reach a Tidex build in `local` mode.
 - Switch package source with:
 
 ```bash
@@ -139,6 +147,7 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 - **Location**: `supabase/functions/<function-name>/index.ts`
 - **Shared code**: `supabase/functions/_shared/`
 - **Deployment**: Sync the function to `/srv/tidex/tidex-sb/volumes/functions/` on `mdr` and restart the `functions` service
+- **Tests**: `deno` is not installed on the Mac. From `supabase/functions` run `bunx deno-bin@2.2.7 test -A --no-lock <file>`, and use `check` the same way.
 
 **JWT enforcement:**
 
@@ -199,6 +208,15 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 - If you see unrelated changes, do not touch, revert, reformat, or "clean up" them.
 - Treat unrelated diffs as owned by the user or another agent, even if they appeared after your work began.
 - Only modify files and hunks required for your task; if unrelated changes block you, stop and ask before proceeding.
+- Never run `git stash`, `git reset`, `git checkout -- <path>` or `git clean` in the shared worktree. Other agents stage whole files, so check your own hunks with `git diff -- <file>` and `git diff --cached -- <file>`.
+- A warning or compile error the user pastes may come from another agent's edit. Check `git diff` for the file before you fix it.
+
+**Shell notes (macOS, zsh):**
+
+- Always give `rg` a path (`rg pattern ios`). Without one it can wait on stdin until the 120 s timeout.
+- Quote globs (`rg -g '*.swift'`). zsh fails an unmatched `--include=*.ts` with "no matches found".
+- Tools are BSD: `sed -i ''`, no `cat -A`. `fd`, PIL and ImageMagick are not installed.
+- On `mdr`, add `</dev/null` or `-T` when `docker compose exec` should not read your stdin, and don't `pkill -f` a pattern that also matches your own ssh command.
 
 **Do NOT create unnecessary files:**
 

@@ -4,13 +4,36 @@ iOS-specific development guidance for the Tidex native app.
 
 ## iOS Development Rules
 
-**Deployment target: iOS 26.0** for every target, so don't add `#available` checks or fallbacks for iOS 26 or earlier. An API introduced in iOS 27 needs an `#available(iOS 27, *)` check and an iOS 26 fallback, because about half of active users were still on iOS 26 in September 2026. Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
+**Deployment target: iOS 26.** `TidexApp` and `TidexAppTests` are at 26.6 and the extensions are at 26.0. Xcode raised the app and test targets on its own. Keep the test target equal to the app target, or the test build fails. Don't add `#available` checks or fallbacks for iOS 26 or earlier. An API introduced in iOS 27 needs an `#available(iOS 27, *)` check and an iOS 26 fallback, because about half of active users were still on iOS 26 in September 2026. Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
 
 Run commands from the repository root unless explicitly stated otherwise.
 
 When running verification or diagnostic commands, prefer flags that reduce non-actionable output and preserve useful diagnostics. Examples: use `swiftlint --quiet` for fast Swift checks, use `--json` on repository build/test wrappers when you need structured diagnostics, and use focused test filters where possible. Avoid verbose command modes unless the extra output is needed to debug the issue.
 
 Do not build or run tests unless the user asks or the root AGENTS.md exception applies; the user runs them in Xcode. When asked, use [the verification guide](docs/AGENT_VERIFICATION.md). Use the existing wrappers, investigate failures within scope, and do not bypass a hung wrapper with raw xcodebuild; report a concrete blocker if it cannot be resolved.
+
+## Where things live
+
+Paths are under `ios/TidexApp/` unless they start with `ios/`.
+
+- The only string catalog is `ios/Resources/Localization/App/Localizable.xcstrings`. `TidexApp/Resources` has assets, `*.lproj/InfoPlist.strings` (permission strings) and Swift helpers, but no catalog.
+- The marketing version is in `ios/Version.xcconfig` and the build number is in `ios/BuildNumber.xcconfig`.
+- To find a screen from its visible text, run `bun run ios:l10n:search -- "<text>"`, then search Swift for the generated camelCase symbol, not the dotted key (see [localization](docs/AGENT_LOCALIZATION.md)).
+- `Features/Schedule` is the shifts tab. `ScheduleViewModel.swift` defines `ShiftsViewModel`, and `Components/ScheduleCalendarView.swift` defines `ShiftsCalendarView`.
+- The jobs list is `payChooserJobsSection` in `Features/Settings/SettingsView.swift`. `Settings/Pay/Components/AddJobSheet.swift` adds a job. `PaySettingsWorkplaceSheets.swift` is only a workplace picker.
+- Friends chat is in `Features/Friends/Messages/`. `FriendsThreadView.swift` handles layout and the footer accessory. `FriendsThreadExyteChat.swift` (2400+ lines) bridges to the Exyte `Chat` fork for gestures and scrolling. `FriendsThreadComposerView.swift` and `FriendsComposerAttachmentController.swift` hold the composer. The table and insets are in `../Chat/Sources/ExyteChat/Views/UIList.swift`.
+- Two parts set tab bar visibility: `isChatTabBarHidden` in `Features/Friends/FriendsView.swift` and `addShiftDestination(in:hidesTabBar:)` in `Features/AddShift/AddShiftNavigator.swift`. Two `.toolbar(_:for: .tabBar)` modifiers on one view conflict. Extending the chat list behind the tab bar has been tried and dropped.
+- Design tokens are in `Shared/`: `Spacing.swift`, `CornerRadius.swift`, `Typography.swift`, `MotionTokens.swift` and `Extensions/Color+Tidex.swift`. `MonthYearPickerSheet` is in `Shared/Animations/MonthTransition.swift`.
+- `Storage/Testing/DesignReviewView.swift` holds the design-review screens. None of them shows a chat thread, the composer or the attachment drawer.
+- After a build, SwiftPM checkouts are at `~/Library/Developer/Xcode/DerivedData/Tidex-*/SourcePackages/checkouts/`. Don't `find /` for them. If that folder is empty, read the Chat fork in `../Chat`.
+
+## Project file
+
+All app and extension folders are synchronized groups, so adding or deleting a Swift file there needs no `project.pbxproj` edit. `TidexAppTests` is the exception. A new test file needs a `PBXBuildFile`, a `PBXFileReference`, a group child and a Sources entry in `ios/Tidex.xcodeproj/project.pbxproj`. Copy the pattern of an existing test file.
+
+## SwiftLint baseline
+
+Run `swiftlint --quiet` from the repository root, or the baseline is skipped. The baseline matches violations by content. When a file grows, its old length or complexity warnings can show up again. Treat only new rule hits on lines you changed as yours. Don't copy old file versions to temporary files to compare.
 
 ## Backend access
 
@@ -53,7 +76,7 @@ Prefer small focused unit tests over broad UI tests unless the behavior is UI-on
 ### Agent completion checklist
 
 - Added/updated tests for new behavior.
-- Confirmed tests are included in the correct test target.
+- Confirmed tests are included in the correct test target (new `TidexAppTests` files need `project.pbxproj` entries, see "Project file").
 - Ran fast validation (`swiftlint --quiet`) and reported results.
 - Did not build or run tests unless the user asked; listed in one or two lines what the user should run or check.
 

@@ -12,7 +12,7 @@ excluded:
   - ios/Pods
   - ios/DerivedData
   - ios/.build
-  - ios/vendor
+  - ios/Vendor
   - ios/TidexApp/Generated
 
 baseline: .swiftlint-baseline.json
