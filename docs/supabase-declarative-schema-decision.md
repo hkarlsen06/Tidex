@@ -16,7 +16,7 @@ and must remain migration-only for now:
   reference `user_settings.monthly_goals_by_month` before adding that column.
   A clean reset or shadow database therefore cannot establish a trustworthy
   declarative baseline.
-- Do not add a naïve earlier-dated bootstrap migration. The self-hosted MDR
+- Do not add a naïve earlier-dated bootstrap migration. The self-hosted production
   database would treat it as unapplied during the next migration push.
 - Git history contains a useful deleted `00000000000000_schema.sql` plus
   January 2026 migrations, but they are not safe to restore verbatim. The
@@ -93,7 +93,7 @@ Reconsider adoption only after all of these are true:
    generated-migration trial pass.
 
 Any eventual history cutover must be coordinated directly against the
-self-hosted MDR database. First deploy all ordinary forward
+self-hosted production database on one-s. First deploy all ordinary forward
 migrations and regenerate the snapshot from that exact state. Create the new
 snapshot with `supabase migration new`, add a generic fail-closed
 nonempty-`public`/`internal` guard, and append the explicit privilege
@@ -101,9 +101,9 @@ reconciliation. Preserve current default-ACL behavior during the history
 cutover; change privilege policy only in a separate reviewed migration.
 Prove the snapshot from scratch, archive old applied migration files
 byte-for-byte outside the active migration directory, then use
-`supabase migration repair --db-url "$TIDEX_MDR_DB_URL"` to mark the old
+`supabase migration repair --db-url "$TIDEX_PROD_DB_URL"` to mark the old
 versions reverted and the snapshot version applied. Migration repair changes tracking only, so the snapshot SQL
-must never run on the populated MDR database. Verify tracking rows
+must never run on the populated production database. Verify tracking rows
 read-only before the next explicit production migration push.
 This is a future production operation and must not be inferred from routine
 schema work.

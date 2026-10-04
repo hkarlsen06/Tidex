@@ -23,7 +23,8 @@ every job in `cron.job_run_details` and never prunes it, so the minutely
 this job the table had grown to 94 MB, all of it included in every backup.
 
 Ten days is enough to look back at failed runs. It matches the Logflare log
-retention on `mdr` (`/srv/tidex/log-retention.sh`).
+retention that `/srv/tidex/log-retention.sh` enforced on `mdr`. That script
+was not carried over to `one-s`, so Logflare logs there are not pruned yet.
 
 Created by `supabase/migrations/20261001042000_purge_cron_run_details.sql`.
 

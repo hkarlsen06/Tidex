@@ -55,8 +55,8 @@ supabase/functions/
    ```
 
 4. **Deploy to production:** Sync the function to
-   `/srv/tidex/tidex-sb/volumes/functions/` on `mdr`, then restart the
-   `functions` service.
+   `/srv/tidex/tidex-sb/volumes/functions/` on `one-s`, then restart the
+   `functions` service with `sudo docker compose restart functions`.
 
    Keep per-function JWT behavior in `supabase/config.toml`. This repository's
    CLI deploy workflow always includes `--no-verify-jwt`.

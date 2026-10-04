@@ -8,7 +8,7 @@ Tidex is now an iOS-only product. This repository still contains the supporting 
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
 - **ios/** - Native iOS application
 
-The iOS app and its supporting web infrastructure share a common self-hosted Supabase backend on the `mdr` server for authentication, database, and edge functions. Production traffic uses `api.tidex.no`.
+The iOS app and its supporting web infrastructure share a common self-hosted Supabase backend on the `one-s` server for authentication, database, and edge functions. Production traffic uses `api.tidex.no`.
 
 ## Tech Stack
 
@@ -22,7 +22,7 @@ The iOS app and its supporting web infrastructure share a common self-hosted Sup
 - **Architecture**: MVVM with Swift concurrency
 
 ### Shared
-- **Database & Auth**: Self-hosted Supabase on `mdr`
+- **Database & Auth**: Self-hosted Supabase on `one-s`
 - **Payments**: None. Tidex is free since 2026-09-28; earlier purchases are handled manually via support
 - **Push Notifications**: Firebase Cloud Messaging
 

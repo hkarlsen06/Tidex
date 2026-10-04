@@ -41,29 +41,37 @@ Tidex is now an iOS-only product. The repository still includes supporting publi
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
 - **ios/** - Native iOS application
 
-The supporting web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`. Production Supabase is self-hosted on the `mdr` server behind `api.tidex.no`; the old hosted Supabase project is retired.
+The supporting web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`. Production Supabase is self-hosted on the `one-s` server behind `api.tidex.no`. It moved there from `mdr` on 2026-10-03. `mdr` has since been wiped and no longer runs anything for Tidex. The old hosted Supabase project is retired.
 
 ## Supabase Production Access
 
-Agents may access production directly with `ssh mdr`. The Tidex stack is at
-`/srv/tidex/tidex-sb`; use `docker compose` there to inspect logs and services
-or make task-authorized service changes, and use
-`docker compose exec -T db psql -U postgres -d postgres` for direct database
-inspection or task-authorized data mutations. Direct SSH is the normal
+Agents may access production directly with `ssh one-s`. Always use that alias.
+`~/.ssh/config` sets the user to `administrator` and sets
+`HostKeyAlias 85.190.118.114`, which is the name the host key is stored under in
+`known_hosts`. Connecting to the raw Tailscale IP (`100.109.207.90`) skips both
+settings and fails with "Permission denied" or "Host key verification failed".
+`administrator` is not in the `docker` group, so every `docker` command needs
+`sudo` (passwordless).
+
+The Tidex stack is at `/srv/tidex/tidex-sb`. Use `sudo docker compose` there to
+inspect logs and services or make task-authorized service changes, and use
+`sudo docker compose exec -T db psql -U postgres -d postgres` for direct
+database inspection or task-authorized data mutations. Direct SSH is the normal
 production access path, so do not block on Supabase MCP or the hosted dashboard.
 
 After any change to the auth service, `.env`, `gotrue-extra.env`, Caddy, or
-the compose stack, run `ssh mdr /srv/tidex/auth-smoke.sh`. It prints nothing
-when auth works the way the iOS app needs and one line per problem otherwise.
-The watchdog also runs it every 5 minutes and emails failures. The source is
-`supabase/ops/auth-smoke.sh`, so copy it back to mdr when you change it. In the
-compose stack, a variable set under `environment:` in `docker-compose.yml`
-overrides the same variable in `env_file`. Change those in `.env`, then confirm
-the live value with `docker compose exec -T auth env`.
+the compose stack, run `ssh one-s sudo /srv/tidex/auth-smoke.sh`. It prints
+nothing when auth works the way the iOS app needs and one line per problem
+otherwise. Without `sudo` it can't read the auth container and reports false
+problems. The watchdog also runs it as root every 5 minutes and emails
+failures. The source is `supabase/ops/auth-smoke.sh`, so copy it back to one-s
+when you change it. In the compose stack, a variable set under `environment:` in
+`docker-compose.yml` overrides the same variable in `env_file`. Change those in
+`.env`, then confirm the live value with `sudo docker compose exec -T auth env`.
 
 Use migrations rather than ad hoc SQL for schema changes. Do not run remote
 Supabase CLI database commands (`db push`, `db pull`, `migration repair`,
-`--linked`, `--db-url`) against production. MDR has no
+`--linked`, `--db-url`) against production. The production database has no
 `supabase_migrations.schema_migrations` table, so `db push` would try to
 replay every migration.
 
@@ -142,23 +150,23 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 
 ## Supabase Edge Functions
 
-**CRITICAL: Edit locally in `supabase/functions/`, then deploy to the self-hosted stack on `mdr`, NOT via Supabase's hosted deployment or MCP deploy tools**
+**CRITICAL: Edit locally in `supabase/functions/`, then deploy to the self-hosted stack on `one-s`, NOT via Supabase's hosted deployment or MCP deploy tools**
 
 - **Location**: `supabase/functions/<function-name>/index.ts`
 - **Shared code**: `supabase/functions/_shared/`
-- **Deployment**: Sync the function to `/srv/tidex/tidex-sb/volumes/functions/` on `mdr` and restart the `functions` service
+- **Deployment**: Sync the function to `/srv/tidex/tidex-sb/volumes/functions/` on `one-s` and restart the `functions` service
 - **Tests**: `deno` is not installed on the Mac. From `supabase/functions` run `bunx deno-bin@2.2.7 test -A --no-lock <file>`, and use `check` the same way.
 
 **JWT enforcement:**
 
-The router at `supabase/ops/edge-router/main/` (deployed as `volumes/functions/main/` on `mdr`) enforces JWTs. It ignores the `VERIFY_JWT` env var and `verify_jwt` in `supabase/config.toml`, which only matter for `supabase functions serve`. Keep both in sync with the router's `PUBLIC_FUNCTIONS` list.
+The router at `supabase/ops/edge-router/main/` (deployed as `volumes/functions/main/` on `one-s`) enforces JWTs. It ignores the `VERIFY_JWT` env var and `verify_jwt` in `supabase/config.toml`, which only matter for `supabase functions serve`. Keep both in sync with the router's `PUBLIC_FUNCTIONS` list.
 
 - Public, no JWT check: `apple-server-notifications` (Apple signature), `before-user-created` (Standard Webhooks signature), `calendar-feed` (calendar token), `wagey-chat-v2` (shutdown stub for old app versions). A new webhook or public function must be added to `PUBLIC_FUNCTIONS` in the router and to `config.toml` with `verify_jwt = false`.
 - UptimeBot polls `GET /functions/v1/send-push-notifications` with only the publishable key, so the router's `PUBLIC_GET_FUNCTIONS` lets unauthenticated GETs through to it and the function answers with a static status. Keep that path working, or change the monitor first. Removing it on 2026-09-30 caused a 2 minute outage alert.
 - Every other function needs a valid, unexpired JWT with role `authenticated` or `service_role`. The router accepts ES256/RS256 tokens signed with a key in `SUPABASE_JWKS` (what GoTrue issues) and HS256 tokens signed with `JWT_SECRET` (the legacy service role key that pg_cron sends from the vault). The router rejects the `sb_publishable_` key and the anon JWTs, so a signed-out call fails on protected functions.
 - The router returns 404 for any first path segment that is not a directory under `volumes/functions/` with an `index.ts` (so `_shared`, `main` and `node_modules` are not routable).
 - Functions still check the caller themselves, for example with `withSupabase({ auth: "user" })`. The router is the first check, not the only one.
-- To deploy the router, copy `supabase/ops/edge-router/main/` to `/srv/tidex/tidex-sb/volumes/functions/main/` on `mdr`, back up the old files first, and restart the `functions` service. Run `ssh mdr /srv/tidex/auth-smoke.sh` and check that the `process-pending-push-notifications` cron still gets 200s in `net._http_response`.
+- To deploy the router, copy `supabase/ops/edge-router/main/` to `/srv/tidex/tidex-sb/volumes/functions/main/` on `one-s`, back up the old files first, and restart the `functions` service. Run `ssh one-s sudo /srv/tidex/auth-smoke.sh` and check that the `process-pending-push-notifications` cron still gets 200s in `net._http_response`.
 
 ## Supabase SQL Functions & Cron Jobs
 
@@ -184,7 +192,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 
 1. Edit function/trigger source files in `supabase/sql/functions/` as needed.
 2. Add or update the corresponding migration in `supabase/migrations/`.
-3. Dry-run it on MDR by wrapping the file in `BEGIN;` and `ROLLBACK;` and piping it to `ssh mdr "cd /srv/tidex/tidex-sb && docker compose exec -T db psql -U postgres -d postgres -v ON_ERROR_STOP=1"`.
+3. Dry-run it on production by wrapping the file in `BEGIN;` and `ROLLBACK;` and piping it to `ssh one-s "cd /srv/tidex/tidex-sb && sudo docker compose exec -T db psql -U postgres -d postgres -v ON_ERROR_STOP=1"`.
 4. Apply it with the same command plus `--single-transaction`, reading the migration file on stdin, then verify the result with a read-only query.
 
 **Current Cron Jobs:**
@@ -216,7 +224,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 - Always give `rg` a path (`rg pattern ios`). Without one it can wait on stdin until the 120 s timeout.
 - Quote globs (`rg -g '*.swift'`). zsh fails an unmatched `--include=*.ts` with "no matches found".
 - Tools are BSD: `sed -i ''`, no `cat -A`. `fd`, PIL and ImageMagick are not installed.
-- On `mdr`, add `</dev/null` or `-T` when `docker compose exec` should not read your stdin, and don't `pkill -f` a pattern that also matches your own ssh command.
+- On `one-s`, add `</dev/null` or `-T` when `docker compose exec` should not read your stdin, and don't `pkill -f` a pattern that also matches your own ssh command.
 
 **Do NOT create unnecessary files:**
 

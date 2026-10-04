@@ -1,8 +1,11 @@
 #!/bin/bash
 # Checks that production auth still behaves the way the iOS app needs.
-# Runs on mdr: /srv/tidex/auth-smoke.sh (called by /srv/backup/watchdog.sh every 5 min).
+# Runs as root on one-s: /srv/tidex/auth-smoke.sh (called by /srv/backup/watchdog.sh every 5 min).
+# Run it by hand with `ssh one-s sudo /srv/tidex/auth-smoke.sh`. Without sudo it can't read the
+# auth container and reports false problems.
 # Prints one line per problem and exits 1 if there are any. Prints nothing and exits 0 when healthy.
-# Install or update: scp supabase/ops/auth-smoke.sh mdr:/srv/tidex/auth-smoke.sh
+# Install or update: scp supabase/ops/auth-smoke.sh one-s:/tmp/ &&
+#   ssh one-s sudo install -m 755 /tmp/auth-smoke.sh /srv/tidex/auth-smoke.sh
 #
 # Every check here maps to a regression from the 2026-09-01 self-hosting move.
 set -u

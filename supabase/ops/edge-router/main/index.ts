@@ -1,8 +1,8 @@
 // Edge runtime router (the "main" function) for the self-hosted Supabase stack.
 //
 // Deployed by copying this directory to
-// /srv/tidex/tidex-sb/volumes/functions/main/ on mdr and running
-// `docker compose restart functions` in /srv/tidex/tidex-sb.
+// /srv/tidex/tidex-sb/volumes/functions/main/ on one-s and running
+// `sudo docker compose restart functions` in /srv/tidex/tidex-sb.
 // It lives outside supabase/functions so `supabase functions serve` does not
 // treat it as a user function.
 //

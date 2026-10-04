@@ -406,7 +406,8 @@ END;
 $function$;
 
 -- Distinct active users per hour for the last 24 hours and per day for the last 30 days.
--- Days follow p_time_zone. Only counts opens from builds that record them.
+-- Days follow p_time_zone. Only counts opens from builds that record them. Leaves out the
+-- admin calling it, so the chart shows other people.
 CREATE OR REPLACE FUNCTION public.admin_get_active_users_chart_api(p_time_zone text DEFAULT 'Europe/Oslo')
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -431,7 +432,10 @@ BEGIN
       SELECT jsonb_agg(
         jsonb_build_object(
           'start', h.start,
-          'users', (SELECT count(*) FROM internal.app_activity_hours x WHERE x.hour = h.start)
+          'users', (
+            SELECT count(*) FROM internal.app_activity_hours x
+            WHERE x.hour = h.start AND x.user_id IS DISTINCT FROM auth.uid()
+          )
         )
         ORDER BY h.start
       )
@@ -445,6 +449,7 @@ BEGIN
             SELECT count(DISTINCT x.user_id) FROM internal.app_activity_hours x
             WHERE x.hour >= d.day::timestamp AT TIME ZONE p_time_zone
               AND x.hour < (d.day + 1)::timestamp AT TIME ZONE p_time_zone
+              AND x.user_id IS DISTINCT FROM auth.uid()
           )
         )
         ORDER BY d.day
