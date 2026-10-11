@@ -19,7 +19,8 @@ problem() { echo "auth: $*"; FAILED=1; }
 FAILED=0
 
 # 1. Providers and signup behaviour the app relies on.
-# signUp() in AuthService.swift requires a session straight away, so email autoconfirm must stay on.
+# Email sign-ups confirm with a 6-digit code (AuthService.verifySignupCode), so autoconfirm must stay off.
+# With it on, anyone could register someone else's email address.
 settings=$(curl -s -m 15 "$URL/auth/v1/settings" -H "apikey: $ANON")
 python3 - "$settings" <<'EOF' || FAILED=1
 import json, sys
@@ -29,8 +30,8 @@ except ValueError:
     print("auth: /settings did not return JSON"); sys.exit(1)
 ext = s.get("external", {})
 bad = [f"{p} sign-in disabled" for p in ("apple", "google", "email") if not ext.get(p)]
-if not s.get("mailer_autoconfirm"):
-    bad.append("email autoconfirm is off (new email sign-ups get no session)")
+if s.get("mailer_autoconfirm"):
+    bad.append("email autoconfirm is on (unverified email sign-ups)")
 # No SMS provider is configured, so phone autoconfirm would let anyone claim any phone number.
 if s.get("phone_autoconfirm"):
     bad.append("phone autoconfirm is on (unverified phone sign-ups)")
@@ -58,7 +59,7 @@ esac
 
 # 4. Settings that /settings doesn't expose. Compose `environment:` beats env_file, so read the live container.
 live_env=$(cd "$STACK" && docker compose exec -T auth env 2>/dev/null)
-for want in GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true GOTRUE_MAILER_AUTOCONFIRM=true; do
+for want in GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true GOTRUE_MAILER_AUTOCONFIRM=false; do
   grep -qx "$want" <<<"$live_env" || problem "auth container is missing $want"
 done
 case "$(grep -m1 '^GOTRUE_SITE_URL=' <<<"$live_env")" in

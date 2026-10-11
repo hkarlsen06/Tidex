@@ -405,6 +405,47 @@ BEGIN
 END;
 $function$;
 
+-- Jobs, wage snapshots, pay settings and payroll adjustments for the user detail screen.
+CREATE OR REPLACE FUNCTION public.admin_get_user_wage_setup_api(p_user_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public', 'internal', 'auth'
+AS $function$
+BEGIN
+  PERFORM public.assert_is_admin();
+
+  RETURN jsonb_build_object(
+    'jobs', COALESCE((
+      SELECT jsonb_agg(to_jsonb(j) ORDER BY j.is_default DESC, j.sort_order, j.created_at)
+      FROM public.jobs j
+      WHERE j.user_id = p_user_id AND j.deleted_at IS NULL AND j.archived_at IS NULL
+    ), '[]'::jsonb),
+    'snapshots', COALESCE((
+      SELECT jsonb_agg(to_jsonb(w) ORDER BY w.from_date NULLS FIRST, w.created_at)
+      FROM public.wage_snapshots w
+      WHERE w.user_id = p_user_id AND w.deleted_at IS NULL
+    ), '[]'::jsonb),
+    'settings', (
+      SELECT jsonb_build_object(
+        'payrollDay', us.payroll_day,
+        'monthlyGoal', us.monthly_goal,
+        'currency', us.currency,
+        'halfTaxMonth', us.half_tax_month
+      )
+      FROM public.user_settings us
+      WHERE us.user_id = p_user_id
+    ),
+    'adjustments', COALESCE((
+      SELECT jsonb_agg(to_jsonb(pa) ORDER BY pa.payout_date DESC, pa.created_at DESC)
+      FROM public.payroll_adjustments pa
+      WHERE pa.user_id = p_user_id AND pa.deleted_at IS NULL
+    ), '[]'::jsonb)
+  );
+END;
+$function$;
+
 -- Distinct active users per hour for the last 24 hours and per day for the last 30 days.
 -- Days follow p_time_zone. Only counts opens from builds that record them. Leaves out the
 -- admin calling it, so the chart shows other people.
@@ -1455,4 +1496,6 @@ GRANT EXECUTE ON FUNCTION public.admin_preview_notification_target_api(text, uui
 GRANT EXECUTE ON FUNCTION public.admin_send_broadcast_api(text, text, text, text, text, text, text, uuid[], boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_broadcast_detail_api(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_user_stats_api(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_user_wage_setup_api(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_get_user_wage_setup_api(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_get_active_users_chart_api(text) TO authenticated;

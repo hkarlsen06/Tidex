@@ -883,6 +883,9 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 
     Task { @MainActor in
       if let deepLink {
+        // iOS calls this while it is still animating the app open. A navigation push started
+        // then can freeze halfway, leaving a blank screen and an empty toolbar pill.
+        await Self.waitUntilApplicationIsActive()
         AppCoordinator.shared.pendingDeepLink = deepLink
         if let chatThreadId {
           await NotificationService.shared.clearDeliveredFriendChatNotifications(for: chatThreadId)
@@ -893,5 +896,14 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
 
     completionHandler()
+  }
+
+  @MainActor
+  private static func waitUntilApplicationIsActive() async {
+    let activations = NotificationCenter.default.notifications(
+      named: UIApplication.didBecomeActiveNotification
+    )
+    guard UIApplication.shared.applicationState != .active else { return }
+    for await _ in activations { return }
   }
 }

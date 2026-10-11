@@ -305,3 +305,46 @@ internal final class AdminAPITests: XCTestCase {
     XCTAssertEqual(entry.metadataRows.last?.value, "876000h")
   }
 }
+
+// MARK: - Wage setup
+
+extension AdminAPITests {
+  internal func testWageSetupDecodesTableRows() throws {
+    let json: Data = Data(
+      #"""
+      {"jobs":[{"id":"j1","name":"Rema 1000","color":"#3B82F6","user_id":"u1","currency":"kr",
+        "revision":1,"created_at":"2026-10-06T16:13:57.559+00:00","deleted_at":null,"is_default":true,
+        "pay_period":null,"sort_order":0,"updated_at":"2026-10-06T16:13:57.559+00:00",
+        "archived_at":null,"payroll_day":15,"monthly_goal":20000,"half_tax_month":null}],
+       "settings":{"currency":"kr","payrollDay":20,"monthlyGoal":null,"halfTaxMonth":12},
+       "snapshots":[{"id":"s1","job_id":"j1","user_id":"u1",
+        "overtime":{"rules":[],"enabled":false,"weeklyThresholdHours":40},"from_date":null,
+        "created_at":"2026-10-06T16:13:57.559+00:00","deleted_at":null,"wage_level":null,
+        "hourly_wage":197.96,"supplements":{"rules":[
+          {"to":"21:00","days":[1,2,3,4,5],"from":"18:00","rate":22},
+          {"to":"23:00","days":[6],"from":"18:00","rate":110}]},
+        "tax_enabled":true,"break_method":"proportional","break_enabled":true,"tariff_type_id":null,
+        "tax_percentage":18,"break_threshold_hours":5.5,"break_deduction_minutes":30},
+        {"id":"s2","job_id":"other","user_id":"u1","from_date":"2026-01-01","hourly_wage":205,
+         "supplements":{"rules":[]},"overtime":{"rules":[],"enabled":false,"weeklyThresholdHours":40}}],
+       "adjustments":[{"id":"a1","user_id":"u1","job_id":"j1","amount":1500.5,"currency":"kr",
+        "category":"retro_pay","tax_treatment":"gross_taxable","description":"Back pay","note":null,
+        "payout_date":"2026-09-20","revision":1,"deleted_at":null}]}
+      """#.utf8)
+
+    let setup: AdminWageSetup = try JSONDecoder().decode(AdminWageSetup.self, from: json)
+
+    let job: Job = try XCTUnwrap(setup.jobs.first)
+    XCTAssertEqual(job.name, "Rema 1000")
+    let snapshots: [WageSnapshot] = setup.snapshots(for: job)
+    XCTAssertEqual(snapshots.map(\.id), ["s1"])
+    let snapshot: WageSnapshot = try XCTUnwrap(snapshots.first)
+    XCTAssertEqual(snapshot.hourly_wage, 197.96)
+    XCTAssertEqual(snapshot.effectiveTaxPercentage, 18)
+    XCTAssertEqual(snapshot.breakMethod, .proportional)
+    XCTAssertEqual(snapshot.effectiveSupplements.map(\.rate), [22, 110])
+    XCTAssertEqual(setup.settings?.halfTaxMonth, 12)
+    XCTAssertEqual(setup.adjustments.first?.description, "Back pay")
+    XCTAssertEqual(setup.adjustments.first?.category, .retroPay)
+  }
+}

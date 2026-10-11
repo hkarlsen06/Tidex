@@ -65,9 +65,15 @@ nothing when auth works the way the iOS app needs and one line per problem
 otherwise. Without `sudo` it can't read the auth container and reports false
 problems. The watchdog also runs it as root every 5 minutes and emails
 failures. The source is `supabase/ops/auth-smoke.sh`, so copy it back to one-s
-when you change it. In the compose stack, a variable set under `environment:` in
-`docker-compose.yml` overrides the same variable in `env_file`. Change those in
-`.env`, then confirm the live value with `sudo docker compose exec -T auth env`.
+when you change it.
+
+On one-s, `.env` sets `COMPOSE_FILE=compose-migration.json`. That file is a
+fully resolved config written during the move from `mdr`, with every value
+from `.env`, `gotrue-extra.env` and `functions-secrets.env` copied in. Editing
+those env files changes nothing until you make the same edit in
+`compose-migration.json`. Back up the JSON file, edit the value there and in the
+env file, run `sudo docker compose up -d <service>`, then confirm the live
+value with `sudo docker compose exec -T auth env`.
 
 Use migrations rather than ad hoc SQL for schema changes. Do not run remote
 Supabase CLI database commands (`db push`, `db pull`, `migration repair`,

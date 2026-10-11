@@ -178,6 +178,31 @@ struct AdminUserStats: Decodable, Sendable {
   var calendarFeedLastUsed: Date? { adminDate(calendarFeedLastUsedAt) }
 }
 
+/// A user's pay configuration from `admin_get_user_wage_setup_api`. Jobs, snapshots and
+/// adjustments are table rows, so they decode with the app's own models.
+struct AdminWageSetup: Decodable, Sendable {
+  /// Active jobs, default job first.
+  let jobs: [Job]
+  /// Oldest first. The undated snapshot applies from the start.
+  let snapshots: [WageSnapshot]
+  /// Nil when the user has no settings row.
+  let settings: Settings?
+  /// Newest payout first.
+  let adjustments: [PayrollAdjustment]
+
+  /// The `user_settings` values a job falls back to when it has none of its own.
+  struct Settings: Decodable, Sendable {
+    let payrollDay: Int?
+    let monthlyGoal: Int?
+    let currency: String?
+    let halfTaxMonth: Int?
+  }
+
+  func snapshots(for job: Job) -> [WageSnapshot] {
+    snapshots.filter { $0.job_id == job.id }
+  }
+}
+
 /// Distinct users with an app open, from `admin_get_active_users_chart_api`.
 /// Only counts builds that record app opens.
 struct AdminActiveUsersChart: Decodable, Sendable {

@@ -48,9 +48,14 @@ enum AdminAPI {
     try await rpc("admin_get_user_stats_api", ["p_user_id": .string(id)])
   }
 
+  static func userWageSetup(id: String) async throws -> AdminWageSetup {
+    try await rpc("admin_get_user_wage_setup_api", ["p_user_id": .string(id)])
+  }
+
   /// Days follow the admin's own time zone.
   static func activeUsersChart() async throws -> AdminActiveUsersChart {
-    try await rpc("admin_get_active_users_chart_api", ["p_time_zone": .string(TimeZone.current.identifier)])
+    try await rpc(
+      "admin_get_active_users_chart_api", ["p_time_zone": .string(TimeZone.current.identifier)])
   }
 
   /// Weeks and months follow the admin's own time zone.

@@ -11,6 +11,7 @@ struct AdminUserDetailView: View {
   @State private var confirmAdmin = false
   @State private var impersonationReason = ""
   @State private var stats: AdminUserStats?
+  @State private var wageSetup: AdminWageSetup?
 
   init(user: AdminUser, viewerIsSuperadmin: Bool, onChange: @escaping (AdminUser) -> Void) {
     _user = State(initialValue: user)
@@ -35,6 +36,9 @@ struct AdminUserDetailView: View {
         activitySection
         if let stats {
           AdminUserStatsSections(stats: stats)
+        }
+        if let wageSetup {
+          AdminUserWageSetupSections(setup: wageSetup)
         }
         actionsSection
         if canImpersonate {
@@ -189,8 +193,10 @@ struct AdminUserDetailView: View {
   }
 
   private func loadStats() async {
+    async let wages: AdminWageSetup = AdminAPI.userWageSetup(id: user.id)
     do {
       stats = try await AdminAPI.userStats(id: user.id)
+      wageSetup = try await wages
     } catch {
       errorMessage = error.localizedDescription
     }
