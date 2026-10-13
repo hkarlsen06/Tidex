@@ -67,6 +67,13 @@ problems. The watchdog also runs it as root every 5 minutes and emails
 failures. The source is `supabase/ops/auth-smoke.sh`, so copy it back to one-s
 when you change it.
 
+one-s was resized to 4 vCPU and 8 GB RAM on 2026-10-13. It runs Tidex and
+Paeonia's Convex backend side by side, and the agent sessions run there too.
+Before that it had 4 GB, and swapped-out edge runtime memory slowed cold
+starts. The watchdog (`/srv/backup/watchdog.sh`, only on one-s) reports any
+Tidex container that is not running. Before you stop a container on purpose,
+add it to `STOPPED_ON_PURPOSE` in that script.
+
 On one-s, `.env` sets `COMPOSE_FILE=compose-migration.json`. That file is a
 fully resolved config written during the move from `mdr`, with every value
 from `.env`, `gotrue-extra.env` and `functions-secrets.env` copied in. Editing
@@ -167,8 +174,8 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 
 The router at `supabase/ops/edge-router/main/` (deployed as `volumes/functions/main/` on `one-s`) enforces JWTs. It ignores the `VERIFY_JWT` env var and `verify_jwt` in `supabase/config.toml`, which only matter for `supabase functions serve`. Keep both in sync with the router's `PUBLIC_FUNCTIONS` list.
 
-- Public, no JWT check: `apple-server-notifications` (Apple signature), `before-user-created` (Standard Webhooks signature), `calendar-feed` (calendar token), `wagey-chat-v2` (shutdown stub for old app versions). A new webhook or public function must be added to `PUBLIC_FUNCTIONS` in the router and to `config.toml` with `verify_jwt = false`.
-- UptimeBot polls `GET /functions/v1/send-push-notifications` with only the publishable key, so the router's `PUBLIC_GET_FUNCTIONS` lets unauthenticated GETs through to it and the function answers with a static status. Keep that path working, or change the monitor first. Removing it on 2026-09-30 caused a 2 minute outage alert.
+- Public, no JWT check: `apple-server-notifications` (Apple signature), `before-user-created` (Standard Webhooks signature), `calendar-feed` (calendar token), `health` (Uptime Robot), `wagey-chat-v2` (shutdown stub for old app versions). A new webhook or public function must be added to `PUBLIC_FUNCTIONS` in the router and to `config.toml` with `verify_jwt = false`.
+- Uptime Robot polls `GET /functions/v1/health`, a function with no imports. Idle workers stop after about 30 s, so every check starts a new worker. Keep the monitored function free of imports: `send-push-notifications` took 330 ms to start cold, and those cold starts set off Uptime Robot's slow response alerts. Uptime Robot's monitors check from Europe only, because US probes added up to 1.2 s of transatlantic latency. Keep their HTTP method on GET. Auth answers HEAD with 405, and Uptime Robot then retries with GET and reports both requests as one response time. Change the monitor URL before you rename or remove `health`. Removing the old monitored path on 2026-09-30 caused a 2 minute outage alert.
 - Every other function needs a valid, unexpired JWT with role `authenticated` or `service_role`. The router accepts ES256/RS256 tokens signed with a key in `SUPABASE_JWKS` (what GoTrue issues) and HS256 tokens signed with `JWT_SECRET` (the legacy service role key that pg_cron sends from the vault). The router rejects the `sb_publishable_` key and the anon JWTs, so a signed-out call fails on protected functions.
 - The router returns 404 for any first path segment that is not a directory under `volumes/functions/` with an `index.ts` (so `_shared`, `main` and `node_modules` are not routable).
 - Functions still check the caller themselves, for example with `withSupabase({ auth: "user" })`. The router is the first check, not the only one.

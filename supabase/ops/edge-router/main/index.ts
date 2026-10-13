@@ -22,13 +22,9 @@ const PUBLIC_FUNCTIONS = new Set([
   "apple-server-notifications",
   "before-user-created",
   "calendar-feed",
+  "health",
   "wagey-chat-v2",
 ]);
-
-// UptimeBot polls GET /functions/v1/send-push-notifications with only the
-// publishable key. The function answers GET with a static status and checks
-// credentials itself on POST, so the router lets that GET through.
-const PUBLIC_GET_FUNCTIONS = new Set(["send-push-notifications"]);
 
 // Lowercase letters, digits and hyphens. This rules out _shared, node_modules,
 // deno.json and path tricks. main is the router itself.
@@ -66,9 +62,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // CORS preflights carry no credentials.
-  const isPublic = PUBLIC_FUNCTIONS.has(name) ||
-    (req.method === "GET" && PUBLIC_GET_FUNCTIONS.has(name));
-  if (req.method !== "OPTIONS" && !isPublic) {
+  if (req.method !== "OPTIONS" && !PUBLIC_FUNCTIONS.has(name)) {
     const token = bearerToken(req);
     if (!token) {
       return json(401, { code: 401, message: "Missing authorization header" });

@@ -249,6 +249,10 @@ verify_jwt = false
 [functions.wagey-chat-v2]
 verify_jwt = false
 
+# Uptime Robot polls this without credentials
+[functions.health]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

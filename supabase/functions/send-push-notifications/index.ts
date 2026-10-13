@@ -1429,11 +1429,6 @@ async function handleRequest(
   authenticatedWithSecretKey: boolean,
 ) {
   try {
-    // UptimeBot polls GET without credentials to check the edge runtime is up.
-    if (req.method === "GET") {
-      return json({ ok: true, service: "send-push-notifications" });
-    }
-
     if (req.method !== "POST") {
       return res("Method Not Allowed", 405);
     }
