@@ -53,4 +53,31 @@ with tempfile.TemporaryDirectory() as directory:
     }
     assert result["tests_count"] == 2 and result["tests_failed"] == 1
 
+    # A run that never started testing: no result bundle, only the log.
+    source.write_text("")
+    log.write_text(
+        "2026-10-14 xcodebuild[1:2] Writing error result bundle\n"
+        "Testing failed:\n"
+        "\tUnable to boot the Simulator.\n"
+        "\tlaunchd failed to respond.\n"
+        "\n"
+        "** TEST FAILED **\n"
+    )
+    text_output = subprocess.run([
+        sys.executable, "-c", parser, "text", "FAILURE", str(source),
+        str(output), str(log), "0", "simulator", "App", "result.xcresult", "0",
+    ], check=True, capture_output=True, text=True).stdout
+    result = json.loads(output.read_text())
+    assert result["errors"] == ["Unable to boot the Simulator.", "launchd failed to respond."]
+    assert text_output.index("NO TESTS RAN") < text_output.index("ERRORS:")
+
+    # A failure with nothing parseable prints the end of the log instead.
+    log.write_text("Something went wrong\n** BUILD FAILED **\n")
+    text_output = subprocess.run([
+        sys.executable, "-c", parser, "text", "FAILURE", str(source),
+        str(output), str(log), "0", "simulator", "App", "result.xcresult", "0",
+    ], check=True, capture_output=True, text=True).stdout
+    assert "Last lines of the xcodebuild log" in text_output
+    assert "** BUILD FAILED **" in text_output
+
 print("Result classification passed")

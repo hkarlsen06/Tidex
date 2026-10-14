@@ -12,8 +12,9 @@ while [ $# -gt 0 ]; do
 done
 ACTION="${XCODE_BUILD_AGENT_ACTION:-build}"
 DESTINATION="${XCODE_BUILD_AGENT_DESTINATION:-generic/platform=iOS Simulator}"
-if [[ "$ACTION" != "build" && "$ACTION" != "archive" && "$ACTION" != "exportArchive" ]]; then
-  echo "XCODE_BUILD_AGENT_ACTION must be build, archive, or exportArchive" >&2
+# build-for-testing also compiles the test targets.
+if [[ "$ACTION" != "build" && "$ACTION" != "build-for-testing" && "$ACTION" != "archive" && "$ACTION" != "exportArchive" ]]; then
+  echo "XCODE_BUILD_AGENT_ACTION must be build, build-for-testing, archive, or exportArchive" >&2
   exit 2
 fi
 

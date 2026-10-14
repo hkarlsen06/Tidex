@@ -314,8 +314,18 @@ if xcresult_ok:
 if not warnings or not errors or not test_failures:
     text = Path(log_path).read_text(encoding="utf-8", errors="replace")
 
+    in_testing_failed = False
     for line in text.splitlines():
         normalized_line = line.strip()
+        # xcodebuild lists why testing could not start under "Testing failed:".
+        if normalized_line == "Testing failed:":
+            in_testing_failed = True
+            continue
+        if in_testing_failed:
+            if line.startswith(("\t", " ")) and normalized_line:
+                add_unique(errors, normalized_line)
+                continue
+            in_testing_failed = False
         if " warning: " in line:
             add_unique(warnings, line)
         elif " error: " in line:
@@ -350,7 +360,23 @@ else:
     print(f"DESTINATION: {destination}")
     if tests_count is not None or tests_failed is not None:
         print(f"TESTS: total={tests_count if tests_count is not None else 'unknown'} failed={tests_failed if tests_failed is not None else 'unknown'}")
+    if status != "SUCCESS" and not tests_count:
+        print("NO TESTS RAN: the build or the test launch failed. See ERRORS below.")
     print()
+    if errors:
+        print("ERRORS:")
+        for error in errors:
+            print(error)
+        print()
+    elif status != "SUCCESS":
+        tail = [
+            line for line in Path(log_path).read_text(encoding="utf-8", errors="replace").splitlines()
+            if line.strip() and " warning: " not in line
+        ][-30:]
+        print("ERRORS: none parsed. Last lines of the xcodebuild log:")
+        for line in tail:
+            print(line)
+        print()
     if test_failures:
         print("TEST FAILURES:")
         for failure in test_failures:
@@ -360,11 +386,6 @@ else:
         print("WARNINGS:")
         for warning in warnings:
             print(warning)
-        print()
-    if errors:
-        print("ERRORS:")
-        for error in errors:
-            print(error)
 PY
 
 exit "$EXIT_CODE"

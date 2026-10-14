@@ -46,3 +46,8 @@ jobs:
 
       - name: Audit iOS localization
         run: bun run ios:l10n:audit
+
+      # SwiftLint doesn't compile anything, so a test file that no longer builds
+      # would otherwise go unnoticed until someone runs the tests.
+      - name: Build the app and the test targets
+        run: XCODE_BUILD_AGENT_ACTION=build-for-testing ./scripts/xcode-build-agent.sh
