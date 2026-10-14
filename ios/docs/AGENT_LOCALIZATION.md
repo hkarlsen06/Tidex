@@ -26,11 +26,11 @@ bun run ios:l10n:validate
 ```
 
 - New keys must include English, Norwegian Bokmal, and a translator comment.
-- The helper preserves existing catalog order by default to keep diffs focused. Pass `--sort-keys` only when intentionally normalizing a catalog.
+- The helper writes the catalog exactly as Xcode's String Catalog editor saves it, so a later save in Xcode leaves no diff. The translator, `reset-translations.mjs` and `audit-strings --remove` write through it too (`scripts/xcstrings-set --format-stdin`). Edit catalogs with these scripts or Xcode, not by hand or with other JSON tools.
 - Use `--locale <code>=<value>` for additional languages if a specific non-generated locale edit is needed.
 - Use Xcode's String Catalog editor or XLIFF export/import for pluralization, substitutions, device variants, or bulk translator workflows.
 - After adding English/Norwegian copy, remind the user to run `bun ios/Scripts/translate-xcstrings.mjs` when other supported languages should be generated.
-- The translator uses six shared request slots across languages, preserves catalog order, and atomically saves each completed batch. Reruns fill missing translations and target-language units marked `needs_review` or `new`; other existing translations are retained.
+- The translator uses six shared request slots across languages, keeps Xcode's catalog format, and atomically saves each completed batch. Reruns fill missing translations and target-language units marked `needs_review` or `new`; other existing translations are retained.
 - When English or Norwegian wording changes through `xcstrings-set`, the helper automatically marks other existing translations `needs_review`, except languages supplied in the same command. Unchanged wording and metadata-only edits do not trigger this. For source edits made outside the helper, mark affected translations `needs_review` before running the translator.
 - Request failures and invalid translations are reported immediately and return a nonzero exit status. Interrupting saves completed work and aborts pending requests; rerun to resume.
 - Run `bun test ios/Scripts/translate-xcstrings.test.mjs` for translator regression checks without API calls.

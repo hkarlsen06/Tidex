@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import argparse
 import copy
+import ctypes
+import ctypes.util
 import fcntl
+import functools
 import json
 import shutil
 import subprocess
@@ -79,11 +82,6 @@ def parse_args() -> argparse.Namespace:
         "--allow-complex",
         action="store_true",
         help="Allow overwriting entries with variations or substitutions.",
-    )
-    parser.add_argument(
-        "--sort-keys",
-        action="store_true",
-        help="Sort the catalog's strings dictionary alphabetically.",
     )
     parser.add_argument(
         "--skip-xcstringstool-check",
@@ -204,7 +202,6 @@ def update_catalog(
     extraction_state: Optional[str],
     allow_missing_comment: bool,
     allow_complex: bool,
-    sort_keys: bool,
 ) -> tuple[bool, list[str]]:
     strings = catalog["strings"]
     is_new_entry = key not in strings
@@ -278,22 +275,76 @@ def update_catalog(
                     mark_translation_needs_review(locale_entry)
                     changed_locales.append(locale)
 
-    if sort_keys:
-        catalog["strings"] = {
-            sorted_key: strings[sorted_key]
-            for sorted_key in sorted(strings.keys())
-        }
-
     return is_new_entry, changed_locales
 
 
+# Xcode's String Catalog editor orders keys like Foundation's
+# localizedStandardCompare, which needs ICU collation, so ask CoreFoundation.
+_cf = ctypes.CDLL(ctypes.util.find_library("CoreFoundation"))
+_cf.CFStringCreateWithCString.restype = ctypes.c_void_p
+_cf.CFStringCreateWithCString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint32]
+_cf.CFStringGetLength.restype = ctypes.c_long
+_cf.CFStringGetLength.argtypes = [ctypes.c_void_p]
+_cf.CFRelease.argtypes = [ctypes.c_void_p]
+_cf.CFLocaleCopyCurrent.restype = ctypes.c_void_p
+
+
+class _CFRange(ctypes.Structure):
+    _fields_ = [("location", ctypes.c_long), ("length", ctypes.c_long)]
+
+
+_cf.CFStringCompareWithOptionsAndLocale.restype = ctypes.c_long
+_cf.CFStringCompareWithOptionsAndLocale.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p, _CFRange, ctypes.c_ulong, ctypes.c_void_p,
+]
+# Case insensitive, numeric, width insensitive and forced ordering, in the
+# current locale: the options localizedStandardCompare uses.
+_STANDARD_COMPARE = 1 | 64 | 256 | 512
+_CURRENT_LOCALE = _cf.CFLocaleCopyCurrent()
+
+
+def xcode_key_order(keys) -> list:
+    keys = list(keys)
+    refs = {key: _cf.CFStringCreateWithCString(None, key.encode("utf-8"), 0x08000100) for key in keys}
+    try:
+        def compare(a, b):
+            ref = refs[a]
+            whole = _CFRange(0, _cf.CFStringGetLength(ref))
+            return _cf.CFStringCompareWithOptionsAndLocale(
+                ref, refs[b], whole, _STANDARD_COMPARE, _CURRENT_LOCALE
+            )
+        return sorted(keys, key=functools.cmp_to_key(compare))
+    finally:
+        for ref in refs.values():
+            _cf.CFRelease(ref)
+
+
 def serialize_catalog(catalog: dict) -> str:
-    return json.dumps(
-        catalog,
-        ensure_ascii=False,
-        indent=2,
-        separators=(",", " : "),
-    ) + "\n"
+    """Writes the catalog exactly as Xcode's String Catalog editor saves it, so a
+    later save in Xcode changes nothing: every object's keys in
+    localizedStandardCompare order, two-space indent, `" : "` between key and
+    value, an empty object as `{`, a blank line and `}`, and no newline at the
+    end."""
+
+    def dump(value, depth: int) -> str:
+        outer = "  " * depth
+        inner = "  " * (depth + 1)
+        if isinstance(value, dict):
+            if not value:
+                return "{\n\n" + outer + "}"
+            members = (
+                f"{inner}{json.dumps(key, ensure_ascii=False)} : {dump(value[key], depth + 1)}"
+                for key in xcode_key_order(value)
+            )
+            return "{\n" + ",\n".join(members) + "\n" + outer + "}"
+        if isinstance(value, list):
+            if not value:
+                return "[\n\n" + outer + "]"
+            items = (inner + dump(item, depth + 1) for item in value)
+            return "[\n" + ",\n".join(items) + "\n" + outer + "]"
+        return json.dumps(value, ensure_ascii=False)
+
+    return dump(catalog, 0)
 
 
 def run_xcstringstool_check(path: Path) -> None:
@@ -375,7 +426,6 @@ def main() -> None:
             extraction_state=args.extraction_state,
             allow_missing_comment=args.allow_missing_comment,
             allow_complex=args.allow_complex,
-            sort_keys=args.sort_keys,
         )
 
         content = serialize_catalog(catalog)
@@ -395,4 +445,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Formats catalog JSON from stdin the way Xcode saves it. The JavaScript and
+    # Swift localization scripts write through this, because only CoreFoundation
+    # reproduces Xcode's key order.
+    if sys.argv[1:] == ["--format-stdin"]:
+        sys.stdout.write(serialize_catalog(json.load(sys.stdin)))
+        raise SystemExit(0)
     main()

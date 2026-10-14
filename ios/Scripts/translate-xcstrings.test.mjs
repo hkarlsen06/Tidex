@@ -90,7 +90,7 @@ async function waitUntil(predicate) {
   }
 }
 
-test("uses six slots across languages and preserves every existing entry and its order", async () => {
+test("uses six slots across languages and preserves every existing entry in Xcode's order", async () => {
   const missing = ["de", "fr", "es", "it", "nl", "ca", "sv", "da"];
   const original = catalog(missing);
   const file = await writeCatalog(original);
@@ -119,7 +119,8 @@ test("uses six slots across languages and preserves every existing entry and its
   expect(maximum).toBe(6);
   expect(started.sort()).toEqual(missing.sort());
   const saved = JSON.parse(await fs.readFile(file, "utf8"));
-  expect(Object.keys(saved.strings)).toEqual(Object.keys(original.strings));
+  // The fixture lists z.pay first. Saved catalogs use Xcode's key order.
+  expect(Object.keys(saved.strings)).toEqual(["a.untouched", "z.pay"]);
   expect(saved.strings["a.untouched"]).toEqual(original.strings["a.untouched"]);
   for (const [locale, entry] of Object.entries(original.strings["z.pay"].localizations)) {
     expect(saved.strings["z.pay"].localizations[locale]).toEqual(entry);
@@ -187,7 +188,8 @@ for (const sourceLocale of ["en", "nb"]) {
     setCatalogString(file, `--${sourceLocale}`, "Updated pay %@", "--locale", "de=Updated German %@");
     const saved = JSON.parse(await fs.readFile(file, "utf8"));
     const localizations = saved.strings["z.pay"].localizations;
-    expect(Object.keys(saved.strings)).toEqual(Object.keys(original.strings));
+    // The fixture lists z.pay first. Saved catalogs use Xcode's key order.
+    expect(Object.keys(saved.strings)).toEqual(["a.untouched", "z.pay"]);
     expect(saved.strings["a.untouched"]).toEqual(original.strings["a.untouched"]);
     expect(localizations[sourceLocale]).toEqual(unit("Updated pay %@"));
     const otherSource = sourceLocale === "en" ? "nb" : "en";

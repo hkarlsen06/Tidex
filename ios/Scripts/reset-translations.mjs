@@ -6,6 +6,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import { xcstringsStringify } from "./translate-xcstrings.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,7 +40,7 @@ async function resetTranslations(filePath) {
     keptCount += Object.keys(entry.localizations).length;
   }
 
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
+  await fs.writeFile(filePath, xcstringsStringify(data));
 
   console.log(`  Removed: ${removedCount} translations`);
   console.log(`  Kept: ${keptCount} translations (en, nb)`);

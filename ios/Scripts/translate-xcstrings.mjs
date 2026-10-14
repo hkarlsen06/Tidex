@@ -2,6 +2,7 @@
 
 import fs from "fs/promises";
 import path from "path";
+import { execFileSync } from "child_process";
 import { fileURLToPath } from "url";
 import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
@@ -512,10 +513,17 @@ function deepSet(obj, path, value) {
   current[path[path.length - 1]] = value;
 }
 
-// Keep the catalog's existing order; sorting moves unrelated entries in diffs.
+// Writes the catalog the way Xcode's String Catalog editor saves it, so a later
+// save in Xcode changes nothing. Only CoreFoundation reproduces Xcode's key order,
+// so scripts/xcstrings-set does the formatting.
+const XCSTRINGS_SET = path.join(__dirname, "../../scripts/xcstrings-set");
+
 function xcstringsStringify(data) {
-  const json = JSON.stringify(data, null, 2);
-  return json.replace(/^(\s*"(?:[^"\\]|\\.)*"): /gm, "$1 : ") + "\n";
+  return execFileSync(XCSTRINGS_SET, ["--format-stdin"], {
+    input: JSON.stringify(data),
+    encoding: "utf8",
+    maxBuffer: 512 * 1024 * 1024,
+  });
 }
 
 function reportProgress(message) {

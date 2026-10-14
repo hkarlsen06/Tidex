@@ -636,13 +636,39 @@ private func removeKeysFromCatalog(keys: [String], catalogPath: String) -> Bool 
   }
 
   do {
-    try updatedData.write(to: URL(fileURLWithPath: catalogPath))
+    try formattedLikeXcode(updatedData).write(to: URL(fileURLWithPath: catalogPath))
     print("✓ Removed \(removedCount) orphaned keys from String Catalog")
     return true
   } catch {
     print("Error: Could not write updated catalog: \(error)")
     return false
   }
+}
+
+/// Formats catalog JSON the way Xcode saves it, through scripts/xcstrings-set, so
+/// a later save in Xcode changes nothing. JSONSerialization's sorted keys follow a
+/// different order than Xcode's.
+private func formattedLikeXcode(_ data: Data) throws -> Data {
+  let process = Process()
+  process.executableURL =
+    URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent()
+    .appendingPathComponent("../../scripts/xcstrings-set")
+    .standardizedFileURL
+  process.arguments = ["--format-stdin"]
+  let input = Pipe()
+  let output = Pipe()
+  process.standardInput = input
+  process.standardOutput = output
+  try process.run()
+  input.fileHandleForWriting.write(data)
+  try input.fileHandleForWriting.close()
+  let formatted = output.fileHandleForReading.readDataToEndOfFile()
+  process.waitUntilExit()
+  guard process.terminationStatus == 0, !formatted.isEmpty else {
+    throw CocoaError(.fileWriteUnknown)
+  }
+  return formatted
 }
 
 // MARK: - Main
