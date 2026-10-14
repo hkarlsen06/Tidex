@@ -17,19 +17,32 @@ When the user does ask for a build or test:
 - Use the wrappers only, never raw `xcodebuild`. They share one machine-wide lock across Tidex, Paeonia, Kvil and Notex. If a run prints `waiting for another agent's xcodebuild`, wait. Do not kill the other run or set `XCODE_AGENT_NO_LOCK=1`.
 - Run only what was asked for, filtered with `-only-testing:<Target>/<Class>` where possible. The test wrapper builds the app itself, so do not run the build wrapper first.
 - Do not run UI tests (`TidexAppUITests`) unless the user asks for UI tests. Unfiltered runs skip them; do not set `XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1` on your own.
-- Do not boot, create, erase or clone simulators, or open Simulator.app. Use the destination the test wrapper picks.
+- Run on a connected device, or on the shared simulator when none is connected. [Devices and simulators](#devices-and-simulators) below says how. Do not open Simulator.app.
 - `XCODE_AGENT_NICE` and `XCODE_AGENT_JOBS` are for the user to set, not you.
 
 ### Exception: when no other agent needs the Mac
 
 The rules above exist because parallel agents used to build, test and start or stop simulators on their own at the same time. That slowed the Mac down and caused build database locks. They are not meant to stop useful work when nothing can conflict.
 
-You may build, run tests, and boot, shut down, restart, erase or reinstall apps on simulators without asking when both of these hold:
+You may build, run tests, and boot, shut down, restart or reinstall apps on the device or shared simulator described below without asking when both of these hold:
 
 - Nothing else is building, testing or using a simulator. Check right before you act. `pgrep -lf "xcodebuild|xcode-test-agent|xcode-build-agent|simctl"` must print nothing, `/tmp/xcode-agent.lock` must not exist, and `xcrun simctl list devices booted` must not show a simulator in use by someone else. These checks don't see the Xcode app. If a run fails with `build.db: database is locked`, the user is probably building in Xcode, so stop and hand off without retrying.
 - The action helps the task, and you don't need a decision from the user to take it. Examples are confirming a fix compiles, running the tests you wrote, and restarting a simulator that fails with "Simulator device failed to launch no.tidex.app" and 0 tests run.
 
 While you do it, keep using the wrappers and their lock, run the smallest set of tests that answers your question, and shut down any simulator you booted when you're done. If another agent starts during your work, go back to the rules above.
+
+### Devices and simulators
+
+Agents in several repos share this Mac, and simulators created by agents once filled its disk. Whenever the app or tests run:
+
+- Use a connected device first. `xcrun xctrace list devices` lists them. Pick an iPhone or iPad under `== Devices ==`, not the Mac and not one under `== Devices Offline ==`, and pass it as `platform=iOS,id=<UDID>`, for example `XCODE_TEST_AGENT_DESTINATION="platform=iOS,id=<UDID>" ./scripts/xcode-test-agent.sh`. If the device is locked, ask the user to unlock it.
+- If no device is connected, use the one shared simulator, `Shared iPhone`, as `platform=iOS Simulator,name=Shared iPhone`. Agents in every worktree and every repo on this Mac use that same simulator.
+- The only other simulator allowed is `Shared iPhone SE`, for checking layouts on a small screen. Use it only for that, and shut it down when you're done.
+- Always set `XCODE_TEST_AGENT_DESTINATION`. Without it, the test wrapper creates and uses its own `Tidex Tests` simulator.
+- Setting it skips the wrapper's uninstall of Tidex before the run. If a run then fails with "test runner hung before establishing connection" or "failed to launch no.tidex.app", run `xcrun simctl uninstall "Shared iPhone" no.tidex.app` and retry. On a physical device, ask the user before uninstalling, because that deletes the app's data there.
+- Do not create, clone or erase simulators, and do not boot any simulator other than these two. To clear the app's data, uninstall it instead of erasing the simulator.
+- Do not download simulator runtimes or platforms, through `xcodebuild -downloadPlatform`, `xcrun simctl runtime add` or Xcode's Components settings. If a shared simulator is missing or no runtime is installed, stop and ask the user.
+- `./scripts/xcode-build-agent.sh` builds for the generic simulator destination. That needs no simulator or runtime, so these rules don't change it.
 
 ## Project Overview
 
