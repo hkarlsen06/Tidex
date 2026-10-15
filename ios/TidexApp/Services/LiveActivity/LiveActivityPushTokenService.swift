@@ -131,6 +131,15 @@ final class LiveActivityPushTokenService {
   }
 }
 
+extension Activity where Attributes == ShiftActivityAttributes {
+  /// `Activity` isn't Sendable, so main actor code passes the id and this
+  /// nonisolated function looks the activity up itself.
+  nonisolated static func endImmediately(id: String) async {
+    let activity = activities.first { $0.id == id }
+    await activity?.end(nil, dismissalPolicy: .immediate)
+  }
+}
+
 extension LiveActivityPushTokenService {
   fileprivate func startPushTokenObservationIfNeeded(
     for activity: Activity<ShiftActivityAttributes>
@@ -143,7 +152,7 @@ extension LiveActivityPushTokenService {
       if !locallyStartedActivityIds.contains(activity.id),
         !(await hasAuthenticatedRegistrationContext())
       {
-        await activity.end(nil, dismissalPolicy: .immediate)
+        await Activity<ShiftActivityAttributes>.endImmediately(id: activity.id)
         removeObservation(for: activity.id)
         return
       }

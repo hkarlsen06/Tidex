@@ -18,8 +18,8 @@ enum TermsVersion {
   private static let fallbackVersionReference = "2026-03-28T00:40:00Z"
 
   /// Cached version reference (fetched from API)
-  private static var cachedVersionReference: String?
-  private static var lastFetchTime: Date?
+  @MainActor private static var cachedVersionReference: String?
+  @MainActor private static var lastFetchTime: Date?
   private static let cacheExpiryInterval: TimeInterval = 3_600  // 1 hour
 
   /// Maximum time to wait for terms version API response
@@ -37,6 +37,7 @@ enum TermsVersion {
 
   /// Like `fetchCurrentVersionReference`, but returns nil when the manifest can't be reached.
   /// Callers use nil to tell "offline" apart from "the fallback says re-accept".
+  @MainActor
   static func fetchLiveVersionReference() async -> String? {
     // Check cache first
     if let cached = cachedVersionReference,
@@ -87,6 +88,7 @@ enum TermsVersion {
   /// Check if the user needs to accept or re-accept terms
   /// - Parameter termsAcceptedAt: ISO date string of when user accepted terms (from user metadata)
   /// - Returns: true if user needs to accept/re-accept terms
+  @MainActor
   static func needsTermsReAcceptance(_ termsAcceptedAt: String?) -> Bool {
     guard let termsAcceptedAt, !termsAcceptedAt.isEmpty else {
       // Never accepted terms

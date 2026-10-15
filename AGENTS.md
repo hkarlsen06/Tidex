@@ -174,6 +174,10 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 - Before committing release-oriented Tidex project changes, run `./scripts/set-chat-package-source.sh remote`.
 - After release work, switch back with `./scripts/set-chat-package-source.sh local` if continuing local package development.
 
+## Release checks
+
+[RELEASE_CHECKS.md](RELEASE_CHECKS.md) lists things to try on a device before the next App Store or TestFlight release. When the user asks for release work (App Store submission, TestFlight build, version tag), show them the open items first and ask whether they have checked them. After the release ships, delete the items and keep the empty file. When a change needs a manual device check that the tests can't cover, add it there.
+
 ## Supabase Edge Functions
 
 **CRITICAL: Edit locally in `supabase/functions/`, then deploy to the self-hosted stack on `one-s`, NOT via Supabase's hosted deployment or MCP deploy tools**

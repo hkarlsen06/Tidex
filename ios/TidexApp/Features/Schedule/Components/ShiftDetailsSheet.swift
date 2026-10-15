@@ -1097,7 +1097,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           id: "note",
           systemImage: "note.text",
           title: displayedNote ?? "",
-          action: onUpdate == nil ? nil : beginNoteEditing
+          action: onUpdate == nil ? nil : { beginNoteEditing() }
         )
       )
       .accessibilityHint(onUpdate == nil ? Text(verbatim: "") : Text(.shiftsDetailsNoteEdit))
@@ -1128,7 +1128,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           subtitle: breakRowSubtitle,
           value: deductedPauseMinutes > 0
             ? "\(deductedPauseMinutes) \(String(localized: .commonMinutesShort))" : nil,
-          action: canEditPauseWindows ? openPauseEditor : nil
+          action: canEditPauseWindows ? { openPauseEditor() } : nil
         ))
     }
 

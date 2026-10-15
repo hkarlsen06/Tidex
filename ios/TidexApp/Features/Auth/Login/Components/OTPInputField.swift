@@ -213,7 +213,8 @@ internal struct OTPInputField: View {
     }
 
     cursorTimer = Timer.scheduledTimer(withTimeInterval: cursorBlinkInterval, repeats: true) { _ in
-      cursorVisible.toggle()
+      // The timer is scheduled on the main run loop.
+      MainActor.assumeIsolated { cursorVisible.toggle() }
     }
   }
 }

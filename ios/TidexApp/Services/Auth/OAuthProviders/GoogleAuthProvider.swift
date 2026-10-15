@@ -35,11 +35,10 @@ final class GoogleAuthProvider {
     guard
       let idToken = try await performRequest(start: { [weak self] requestID in
         GIDSignIn.sharedInstance.signIn(withPresenting: viewController) { result, error in
+          // GIDSignInResult isn't Sendable, so read the token before hopping.
+          let signInResult = Self.signInResult(result: result, error: error)
           Task { @MainActor in
-            self?.completeRequest(
-              id: requestID,
-              result: Self.signInResult(result: result, error: error)
-            )
+            self?.completeRequest(id: requestID, result: signInResult)
           }
         }
       })
@@ -50,7 +49,7 @@ final class GoogleAuthProvider {
     return idToken
   }
 
-  private static func signInResult(
+  nonisolated private static func signInResult(
     result: GIDSignInResult?,
     error: Error?
   ) -> Result<String?, Error> {
@@ -131,16 +130,15 @@ final class GoogleAuthProvider {
 
     return try await performRequest(start: { [weak self] requestID in
       GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
-        Task { @MainActor in
+        // GIDGoogleUser isn't Sendable, so read the token before hopping.
+        let result: Result<String?, Error> =
           if let error {
-            self?.completeRequest(
-              id: requestID,
-              result: .failure(GoogleAuthError.failed(error.localizedDescription))
-            )
-            return
+            .failure(GoogleAuthError.failed(error.localizedDescription))
+          } else {
+            .success(user?.idToken?.tokenString)
           }
-
-          self?.completeRequest(id: requestID, result: .success(user?.idToken?.tokenString))
+        Task { @MainActor in
+          self?.completeRequest(id: requestID, result: result)
         }
       }
     })

@@ -155,3 +155,30 @@ enum TestFixtures {
     )
   }
 }
+
+// Models can't leave the actor's context, so tests read unmanaged copies.
+extension LocalStoreActor {
+  func allJobCopies(userId: String) throws -> sending [LocalJob] {
+    copies(of: try getAllJobs(userId: userId))
+  }
+
+  func allUserShiftCopies(userId: String) throws -> sending [LocalUserShift] {
+    copies(of: try getAllUserShifts(userId: userId))
+  }
+
+  func allRecurringShiftCopies(userId: String) throws -> sending [LocalRecurringShift] {
+    copies(of: try getAllRecurringShifts(userId: userId))
+  }
+
+  func allWageSnapshotCopies(userId: String) throws -> sending [LocalWageSnapshot] {
+    copies(of: try getAllWageSnapshots(userId: userId))
+  }
+
+  func allPayrollAdjustmentCopies(userId: String) throws -> sending [LocalPayrollAdjustment] {
+    copies(of: try getAllPayrollAdjustments(userId: userId))
+  }
+
+  func conflictedPayrollAdjustmentIds(userId: String) throws -> [String] {
+    try getConflicts(userId: userId).payrollAdjustments.map(\.id)
+  }
+}

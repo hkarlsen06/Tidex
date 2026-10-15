@@ -637,6 +637,7 @@ enum FriendsThreadChatViewportResolver {
       presentedMessageIDsByIndexPath[indexPath]
     }
 
+    @MainActor
     func latestVisiblePresentedMessageID(in tableView: UITableView) -> String? {
       let visibleIndexPaths = (tableView.indexPathsForVisibleRows ?? []).filter { indexPath in
         tableView.numberOfSections > indexPath.section
@@ -694,6 +695,7 @@ enum FriendsThreadChatViewportResolver {
     layoutSnapshot.indexPath(for: presentedMessageID)
   }
 
+  @MainActor
   static func latestVisiblePresentedMessageID(
     in tableView: UITableView,
     messages: [ExyteChat.Message]
@@ -701,6 +703,7 @@ enum FriendsThreadChatViewportResolver {
     layoutSnapshot(messages: messages).latestVisiblePresentedMessageID(in: tableView)
   }
 
+  @MainActor
   static func latestVisiblePresentedMessageID(
     in tableView: UITableView,
     layoutSnapshot: LayoutSnapshot

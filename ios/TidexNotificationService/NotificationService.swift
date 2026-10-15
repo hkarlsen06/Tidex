@@ -23,7 +23,8 @@ private let donationBudget = Duration.seconds(2)
 private enum SenderAvatarLoader {
   private static let appGroupId = "group.no.tidex.app"
   private static let sharedCacheDirectoryName = "NotificationAvatarCache"
-  static let inMemoryCache = NSCache<NSURL, INImage>()
+  // NSCache is thread-safe, and nothing mutates an INImage after makeImage creates it.
+  nonisolated(unsafe) static let inMemoryCache = NSCache<NSURL, INImage>()
   static let urlCache = URLCache(
     memoryCapacity: 4 * 1_024 * 1_024,
     diskCapacity: 20 * 1_024 * 1_024,
@@ -78,7 +79,9 @@ private enum SenderAvatarLoader {
     return makeImage(from: response.data, url: url)
   }
 
-  static func fetchImage(for url: URL) async -> INImage? {
+  // Returns data, not an INImage, because INImage isn't Sendable and the
+  // caller races this fetch against a timeout in a task group.
+  static func fetchImageData(for url: URL) async -> Data? {
     let request = URLRequest(
       url: url,
       cachePolicy: .useProtocolCachePolicy,
@@ -95,7 +98,7 @@ private enum SenderAvatarLoader {
 
       urlCache.storeCachedResponse(CachedURLResponse(response: response, data: data), for: request)
       storeSharedImageData(data, for: url)
-      return makeImage(from: data, url: url)
+      return data
     } catch is CancellationError {
       return nil
     } catch {
@@ -132,7 +135,7 @@ private enum SenderAvatarLoader {
       .joined()
   }
 
-  private static func makeImage(from data: Data, url: URL) -> INImage? {
+  static func makeImage(from data: Data, url: URL) -> INImage? {
     guard !data.isEmpty else { return nil }
     let image = INImage(imageData: data)
     inMemoryCache.setObject(image, forKey: url as NSURL)
@@ -159,9 +162,23 @@ final class NotificationService: UNNotificationServiceExtension {
 
     self.bestAttemptContent = bestAttemptContent
     processingTask?.cancel()
-    processingTask = Task { [weak self] in
-      guard let self else { return }
-      let updatedContent = await enrichedContent(from: request, content: bestAttemptContent)
+
+    guard let contentCopy = request.content.mutableCopy() as? UNMutableNotificationContent
+    else {
+      contentHandler(bestAttemptContent)
+      return
+    }
+    let payload = CommunicationNotificationPayload(
+      userInfo: request.content.userInfo,
+      fallbackSenderDisplayName: request.content.title
+    )
+    // The task enriches its own copy, so serviceExtensionTimeWillExpire can deliver
+    // bestAttemptContent while the task is still running. Nothing else references
+    // the copy, and the system's content handler can be called from any thread.
+    nonisolated(unsafe) let workingContent = contentCopy
+    nonisolated(unsafe) let contentHandler = contentHandler
+    processingTask = Task {
+      let updatedContent = await Self.enrichedContent(workingContent, payload: payload)
       guard !Task.isCancelled else { return }
       contentHandler(updatedContent)
     }
@@ -176,18 +193,13 @@ final class NotificationService: UNNotificationServiceExtension {
     }
   }
 
-  private func enrichedContent(
-    from request: UNNotificationRequest,
-    content: UNMutableNotificationContent
+  private static func enrichedContent(
+    _ content: UNMutableNotificationContent,
+    payload: CommunicationNotificationPayload?
   ) async -> UNNotificationContent {
     let startedAt = Date()
 
-    guard
-      let payload = CommunicationNotificationPayload(
-        userInfo: request.content.userInfo,
-        fallbackSenderDisplayName: request.content.title
-      )
-    else {
+    guard let payload else {
       return content
     }
 
@@ -254,7 +266,7 @@ final class NotificationService: UNNotificationServiceExtension {
     }
   }
 
-  private func loadSenderImage(from url: URL?) async -> INImage? {
+  private static func loadSenderImage(from url: URL?) async -> INImage? {
     guard let url else { return nil }
     let startedAt = Date()
 
@@ -271,9 +283,9 @@ final class NotificationService: UNNotificationServiceExtension {
       return cachedImage
     }
 
-    let fetchedImage = await withTaskGroup(of: INImage?.self, returning: INImage?.self) { group in
+    let fetchedData = await withTaskGroup(of: Data?.self, returning: Data?.self) { group in
       group.addTask {
-        await SenderAvatarLoader.fetchImage(for: url)
+        await SenderAvatarLoader.fetchImageData(for: url)
       }
       group.addTask {
         try? await Task.sleep(for: avatarFetchBudget)
@@ -287,13 +299,14 @@ final class NotificationService: UNNotificationServiceExtension {
       group.cancelAll()
       return result
     }
+    let fetchedImage = fetchedData.flatMap { SenderAvatarLoader.makeImage(from: $0, url: url) }
     logger.debug(
       "Sender avatar fetch result hit=\(fetchedImage != nil, privacy: .public) duration=\(Self.elapsedMilliseconds(since: startedAt), privacy: .public) ms"
     )
     return fetchedImage
   }
 
-  private func donateBestEffort(_ interaction: INInteraction) {
+  private static func donateBestEffort(_ interaction: INInteraction) {
     let donationStartedAt = Date()
     let timeoutTask = Task.detached(priority: .utility) {
       try? await Task.sleep(for: donationBudget)

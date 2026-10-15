@@ -1,6 +1,7 @@
 import XCTest
 
 /// Calendar taps, labels and markers, captured with offline fixture data.
+@MainActor
 final class CalendarSemanticsUITests: XCTestCase {
   private let timeout: TimeInterval = 30
 

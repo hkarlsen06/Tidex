@@ -85,7 +85,7 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     setupMonthSubscription()
   }
 
-  deinit {  // swiftlint:disable:this type_contents_order
+  isolated deinit {  // swiftlint:disable:this type_contents_order
     // Cancel all Combine subscriptions to prevent memory leaks
     // While [weak self] prevents retain cycles, the subscriptions
     // themselves remain active without explicit cancellation

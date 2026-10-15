@@ -14,7 +14,7 @@ final class JobsRepositoryTests: XCTestCase {
     return LocalStoreActor(modelContainer: container)
   }
 
-  private func makeUpsertTestJob(
+  private static func makeUpsertTestJob(
     id: String,
     name: String,
     sortOrder: Int,
@@ -35,16 +35,16 @@ final class JobsRepositoryTests: XCTestCase {
 
   func testUpsertJobTwiceBeforeSaveKeepsOneRowWithLatestValues() async throws {
     let store = try makeJobStoreActor()
-    let first = makeUpsertTestJob(
+    let first = Self.makeUpsertTestJob(
       id: "job-1", name: "First", sortOrder: 0, updatedAt: Date(timeIntervalSince1970: 1))
-    let second = makeUpsertTestJob(
+    let second = Self.makeUpsertTestJob(
       id: "job-1", name: "Second", sortOrder: 1, updatedAt: Date(timeIntervalSince1970: 2))
 
     try await store.upsertJob(first)
     try await store.upsertJob(second)
     try await store.save()
 
-    let jobs = try await store.getAllJobs(userId: "user-1")
+    let jobs = try await store.allJobCopies(userId: "user-1")
     XCTAssertEqual(jobs.count, 1)
     XCTAssertEqual(jobs.first?.name, "Second")
     XCTAssertEqual(jobs.first?.sortOrder, 1)
@@ -52,18 +52,18 @@ final class JobsRepositoryTests: XCTestCase {
 
   func testUpsertJobAcrossSeparateSavesKeepsOneRowWithLatestValues() async throws {
     let store = try makeJobStoreActor()
-    let first = makeUpsertTestJob(
+    let first = Self.makeUpsertTestJob(
       id: "job-2", name: "First", sortOrder: 0, updatedAt: Date(timeIntervalSince1970: 1))
 
     try await store.upsertJob(first)
     try await store.save()
 
-    let second = makeUpsertTestJob(
+    let second = Self.makeUpsertTestJob(
       id: "job-2", name: "Second", sortOrder: 1, updatedAt: Date(timeIntervalSince1970: 2))
     try await store.upsertJob(second)
     try await store.save()
 
-    let jobs = try await store.getAllJobs(userId: "user-1")
+    let jobs = try await store.allJobCopies(userId: "user-1")
     XCTAssertEqual(jobs.count, 1)
     XCTAssertEqual(jobs.first?.name, "Second")
     XCTAssertEqual(jobs.first?.sortOrder, 1)

@@ -1391,6 +1391,11 @@ internal actor LocalStoreActor {
     return try modelContext.fetch(descriptor).first
   }
 
+  /// For callers outside the actor, which can't read a `LocalEvent` from this context.
+  internal func eventUserId(id: String) throws -> String? {
+    try getEvent(id: id)?.userId
+  }
+
   internal func getAllEvents(userId: String) throws -> [LocalEvent] {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.userId == userId }

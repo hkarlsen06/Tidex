@@ -503,7 +503,7 @@ internal final class AddShiftViewModel {
     setupAddActionSubscription()
   }
 
-  deinit {
+  isolated deinit {
     monthContextCancellable?.cancel()
     addActionCancellable?.cancel()
     previewUpdateTask?.cancel()

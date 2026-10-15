@@ -8,8 +8,8 @@ import WidgetKit
 
 struct FriendEntity: AppEntity {
   // App Intents metadata needs literal keys, so these name catalog keys instead of symbols.
-  static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "widget.friend")
-  static var defaultQuery = FriendEntityQuery()
+  static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "widget.friend")
+  static let defaultQuery = FriendEntityQuery()
 
   var id: String
   var displayName: String
@@ -112,8 +112,8 @@ struct FriendEntityQuery: EntityQuery {
 // MARK: - Widget Configuration Intent
 
 struct FriendShiftIntent: WidgetConfigurationIntent {
-  static var title: LocalizedStringResource = "widget.name.friendsShift"
-  static var description: IntentDescription = "widget.intent.friendShift.description"
+  static let title: LocalizedStringResource = "widget.name.friendsShift"
+  static let description: IntentDescription = "widget.intent.friendShift.description"
 
   @Parameter(title: "widget.friend")
   var friend: FriendEntity?

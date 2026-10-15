@@ -5,7 +5,7 @@ import XCTest
 /// Production has no SMS provider, so phone flows that need a code must stop before calling the server.
 @MainActor
 internal final class SMSUnavailableAuthTests: XCTestCase {
-  override internal func setUpWithError() throws {
+  override internal func setUp() async throws {
     try XCTSkipIf(AuthService.isSMSAvailable, "SMS is configured; the OTP flows are allowed")
   }
 

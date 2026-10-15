@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class TidexAppUITests: XCTestCase {
   private enum AccessibilityID {
     static let composerTextField = "friends-thread-composer.text-field"

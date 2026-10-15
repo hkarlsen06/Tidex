@@ -240,7 +240,8 @@ private enum MockCalendarSubscriptionError: Error, LocalizedError {
   }
 }
 
-private final class MockCalendarSubscriptionService: CalendarSubscriptionServicing {
+// `@unchecked` is safe because only the main actor tests touch the mock.
+private final class MockCalendarSubscriptionService: CalendarSubscriptionServicing, @unchecked Sendable {
   var state: CalendarSubscriptionState
   let activeAfterDuplicate: CalendarSubscriptionState
   let createError: Error?

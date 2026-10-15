@@ -24,6 +24,7 @@ final class LaunchAppearanceTests: XCTestCase {
   }
 }
 
+@MainActor
 final class SemanticColorContrastTests: XCTestCase {
   private static let minimumTextContrast = 4.5
   private static let minimumNonTextContrast = 3.0

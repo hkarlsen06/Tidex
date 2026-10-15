@@ -57,7 +57,7 @@ struct EventReminderEditorSection: View {
             anchorTime: $pickerAnchorTime,
             isEditing: editingTimeIndex != nil,
             onSave: savePickerTime,
-            onDelete: editingTimeIndex != nil ? deleteCurrentReminderTime : nil,
+            onDelete: editingTimeIndex != nil ? { deleteCurrentReminderTime() } : nil,
             onCancel: { showTimePickerSheet = false }
           )
         } else {
@@ -67,7 +67,7 @@ struct EventReminderEditorSection: View {
             isEditing: editingTimeIndex != nil,
             context: .event,
             onSave: savePickerTime,
-            onDelete: editingTimeIndex != nil ? deleteCurrentReminderTime : nil,
+            onDelete: editingTimeIndex != nil ? { deleteCurrentReminderTime() } : nil,
             onCancel: { showTimePickerSheet = false }
           )
         }

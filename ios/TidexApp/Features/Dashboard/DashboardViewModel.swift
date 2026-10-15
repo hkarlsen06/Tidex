@@ -1736,7 +1736,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
       }
   }
 
-  deinit {  // swiftlint:disable:this type_contents_order
+  isolated deinit {  // swiftlint:disable:this type_contents_order
     // Cancel Combine subscriptions to prevent memory leaks
     monthContextCancellable?.cancel()
 

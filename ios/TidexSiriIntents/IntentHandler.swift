@@ -23,16 +23,6 @@ final class IntentHandler: INExtension {
 }
 
 private final class SendMessageIntentHandler: NSObject, INSendMessageIntentHandling {
-  func resolveRecipients(
-    for intent: INSendMessageIntent,
-    with completion: @escaping ([INSendMessageRecipientResolutionResult]) -> Void
-  ) {
-    Task {
-      let result = await resolvedRecipients(for: intent)
-      completion(result)
-    }
-  }
-
   func resolveContent(
     for intent: INSendMessageIntent,
     with completion: @escaping (INStringResolutionResult) -> Void
@@ -68,36 +58,30 @@ private final class SendMessageIntentHandler: NSObject, INSendMessageIntentHandl
     completion(INSendMessageIntentResponse(code: .ready, userActivity: nil))
   }
 
-  func handle(
-    intent: INSendMessageIntent,
-    completion: @escaping (INSendMessageIntentResponse) -> Void
-  ) {
+  func handle(intent: INSendMessageIntent) async -> INSendMessageIntentResponse {
     let recipientUserIds = resolvedRecipientUserIds(from: intent)
     guard recipientUserIds.count == 1,
       let recipientUserId = recipientUserIds.first,
       let content = normalizedContent(intent.content)
     else {
-      completion(INSendMessageIntentResponse(code: .failure, userActivity: nil))
-      return
+      return INSendMessageIntentResponse(code: .failure, userActivity: nil)
     }
 
-    Task {
-      do {
-        try await ShareExtensionMessagingClient.sendTextMessage(
-          to: recipientUserId,
-          message: content
-        )
-        completion(INSendMessageIntentResponse(code: .success, userActivity: nil))
-      } catch FriendsAPIError.noAccessToken {
-        completion(INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: nil))
-      } catch {
-        logger.error("Siri message send failed: \(error.localizedDescription, privacy: .public)")
-        completion(INSendMessageIntentResponse(code: .failure, userActivity: nil))
-      }
+    do {
+      try await ShareExtensionMessagingClient.sendTextMessage(
+        to: recipientUserId,
+        message: content
+      )
+      return INSendMessageIntentResponse(code: .success, userActivity: nil)
+    } catch FriendsAPIError.noAccessToken {
+      return INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: nil)
+    } catch {
+      logger.error("Siri message send failed: \(error.localizedDescription, privacy: .public)")
+      return INSendMessageIntentResponse(code: .failure, userActivity: nil)
     }
   }
 
-  private func resolvedRecipients(for intent: INSendMessageIntent) async
+  func resolveRecipients(for intent: INSendMessageIntent) async
     -> [INSendMessageRecipientResolutionResult]
   {
     guard let requestedRecipients = intent.recipients, !requestedRecipients.isEmpty else {

@@ -7,6 +7,7 @@ enum TimeInputField: Hashable {
   case end
 }
 
+@MainActor
 @Observable
 final class TimeInputFocusController {
   @ObservationIgnored weak var startField: UITextField?

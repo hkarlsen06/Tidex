@@ -184,8 +184,8 @@ final class EventsRepository {
   func resolveConflictKeepLocal(id: String) async throws {
     do {
       try await localStore.storeActor.resolveStoredEventConflictKeepLocal(id: id)
-      if let localEvent = try await localStore.storeActor.getEvent(id: id) {
-        triggerSync(userId: localEvent.userId)
+      if let userId = try await localStore.storeActor.eventUserId(id: id) {
+        triggerSync(userId: userId)
       }
     } catch LocalStoreWriteError.notFound {
       logger.warning("Event not found for local conflict resolution: \(id)")
@@ -197,9 +197,9 @@ final class EventsRepository {
   func resolveConflictKeepServer(id: String) async throws {
     do {
       try await localStore.storeActor.resolveStoredEventConflictKeepServer(id: id)
-      if let localEvent = try await localStore.storeActor.getEvent(id: id) {
+      if let userId = try await localStore.storeActor.eventUserId(id: id) {
         Task {
-          await eventReminderScheduler.scheduleAllReminders(for: localEvent.userId)
+          await eventReminderScheduler.scheduleAllReminders(for: userId)
         }
       } else {
         Task {

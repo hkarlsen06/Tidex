@@ -51,7 +51,19 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
       endTime: "17:00",
       customSupplements: nil
     )
-    let record = try await store.getUserShift(id: id)
+    return try await storedShift(id: id, in: store)
+  }
+
+  /// The row as stored now. A copy doesn't follow later changes, so read again after each store call.
+  private func storedShift(id: String, in store: LocalStoreActor) async throws -> LocalUserShift {
+    let record = try await store.userShiftCopy(id: id)
+    return try XCTUnwrap(record)
+  }
+
+  private func storedAdjustment(id: String, in store: LocalStoreActor) async throws
+    -> LocalPayrollAdjustment
+  {
+    let record = try await store.payrollAdjustmentCopy(id: id)
     return try XCTUnwrap(record)
   }
 
@@ -69,8 +81,7 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
       earnedToDate: nil,
       payoutDate: Date()
     )
-    let record = try await store.getPayrollAdjustment(id: created.id)
-    return try XCTUnwrap(record)
+    return try await storedAdjustment(id: created.id, in: store)
   }
 
   private func serverShiftRow(id: String, startTime: String, revision: Int64) -> SyncShiftRow {
@@ -174,8 +185,8 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
 
     await store.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
 
-    let conflicts = try await store.getConflicts(userId: userId)
-    XCTAssertEqual(conflicts.payrollAdjustments.map(\.id), [adjustment.id])
+    let conflictIds = try await store.conflictedPayrollAdjustmentIds(userId: userId)
+    XCTAssertEqual(conflictIds, [adjustment.id])
     let count = try await store.countConflicts(userId: userId)
     XCTAssertEqual(count, 1)
     let hasConflicts = try await store.hasConflicts(userId: userId)
@@ -270,7 +281,7 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     let store = LocalStoreActor(modelContainer: try makeContainer())
     let shift = try await makeShift(id: "shift-1", in: store)
     _ = try await store.markShiftPendingDelete(id: "shift-1")
-    let dirtyBefore = try await store.getDirtyUserShifts(userId: userId)
+    let dirtyBefore = try await store.dirtyUserShiftCopies(userId: userId)
     XCTAssertEqual(dirtyBefore.map(\.id), ["shift-1"])
     XCTAssertEqual(shift.serverRevision, 0)
 
@@ -279,10 +290,11 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     await store.markShiftDeleted(
       id: "shift-1", serverUpdatedAt: deletedAt, serverRevision: 0, serverDeletedAt: deletedAt)
 
-    let dirtyAfter = try await store.getDirtyUserShifts(userId: userId)
+    let dirtyAfter = try await store.dirtyUserShiftCopies(userId: userId)
     XCTAssertTrue(dirtyAfter.isEmpty)
-    XCTAssertEqual(shift.syncStatus, .clean)
-    XCTAssertNotNil(shift.serverDeletedAt)
+    let stored = try await storedShift(id: "shift-1", in: store)
+    XCTAssertEqual(stored.syncStatus, .clean)
+    XCTAssertNotNil(stored.serverDeletedAt)
     let hasPending = try await store.hasPendingChanges(userId: userId)
     XCTAssertFalse(hasPending)
   }
@@ -304,14 +316,15 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     )
 
     XCTAssertFalse(applied, "The overwrite must be refused for a dirty row")
-    XCTAssertEqual(shift.startTime, "09:00")
-    XCTAssertEqual(shift.syncStatus, .dirty)
-    XCTAssertEqual(shift.serverRevision, 0)
+    let stored = try await storedShift(id: "shift-1", in: store)
+    XCTAssertEqual(stored.startTime, "09:00")
+    XCTAssertEqual(stored.syncStatus, .dirty)
+    XCTAssertEqual(stored.serverRevision, 0)
   }
 
   internal func testPullOverwritesCleanShift() async throws {
     let store = LocalStoreActor(modelContainer: try makeContainer())
-    let shift = try await makeShift(id: "shift-1", in: store)
+    _ = try await makeShift(id: "shift-1", in: store)
     await store.markShiftClean(id: "shift-1")
 
     let applied = await store.updateShiftFromServer(
@@ -324,8 +337,9 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     )
 
     XCTAssertTrue(applied)
-    XCTAssertEqual(shift.startTime, "08:00")
-    XCTAssertEqual(shift.serverRevision, 2)
+    let stored = try await storedShift(id: "shift-1", in: store)
+    XCTAssertEqual(stored.startTime, "08:00")
+    XCTAssertEqual(stored.serverRevision, 2)
   }
 
   internal func testPullDoesNotOverwriteDirtyPayrollAdjustment() async throws {
@@ -366,8 +380,9 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     )
 
     XCTAssertFalse(applied)
-    XCTAssertEqual(adjustment.amount, 500)
-    XCTAssertEqual(adjustment.syncStatus, .dirty)
+    let stored = try await storedAdjustment(id: adjustment.id, in: store)
+    XCTAssertEqual(stored.amount, 500)
+    XCTAssertEqual(stored.syncStatus, .dirty)
   }
 
   // swiftlint:disable:next function_body_length
@@ -390,7 +405,8 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
       earnedToDate: nil,
       payoutDate: adjustment.payoutDate
     )
-    XCTAssertEqual(adjustment.dirtyFieldKeys, [.note])
+    let edited = try await storedAdjustment(id: adjustment.id, in: store)
+    XCTAssertEqual(edited.dirtyFieldKeys, [.note])
 
     // Another device changed the amount. The merge takes it and keeps the unpushed note.
     let row = SyncPayrollAdjustmentRow(
@@ -423,11 +439,12 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
       snapshot: PayrollAdjustmentServerSnapshot.from(row: row, updatedAt: Date(), deletedAt: nil)
     )
 
-    XCTAssertEqual(adjustment.amount, 900)
-    XCTAssertEqual(adjustment.note, "Local note")
-    XCTAssertEqual(adjustment.dirtyFieldKeys, [.note])
-    XCTAssertEqual(adjustment.syncStatus, .dirty)
-    XCTAssertEqual(adjustment.serverRevision, 2)
+    let merged = try await storedAdjustment(id: adjustment.id, in: store)
+    XCTAssertEqual(merged.amount, 900)
+    XCTAssertEqual(merged.note, "Local note")
+    XCTAssertEqual(merged.dirtyFieldKeys, [.note])
+    XCTAssertEqual(merged.syncStatus, .dirty)
+    XCTAssertEqual(merged.serverRevision, 2)
   }
 
   // MARK: - Payroll adjustment conflict resolution
@@ -440,10 +457,11 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
 
     await store.resolvePayrollAdjustmentConflictKeepLocal(id: adjustment.id, serverRevision: 4)
 
-    XCTAssertEqual(adjustment.syncStatus, .dirty)
-    XCTAssertEqual(adjustment.serverRevision, 4)
-    XCTAssertEqual(adjustment.dirtyFieldKeys, Set(PayrollAdjustmentField.allCases))
-    XCTAssertNil(adjustment.conflictServerSnapshot)
+    let stored = try await storedAdjustment(id: adjustment.id, in: store)
+    XCTAssertEqual(stored.syncStatus, .dirty)
+    XCTAssertEqual(stored.serverRevision, 4)
+    XCTAssertEqual(stored.dirtyFieldKeys, Set(PayrollAdjustmentField.allCases))
+    XCTAssertNil(stored.conflictServerSnapshot)
   }
 
   internal func testKeepServerRestoresPayrollAdjustmentFromSnapshot() async throws {
@@ -473,11 +491,12 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     await store.resolvePayrollAdjustmentConflictKeepServer(
       id: adjustment.id, serverSnapshot: snapshot)
 
-    XCTAssertEqual(adjustment.amount, 900)
-    XCTAssertEqual(adjustment.descriptionText, "Server bonus")
-    XCTAssertEqual(adjustment.serverRevision, 5)
-    XCTAssertEqual(adjustment.syncStatus, .clean)
-    XCTAssertEqual(adjustment.dirtyFieldKeys, [])
+    let stored = try await storedAdjustment(id: adjustment.id, in: store)
+    XCTAssertEqual(stored.amount, 900)
+    XCTAssertEqual(stored.descriptionText, "Server bonus")
+    XCTAssertEqual(stored.serverRevision, 5)
+    XCTAssertEqual(stored.syncStatus, .clean)
+    XCTAssertEqual(stored.dirtyFieldKeys, [])
   }
 
   // MARK: - Notification preferences edited during a push

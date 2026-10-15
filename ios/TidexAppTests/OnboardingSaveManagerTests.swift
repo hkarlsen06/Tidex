@@ -122,16 +122,16 @@ final class OnboardingCompletionStoreTests: XCTestCase {
 
   private var defaults: UserDefaults!
 
-  override func setUp() {
-    super.setUp()
+  override func setUp() async throws {
+    try await super.setUp()
     defaults = UserDefaults(suiteName: "OnboardingCompletionStoreTests")
     defaults.removePersistentDomain(forName: "OnboardingCompletionStoreTests")
   }
 
-  override func tearDown() {
+  override func tearDown() async throws {
     defaults.removePersistentDomain(forName: "OnboardingCompletionStoreTests")
     defaults = nil
-    super.tearDown()
+    try await super.tearDown()
   }
 
   func testCompletionIsLocalAndQueuedBeforeAnyNetworkCall() {

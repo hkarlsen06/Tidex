@@ -85,7 +85,7 @@ internal final class AddShiftCoordinator {
     triggerAddSubject.send()
   }
 
-  deinit {
+  isolated deinit {
     triggerAddSubject.send(completion: .finished)
   }
 }

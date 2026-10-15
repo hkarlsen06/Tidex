@@ -418,8 +418,8 @@ struct FriendsWidgetView: View {
     }
   }
 
-  static let maxRows = 4
-  static let maxFooterAvatars = 7
+  nonisolated static let maxRows = 4
+  nonisolated static let maxFooterAvatars = 7
 
   /// Friends shown as the card and rows: the nearest shifts that fit.
   private var shiftFriends: [FriendPreview] {

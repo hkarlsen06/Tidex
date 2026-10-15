@@ -88,7 +88,8 @@ enum ShiftCardFormatter {
   }
 }
 
-private final class ShiftCardFormatterCache {
+// `@unchecked` is safe because the lock guards `formatters`.
+private final class ShiftCardFormatterCache: @unchecked Sendable {
   private var formatters: [String: DateFormatter] = [:]
   private let lock = NSLock()
 

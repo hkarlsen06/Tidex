@@ -4,9 +4,9 @@ import XCTest
 
 @MainActor
 final class SensitiveContentPresentationStateTests: XCTestCase {
-  override func tearDown() {
+  override func tearDown() async throws {
     SensitiveContentPresentationState.shared.setVisibleContext(nil)
-    super.tearDown()
+    try await super.tearDown()
   }
 
   func testClearingDifferentOwnerDoesNotRemoveActiveContext() {

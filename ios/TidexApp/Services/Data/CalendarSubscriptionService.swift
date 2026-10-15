@@ -63,7 +63,7 @@ enum CalendarSubscriptionSetupIntent: Hashable, Sendable {
   }
 }
 
-protocol CalendarSubscriptionServicing {
+protocol CalendarSubscriptionServicing: Sendable {
   func getSubscription() async throws -> CalendarSubscriptionState
   func createSubscription(mode: CalendarSubscriptionContentMode) async throws
     -> CalendarSubscriptionCreated
@@ -184,7 +184,7 @@ protocol CalendarSubscriptionTokenStoring {
   func clearAllTokens()
 }
 
-final class CalendarSubscriptionKeychainStore: CalendarSubscriptionTokenStoring {
+final class CalendarSubscriptionKeychainStore: CalendarSubscriptionTokenStoring, Sendable {
   static let shared = CalendarSubscriptionKeychainStore()
 
   private let service = "\(APIConfiguration.keychainService).calendar-subscriptions"

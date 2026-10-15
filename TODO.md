@@ -132,3 +132,12 @@ Prerequisites before reevaluation:
   after pg-delta's current rewrite stabilizes.
 
 References: [Supabase declarative database schemas](https://supabase.com/docs/guides/local-development/declarative-database-schemas), [pg-delta public-alpha announcement](https://github.com/orgs/supabase/discussions/44938), [destructive dependency replacement issue](https://github.com/supabase/pg-toolbelt/issues/280), and [clean-room pg-delta rewrite](https://github.com/supabase/pg-toolbelt/pull/299).
+
+## Swift concurrency checking
+
+Until 2026-10-16 every target built in Swift 5 mode (`SWIFT_VERSION = 5.0`) without `SWIFT_STRICT_CONCURRENCY`, so the compiler stayed quiet about most data races that Swift 6 rejects. That was Xcode's new-project default, not a decision. Paeonia went through the same steps in October 2026. Every target now builds in Swift 6 mode. `SyncCoordinator` used to read SwiftData models outside `LocalStoreActor`, and it now reads unmanaged copies from `LocalStore+UnmanagedCopies.swift`.
+
+- [x] Set `SWIFT_STRICT_CONCURRENCY = complete` on every target, still in Swift 5 mode, so each problem shows as a warning without breaking the build.
+- [x] Build a Debug configuration and read the warnings. The Tidex app target's Release configuration sets `"OTHER_SWIFT_FLAGS[arch=*]" = "-suppress-warnings"`, so a Release build hides them.
+- [x] Fix the warnings. In Paeonia most came from two causes: design tokens and pure helpers that should be `nonisolated`, and `Shape` types, whose `path(in:)` SwiftUI calls off the main actor. `PhotosPicker`'s label closure is `@Sendable`, so build the label view from plain values before the picker and pass it in.
+- [x] Once a build has no concurrency warnings, set `SWIFT_VERSION = 6.0` on every target.

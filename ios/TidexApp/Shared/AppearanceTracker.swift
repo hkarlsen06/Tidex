@@ -7,6 +7,7 @@
 /// Global tracker for which views have already appeared
 /// Uses a simple LRU cache to avoid unbounded memory growth
 /// Reset this when navigating to a new month to allow fresh animations
+@MainActor
 final class AppearanceTracker {
   static let shared = AppearanceTracker()
 

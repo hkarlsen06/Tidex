@@ -1922,7 +1922,7 @@ private struct FriendsChatImageView: View {
   @State private var shouldSuppressNextTap: Bool = false
 
   var body: some View {
-    let onImageTap: (() -> Void)? = canOpenAttachment ? handleImageTap : nil
+    let onImageTap: (() -> Void)? = canOpenAttachment ? { handleImageTap() } : nil
 
     FriendsChatImageAttachmentCard(
       attachment: attachment,
@@ -2017,7 +2017,7 @@ private struct FriendsChatImageView: View {
 }
 
 private struct FriendsChatReplyPayloadFramePreferenceKey: PreferenceKey {
-  static var defaultValue: [String: CGRect] = [:]
+  static let defaultValue: [String: CGRect] = [:]
 
   static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
     value.merge(nextValue()) { _, new in new }

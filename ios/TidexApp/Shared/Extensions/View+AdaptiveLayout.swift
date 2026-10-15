@@ -81,6 +81,7 @@ extension View {
 // MARK: - iPad Detection Helper
 
 /// Check if running on iPad
+@MainActor
 private var isIPad: Bool {
   UIDevice.current.userInterfaceIdiom == .pad
 }

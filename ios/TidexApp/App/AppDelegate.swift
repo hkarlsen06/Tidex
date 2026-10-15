@@ -330,7 +330,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
       if shouldEnd {
         endedAny = true
-        await activity.end(nil, dismissalPolicy: .immediate)
+        await Activity<ShiftActivityAttributes>.endImmediately(id: activity.id)
       }
     }
 
@@ -347,7 +347,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       guard !matchingActivities.isEmpty else { return }
 
       for activity in matchingActivities {
-        await activity.end(nil, dismissalPolicy: .immediate)
+        await Activity<ShiftActivityAttributes>.endImmediately(id: activity.id)
       }
 
       // Re-check immediately so replacement activities can start without waiting
@@ -761,7 +761,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 // MARK: - UNUserNotificationCenterDelegate
-extension AppDelegate: UNUserNotificationCenterDelegate {
+extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
   private func shouldSuppressForegroundPresentation(for userInfo: [AnyHashable: Any]) -> Bool {
     let type = userInfo["type"] as? String ?? ""
     if type.hasPrefix("shared_shift_"),

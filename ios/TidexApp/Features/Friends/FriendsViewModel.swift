@@ -252,7 +252,7 @@ final class SharingViewModel: MonthNavigable {
     setupMonthContextSubscription()
   }
 
-  deinit {
+  isolated deinit {
     monthContextCancellable?.cancel()
     selectedSharerLoadTask?.cancel()
   }

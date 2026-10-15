@@ -82,7 +82,8 @@ enum NorwegianHolidays {
   // MARK: - Private Implementation
 
   private static let cacheLock = NSLock()
-  private static var holidayCache: [Int: [Holiday]] = [:]
+  // cacheLock guards every access.
+  nonisolated(unsafe) private static var holidayCache: [Int: [Holiday]] = [:]
 
   /// Gregorian calendar used for all holiday date calculations.
   private static let calendar: Calendar = {

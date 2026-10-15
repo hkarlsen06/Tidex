@@ -97,8 +97,10 @@ extension SyncReason {
 
 /// Coordinates bidirectional sync between local SwiftData storage and Supabase
 /// Implements incremental sync via revision cursors with field-level conflict detection
+/// `@unchecked` is safe because the observable state is only written inside `MainActor.run`,
+/// and the sync state lives in the `SyncStateStore` actor.
 @Observable
-final class SyncCoordinator {
+final class SyncCoordinator: @unchecked Sendable {
   /// Shared instance
   static let shared = SyncCoordinator()
 
@@ -202,7 +204,7 @@ final class SyncCoordinator {
   // swiftlint:disable:next type_contents_order
   internal func loadTrackingState(userId: String) async {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    let state = try? await storeActor.getSyncState(userId: userId)
+    let state = try? await storeActor.syncStateCopy(userId: userId)
     let conflicts = (try? await storeActor.countConflicts(userId: userId)) ?? 0
     let lastSuccessfulSyncAt = state?.lastSuccessfulSyncAt
     let lastSyncAttemptAt = state?.lastSyncAttemptAt
@@ -564,7 +566,7 @@ final class SyncCoordinator {
     do {
       try Task.checkCancellation()
 
-      let syncState = try await storeActor.getOrCreateSyncState(userId: userId)
+      let syncState = try await storeActor.syncStateCopyCreatingIfNeeded(userId: userId)
       // Read the cursors here so the pull task does not capture the SwiftData model.
       let startCursors = Dictionary(
         uniqueKeysWithValues: tables.map { table in
@@ -1067,7 +1069,7 @@ final class SyncCoordinator {
     let serverArchivedAt = serverRow.archived_at.flatMap { parseISO8601($0) }
     let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
-    if let existing = try await storeActor.getJob(id: serverRow.id) {
+    if let existing = try await storeActor.jobCopy(id: serverRow.id) {
       return await applyJobToExisting(
         existing: existing,
         serverRow: serverRow,
@@ -1106,7 +1108,7 @@ final class SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.getJob(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.jobCopy(id: serverRow.id), fresh.syncStatus != .clean else {
         return .noChange
       }
       return await applyJobToExisting(
@@ -1202,7 +1204,7 @@ final class SyncCoordinator {
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
-      if let existing = try await storeActor.getUserShift(id: row.id) {
+      if let existing = try await storeActor.userShiftCopy(id: row.id) {
         affectedMonths.insert(ShiftChangeAffectedMonth(date: existing.shiftDate))
       }
 
@@ -1258,7 +1260,7 @@ final class SyncCoordinator {
     let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
     // Check if exists locally
-    if let existing = try await storeActor.getUserShift(id: serverRow.id) {
+    if let existing = try await storeActor.userShiftCopy(id: serverRow.id) {
       return await applyShiftToExisting(
         existing: existing,
         serverRow: serverRow,
@@ -1311,7 +1313,7 @@ final class SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.getUserShift(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.userShiftCopy(id: serverRow.id), fresh.syncStatus != .clean else {
         return .noChange
       }
       return await applyShiftToExisting(
@@ -1457,7 +1459,7 @@ final class SyncCoordinator {
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
-      if let existing = try await storeActor.getEvent(id: row.id) {
+      if let existing = try await storeActor.eventCopy(id: row.id) {
         affectedMonths.formUnion(
           ShiftChangeContext.affecting(
             dateRangeStart: existing.startDate,
@@ -1511,7 +1513,7 @@ final class SyncCoordinator {
     let serverUpdatedAt = try requireISO8601(serverRow.updated_at, table: .events, id: serverRow.id)
     let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
-    if let existing = try await storeActor.getEvent(id: serverRow.id) {
+    if let existing = try await storeActor.eventCopy(id: serverRow.id) {
       return await applyEventToExisting(
         existing: existing,
         serverRow: serverRow,
@@ -1555,7 +1557,7 @@ final class SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.getEvent(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.eventCopy(id: serverRow.id), fresh.syncStatus != .clean else {
         return .noChange
       }
       return await applyEventToExisting(
@@ -1743,7 +1745,7 @@ final class SyncCoordinator {
       serverRow.updated_at, table: .recurringShifts, id: serverRow.id)
     let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
-    if let existing = try await storeActor.getRecurringShift(id: serverRow.id) {
+    if let existing = try await storeActor.recurringShiftCopy(id: serverRow.id) {
       return await applyRecurringShiftToExisting(
         existing: existing,
         serverRow: serverRow,
@@ -1788,7 +1790,7 @@ final class SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.getRecurringShift(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.recurringShiftCopy(id: serverRow.id), fresh.syncStatus != .clean else {
         return .noChange
       }
       return await applyRecurringShiftToExisting(
@@ -1969,7 +1971,7 @@ final class SyncCoordinator {
       serverRow.updated_at, table: .wageSnapshots, id: serverRow.id)
     let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
-    if let existing = try await storeActor.getWageSnapshot(id: serverRow.id) {
+    if let existing = try await storeActor.wageSnapshotCopy(id: serverRow.id) {
       return await applyWageSnapshotToExisting(
         existing: existing,
         serverRow: serverRow,
@@ -2014,7 +2016,7 @@ final class SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.getWageSnapshot(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.wageSnapshotCopy(id: serverRow.id), fresh.syncStatus != .clean else {
         return .noChange
       }
       return await applyWageSnapshotToExisting(
@@ -2097,7 +2099,7 @@ final class SyncCoordinator {
 
   private func pushPayrollAdjustments(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    let dirtyAdjustments = try await storeActor.getDirtyPayrollAdjustments(userId: userId)
+    let dirtyAdjustments = try await storeActor.dirtyPayrollAdjustmentCopies(userId: userId)
 
     if dirtyAdjustments.isEmpty {
       return TablePushResult(
@@ -2244,7 +2246,7 @@ final class SyncCoordinator {
       serverDeletedAt: serverDeletedAt,
       snapshot: snapshot
     )
-    guard let rebased = try await storeActor.getPayrollAdjustment(id: adjustment.id) else {
+    guard let rebased = try await storeActor.payrollAdjustmentCopy(id: adjustment.id) else {
       return .conflict
     }
     let retryResult = try await pushPayrollAdjustment(
@@ -2490,7 +2492,7 @@ final class SyncCoordinator {
     var affectedMonths = Self.affectedMonths(forPayrollAdjustmentRows: rows)
 
     for row in rows {
-      if let existing = try await storeActor.getPayrollAdjustment(id: row.id) {
+      if let existing = try await storeActor.payrollAdjustmentCopy(id: row.id) {
         affectedMonths.insert(ShiftChangeAffectedMonth(date: existing.payoutDate))
       }
 
@@ -2533,7 +2535,7 @@ final class SyncCoordinator {
       deletedAt: serverDeletedAt
     )
 
-    if let existing = try await storeActor.getPayrollAdjustment(id: serverRow.id) {
+    if let existing = try await storeActor.payrollAdjustmentCopy(id: serverRow.id) {
       return await applyPayrollAdjustmentToExisting(
         existing: existing,
         serverRow: serverRow,
@@ -2571,7 +2573,7 @@ final class SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.getPayrollAdjustment(id: serverRow.id),
+      guard let fresh = try? await storeActor.payrollAdjustmentCopy(id: serverRow.id),
         fresh.syncStatus != .clean
       else {
         return .noChange
@@ -2709,7 +2711,7 @@ final class SyncCoordinator {
     let serverUpdatedAt = try requireISO8601(
       serverRow.updated_at, table: .userSettings, id: serverRow.user_id)
 
-    if let existing = try await storeActor.getUserSettings(userId: serverRow.user_id) {
+    if let existing = try await storeActor.userSettingsCopy(userId: serverRow.user_id) {
       return await applyUserSettingsToExisting(
         existing: existing,
         serverRow: serverRow,
@@ -2749,7 +2751,7 @@ final class SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.getUserSettings(userId: serverRow.user_id),
+      guard let fresh = try? await storeActor.userSettingsCopy(userId: serverRow.user_id),
         fresh.syncStatus != .clean
       else {
         return .noChange
@@ -2862,7 +2864,7 @@ final class SyncCoordinator {
   // swiftlint:disable:next cyclomatic_complexity
   private func pushJobs(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    let dirtyJobs = try await storeActor.getDirtyJobs(userId: userId)
+    let dirtyJobs = try await storeActor.dirtyJobCopies(userId: userId)
 
     if dirtyJobs.isEmpty {
       return TablePushResult(table: .jobs, rowsPushed: 0, newConflicts: 0, rebased: 0)
@@ -3309,7 +3311,7 @@ final class SyncCoordinator {
       newSnapshot: newServerSnapshot
     )
 
-    if let rebasedJob = try await storeActor.getJob(id: jobId) {
+    if let rebasedJob = try await storeActor.jobCopy(id: jobId) {
       let retryResult = try await pushJob(
         rebasedJob, userId: userId, storeActor: storeActor, isRetry: true)
       if retryResult == .success {
@@ -3324,7 +3326,7 @@ final class SyncCoordinator {
 
   private func pushUserShifts(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    let dirtyShifts = try await storeActor.getDirtyUserShifts(userId: userId)
+    let dirtyShifts = try await storeActor.dirtyUserShiftCopies(userId: userId)
 
     if dirtyShifts.isEmpty {
       return TablePushResult(table: .userShifts, rowsPushed: 0, newConflicts: 0, rebased: 0)
@@ -3833,7 +3835,7 @@ final class SyncCoordinator {
     )
 
     // Reload and retry
-    if let rebasedShift = try await storeActor.getUserShift(id: shiftId) {
+    if let rebasedShift = try await storeActor.userShiftCopy(id: shiftId) {
       let retryResult = try await pushUserShift(
         rebasedShift, userId: userId, storeActor: storeActor, isRetry: true)
       if retryResult == .success {
@@ -3848,7 +3850,7 @@ final class SyncCoordinator {
 
   private func pushEvents(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    let dirtyEvents = try await storeActor.getDirtyEvents(userId: userId)
+    let dirtyEvents = try await storeActor.dirtyEventCopies(userId: userId)
 
     if dirtyEvents.isEmpty {
       return TablePushResult(table: .events, rowsPushed: 0, newConflicts: 0, rebased: 0)
@@ -4268,7 +4270,7 @@ final class SyncCoordinator {
       newSnapshot: newServerSnapshot
     )
 
-    if let rebasedEvent = try await storeActor.getEvent(id: eventId) {
+    if let rebasedEvent = try await storeActor.eventCopy(id: eventId) {
       let retryResult = try await pushEvent(
         rebasedEvent, userId: userId, storeActor: storeActor, isRetry: true)
       if retryResult == .success {
@@ -4283,7 +4285,7 @@ final class SyncCoordinator {
 
   private func pushRecurringShifts(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    let dirtyShifts = try await storeActor.getDirtyRecurringShifts(userId: userId)
+    let dirtyShifts = try await storeActor.dirtyRecurringShiftCopies(userId: userId)
 
     if dirtyShifts.isEmpty {
       return TablePushResult(table: .recurringShifts, rowsPushed: 0, newConflicts: 0, rebased: 0)
@@ -4803,7 +4805,7 @@ final class SyncCoordinator {
       newSnapshot: newServerSnapshot
     )
 
-    if let rebasedShift = try await storeActor.getRecurringShift(id: shiftId) {
+    if let rebasedShift = try await storeActor.recurringShiftCopy(id: shiftId) {
       let retryResult = try await pushRecurringShift(
         rebasedShift, userId: userId, storeActor: storeActor, isRetry: true)
       if retryResult == .success {
@@ -4818,7 +4820,7 @@ final class SyncCoordinator {
 
   private func pushWageSnapshots(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    let dirtySnapshots = try await storeActor.getDirtyWageSnapshots(userId: userId)
+    let dirtySnapshots = try await storeActor.dirtyWageSnapshotCopies(userId: userId)
 
     if dirtySnapshots.isEmpty {
       return TablePushResult(table: .wageSnapshots, rowsPushed: 0, newConflicts: 0, rebased: 0)
@@ -5293,7 +5295,7 @@ final class SyncCoordinator {
       newSnapshot: newServerSnapshot
     )
 
-    if let rebasedSnapshot = try await storeActor.getWageSnapshot(id: snapshotId) {
+    if let rebasedSnapshot = try await storeActor.wageSnapshotCopy(id: snapshotId) {
       let retryResult = try await pushWageSnapshot(
         rebasedSnapshot, userId: userId, storeActor: storeActor, isRetry: true)
       if retryResult == .success {
@@ -5308,7 +5310,7 @@ final class SyncCoordinator {
 
   private func pushUserSettings(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    guard let settings = try await storeActor.getDirtyUserSettings(userId: userId) else {
+    guard let settings = try await storeActor.dirtyUserSettingsCopy(userId: userId) else {
       return TablePushResult(table: .userSettings, rowsPushed: 0, newConflicts: 0, rebased: 0)
     }
 
@@ -5631,7 +5633,7 @@ final class SyncCoordinator {
       newSnapshot: newServerSnapshot
     )
 
-    if let rebasedSettings = try await storeActor.getUserSettings(userId: userId) {
+    if let rebasedSettings = try await storeActor.userSettingsCopy(userId: userId) {
       let retryResult = try await pushUserSettingsRow(
         rebasedSettings, userId: userId, storeActor: storeActor, isRetry: true)
       if retryResult == .success {
@@ -5745,7 +5747,7 @@ final class SyncCoordinator {
     async throws
   {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    guard let job = try await storeActor.getJob(id: jobId) else {
+    guard let job = try await storeActor.jobCopy(id: jobId) else {
       throw SyncError.notFound(table: .jobs, id: jobId)
     }
     guard job.syncStatus == .conflict else {
@@ -5771,7 +5773,7 @@ final class SyncCoordinator {
       requeue: { await storeActor.resolveJobConflictKeepLocal(id: jobId, serverRevision: $0) },
       markConflict: { await storeActor.markJobConflict(id: jobId, serverSnapshot: nil) },
       push: {
-        if let updated = try await storeActor.getJob(id: jobId) {
+        if let updated = try await storeActor.jobCopy(id: jobId) {
           _ = try await self.pushJob(
             updated, userId: userId, storeActor: storeActor, isRetry: false)
         }
@@ -5784,7 +5786,7 @@ final class SyncCoordinator {
     async throws
   {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    guard let shift = try await storeActor.getUserShift(id: shiftId) else {
+    guard let shift = try await storeActor.userShiftCopy(id: shiftId) else {
       throw SyncError.notFound(table: .userShifts, id: shiftId)
     }
     guard shift.syncStatus == .conflict else {
@@ -5812,7 +5814,7 @@ final class SyncCoordinator {
       requeue: { await storeActor.resolveShiftConflictKeepLocal(id: shiftId, serverRevision: $0) },
       markConflict: { await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil) },
       push: {
-        if let updated = try await storeActor.getUserShift(id: shiftId) {
+        if let updated = try await storeActor.userShiftCopy(id: shiftId) {
           _ = try await self.pushUserShift(
             updated, userId: userId, storeActor: storeActor, isRetry: false)
         }
@@ -5825,7 +5827,7 @@ final class SyncCoordinator {
     async throws
   {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    guard let event = try await storeActor.getEvent(id: eventId) else {
+    guard let event = try await storeActor.eventCopy(id: eventId) else {
       throw SyncError.notFound(table: .events, id: eventId)
     }
     guard event.syncStatus == .conflict else {
@@ -5853,7 +5855,7 @@ final class SyncCoordinator {
       requeue: { await storeActor.resolveEventConflictKeepLocal(id: eventId, serverRevision: $0) },
       markConflict: { await storeActor.markEventConflict(id: eventId, serverSnapshot: nil) },
       push: {
-        if let updated = try await storeActor.getEvent(id: eventId) {
+        if let updated = try await storeActor.eventCopy(id: eventId) {
           _ = try await self.pushEvent(
             updated, userId: userId, storeActor: storeActor, isRetry: false)
         }
@@ -5866,7 +5868,7 @@ final class SyncCoordinator {
     shiftId: String, resolution: ConflictResolution, userId: String
   ) async throws {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    guard let shift = try await storeActor.getRecurringShift(id: shiftId) else {
+    guard let shift = try await storeActor.recurringShiftCopy(id: shiftId) else {
       throw SyncError.notFound(table: .recurringShifts, id: shiftId)
     }
     guard shift.syncStatus == .conflict else {
@@ -5896,7 +5898,7 @@ final class SyncCoordinator {
       },
       markConflict: { await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil) },
       push: {
-        if let updated = try await storeActor.getRecurringShift(id: shiftId) {
+        if let updated = try await storeActor.recurringShiftCopy(id: shiftId) {
           _ = try await self.pushRecurringShift(
             updated, userId: userId, storeActor: storeActor, isRetry: false)
         }
@@ -5909,7 +5911,7 @@ final class SyncCoordinator {
     snapshotId: String, resolution: ConflictResolution, userId: String
   ) async throws {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    guard let snapshot = try await storeActor.getWageSnapshot(id: snapshotId) else {
+    guard let snapshot = try await storeActor.wageSnapshotCopy(id: snapshotId) else {
       throw SyncError.notFound(table: .wageSnapshots, id: snapshotId)
     }
     guard snapshot.syncStatus == .conflict else {
@@ -5941,7 +5943,7 @@ final class SyncCoordinator {
         await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
       },
       push: {
-        if let updated = try await storeActor.getWageSnapshot(id: snapshotId) {
+        if let updated = try await storeActor.wageSnapshotCopy(id: snapshotId) {
           _ = try await self.pushWageSnapshot(
             updated, userId: userId, storeActor: storeActor, isRetry: false)
         }
@@ -5954,7 +5956,7 @@ final class SyncCoordinator {
     adjustmentId: String, resolution: ConflictResolution, userId: String
   ) async throws {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    guard let adjustment = try await storeActor.getPayrollAdjustment(id: adjustmentId) else {
+    guard let adjustment = try await storeActor.payrollAdjustmentCopy(id: adjustmentId) else {
       throw SyncError.notFound(table: .payrollAdjustments, id: adjustmentId)
     }
     guard adjustment.syncStatus == .conflict else {
@@ -5990,7 +5992,7 @@ final class SyncCoordinator {
         await storeActor.markPayrollAdjustmentConflict(id: adjustmentId, serverSnapshot: nil)
       },
       push: {
-        if let updated = try await storeActor.getPayrollAdjustment(id: adjustmentId) {
+        if let updated = try await storeActor.payrollAdjustmentCopy(id: adjustmentId) {
           _ = try await self.pushPayrollAdjustment(
             updated, userId: userId, storeActor: storeActor)
         }
@@ -6001,7 +6003,7 @@ final class SyncCoordinator {
   /// Resolve a conflict for user settings
   func resolveUserSettingsConflict(resolution: ConflictResolution, userId: String) async throws {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    guard let settings = try await storeActor.getUserSettings(userId: userId) else {
+    guard let settings = try await storeActor.userSettingsCopy(userId: userId) else {
       throw SyncError.notFound(table: .userSettings, id: userId)
     }
     guard settings.syncStatus == .conflict else {
@@ -6029,7 +6031,7 @@ final class SyncCoordinator {
       },
       markConflict: { await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil) },
       push: {
-        if let updated = try await storeActor.getUserSettings(userId: userId) {
+        if let updated = try await storeActor.userSettingsCopy(userId: userId) {
           _ = try await self.pushUserSettingsRow(
             updated, userId: userId, storeActor: storeActor, isRetry: false)
         }

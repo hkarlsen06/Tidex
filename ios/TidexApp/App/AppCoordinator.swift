@@ -226,7 +226,7 @@ final class AppCoordinator {
     launchLog.info("[Launch] AppCoordinator.init END")
   }
 
-  deinit {
+  isolated deinit {
     authStateTask?.cancel()
     friendsRealtimeTask?.cancel()
     appActiveObserver?.cancel()
@@ -439,7 +439,7 @@ final class AppCoordinator {
 
     let stateBeforeCheck = appState
     let didComplete = await withTaskGroup(of: Bool.self) { group in
-      group.addTask { @MainActor in
+      group.addTask {
         await self.performMFAAndTermsCheck()
         return true
       }

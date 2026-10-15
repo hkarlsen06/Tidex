@@ -21,6 +21,7 @@ enum HapticType {
 
 /// Centralized haptic feedback manager
 /// Provides consistent haptic feedback across the app
+@MainActor
 enum Haptics {
   /// Play haptic feedback of the specified type
   static func play(_ type: HapticType) {

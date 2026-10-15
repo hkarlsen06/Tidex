@@ -44,7 +44,12 @@ internal final class SyncPushMergeTests: XCTestCase {
       endTime: "17:00",
       customSupplements: nil
     )
-    let record = try await store.getUserShift(id: shiftId)
+    return try await storedShift(in: store)
+  }
+
+  /// The row as stored now. A copy doesn't follow later changes, so read again after each store call.
+  private func storedShift(in store: LocalStoreActor) async throws -> LocalUserShift {
+    let record = try await store.userShiftCopy(id: shiftId)
     return try XCTUnwrap(record)
   }
 
@@ -108,9 +113,10 @@ internal final class SyncPushMergeTests: XCTestCase {
 
     await markPushed(store, startTime: "09:00", revision: 1, baseline: SyncPushBaseline(shift))
 
-    XCTAssertEqual(shift.syncStatus, .clean)
-    XCTAssertEqual(shift.dirtyFieldKeys, [])
-    XCTAssertEqual(shift.serverRevision, 1)
+    let stored = try await storedShift(in: store)
+    XCTAssertEqual(stored.syncStatus, .clean)
+    XCTAssertEqual(stored.dirtyFieldKeys, [])
+    XCTAssertEqual(stored.serverRevision, 1)
   }
 
   internal func testPushCompletionKeepsEditMadeWhileInFlight() async throws {
@@ -128,10 +134,11 @@ internal final class SyncPushMergeTests: XCTestCase {
     )
     await markPushed(store, startTime: "09:00", revision: 1, baseline: baseline)
 
-    XCTAssertEqual(shift.startTime, "10:00")
-    XCTAssertEqual(shift.syncStatus, .dirty)
-    XCTAssertTrue(shift.dirtyFieldKeys.contains(.startTime))
-    XCTAssertEqual(shift.serverRevision, 1, "The next push must update, not insert again")
+    let stored = try await storedShift(in: store)
+    XCTAssertEqual(stored.startTime, "10:00")
+    XCTAssertEqual(stored.syncStatus, .dirty)
+    XCTAssertTrue(stored.dirtyFieldKeys.contains(.startTime))
+    XCTAssertEqual(stored.serverRevision, 1, "The next push must update, not insert again")
   }
 
   internal func testPushCompletionSettlesAcknowledgedFieldsWhenAnotherFieldChangedInFlight()
@@ -148,11 +155,12 @@ internal final class SyncPushMergeTests: XCTestCase {
 
     // The server acknowledged 10:00. If start stayed dirty, a later edit of the start time on
     // another device would be overwritten by this device's already sent value.
-    XCTAssertEqual(shift.dirtyFieldKeys, [.endTime])
-    XCTAssertEqual(shift.syncStatus, .dirty)
-    XCTAssertEqual(shift.startTime, "10:00")
-    XCTAssertEqual(shift.endTime, "18:00")
-    XCTAssertEqual(shift.serverRevision, 2)
+    let stored = try await storedShift(in: store)
+    XCTAssertEqual(stored.dirtyFieldKeys, [.endTime])
+    XCTAssertEqual(stored.syncStatus, .dirty)
+    XCTAssertEqual(stored.startTime, "10:00")
+    XCTAssertEqual(stored.endTime, "18:00")
+    XCTAssertEqual(stored.serverRevision, 2)
   }
 
   internal func testPushCompletionKeepsDeleteMadeWhileInFlight() async throws {
@@ -163,8 +171,9 @@ internal final class SyncPushMergeTests: XCTestCase {
     _ = try await store.markShiftPendingDelete(id: shiftId)
     await markPushed(store, startTime: "09:00", revision: 1, baseline: baseline)
 
-    XCTAssertEqual(shift.syncStatus, .pendingDelete)
-    XCTAssertEqual(shift.serverRevision, 1, "The delete must target the inserted revision")
+    let stored = try await storedShift(in: store)
+    XCTAssertEqual(stored.syncStatus, .pendingDelete)
+    XCTAssertEqual(stored.serverRevision, 1, "The delete must target the inserted revision")
   }
 
   // MARK: - B: row rejections do not stop the sync
@@ -198,7 +207,7 @@ internal final class SyncPushMergeTests: XCTestCase {
       endTime: nil,
       customSupplements: nil
     )
-    return shift
+    return try await storedShift(in: store)
   }
 
   private func merge(
@@ -225,10 +234,11 @@ internal final class SyncPushMergeTests: XCTestCase {
     // The edit was pushed and committed, but the request timed out locally.
     await merge(store, shift, serverStartTime: "10:00", serverUpdatedAt: Date())
 
-    XCTAssertEqual(shift.syncStatus, .clean)
-    XCTAssertEqual(shift.dirtyFieldKeys, [])
-    XCTAssertEqual(shift.startTime, "10:00")
-    XCTAssertEqual(shift.serverRevision, 2)
+    let stored = try await storedShift(in: store)
+    XCTAssertEqual(stored.syncStatus, .clean)
+    XCTAssertEqual(stored.dirtyFieldKeys, [])
+    XCTAssertEqual(stored.startTime, "10:00")
+    XCTAssertEqual(stored.serverRevision, 2)
   }
 
   internal func testRealConflictKeepsNewerLocalEdit() async throws {
@@ -239,10 +249,11 @@ internal final class SyncPushMergeTests: XCTestCase {
       store, shift, serverStartTime: "11:00",
       serverUpdatedAt: shift.localUpdatedAt.addingTimeInterval(-60))
 
-    XCTAssertEqual(shift.syncStatus, .dirty)
-    XCTAssertEqual(shift.dirtyFieldKeys, [.startTime])
-    XCTAssertEqual(shift.startTime, "10:00")
-    XCTAssertEqual(shift.serverRevision, 2)
+    let stored = try await storedShift(in: store)
+    XCTAssertEqual(stored.syncStatus, .dirty)
+    XCTAssertEqual(stored.dirtyFieldKeys, [.startTime])
+    XCTAssertEqual(stored.startTime, "10:00")
+    XCTAssertEqual(stored.serverRevision, 2)
   }
 
   internal func testNewerServerTimestampDoesNotDiscardUnacknowledgedEdit() async throws {
@@ -253,32 +264,36 @@ internal final class SyncPushMergeTests: XCTestCase {
       store, shift, serverStartTime: "11:00",
       serverUpdatedAt: shift.localUpdatedAt.addingTimeInterval(60))
 
-    XCTAssertEqual(shift.syncStatus, .dirty)
-    XCTAssertEqual(shift.dirtyFieldKeys, [.startTime])
-    XCTAssertEqual(shift.startTime, "10:00")
+    let stored = try await storedShift(in: store)
+    XCTAssertEqual(stored.syncStatus, .dirty)
+    XCTAssertEqual(stored.dirtyFieldKeys, [.startTime])
+    XCTAssertEqual(stored.startTime, "10:00")
   }
 
   internal func testTimedOutPushKeepsSubsequentEditAndSettlesOnAcknowledgement() async throws {
     let store = try makeStoreActor()
-    let shift = try await makeEditedSyncedShift(in: store)
+    _ = try await makeEditedSyncedShift(in: store)
 
     // A push of 10:00 is in flight. The user edits again before it reaches the server.
     _ = try await store.updateUserShift(
       id: shiftId, shiftDate: nil, startTime: "11:00", endTime: nil, customSupplements: nil)
-    let serverUpdatedAt = shift.localUpdatedAt.addingTimeInterval(60)
+    let edited = try await storedShift(in: store)
+    let serverUpdatedAt = edited.localUpdatedAt.addingTimeInterval(60)
 
     // The response is lost. A later pull sees the delayed 10:00 write.
-    await merge(store, shift, serverStartTime: "10:00", serverUpdatedAt: serverUpdatedAt)
+    await merge(store, edited, serverStartTime: "10:00", serverUpdatedAt: serverUpdatedAt)
 
-    XCTAssertEqual(shift.startTime, "11:00")
-    XCTAssertEqual(shift.syncStatus, .dirty)
-    XCTAssertEqual(shift.dirtyFieldKeys, [.startTime])
-    XCTAssertEqual(shift.serverRevision, 2)
+    let merged = try await storedShift(in: store)
+    XCTAssertEqual(merged.startTime, "11:00")
+    XCTAssertEqual(merged.syncStatus, .dirty)
+    XCTAssertEqual(merged.dirtyFieldKeys, [.startTime])
+    XCTAssertEqual(merged.serverRevision, 2)
 
-    await markPushed(store, startTime: "11:00", revision: 3, baseline: SyncPushBaseline(shift))
+    await markPushed(store, startTime: "11:00", revision: 3, baseline: SyncPushBaseline(merged))
 
-    XCTAssertEqual(shift.startTime, "11:00")
-    XCTAssertEqual(shift.syncStatus, .clean)
-    XCTAssertEqual(shift.dirtyFieldKeys, [])
+    let acknowledged = try await storedShift(in: store)
+    XCTAssertEqual(acknowledged.startTime, "11:00")
+    XCTAssertEqual(acknowledged.syncStatus, .clean)
+    XCTAssertEqual(acknowledged.dirtyFieldKeys, [])
   }
 }

@@ -717,7 +717,7 @@ final class ShiftsViewModel: MonthNavigable {
       }
   }
 
-  deinit {
+  isolated deinit {
     // Cancel Combine subscriptions to prevent memory leaks
     monthContextCancellable?.cancel()
     localReloadTask?.cancel()

@@ -85,7 +85,9 @@ final class FriendNotificationMessagePrefetcherTests: XCTestCase {
       object: nil,
       queue: nil
     ) { notification in
-      updatedThreadId = notification.userInfo?["threadId"] as? String
+      // The main actor prefetcher posts synchronously, so this runs on the main actor.
+      let threadId = notification.userInfo?["threadId"] as? String
+      MainActor.assumeIsolated { updatedThreadId = threadId }
     }
     defer { notificationCenter.removeObserver(token) }
 

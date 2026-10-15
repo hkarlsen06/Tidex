@@ -93,11 +93,13 @@ final class AppleAuthProvider: NSObject {
     completeActiveRequest(result: result)
   }
 
+  // Takes the controller's identity because ASAuthorizationController isn't Sendable
+  // and the delegate callbacks hop to the main actor.
   private func completeRequest(
-    controller: ASAuthorizationController,
+    controllerID: ObjectIdentifier,
     result: Result<ASAuthorization, Error>
   ) {
-    guard authorizationController === controller else { return }
+    guard authorizationController.map(ObjectIdentifier.init) == controllerID else { return }
     completeActiveRequest(result: result)
   }
 
@@ -146,8 +148,9 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
     controller: ASAuthorizationController,
     didCompleteWithAuthorization authorization: ASAuthorization
   ) {
+    let controllerID = ObjectIdentifier(controller)
     Task { @MainActor in
-      completeRequest(controller: controller, result: .success(authorization))
+      completeRequest(controllerID: controllerID, result: .success(authorization))
     }
   }
 
@@ -155,6 +158,7 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
     controller: ASAuthorizationController,
     didCompleteWithError error: Error
   ) {
+    let controllerID = ObjectIdentifier(controller)
     Task { @MainActor in
       if let authError = error as? ASAuthorizationError {
         let appleError: AppleAuthError
@@ -187,9 +191,9 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
         @unknown default:
           appleError = .unknown
         }
-        completeRequest(controller: controller, result: .failure(appleError))
+        completeRequest(controllerID: controllerID, result: .failure(appleError))
       } else {
-        completeRequest(controller: controller, result: .failure(error))
+        completeRequest(controllerID: controllerID, result: .failure(error))
       }
     }
   }

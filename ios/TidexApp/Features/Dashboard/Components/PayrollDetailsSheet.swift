@@ -61,7 +61,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   }
 
   /// Names the tax basis of the summed total, or falls back to "Total estimate" when jobs mix net and gross.
-  static func totalLabel(taxEnabledByJob: [Bool]) -> LocalizedStringResource {  // swiftlint:disable:this explicit_acl
+  nonisolated internal static func totalLabel(taxEnabledByJob: [Bool]) -> LocalizedStringResource {
     if Set(taxEnabledByJob).count > 1 { return .dashboardPayrollDetailsTotalEstimate }  // swiftlint:disable:this conditional_returns_on_newline line_length
     return taxEnabledByJob.first == true
       ? .dashboardPayrollDetailsTotalNetAfterTax : .dashboardPayrollDetailsTotalBeforeTax

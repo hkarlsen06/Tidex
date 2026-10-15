@@ -14,6 +14,7 @@ enum ContentSizedSheetMetrics {
   static let defaultContentHeight: CGFloat = 220
   static let estimatedSummaryHeaderHeight: CGFloat = 104
 
+  @MainActor
   static func detentHeight(for contentHeight: CGFloat) -> CGFloat {
     let maxHeight = currentWindowHeight * maxScreenCoverage
     let resolvedContentHeight = max(contentHeight, defaultContentHeight)
@@ -34,6 +35,7 @@ enum ContentSizedSheetMetrics {
     return (Spacing.mlg * 2) + summaryHeight + summarySpacing + cardsHeight + cardsSpacing
   }
 
+  @MainActor
   private static var currentWindowHeight: CGFloat {
     UIApplication.shared.connectedScenes
       .compactMap { $0 as? UIWindowScene }

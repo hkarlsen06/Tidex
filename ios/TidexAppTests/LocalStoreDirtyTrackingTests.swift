@@ -51,7 +51,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let localRecord = try await store.getUserShift(id: "shift-1")
+    let localRecord = try await store.userShiftCopy(id: "shift-1")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -83,7 +83,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let localRecord = try await store.getUserShift(id: "shift-2")
+    let localRecord = try await store.userShiftCopy(id: "shift-2")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -114,7 +114,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       ])
     )
 
-    let localRecord = try await store.getUserShift(id: "shift-pause-1")
+    let localRecord = try await store.userShiftCopy(id: "shift-pause-1")
     let local = try XCTUnwrap(localRecord)
 
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -142,7 +142,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     _ = try await store.markShiftPendingDelete(id: "shift-3")
 
-    let localRecord = try await store.getUserShift(id: "shift-3")
+    let localRecord = try await store.userShiftCopy(id: "shift-3")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .pendingDelete)
@@ -184,7 +184,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredShiftConflictKeepServer(id: "shift-4")
 
-    let localRecord = try await store.getUserShift(id: "shift-4")
+    let localRecord = try await store.userShiftCopy(id: "shift-4")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .clean)
@@ -250,7 +250,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredShiftConflictKeepLocal(id: "shift-5")
 
-    let localRecord = try await store.getUserShift(id: "shift-5")
+    let localRecord = try await store.userShiftCopy(id: "shift-5")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -289,7 +289,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let localRecord = try await store.getUserShift(id: "shift-note-1")
+    let localRecord = try await store.userShiftCopy(id: "shift-note-1")
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.note, "Dentist")
     XCTAssertEqual(local.dirtyFieldKeys, Set([.note]))
@@ -323,7 +323,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let localRecord = try await store.getUserShift(id: "shift-note-2")
+    let localRecord = try await store.userShiftCopy(id: "shift-note-2")
     let local = try XCTUnwrap(localRecord)
     XCTAssertNil(local.note)
     XCTAssertEqual(local.dirtyFieldKeys, Set([.note]))
@@ -354,7 +354,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       dates: ["2026-03-16", "2026-03-23", "2026-03-16"]
     )
 
-    let localRecord = try await store.getRecurringShift(id: created.id)
+    let localRecord = try await store.recurringShiftCopy(id: created.id)
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(addedCount, 2)
     XCTAssertEqual(local.decodedExclusions, ["2026-03-09", "2026-03-16", "2026-03-23"])
@@ -408,7 +408,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       dateSpecificSupplements: nil
     )
 
-    let localRecord = try await store.getRecurringShift(id: created.id)
+    let localRecord = try await store.recurringShiftCopy(id: created.id)
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.decodedEndCondition, .endDate(date: "2026-03-16"))
     XCTAssertEqual(local.decodedExclusions, ["2026-03-09"])
@@ -444,7 +444,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       dateSpecificNotes: ["2026-03-09": " Swap shift "]
     )
 
-    let localRecord = try await store.getRecurringShift(id: created.id)
+    let localRecord = try await store.recurringShiftCopy(id: created.id)
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.decodedDateSpecificNotes, ["2026-03-09": "Swap shift"])
     XCTAssertEqual(local.dirtyFieldKeys, Set([.dateSpecificNotes]))
@@ -478,7 +478,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       dateSpecificNotes: ["2026-03-16": "Leave early"]
     )
 
-    let localRecord = try await store.getRecurringShift(id: created.id)
+    let localRecord = try await store.recurringShiftCopy(id: created.id)
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.decodedDateSpecificNotes, ["2026-03-16": "Leave early"])
     XCTAssertEqual(local.dirtyFieldKeys, Set([.dateSpecificNotes]))
@@ -499,7 +499,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       notificationMinutesArray: [60, 300]
     )
 
-    let localRecord = try await store.getEvent(id: "event-1")
+    let localRecord = try await store.eventCopy(id: "event-1")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -535,7 +535,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       note: " Dentist "
     )
 
-    let localRecord = try await store.getEvent(id: "event-2")
+    let localRecord = try await store.eventCopy(id: "event-2")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -574,7 +574,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       notificationAnchorTime: "09:30"
     )
 
-    let localRecord = try await store.getEvent(id: "event-2b")
+    let localRecord = try await store.eventCopy(id: "event-2b")
     let local = try XCTUnwrap(localRecord)
 
     XCTAssertEqual(local.notificationMinutesArray, [120, 15])
@@ -604,7 +604,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     _ = try await store.markEventPendingDelete(id: "event-3")
 
-    let localRecord = try await store.getEvent(id: "event-3")
+    let localRecord = try await store.eventCopy(id: "event-3")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .pendingDelete)
@@ -648,7 +648,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredEventConflictKeepServer(id: "event-4")
 
-    let localRecord = try await store.getEvent(id: "event-4")
+    let localRecord = try await store.eventCopy(id: "event-4")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .clean)
@@ -723,7 +723,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredEventConflictKeepLocal(id: "event-5")
 
-    let localRecord = try await store.getEvent(id: "event-5")
+    let localRecord = try await store.eventCopy(id: "event-5")
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -783,7 +783,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       monthlyGoal: 30_000
     )
 
-    let localRecord = try await store.getJob(id: created.id)
+    let localRecord = try await store.jobCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -805,7 +805,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       monthlyGoal: 30_000
     )
 
-    let snapshots = try await store.getAllWageSnapshots(userId: userId)
+    let snapshots = try await store.allWageSnapshotCopies(userId: userId)
 
     XCTAssertEqual(snapshots.isEmpty, true)
   }
@@ -829,7 +829,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     XCTAssertEqual(created.pay_period, payPeriod)
 
-    let localRecord = try await store.getJob(id: created.id)
+    let localRecord = try await store.jobCopy(id: created.id)
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.toJob().pay_period, payPeriod)
   }
@@ -861,7 +861,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       payPeriod: newPayPeriod
     )
 
-    let localRecord = try await store.getJob(id: created.id)
+    let localRecord = try await store.jobCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -892,9 +892,9 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     // Swap the last two: Cafe, Bar, Shop. Cafe keeps its place.
     try await store.reorderJobs(userId: userId, orderedJobIds: [jobIds[0], jobIds[2], jobIds[1]])
 
-    let cafeRecord = try await store.getJob(id: jobIds[0])
-    let shopRecord = try await store.getJob(id: jobIds[1])
-    let barRecord = try await store.getJob(id: jobIds[2])
+    let cafeRecord = try await store.jobCopy(id: jobIds[0])
+    let shopRecord = try await store.jobCopy(id: jobIds[1])
+    let barRecord = try await store.jobCopy(id: jobIds[2])
     let cafe = try XCTUnwrap(cafeRecord)
     let shop = try XCTUnwrap(shopRecord)
     let bar = try XCTUnwrap(barRecord)
@@ -930,7 +930,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       color: nil
     )
 
-    let localRecord = try await store.getJob(id: created.id)
+    let localRecord = try await store.jobCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -961,7 +961,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       currency: "$"
     )
 
-    let localRecord = try await store.getJob(id: created.id)
+    let localRecord = try await store.jobCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -998,7 +998,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
         // Expected for both new and restored active jobs.
       }
 
-      let localRecord = try await store.getJob(id: created.id)
+      let localRecord = try await store.jobCopy(id: created.id)
       let local = try XCTUnwrap(localRecord)
       XCTAssertNil(local.archivedAt)
       XCTAssertNil(local.deletedAt)
@@ -1069,22 +1069,22 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       userId: userId, receipt: deletionReceipt(jobId: jobId, ownerId: userId, deletedAt: deletedAt)
     )
 
-    let jobs = try await store.getAllJobs(userId: userId)
+    let jobs = try await store.allJobCopies(userId: userId)
     XCTAssertEqual(jobs.first { $0.id == jobId }?.deletedAt, deletedAt)
     XCTAssertEqual(jobs.first { $0.id == jobId }?.serverRevision, 5)
     XCTAssertEqual(jobs.first { $0.id == jobId }?.syncStatus, .clean)
     XCTAssertNil(jobs.first { $0.id == otherJobId }?.deletedAt)
-    let shifts = try await store.getAllUserShifts(userId: userId)
+    let shifts = try await store.allUserShiftCopies(userId: userId)
     XCTAssertEqual(shifts.first { $0.jobId == jobId }?.serverDeletedAt, deletedAt)
     XCTAssertEqual(shifts.first { $0.jobId == jobId }?.syncStatus, .clean)
     XCTAssertNil(shifts.first { $0.jobId == otherJobId }?.serverDeletedAt)
-    let recurring = try await store.getAllRecurringShifts(userId: userId)
+    let recurring = try await store.allRecurringShiftCopies(userId: userId)
     XCTAssertEqual(recurring.first { $0.jobId == jobId }?.serverDeletedAt, deletedAt)
     XCTAssertNil(recurring.first { $0.jobId == otherJobId }?.serverDeletedAt)
-    let adjustments = try await store.getAllPayrollAdjustments(userId: userId)
+    let adjustments = try await store.allPayrollAdjustmentCopies(userId: userId)
     XCTAssertEqual(adjustments.first { $0.jobId == jobId }?.serverDeletedAt, deletedAt)
     XCTAssertNil(adjustments.first { $0.jobId == otherJobId }?.serverDeletedAt)
-    let snapshots = try await store.getAllWageSnapshots(userId: userId)
+    let snapshots = try await store.allWageSnapshotCopies(userId: userId)
     XCTAssertEqual(snapshots.first { $0.jobId == jobId }?.serverDeletedAt, deletedAt)
     XCTAssertNil(snapshots.first { $0.jobId == otherJobId }?.serverDeletedAt)
     try await store.validateArchivedJobDeletion(userId: "other-user", jobId: otherUserJobId)
@@ -1105,7 +1105,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       )
       XCTFail("A preview must not delete local history")
     } catch JobsRepositoryError.deletionRefreshFailed {}
-    let job = try await store.getJob(id: jobId)
+    let job = try await store.jobCopy(id: jobId)
     XCTAssertNil(job?.deletedAt)
   }
 
@@ -1159,7 +1159,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredJobConflictKeepServer(id: created.id)
 
-    let localRecord = try await store.getJob(id: created.id)
+    let localRecord = try await store.jobCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .clean)
@@ -1227,7 +1227,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredJobConflictKeepLocal(id: created.id)
 
-    let localRecord = try await store.getJob(id: created.id)
+    let localRecord = try await store.jobCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -1256,7 +1256,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       breakDeductionMinutes: 30
     )
 
-    let localRecord = try await store.getWageSnapshot(id: created.id)
+    let localRecord = try await store.wageSnapshotCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -1300,7 +1300,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       breakDeductionMinutes: nil
     )
 
-    let localRecord = try await store.getWageSnapshot(id: created.id)
+    let localRecord = try await store.wageSnapshotCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -1313,7 +1313,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     let created = try await createPayHistorySnapshot(in: store, fromDate: "2026-01-01")
     await store.markWageSnapshotClean(id: created.id)
     let updated = try await movePayHistorySnapshot(created.id, in: store, to: "2026-02-01")
-    let record = try await store.getWageSnapshot(id: created.id)
+    let record = try await store.wageSnapshotCopy(id: created.id)
     let local = try XCTUnwrap(record)
 
     XCTAssertEqual(updated.from_date, "2026-02-01")
@@ -1333,7 +1333,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     } catch {
       XCTAssertEqual(error as? WageSnapshotDateError, .dateConflict)
     }
-    let record = try await store.getWageSnapshot(id: created.id)
+    let record = try await store.wageSnapshotCopy(id: created.id)
     let local = try XCTUnwrap(record)
     XCTAssertEqual(local.fromDateString, "2026-01-01")
     XCTAssertEqual(local.hourlyWage, 200)
@@ -1349,7 +1349,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     } catch {
       XCTAssertEqual(error as? WageSnapshotDateError, .baselineMustRemainUndated)
     }
-    let record = try await store.getWageSnapshot(id: created.id)
+    let record = try await store.wageSnapshotCopy(id: created.id)
     XCTAssertNil(record?.fromDate)
   }
 
@@ -1395,7 +1395,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.markWageSnapshotPendingDelete(id: created.id)
 
-    let localRecord = try await store.getWageSnapshot(id: created.id)
+    let localRecord = try await store.wageSnapshotCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .pendingDelete)
@@ -1448,7 +1448,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredWageSnapshotConflictKeepServer(id: created.id)
 
-    let localRecord = try await store.getWageSnapshot(id: created.id)
+    let localRecord = try await store.wageSnapshotCopy(id: created.id)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .clean)
@@ -1491,7 +1491,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: "stats"
     )
 
-    let localRecord = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.userSettingsCopy(userId: userId)
 
     let local = try XCTUnwrap(localRecord)
 
@@ -1541,7 +1541,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: nil
     )
 
-    let localRecord = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.userSettingsCopy(userId: userId)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -1577,7 +1577,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: nil
     )
 
-    let localRecord = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.userSettingsCopy(userId: userId)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -1625,7 +1625,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredUserSettingsConflictKeepServer(userId: userId)
 
-    let localRecord = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.userSettingsCopy(userId: userId)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .clean)
@@ -1705,7 +1705,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredUserSettingsConflictKeepLocal(userId: userId)
 
-    let localRecord = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.userSettingsCopy(userId: userId)
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
@@ -1731,11 +1731,11 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
         localUpdatedAt: Date(timeIntervalSince1970: 1)
       ))
     try await store.save()
-    let jobsBeforeReset = try await store.getAllJobs(userId: userId)
+    let jobsBeforeReset = try await store.allJobCopies(userId: userId)
     XCTAssertEqual(jobsBeforeReset.count, 1)
 
     await store.resetAllData()
-    let jobsAfterFirstReset = try await store.getAllJobs(userId: userId)
+    let jobsAfterFirstReset = try await store.allJobCopies(userId: userId)
     XCTAssertEqual(jobsAfterFirstReset.count, 0)
 
     // The container must still accept writes after erase().
@@ -1753,7 +1753,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       ))
     try await store.save()
 
-    let jobsAfterReset = try await store.getAllJobs(userId: userId)
+    let jobsAfterReset = try await store.allJobCopies(userId: userId)
     XCTAssertEqual(jobsAfterReset.count, 1)
     XCTAssertEqual(jobsAfterReset.first?.name, "After reset")
   }
