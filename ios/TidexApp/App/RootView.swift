@@ -68,6 +68,7 @@ struct RootView: View {
 /// Handles transitions between: Loading -> Onboarding -> Login -> MFA -> Post-Auth Onboarding -> Dashboard
 private struct RootContent: View {
   private let coordinator = AppCoordinator.shared
+  private let appGate = AppGate.shared
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   // Theme is handled at UIKit window level - no need to observe AppearanceManager here
 
@@ -96,85 +97,94 @@ private struct RootContent: View {
 
       // Content based on app state
       Group {
-        switch coordinator.appState {
-        case .loading:
-          LoadingView()
-
-        case .unauthenticated:
-          if !hasCompletedPreAuthOnboarding, !showAuthAfterOnboarding {
-            // Show pre-auth onboarding (screens 1-3)
-            OnboardingView(
-              onNavigateToSignup: {
-                completePreAuthOnboarding(destination: .signup)
-              },
-              onNavigateToLogin: {
-                completePreAuthOnboarding(destination: .login)
-              }
-            )
-            .transition(.opacity)
-          } else {
-            // Show auth navigation with the selected destination
-            AuthNavigationView(initialScreen: authDestination == .signup ? .signup : .login)
-              .transition(.opacity)
+        if let block = appGate.block {
+          AppGateView(block: block) {
+            await appGate.refresh()
           }
+          .transition(.opacity)
+        } else {
+          switch coordinator.appState {
+          case .loading:
+            LoadingView()
 
-        case .mfaRequired:
-          if let factor = coordinator.pendingMFAFactor {
-            MFAVerifyView(factor: factor, coordinator: coordinator)
-              .transition(.opacity)
-          } else {
-            // Fallback - shouldn't happen
-            AuthNavigationView()
-          }
-
-        case .termsRequired:
-          AcceptTermsView(isUpdate: coordinator.isTermsUpdate, coordinator: coordinator)
-            .transition(.opacity)
-
-        case .authenticated:
-          if !hasCompletedPostAuthOnboarding, !coordinator.hasFinishedOnboardingRemotely {
-            PostAuthOnboardingView(
-              entryMode: .initial,
-              onComplete: {
-                hasCompletedPostAuthOnboarding = true
-              },
-              onClose: nil,
-              userId: coordinator.userId ?? ""
-            )
-            .transition(.opacity)
-          } else {
-            MainTabView()
-              .overlay(alignment: .top) {
-                if let activeChatToast {
-                  InAppChatToastView(
-                    payload: activeChatToast,
-                    onTap: {
-                      dismissChatToast()
-                      guard activeChatToast.destination == .friendChat,
-                        !activeChatToast.threadId.isEmpty
-                      else {
-                        return
-                      }
-
-                      coordinator.pendingDeepLink = .friendChat(
-                        threadId: activeChatToast.threadId,
-                        messageId: activeChatToast.messageId,
-                        senderUserId: activeChatToast.senderUserId,
-                        typingUserId: activeChatToast.typingUserId,
-                        navigationRequestId: UUID()
-                      )
-                    },
-                    onDismiss: {
-                      dismissChatToast()
-                    }
-                  )
-                  .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                  .padding(.horizontal, Spacing.md)
-                  .padding(.top, 8)
-                  .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
-                  .zIndex(10)
+          case .unauthenticated:
+            if !hasCompletedPreAuthOnboarding, !showAuthAfterOnboarding {
+              // Show pre-auth onboarding (screens 1-3)
+              OnboardingView(
+                onNavigateToSignup: {
+                  completePreAuthOnboarding(destination: .signup)
+                },
+                onNavigateToLogin: {
+                  completePreAuthOnboarding(destination: .login)
                 }
-              }
+              )
+              .transition(.opacity)
+            } else {
+              // Show auth navigation with the selected destination
+              AuthNavigationView(initialScreen: authDestination == .signup ? .signup : .login)
+                .transition(.opacity)
+            }
+
+          case .mfaRequired:
+            if let factor = coordinator.pendingMFAFactor {
+              MFAVerifyView(factor: factor, coordinator: coordinator)
+                .transition(.opacity)
+            } else {
+              // Fallback - shouldn't happen
+              AuthNavigationView()
+            }
+
+          case .termsRequired:
+            AcceptTermsView(isUpdate: coordinator.isTermsUpdate, coordinator: coordinator)
+              .transition(.opacity)
+
+          case .authenticated:
+            if !hasCompletedPostAuthOnboarding, !coordinator.hasFinishedOnboardingRemotely {
+              PostAuthOnboardingView(
+                entryMode: .initial,
+                onComplete: {
+                  hasCompletedPostAuthOnboarding = true
+                },
+                onClose: nil,
+                userId: coordinator.userId ?? ""
+              )
+              .transition(.opacity)
+            } else {
+              MainTabView()
+                .overlay(alignment: .top) {
+                  if let activeChatToast {
+                    InAppChatToastView(
+                      payload: activeChatToast,
+                      onTap: {
+                        dismissChatToast()
+                        guard activeChatToast.destination == .friendChat,
+                          !activeChatToast.threadId.isEmpty
+                        else {
+                          return
+                        }
+
+                        coordinator.pendingDeepLink = .friendChat(
+                          threadId: activeChatToast.threadId,
+                          messageId: activeChatToast.messageId,
+                          senderUserId: activeChatToast.senderUserId,
+                          typingUserId: activeChatToast.typingUserId,
+                          navigationRequestId: UUID()
+                        )
+                      },
+                      onDismiss: {
+                        dismissChatToast()
+                      }
+                    )
+                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, 8)
+                    .transition(
+                      reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity)
+                    )
+                    .zIndex(10)
+                  }
+                }
+            }
           }
         }
       }
@@ -201,6 +211,13 @@ private struct RootContent: View {
     .onAppear {
       launchLog.info(
         "[Launch] RootContent.onAppear – appState=\(String(describing: coordinator.appState))")
+    }
+    .task {
+      await appGate.refresh()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
+    { _ in
+      Task { await appGate.refresh() }
     }
     .task {
       // Defer storage initialization until after first render to avoid launch stalls.

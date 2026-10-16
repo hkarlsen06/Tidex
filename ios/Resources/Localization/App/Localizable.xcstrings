@@ -24227,6 +24227,1416 @@
         }
       }
     },
+    "appGate.maintenance.message" : {
+      "comment" : "Message on the maintenance screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نجري صيانة مجدولة وسنعود خلال دقائق. بياناتك آمنة."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Извършваме планирана поддръжка и ще се върнем след няколко минути. Данните ви са в безопасност."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "পরিকল্পিত রক্ষণাবেক্ষণ চলছে। কয়েক মিনিটের মধ্যে ফিরে আসব। আপনার ডেটা নিরাপদ।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estem fent tasques de manteniment programades i tornarem d'aquí a uns minuts. Les teves dades estan segures."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Provádíme plánovanou údržbu a za pár minut budeme zpět. Vaše data jsou v bezpečí."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi udfører planlagt vedligeholdelse og er tilbage om få minutter. Dine data er sikre."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wir führen geplante Wartungsarbeiten durch und sind in wenigen Minuten zurück. Deine Daten sind sicher."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πραγματοποιούμε προγραμματισμένη συντήρηση και θα επιστρέψουμε σε λίγα λεπτά. Τα δεδομένα σας είναι ασφαλή."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We're doing planned maintenance and will be back in a few minutes. Your data is safe."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estamos realizando tareas de mantenimiento programadas. Volveremos en unos minutos. Tus datos están seguros."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teeme plaanilist hooldust ja oleme mõne minuti pärast tagasi. Sinu andmed on kaitstud."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در حال انجام تعمیرات برنامه‌ریزی‌شده هستیم و تا چند دقیقه دیگر برمی‌گردیم. داده‌های شما محفوظ‌اند."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teemme suunniteltuja huoltotöitä ja palaamme muutaman minuutin kuluttua. Tietosi ovat turvassa."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "May nakaiskedyul kaming maintenance at babalik kami sa loob ng ilang minuto. Ligtas ang iyong data."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une maintenance est en cours. Nous serons de retour dans quelques minutes. Vos données sont en sécurité."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אנחנו מבצעים עבודות תחזוקה מתוכננות ונחזור בעוד כמה דקות. הנתונים שלך בטוחים."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "निर्धारित रखरखाव चल रहा है। हम कुछ मिनटों में लौटेंगे। आपका डेटा सुरक्षित है।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Provodi se planirano održavanje. Vraćamo se za nekoliko minuta. Vaši su podaci sigurni."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tervezett karbantartást végzünk, és néhány perc múlva újra elérhetők leszünk. Az adataid biztonságban vannak."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami sedang melakukan pemeliharaan terjadwal dan akan kembali dalam beberapa menit. Data Anda aman."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Við sinnum fyrirhuguðu viðhaldi og verðum aftur komin eftir nokkrar mínútur. Gögnin þín eru örugg."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "È in corso una manutenzione programmata. Torneremo tra pochi minuti. I tuoi dati sono al sicuro."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在、計画メンテナンス中です。数分後に再開します。データは安全に保管されています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예정된 점검 중입니다. 몇 분 후 다시 이용하실 수 있습니다. 데이터는 안전하게 보관됩니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atliekame planinius priežiūros darbus ir grįšime po kelių minučių. Jūsų duomenys saugūs."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veicam plānotu apkopi un atgriezīsimies pēc dažām minūtēm. Jūsu dati ir drošībā."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi har planlagt vedlikehold og er tilbake om noen minutter. Dataene dine er trygge."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We voeren gepland onderhoud uit en zijn over een paar minuten terug. Je gegevens zijn veilig."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi utfører planlagt vedlikehald og er tilbake om nokre minutt. Dataa dine er trygge."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trwają planowane prace konserwacyjne. Wrócimy za kilka minut. Twoje dane są bezpieczne."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estamos realizando uma manutenção programada e voltaremos em alguns minutos. Seus dados estão seguros."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efectuăm lucrări de mentenanță planificate și vom reveni în câteva minute. Datele tale sunt în siguranță."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Мы проводим плановое обслуживание и вернёмся через несколько минут. Ваши данные в безопасности."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Práve prebieha plánovaná údržba. O pár minút budeme späť. Vaše údaje sú v bezpečí."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izvajamo načrtovano vzdrževanje. Čez nekaj minut bomo spet na voljo. Vaši podatki so varni."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "U toku je planirano održavanje. Vratićemo se za nekoliko minuta. Vaši podaci su bezbedni."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi utför planerat underhåll och är tillbaka om några minuter. Dina uppgifter är säkra."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tunafanya matengenezo yaliyopangwa na tutarejea baada ya dakika chache. Data yako iko salama."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "திட்டமிட்ட பராமரிப்புப் பணிகள் நடக்கின்றன. சில நிமிடங்களில் திரும்புவோம். உங்கள் தரவு பாதுகாப்பாக உள்ளது."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เรากำลังบำรุงรักษาตามแผน และจะกลับมาในอีกไม่กี่นาที ข้อมูลของคุณปลอดภัย"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlı bakım yapıyoruz. Birkaç dakika içinde geri döneceğiz. Verileriniz güvende."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ми проводимо планове обслуговування й повернемося за кілька хвилин. Ваші дані в безпеці."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "طے شدہ دیکھ بھال جاری ہے۔ ہم چند منٹ میں واپس آ جائیں گے۔ آپ کا ڈیٹا محفوظ ہے۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chúng tôi đang bảo trì theo kế hoạch và sẽ trở lại sau vài phút. Dữ liệu của bạn vẫn an toàn."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我们正在进行计划维护，几分钟后即可恢复。您的数据安全无虞。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我們正在進行例行維護，幾分鐘後即可恢復使用。您的資料安全無虞。"
+          }
+        }
+      }
+    },
+    "appGate.maintenance.title" : {
+      "comment" : "Title of the full-screen block shown while the Tidex servers are down for planned maintenance",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجري تحديث Tidex"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex се актуализира"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex আপডেট হচ্ছে"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex s'està actualitzant"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex se aktualizuje"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex opdateres"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex wird aktualisiert"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το Tidex ενημερώνεται"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex is being updated"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex se está actualizando"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidexit uuendatakse"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex در حال به‌روزرسانی است"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidexiä päivitetään"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ina-update ang Tidex"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mise à jour de Tidex en cours"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex מתעדכנת"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex अपडेट हो रहा है"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex se ažurira"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Tidex frissítése folyamatban van"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex sedang diperbarui"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verið er að uppfæra Tidex"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex è in aggiornamento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidexを更新中です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex 업데이트 중"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Tidex“ atnaujinama"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex tiek atjaunināts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex oppdateres"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex wordt bijgewerkt"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex blir oppdatert"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trwa aktualizacja Tidex"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Tidex está sendo atualizado"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex se actualizează"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex обновляется"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex sa aktualizuje"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex se posodablja"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex se ažurira"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex uppdateras"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex inasasishwa"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex புதுப்பிக்கப்படுகிறது"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังอัปเดต Tidex"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex güncelleniyor"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex оновлюється"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex اپ ڈیٹ ہو رہا ہے"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex đang được cập nhật"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex 正在更新"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex 正在更新"
+          }
+        }
+      }
+    },
+    "appGate.update.button" : {
+      "comment" : "Button on the forced-update screen that opens Tidex in the App Store",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "افتح App Store"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отвори App Store"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store খুলুন"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obre l'App Store"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřít App Store"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn App Store"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store öffnen"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Άνοιγμα του App Store"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open App Store"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir App Store"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ava App Store"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باز کردن App Store"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avaa App Store"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buksan ang App Store"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir l’App Store"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פתיחת App Store"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store खोलें"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otvori App Store"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store megnyitása"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka App Store"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opna App Store"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri App Store"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Storeを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store 열기"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atidaryti „App Store“"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atvērt App Store"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne App Store"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open App Store"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opne App Store"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz App Store"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir a App Store"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deschide App Store"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть App Store"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otvoriť App Store"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpri App Store"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otvori App Store"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öppna App Store"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fungua App Store"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store-ஐத் திறக்கவும்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิด App Store"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store'u aç"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відкрити App Store"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store کھولیں"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở App Store"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 App Store"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟 App Store"
+          }
+        }
+      }
+    },
+    "appGate.update.message" : {
+      "comment" : "Message on the forced-update screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لم يعد هذا الإصدار من Tidex يعمل. حدّث التطبيق إلى أحدث إصدار من App Store لمواصلة استخدامه."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тази версия на Tidex вече не работи. Актуализирайте до най-новата версия от App Store, за да продължите да използвате приложението."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex-এর এই সংস্করণটি আর কাজ করে না। অ্যাপটি ব্যবহার চালিয়ে যেতে App Store থেকে সর্বশেষ সংস্করণে আপডেট করুন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aquesta versió de Tidex ja no funciona. Actualitza-la a l'última versió a l'App Store per continuar fent servir l'app."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tato verze Tidexu už nefunguje. Chcete-li aplikaci dál používat, aktualizujte ji v App Storu na nejnovější verzi."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne version af Tidex virker ikke længere. Opdater til den nyeste version i App Store for at fortsætte med at bruge appen."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Version von Tidex funktioniert nicht mehr. Aktualisiere die App im App Store, um sie weiter zu nutzen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Αυτή η έκδοση του Tidex δεν λειτουργεί πλέον. Ενημερώστε την εφαρμογή στην πιο πρόσφατη έκδοση από το App Store για να συνεχίσετε να τη χρησιμοποιείτε."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This version of Tidex no longer works. Update to the latest version in the App Store to keep using the app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versión de Tidex ya no funciona. Actualiza a la última versión en App Store para seguir usando la app."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See Tidexi versioon enam ei tööta. Rakenduse kasutamise jätkamiseks uuenda see App Store’is uusimale versioonile."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "این نسخه از Tidex دیگر کار نمی‌کند. برای ادامه استفاده از برنامه، آن را از App Store به آخرین نسخه به‌روزرسانی کنید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tämä Tidex-versio ei enää toimi. Päivitä uusimpaan versioon App Storessa jatkaaksesi sovelluksen käyttöä."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hindi na gumagana ang bersyong ito ng Tidex. Mag-update sa pinakabagong bersyon sa App Store para patuloy na magamit ang app."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette version de Tidex ne fonctionne plus. Mettez l’app à jour dans l’App Store pour continuer à l’utiliser."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הגרסה הזו של Tidex כבר לא עובדת. כדי להמשיך להשתמש באפליקציה, יש לעדכן לגרסה האחרונה ב-App Store."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex का यह संस्करण अब काम नहीं करता। ऐप का उपयोग जारी रखने के लिए App Store से नवीनतम संस्करण में अपडेट करें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ova verzija Tidexa više ne radi. Ažurirajte aplikaciju na najnoviju verziju u App Storeu kako biste je nastavili koristiti."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Tidex ezen verziója már nem működik. Az alkalmazás további használatához frissíts a legújabb verzióra az App Store-ban."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versi Tidex ini tidak lagi berfungsi. Perbarui ke versi terbaru di App Store untuk terus menggunakan aplikasi."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Þessi útgáfa af Tidex virkar ekki lengur. Uppfærðu í nýjustu útgáfu í App Store til að halda áfram að nota appið."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa versione di Tidex non funziona più. Aggiornala all'ultima versione nell'App Store per continuare a usare l'app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンのTidexは利用できません。引き続き利用するには、App Storeで最新版に更新してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 버전의 Tidex는 더 이상 작동하지 않습니다. 계속 사용하려면 App Store에서 최신 버전으로 업데이트하세요."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ši „Tidex“ versija nebeveikia. Norėdami toliau naudotis programėle, atnaujinkite ją į naujausią versiją „App Store“."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Šī Tidex versija vairs nedarbojas. Lai turpinātu lietot lietotni, atjauniniet to uz jaunāko versiju App Store."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne versjonen av Tidex fungerer ikke lenger. Oppdater til nyeste versjon i App Store for å fortsette å bruke appen."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze versie van Tidex werkt niet meer. Werk de app bij via de App Store om hem te blijven gebruiken."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne versjonen av Tidex fungerer ikkje lenger. Oppdater til nyaste versjon i App Store for å halde fram med å bruke appen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta wersja Tidex już nie działa. Aby dalej korzystać z aplikacji, zaktualizuj ją do najnowszej wersji w App Store."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versão do Tidex não funciona mais. Atualize para a versão mais recente na App Store para continuar usando o app."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Această versiune de Tidex nu mai funcționează. Actualizează aplicația la cea mai recentă versiune din App Store pentru a o folosi în continuare."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Эта версия Tidex больше не работает. Чтобы продолжить пользоваться приложением, обновите его в App Store."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Táto verzia aplikácie Tidex už nefunguje. Ak ju chcete ďalej používať, aktualizujte ju na najnovšiu verziu v App Store."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta različica Tidexa ne deluje več. Za nadaljnjo uporabo aplikacijo posodobite na najnovejšo različico v trgovini App Store."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ova verzija aplikacije Tidex više ne radi. Ažurirajte je na najnoviju verziju u App Store-u da biste nastavili da je koristite."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den här versionen av Tidex fungerar inte längre. Uppdatera till den senaste versionen i App Store för att fortsätta använda appen."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toleo hili la Tidex halifanyi kazi tena. Sasisha hadi toleo jipya zaidi kwenye App Store ili uendelee kutumia programu."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex-இன் இந்தப் பதிப்பு இனி இயங்காது. செயலியைத் தொடர்ந்து பயன்படுத்த, App Store-இல் சமீபத்திய பதிப்புக்குப் புதுப்பிக்கவும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex เวอร์ชันนี้ใช้งานไม่ได้แล้ว อัปเดตเป็นเวอร์ชันล่าสุดใน App Store เพื่อใช้งานแอปต่อ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex'in bu sürümü artık çalışmıyor. Uygulamayı kullanmaya devam etmek için App Store'dan en son sürüme güncelleyin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ця версія Tidex більше не працює. Оновіть застосунок до останньої версії в App Store, щоб користуватися ним далі."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex کا یہ ورژن اب کام نہیں کرتا۔ ایپ استعمال جاری رکھنے کے لیے App Store سے تازہ ترین ورژن اپ ڈیٹ کریں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phiên bản Tidex này không còn hoạt động. Hãy cập nhật lên phiên bản mới nhất trên App Store để tiếp tục sử dụng."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本的 Tidex 已无法使用。请前往 App Store 更新至最新版本，继续使用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本的 Tidex 已無法使用。請至 App Store 更新至最新版本，以繼續使用。"
+          }
+        }
+      }
+    },
+    "appGate.update.title" : {
+      "comment" : "Title of the full-screen block shown when this app version is too old to use",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حدّث Tidex"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Актуализирайте Tidex"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex আপডেট করুন"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualitza Tidex"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualizovat Tidex"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opdater Tidex"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex aktualisieren"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ενημέρωση του Tidex"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update Tidex"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualizar Tidex"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uuenda Tidexit"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "به‌روزرسانی Tidex"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Päivitä Tidex"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I-update ang Tidex"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mettre à jour Tidex"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדכון Tidex"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex अपडेट करें"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ažuriraj Tidex"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex frissítése"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perbarui Tidex"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uppfæra Tidex"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiorna Tidex"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidexを更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex 업데이트"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atnaujinti „Tidex“"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atjaunināt Tidex"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oppdater Tidex"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Werk Tidex bij"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oppdater Tidex"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaktualizuj Tidex"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atualizar o Tidex"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualizează Tidex"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обновить Tidex"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualizovať Tidex"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posodobi Tidex"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ažurirajte Tidex"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uppdatera Tidex"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sasisha Tidex"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex-ஐப் புதுப்பிக்கவும்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัปเดต Tidex"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex'i güncelle"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оновіть Tidex"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex اپ ڈیٹ کریں"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cập nhật Tidex"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新 Tidex"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新 Tidex"
+          }
+        }
+      }
+    },
     "auth.apple.error.cancelled" : {
       "comment" : "Sign in with Apple was canceled by the user",
       "extractionState" : "manual",
@@ -371516,6 +372926,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هل أنت متأكد من حذف %lld ورديات؟ لا يمكن التراجع عن هذا الإجراء."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371576,6 +372990,10 @@
           }
         },
         "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opravdu chcete smazat %lld směn? Tuto akci nelze vrátit zpět."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371678,6 +373096,10 @@
           }
         },
         "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Želite li sigurno izbrisati %lld smjena? To se ne može poništiti."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371714,6 +373136,10 @@
           }
         },
         "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ertu viss um að þú viljir eyða %lld vöktum? Ekki er hægt að afturkalla þetta."
+          },
           "variations" : {
             "plural" : {
               "one" : {
@@ -371750,6 +373176,10 @@
           }
         },
         "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ar tikrai norite ištrinti %lld pamainų? Šio veiksmo atšaukti negalėsite."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371780,6 +373210,10 @@
           }
         },
         "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vai tiešām vēlaties dzēst %lld maiņas? Šo darbību nevar atsaukt."
+          },
           "variations" : {
             "plural" : {
               "one" : {
@@ -371822,6 +373256,10 @@
           }
         },
         "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Czy na pewno chcesz usunąć %lld zmian? Tej czynności nie można cofnąć."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371858,6 +373296,10 @@
           }
         },
         "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sigur vrei să ștergi %lld ture? Această acțiune nu poate fi anulată."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371882,6 +373324,10 @@
           }
         },
         "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить %lld смен? Это действие нельзя отменить."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371912,6 +373358,10 @@
           }
         },
         "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naozaj chcete odstrániť %lld zmien? Táto akcia sa nedá vrátiť späť."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371942,6 +373392,10 @@
           }
         },
         "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ali res želite izbrisati %lld izmen? Tega ni mogoče razveljaviti."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -371972,6 +373426,10 @@
           }
         },
         "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Želite li zaista da izbrišete %lld smena? Ova radnja se ne može opozvati."
+          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -372026,6 +373484,10 @@
           }
         },
         "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ви впевнені, що хочете видалити %lld змін? Цю дію неможливо скасувати."
+          },
           "variations" : {
             "plural" : {
               "few" : {

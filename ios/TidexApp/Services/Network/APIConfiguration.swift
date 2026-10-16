@@ -79,6 +79,9 @@ enum APIConfiguration {
   static let marketingBaseURL = staticURL("https://tidex.no")
   static let supportURL = marketingBaseURL.appendingPathComponent("support")
   static let legalVersionURL = marketingBaseURL.appendingPathComponent("legal/version.json")
+  /// Minimum app version and maintenance flag, read by `AppGate`.
+  static let appConfigURL = marketingBaseURL.appendingPathComponent("app-config.json")
+  static let appStoreURL = staticURL("https://apps.apple.com/app/id6757129790")
 
   // MARK: - App Configuration
 
