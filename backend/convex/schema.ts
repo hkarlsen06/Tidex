@@ -38,9 +38,10 @@ export default defineSchema({
   users: defineTable({
     id: uuid,
     supabase_user_id: optUuid,
-    clerk_user_id: v.string(),
+    // Missing for GoTrue users who signed in only by phone. N+1 has no SMS sign-in, so
+    // they get no Clerk user. An admin can link one by hand if they get in touch.
+    clerk_user_id: optString,
     email: optString,
-    phone: optString,
     // From the sign-in provider (raw_user_meta_data name/full_name and avatar_url/picture).
     name: optString,
     avatar_url: optString,
