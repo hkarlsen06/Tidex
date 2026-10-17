@@ -213,7 +213,11 @@ private struct RootContent: View {
         "[Launch] RootContent.onAppear – appState=\(String(describing: coordinator.appState))")
     }
     .task {
-      await appGate.refresh()
+      // Also poll, so an app left open sees maintenance within a minute.
+      while !Task.isCancelled {
+        await appGate.refresh()
+        try? await Task.sleep(for: .seconds(60))
+      }
     }
     .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
     { _ in

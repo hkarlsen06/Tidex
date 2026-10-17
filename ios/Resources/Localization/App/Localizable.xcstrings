@@ -122634,7 +122634,7 @@
       }
     },
     "Default" : {
-
+      "shouldTranslate" : false
     },
     "Delivery records are deleted 30 days after sending." : {
       "localizations" : {
@@ -169594,7 +169594,7 @@
       "shouldTranslate" : false
     },
     "No jobs or wages set up." : {
-
+      "shouldTranslate" : false
     },
     "No logs yet" : {
       "extractionState" : "manual",
@@ -169635,7 +169635,7 @@
       "shouldTranslate" : false
     },
     "No wage set up for this job." : {
-
+      "shouldTranslate" : false
     },
     "None" : {
       "localizations" : {
@@ -407125,7 +407125,7 @@
       "shouldTranslate" : false
     },
     "Supplements" : {
-
+      "shouldTranslate" : false
     },
     "supplements.addRule" : {
       "comment" : "Button in the supplements editor that adds a new supplement rule.",
@@ -424446,10 +424446,10 @@
       "shouldTranslate" : false
     },
     "Wage history" : {
-
+      "shouldTranslate" : false
     },
     "Wage setup" : {
-
+      "shouldTranslate" : false
     },
     "widget.accessibility.activeShift" : {
       "comment" : "VoiceOver label for the small Dynamic Island icon shown while a shift is in progress.",
