@@ -9,7 +9,7 @@ These numbers come from production on 2026-10-16.
 - 29 users opened the app between 2026-09-29 and 2026-10-16. In most hours 0 or 1 user is active.
 - The database is 93 MB. `user_shifts` has about 3,100 rows, `wage_snapshots` 277, `profiles` 241, `messages` 64.
 - The app queries 12 tables directly, calls 43 RPCs, and subscribes to Realtime changes on `threads`, `messages`, reactions and thread state in `FriendsMessagingRealtimeCoordinator.swift`.
-- Auth uses Sign in with Apple and Google ID tokens, email OTP, password sign-up and reset, passkeys (`PasskeyAuthService.swift`), TOTP MFA and `linkIdentity`.
+- Auth uses Sign in with Apple and Google ID tokens, email OTP, password sign-up and reset, phone sign-in with SMS codes or a password, passkeys (`PasskeyAuthService.swift`), TOTP MFA and `linkIdentity`.
 - `supabase/functions/` has 14 edge functions, and the cron table in `AGENTS.md` lists 8 cron jobs.
 - The last release is 3.0.0, from 2026-09-30. The gate described below ships in 3.0.1, called N here. The Convex app is N+1.
 
@@ -44,17 +44,18 @@ Versions before N don't have the gate. On cutover night they see the server as o
 
 ## Phase 1. Build the Convex backend and set up Clerk
 
-Start with the Clerk checks below. Any of them can change the plan, so answer them before writing app code.
+Start with the Clerk checks below. Any of them can change the plan, so answer them before writing app code. All but the first were answered on 2026-10-18.
 
 1. Run a separate Convex deployment for Tidex on one-s next to Paeonia's. Give it its own domain under `tidex.no` and its own backups. Add its containers to the watchdog.
-2. Create a development and a production Clerk instance with the sign-in methods the app has today. Connect Convex auth to Clerk with Clerk's Convex integration. Convex trusts only Clerk tokens.
+   - The dev deployment runs on the Mac, not on one-s, so one-s keeps its headroom. It is the same backend image under colima. The simulator reaches it on `127.0.0.1`, and a phone reaches it over Tailscale with `tailscale serve`. The rehearsal copy of production data stays on the Mac.
+2. Create a development and a production Clerk instance on the free Hobby plan, with Sign in with Apple, Google, email codes and email with password. Connect Convex auth to Clerk with Clerk's Convex integration. Convex trusts only Clerk tokens.
 3. Write the schema, starting with `users` (`supabaseUserId`, `clerkUserId`). Every other table points to `users._id`.
    - Every table keeps the Supabase UUID as an indexed `id` field, and the app keeps using UUIDs. The local store, rows created offline, push payloads, deep links and the widget all use them. A user who signs up on N+1 gets a new UUID in `users.id`.
    - Sync pulls each table from a `revision` cursor. Every Convex table needs the same kind of increasing counter. On its first launch, N+1 resets its cursors, pulls everything again, and keeps its dirty rows.
 4. Port the 43 RPCs and the 12 direct table queries as queries and mutations. Messaging uses Convex subscriptions in place of Realtime. Port `record_app_activity` early, so we can see who has moved to N+1 after cutover.
 5. Replace the server-side parts:
    - Cron jobs become Convex crons. This covers push notifications, Live Activities, soft-delete purges and the sync-event and diagnostics purges.
-   - `send-push-notifications`, `delete-account`, `admin-user-ban`, `admin-user-role` and `impersonation` become Convex actions. `delete-account`, bans and impersonation also have to act on the Clerk user.
+   - `send-push-notifications`, `delete-account`, `admin-user-ban`, `admin-user-role` and `impersonation` become Convex actions. `delete-account` and bans also have to act on the Clerk user. Impersonation stays inside Convex. The admin stays signed in as themselves, and while an impersonation session is active, the current-user lookup returns the target user.
    - `apple-server-notifications` becomes a Convex HTTP action. Its URL changes in App Store Connect on cutover night.
    - Users have the `calendar-feed` URL saved in their calendar apps. `api.tidex.no/functions/v1/calendar-feed` must keep answering at the same path, either through a Caddy route to a Convex HTTP action or with the edge function reading from Convex.
    - `before-user-created` tells the admin about each new sign-up. A Clerk `user.created` webhook to a Convex HTTP action takes over. It creates the `users` row and sends the same notification.
@@ -63,28 +64,30 @@ Start with the Clerk checks below. Any of them can change the plan, so answer th
    - `message_attachments.storage_path` stores bucket paths.
    - `user_settings.profile_picture_url` and `threads.avatar_url` store full URLs, on both `api.tidex.no` and `identity.tidex.no`.
    - Copy the files to Convex file storage and rewrite the paths and URLs in the migration. Caddy blocks `/storage/v1` at cutover (phase 3), so the old URLs stop working that night.
-8. Write the migration script. It reads Postgres, maps UUIDs to Convex IDs and writes through an internal mutation. It also imports every GoTrue user into Clerk with the Backend API. It sets `external_id` to the Supabase user ID, passes the bcrypt hash from `auth.users.encrypted_password` so passwords keep working, and stores each `clerkUserId` on the `users` row. The script must be safe to run twice: it updates Clerk users it finds by `external_id` instead of creating them again. It checks row and user counts table by table when it finishes.
-9. Rehearse it. Load a `pg_dump` of production into a dev Convex deployment and the development Clerk instance, run the script, time it, and compare counts. Repeat until it passes twice in a row without changes.
+8. Write the migration script. It reads Postgres, maps UUIDs to Convex IDs and writes through an internal mutation. It also imports every GoTrue user into Clerk with the Backend API. It sets `external_id` to the Supabase user ID, passes the bcrypt hash from `auth.users.encrypted_password` so passwords keep working, and stores each `clerkUserId` on the `users` row. It sends no phone numbers or TOTP secrets, and a user without an email gets no Clerk user. The script must be safe to run twice: it updates Clerk users it finds by `external_id` instead of creating them again. It checks row and user counts table by table when it finishes.
+9. Rehearse it. Load a `pg_dump` of production into the dev Convex deployment on the Mac and the development Clerk instance, run the script, time it, and compare counts. Repeat until it passes twice in a row without changes.
 
 ### Clerk checks
 
-- How Clerk links imported users to Sign in with Apple and Google. Apple's user ID is stable per team, and users who hid their email have a relay address. Test both cases with real accounts.
-- Passkeys can't move. A passkey is bound to the relying party that registered it, and GoTrue's passkeys aren't Clerk's. Users who sign in only with a passkey need another way back in, such as email OTP, and register a new passkey in N+1. Count how many users have only a passkey.
-- Whether Clerk's import accepts TOTP secrets, and whether GoTrue stores them encrypted in `auth.mfa_factors`. If either fails, users with MFA set it up again after their first Clerk sign-in.
-- The state of `clerk-convex-swift`. It was a work in progress when this plan was written. Without it, the app passes Clerk's session token to the Convex client through its auth provider protocol.
+- How Clerk links imported users to Sign in with Apple and Google. Clerk links an OAuth sign-in to an existing user whose verified email matches, and imported emails count as verified. 63 Apple users have a private relay address, which stays the same within one Apple team, so linking should work. Test both cases with real accounts.
+- N+1 drops SMS sign-in, passkeys and TOTP, so Tidex fits Clerk's free Hobby plan. MFA and passkeys need Pro ($25 a month), and SMS costs extra on top of that. Counts from 2026-10-18:
+  - 9 users have a phone sign-in, and 5 of them can also sign in another way. The other 4 have no email, so they get no Clerk user. None of them opened the app in the 90 days before. Their data still moves, and their `users` row has no `clerkUserId`. An admin can link one by hand if they get in touch.
+  - The 2 users with a passkey also have a password.
+  - 5 users turned on TOTP. They sign in without a second factor on N+1.
+- Passwords move. All 36 are bcrypt hashes, and Clerk's import accepts `password_hasher: "bcrypt"`.
+- `clerk-convex-swift` exists but has no tagged release, and Clerk's docs pin `0.1.0`. Without it, the app passes Clerk's session token to the Convex client through its auth provider protocol.
 - Clerk is a hosted service in the US. The privacy policy must name it before N+1 is submitted, which also means bumping the legal version files listed in `AGENTS.md`.
-- Clerk's price at our user count.
 
 ## Phase 2. The Convex app (N+1)
 
 N+1 talks only to Convex and signs in only with Clerk. There is no backend flag, so the release is the cutover (phase 3).
 
 1. Replace the Supabase data layer with Convex queries, mutations and subscriptions.
-2. Replace the Supabase auth client with the Clerk iOS SDK for every sign-in method, and give the Convex client Clerk's token.
+2. Replace the Supabase auth client with the Clerk iOS SDK for Sign in with Apple, Google, email codes and email with password, and give the Convex client Clerk's token. Remove the phone, passkey and TOTP screens.
 3. On launch, if N+1 finds a GoTrue session from N in the keychain, it refreshes it with GoTrue, calls the session exchange (phase 1, step 6), signs in to Clerk with the `ticket` strategy, and deletes the GoTrue session. If that fails, the user signs in again with Clerk.
 4. The friends widget doesn't use the app's data layer. `ios/Shared/FriendsAPIClient.swift` calls `https://api.tidex.no/rest/v1/rpc` directly, so it needs its own Convex path and a Clerk token through the app group.
 5. N+1 keeps the local store from N. Shifts edited offline and messages queued in the friends outbox on N sync to Convex after the update. N+1 must not drop them.
-6. The Convex URL and Clerk key come from the build configuration. Debug builds use the dev deployment and the development Clerk instance. TestFlight and App Store builds use production.
+6. The Convex URL and Clerk key come from the build configuration. Debug builds use the dev deployment on the Mac and the development Clerk instance. TestFlight and App Store builds use production.
 7. Test against the dev deployment first. Then run the migration script into the production deployment and Clerk instance (phase 1, step 8) and test the TestFlight build against that rehearsal copy. The cutover replaces it. Update a phone that is signed in on N to the TestFlight build and check that it stays signed in.
 8. Ship the privacy policy that names Clerk. Then submit N+1 with "Manually release this version" and without phased release. App Review tests against production, so the rehearsal copy must include the review demo account, its password in Clerk, and its shifts.
 
@@ -115,3 +118,6 @@ Made on 2026-10-18.
 - N+1 talks only to Convex, without a backend flag. With 29 users, a few hours of update screens on cutover night is cheaper than keeping two data layers working.
 - Clerk ships in N+1 too, so users go through one forced update instead of two, and GoTrue only serves token refreshes after cutover. If the Clerk checks in phase 1 find a blocker, Clerk moves back to a release after N+1.
 - The work happens on the `convex` branch, so `main` stays ready for 3.0.x fixes.
+- The dev Convex deployment runs on the Mac. one-s runs only the Paeonia and Tidex production deployments, because it needs the headroom.
+- N+1 drops SMS sign-in, passkeys and TOTP. SMS costs money and upkeep, and passkeys and TOTP need Clerk's paid plan, so Tidex stays on the free plan.
+- Impersonation stays custom and runs inside Convex. Clerk's own impersonation is capped at 5 on the free plan.
