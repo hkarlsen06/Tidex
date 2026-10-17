@@ -87,6 +87,15 @@ starts. The watchdog (`/srv/backup/watchdog.sh`, only on one-s) reports any
 Tidex container that is not running. Before you stop a container on purpose,
 add it to `STOPPED_ON_PURPOSE` in that script.
 
+Tidex's Convex deployment for the Convex migration runs in `/srv/tidex/convex`
+on one-s, with the Compose project name `tidex-convex`. Keep that name, because
+Paeonia's stack is also in a folder called `convex`. The API is
+`convex.tidex.no` on port 3220, HTTP actions are on `actions.tidex.no` on 3221,
+and the dashboard is on the tailnet-only `convex-dashboard.tidex.no` on 6792.
+`/srv/backup/tidex-convex-backup.sh` backs it up to `/srv/tidex/convex-backups`
+and R2, and the watchdog checks it. Deploy from `backend/` on the `convex`
+branch, with the admin key in the gitignored `backend/.env.local`.
+
 On one-s, `.env` sets `COMPOSE_FILE=compose-migration.json`. That file is a
 fully resolved config written during the move from `mdr`, with every value
 from `.env`, `gotrue-extra.env` and `functions-secrets.env` copied in. Editing
