@@ -130,7 +130,7 @@ For native work, follow [ios/AGENTS.md](ios/AGENTS.md). Read [localization](ios/
 ## App Store Connect / Fastlane Access
 
 On Hjalmar's Mac, the existing Fastlane API configuration is saved in
-`/Users/hkarlsen06/Lokalt/Secrets/Tidex/fastlane.env` (`ASC_KEY_ID`,
+`/Users/hkarlsen06/Documents/Privat/Utviklernøkler/Secrets/Tidex/fastlane.env` (`ASC_KEY_ID`,
 `ASC_ISSUER_ID`, `ASC_KEY_PATH`). `ios/fastlane/.env` is an ignored symlink
 to that file, which Fastlane loads automatically. In a fresh checkout,
 recreate the symlink or load the existing configuration before asking for
