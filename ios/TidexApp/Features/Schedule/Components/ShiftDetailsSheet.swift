@@ -366,8 +366,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     canEditSupplements || canEditPauseWindows
   }
 
+  /// With no note, an editable shift still shows the row as a way to add one.
   private var shouldShowNoteSection: Bool {
-    displayedNote != nil
+    displayedNote != nil || onUpdate != nil
   }
 
   /// Net pay when tax is deducted, otherwise gross. The breakdown card adds up to this.
@@ -1096,7 +1097,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         DetailRowItem(
           id: "note",
           systemImage: "note.text",
-          title: displayedNote ?? "",
+          title: displayedNote ?? String(localized: .shiftsDetailsNotePlaceholder),
+          titleColor: displayedNote == nil ? .tidexTextSecondary : .tidexTextPrimary,
           action: onUpdate == nil ? nil : { beginNoteEditing() }
         )
       )
@@ -1110,6 +1112,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     let id: String
     let systemImage: String
     let title: String
+    var titleColor: Color = .tidexTextPrimary
     var subtitle: String?
     var value: String?
     var action: (() -> Void)?
@@ -1241,7 +1244,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(item.title)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundColor(item.titleColor)
           .multilineTextAlignment(.leading)
 
         if let subtitle = item.subtitle {
