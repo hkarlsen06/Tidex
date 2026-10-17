@@ -622,9 +622,25 @@ export default defineSchema({
     .index("by_token_hash", ["token_hash"])
     .index("by_user", ["user_id"]),
 
-  // impersonation_sessions and impersonation_rate_limits are not here. They hold GoTrue
-  // refresh tokens. Impersonation moves to Clerk (phase 1, step 5), which decides what
-  // a session row needs.
+  // Impersonation happens in Convex, not in Clerk. The admin stays signed in as
+  // themselves, and while their session is active and not expired, the current-user
+  // lookup returns target_user_id instead. The table starts empty at cutover, and the
+  // audit log keeps the history. impersonation_rate_limits is not ported. Rate limits
+  // count this admin's recent sessions instead.
+  impersonation_sessions: defineTable({
+    id: uuid,
+    admin_user_id: uuid,
+    target_user_id: uuid,
+    reason: v.string(),
+    created_at: ts,
+    expires_at: ts,
+    ended_at: optTs,
+    ended_by_admin_user_id: optUuid,
+  })
+    .index("by_uuid", ["id"])
+    .index("by_admin_ended_at", ["admin_user_id", "ended_at"])
+    .index("by_admin_created_at", ["admin_user_id", "created_at"]),
+
   impersonation_audit_log: defineTable({
     id: uuid,
     session_id: optUuid,
