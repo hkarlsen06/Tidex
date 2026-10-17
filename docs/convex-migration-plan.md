@@ -17,9 +17,9 @@ A full copy of the data takes seconds, so cutover needs a maintenance window of 
 
 ## Rules that hold for every phase
 
-- The App Store release and the backend switch happen on different days. A server-side flag decides which backend an app uses, so pressing Release in App Store Connect never changes the backend.
+- N+1 talks only to Convex, so pressing Release in App Store Connect is the cutover. Submit N+1 with manual release, and press Release only during the cutover (phase 3).
 - Nothing in Convex is keyed by an auth provider's user ID. Every row points to a Convex `users` document, and that document stores `supabaseUserId` now and `clerkUserId` later. Changing auth then only changes how we find the `users` row.
-- Before the last step of a cutover, rolling back must be free: turn a flag back, remove the Caddy block, and nothing is lost.
+- Before the last step of a cutover, rolling back must be free: turn maintenance off, remove the Caddy block, and nothing is lost.
 
 ## Phase 0. Minimum-version gate (N)
 
@@ -48,8 +48,8 @@ Versions before N don't have the gate. On cutover night they see the server as o
 2. Configure Convex auth with a `customJwt` provider that trusts the tokens GoTrue issues today (ES256, the JWKS in `SUPABASE_JWKS`). Users stay signed in and the app keeps using the Supabase auth client.
 3. Write the schema, starting with `users` (`supabaseUserId`, later `clerkUserId`). Every other table points to `users._id`.
    - Every table keeps the Supabase UUID as an indexed `id` field, and the app keeps using UUIDs. The local store, rows created offline, push payloads, deep links and the widget all use them.
-   - Sync pulls each table from a `revision` cursor. Every Convex table needs the same kind of increasing counter. When N+1 switches backend, it resets its cursors and pulls everything again, and keeps its dirty rows.
-4. Port the 43 RPCs and the 12 direct table queries as queries and mutations. Messaging uses Convex subscriptions in place of Realtime. Port `record_app_activity` early, because phase 2 and 4 use it to measure adoption.
+   - Sync pulls each table from a `revision` cursor. Every Convex table needs the same kind of increasing counter. On its first launch, N+1 resets its cursors, pulls everything again, and keeps its dirty rows.
+4. Port the 43 RPCs and the 12 direct table queries as queries and mutations. Messaging uses Convex subscriptions in place of Realtime. Port `record_app_activity` early, so we can see who has moved to N+1 after cutover.
 5. Replace the server-side parts:
    - Cron jobs become Convex crons. This covers push notifications, Live Activities, soft-delete purges and the sync-event and diagnostics purges.
    - `send-push-notifications`, `delete-account`, `admin-user-ban`, `admin-user-role` and `impersonation` become Convex actions.
@@ -59,49 +59,38 @@ Versions before N don't have the gate. On cutover night they see the server as o
 6. Move Supabase Storage. On 2026-10-17 it held 154 message attachments (48 MB), 13 profile pictures and 2 legal documents.
    - `message_attachments.storage_path` stores bucket paths.
    - `user_settings.profile_picture_url` and `threads.avatar_url` store full URLs, on both `api.tidex.no` and `identity.tidex.no`.
-   - Copy the files to Convex file storage and rewrite the URLs in the migration, or keep both hosts serving the old URLs until N+2.
+   - Copy the files to Convex file storage and rewrite the paths and URLs in the migration. Caddy blocks `/storage/v1` at cutover (phase 3), so the old URLs stop working that night.
 7. Write the migration script. It reads Postgres, maps UUIDs to Convex IDs and writes through an internal mutation. It must be safe to run twice, and it checks row counts table by table when it finishes.
 8. Rehearse it. Load a `pg_dump` of production into a dev Convex deployment, run the script, time it, and compare counts. Repeat until it passes twice in a row without changes.
 
-## Phase 2. App with both backends (N+1)
+## Phase 2. The Convex app (N+1)
 
-1. The data layer has a Supabase path and a Convex path. The app picks one at launch from two new fields in `app-config.json`.
+N+1 talks only to Convex. There is no backend flag, so the release is the cutover (phase 3).
 
-   ```json
-   {
-     "minimumVersion": "3.0.0",
-     "maintenance": false,
-     "backend": "supabase",
-     "convexUserIds": []
-   }
-   ```
-
-   `convexUserIds` lists Supabase user IDs that use Convex early. If the backend changes while the app runs, the app shows the maintenance screen and reloads once the flag is stable.
-   Local changes that haven't synced yet, such as queued messages in the friends outbox and dirty shifts, go to whichever backend is active when they flush, not the one active when they were made.
-   The friends widget doesn't use the app's data layer. `ios/Shared/FriendsAPIClient.swift` calls `https://api.tidex.no/rest/v1/rpc` directly. It needs a Convex path too, and reads the flag through the app group.
-2. Test the Convex path in TestFlight against the dev deployment.
-3. Release N+1 with `backend: "supabase"`. Nothing changes for users.
-4. Add your own account and a test account to `convexUserIds` and use the App Store build against production Convex for a few days. Their data in Convex is a copy. Anything they change there never reaches Postgres, and the cutover copy overwrites it. Remove them again before cutover.
-5. Wait until nearly all active users run N+1. Check with the app versions that `record_app_activity` stores.
+1. Replace the Supabase data layer with Convex queries, mutations and subscriptions. Sign-in still goes through the Supabase auth client, and the Convex client gets its token from that session.
+2. The friends widget doesn't use the app's data layer. `ios/Shared/FriendsAPIClient.swift` calls `https://api.tidex.no/rest/v1/rpc` directly, so it needs its own Convex path.
+3. N+1 keeps the local store from N. Shifts edited offline and messages queued in the friends outbox on N sync to Convex after the update. N+1 must not drop them.
+4. The Convex URL comes from the build configuration. Debug builds use the dev deployment. TestFlight and App Store builds use production.
+5. Test against the dev deployment first. Then load a rehearsal copy of production data into the production deployment (phase 1, step 8) and test the TestFlight build against it. The cutover replaces that copy.
+6. Submit N+1 with "Manually release this version" and without phased release. App Review tests against the production deployment, so the rehearsal copy must include the review demo account and its shifts.
 
 ## Phase 3. Cutover night
 
-Write each step with its exact command into a checklist before the night, and only run commands from it.
+Write each step with its exact command into a checklist before the night, and only run commands from it. Start once N+1 shows Pending Developer Release in App Store Connect.
 
 1. Set `maintenance: true` and deploy the marketing site. Wait until your own phone shows the maintenance screen.
 2. Make Caddy drop connections (`abort`) to `/rest/v1`, `/realtime/v1`, `/storage/v1` and `/functions/v1` on `api.tidex.no` and `identity.tidex.no`. Leave `/auth/v1` open, and keep `calendar-feed` and `apple-server-notifications` working until step 4 moves them. Every app version, including widgets, background sync and versions before N, then sees the server as offline. Shift edits stay dirty on the phone, and queued messages stay queued.
    Don't revoke grants instead. Sync treats a 42501 refusal as that row's fault and marks the row as a conflict (`SyncCoordinator.isRowRejection`). A conflict with no server row can end with the local row dropped. Writes through `SECURITY DEFINER` RPCs such as `send_message` would also ignore revoked grants.
-3. Run the migration script and check the counts.
+3. Run the migration script and check the counts. It replaces the rehearsal copy.
 4. Switch the server side. Disable the Supabase cron jobs, enable the Convex crons, change the Apple server notification URL, and point `calendar-feed` at Convex.
-5. Add your own user ID to `convexUserIds`. Check shifts, pay, messages, a push notification and a calendar feed refresh.
-6. Point of no return. Set `backend: "convex"`, set `minimumVersion` to N+1, set `maintenance: false`, and deploy.
+5. Check shifts, pay, messages, a push notification and a calendar feed refresh with the TestFlight build of N+1.
+6. Point of no return. Press Release in App Store Connect, set `minimumVersion` to N+1, set `maintenance: false`, and deploy. Users on N see the update screen. Until N+1 reaches their App Store region, which can take a few hours, the App Store button shows no update yet.
 
-Rolling back before step 6 means turning maintenance off, removing the Caddy block, re-enabling the Supabase crons and changing the Apple URL back. After step 6, Convex has writes that Postgres doesn't. A small script that copies changed shifts and messages from Convex back to Postgres is the fallback. Write it before the night.
+Rolling back before step 6 means turning maintenance off, removing the Caddy block, re-enabling the Supabase crons and changing the Apple URL back. N+1 stays unreleased. After step 6, phones run an app that only talks to Convex, and Convex has writes that Postgres doesn't. Going back would take a new release and a script that copies changed shifts and messages back to Postgres, so plan to fix forward.
 
-## Phase 4. Remove the Supabase data path (N+2)
+## Phase 4. Retire the Supabase data
 
-1. Release N+2 without the Supabase data code. It still uses the Supabase auth client.
-2. Keep Postgres read-only for a month, then take a final dump to cold storage and drop the public tables. GoTrue and its `auth` schema stay until phase 5 is done.
+Keep Postgres read-only for a month, then take a final dump to cold storage and drop the public tables. GoTrue and its `auth` schema stay until phase 5 is done.
 
 ## Phase 5. Move auth to Clerk
 
@@ -109,8 +98,8 @@ The aim is that nobody has to sign in again. Users who open the app during the o
 
 1. Import every GoTrue user into Clerk ahead of time with the Backend API. Set `external_id` to the Supabase user ID and pass the bcrypt hash from `auth.users.encrypted_password` so passwords keep working. Store each `clerkUserId` on the Convex `users` row.
 2. Add Clerk as a second provider in Convex auth (the `convex` JWT template or Clerk's Convex integration). Convex then accepts both GoTrue and Clerk tokens.
-3. App N+3 uses the Clerk iOS SDK. On launch, if it still has a GoTrue session, it calls a Convex action that checks the GoTrue token, creates a Clerk sign-in token for the matching user, and returns it. The app signs in to Clerk with the `ticket` strategy and drops the GoTrue session.
-4. Raise `minimumVersion` to N+3 once adoption is high. Remove GoTrue from Convex auth, then shut down GoTrue and Postgres.
+3. App N+2 uses the Clerk iOS SDK. On launch, if it still has a GoTrue session, it calls a Convex action that checks the GoTrue token, creates a Clerk sign-in token for the matching user, and returns it. The app signs in to Clerk with the `ticket` strategy and drops the GoTrue session.
+4. Raise `minimumVersion` to N+2 once adoption is high. Remove GoTrue from Convex auth, then shut down GoTrue and Postgres.
 
 Check these before starting phase 5:
 
@@ -120,7 +109,10 @@ Check these before starting phase 5:
 - Clerk is a hosted service in the US. The privacy policy must name it before launch, which also means bumping the legal version files listed in `AGENTS.md`.
 - Clerk's price at our user count.
 
-## Open questions
+## Decisions
 
-- Should the Convex deployment run on one-s, or on Convex Cloud in an EU region? one-s keeps it next to Paeonia and costs nothing extra. Convex Cloud removes the backup and upgrade work.
-- Is supporting both backends in N+1 worth the work for 29 users? Without it, N+1 talks only to Convex and the cutover happens when you press Release. Users then see the update screen for a few hours until the release reaches every App Store region.
+Made on 2026-10-18.
+
+- The Convex deployment runs on one-s next to Paeonia's. It costs nothing extra, and we run the backups and upgrades.
+- N+1 talks only to Convex, without a backend flag. With 29 users, a few hours of update screens on cutover night is cheaper than keeping two data layers working.
+- The work happens on the `convex` branch, so `main` stays ready for 3.0.x fixes.
