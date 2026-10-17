@@ -1,7 +1,4 @@
-import type { DataModelFromSchemaDefinition, GenericMutationCtx } from "convex/server";
-import type schema from "../schema";
-
-type MutationCtx = GenericMutationCtx<DataModelFromSchemaDefinition<typeof schema>>;
+import type { MutationCtx } from "../_generated/server";
 
 /**
  * Returns the next revision. Call it once per mutation and stamp every row the mutation
