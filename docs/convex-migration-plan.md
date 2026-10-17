@@ -19,7 +19,7 @@ A full copy of the data takes seconds, so cutover needs a maintenance window of 
 
 - The App Store release and the backend switch happen on different days. A server-side flag decides which backend an app uses, so pressing Release in App Store Connect never changes the backend.
 - Nothing in Convex is keyed by an auth provider's user ID. Every row points to a Convex `users` document, and that document stores `supabaseUserId` now and `clerkUserId` later. Changing auth then only changes how we find the `users` row.
-- Before the last step of a cutover, rolling back must be free: turn a flag back, restore grants, and nothing is lost.
+- Before the last step of a cutover, rolling back must be free: turn a flag back, remove the Caddy block, and nothing is lost.
 
 ## Phase 0. Minimum-version gate (N)
 
@@ -36,24 +36,32 @@ A full copy of the data takes seconds, so cutover needs a maintenance window of 
 - If `maintenance` is true, the app shows only a maintenance screen with a retry button.
 - If the file can't be fetched, the app keeps its last answer. On a cold launch with no answer the app opens normally, so an outage of tidex.no never locks anyone out.
 
-Changing either value means editing the file and deploying the marketing site. The app skips its local cache for this request, so a running app sees the change the next time it comes to the foreground.
+Changing either value means editing the file and deploying the marketing site (`bun run pages:deploy:marketing`). The site serves the file with `max-age=0`. The app skips its local cache for this request and checks at launch, on every return to the foreground, and every 60 seconds while it's open, so a running app sees a change within a minute.
 
-Versions before N don't have the gate. When cutover comes, they get a stub response or a database error instead, the same way `wagey-chat-v2` handles old versions today.
+N decodes only these two fields and ignores the rest. Keep `minimumVersion` a string and `maintenance` a boolean for as long as N is in use. If either changes type, N fails to decode the file and keeps its last answer.
+
+Versions before N don't have the gate. On cutover night they see the server as offline, like every other version (see phase 3). Afterwards they keep failing to reach it, because they never learn they need to update.
 
 ## Phase 1. Build the Convex backend
 
 1. Run a separate Convex deployment for Tidex on one-s next to Paeonia's. Give it its own domain under `tidex.no` and its own backups. Add its containers to the watchdog.
 2. Configure Convex auth with a `customJwt` provider that trusts the tokens GoTrue issues today (ES256, the JWKS in `SUPABASE_JWKS`). Users stay signed in and the app keeps using the Supabase auth client.
 3. Write the schema, starting with `users` (`supabaseUserId`, later `clerkUserId`). Every other table points to `users._id`.
-4. Port the 43 RPCs and the 12 direct table queries as queries and mutations. Messaging uses Convex subscriptions in place of Realtime.
+   - Every table keeps the Supabase UUID as an indexed `id` field, and the app keeps using UUIDs. The local store, rows created offline, push payloads, deep links and the widget all use them.
+   - Sync pulls each table from a `revision` cursor. Every Convex table needs the same kind of increasing counter. When N+1 switches backend, it resets its cursors and pulls everything again, and keeps its dirty rows.
+4. Port the 43 RPCs and the 12 direct table queries as queries and mutations. Messaging uses Convex subscriptions in place of Realtime. Port `record_app_activity` early, because phase 2 and 4 use it to measure adoption.
 5. Replace the server-side parts:
    - Cron jobs become Convex crons. This covers push notifications, Live Activities, soft-delete purges and the sync-event and diagnostics purges.
    - `send-push-notifications`, `delete-account`, `admin-user-ban`, `admin-user-role` and `impersonation` become Convex actions.
    - `apple-server-notifications` becomes a Convex HTTP action. Its URL changes in App Store Connect on cutover night.
    - Users have the `calendar-feed` URL saved in their calendar apps. `api.tidex.no/functions/v1/calendar-feed` must keep answering at the same path, either through a Caddy route to a Convex HTTP action or with the edge function reading from Convex.
    - `before-user-created` stays while GoTrue stays.
-6. Write the migration script. It reads Postgres, maps UUIDs to Convex IDs and writes through an internal mutation. It must be safe to run twice, and it checks row counts table by table when it finishes.
-7. Rehearse it. Load a `pg_dump` of production into a dev Convex deployment, run the script, time it, and compare counts. Repeat until it passes twice in a row without changes.
+6. Move Supabase Storage. On 2026-10-17 it held 154 message attachments (48 MB), 13 profile pictures and 2 legal documents.
+   - `message_attachments.storage_path` stores bucket paths.
+   - `user_settings.profile_picture_url` and `threads.avatar_url` store full URLs, on both `api.tidex.no` and `identity.tidex.no`.
+   - Copy the files to Convex file storage and rewrite the URLs in the migration, or keep both hosts serving the old URLs until N+2.
+7. Write the migration script. It reads Postgres, maps UUIDs to Convex IDs and writes through an internal mutation. It must be safe to run twice, and it checks row counts table by table when it finishes.
+8. Rehearse it. Load a `pg_dump` of production into a dev Convex deployment, run the script, time it, and compare counts. Repeat until it passes twice in a row without changes.
 
 ## Phase 2. App with both backends (N+1)
 
@@ -70,6 +78,7 @@ Versions before N don't have the gate. When cutover comes, they get a stub respo
 
    `convexUserIds` lists Supabase user IDs that use Convex early. If the backend changes while the app runs, the app shows the maintenance screen and reloads once the flag is stable.
    Local changes that haven't synced yet, such as queued messages in the friends outbox and dirty shifts, go to whichever backend is active when they flush, not the one active when they were made.
+   The friends widget doesn't use the app's data layer. `ios/Shared/FriendsAPIClient.swift` calls `https://api.tidex.no/rest/v1/rpc` directly. It needs a Convex path too, and reads the flag through the app group.
 2. Test the Convex path in TestFlight against the dev deployment.
 3. Release N+1 with `backend: "supabase"`. Nothing changes for users.
 4. Add your own account and a test account to `convexUserIds` and use the App Store build against production Convex for a few days. Their data in Convex is a copy. Anything they change there never reaches Postgres, and the cutover copy overwrites it. Remove them again before cutover.
@@ -80,13 +89,14 @@ Versions before N don't have the gate. When cutover comes, they get a stub respo
 Write each step with its exact command into a checklist before the night, and only run commands from it.
 
 1. Set `maintenance: true` and deploy the marketing site. Wait until your own phone shows the maintenance screen.
-2. Revoke insert, update and delete on the public tables from `authenticated`. Versions before N can't show the maintenance screen, and this makes their writes fail with an error instead of landing in a database nobody reads anymore.
+2. Make Caddy drop connections (`abort`) to `/rest/v1`, `/realtime/v1`, `/storage/v1` and `/functions/v1` on `api.tidex.no` and `identity.tidex.no`. Leave `/auth/v1` open, and keep `calendar-feed` and `apple-server-notifications` working until step 4 moves them. Every app version, including widgets, background sync and versions before N, then sees the server as offline. Shift edits stay dirty on the phone, and queued messages stay queued.
+   Don't revoke grants instead. Sync treats a 42501 refusal as that row's fault and marks the row as a conflict (`SyncCoordinator.isRowRejection`). A conflict with no server row can end with the local row dropped. Writes through `SECURITY DEFINER` RPCs such as `send_message` would also ignore revoked grants.
 3. Run the migration script and check the counts.
 4. Switch the server side. Disable the Supabase cron jobs, enable the Convex crons, change the Apple server notification URL, and point `calendar-feed` at Convex.
 5. Add your own user ID to `convexUserIds`. Check shifts, pay, messages, a push notification and a calendar feed refresh.
 6. Point of no return. Set `backend: "convex"`, set `minimumVersion` to N+1, set `maintenance: false`, and deploy.
 
-Rolling back before step 6 means turning maintenance off, restoring the grants, re-enabling the Supabase crons and changing the Apple URL back. After step 6, Convex has writes that Postgres doesn't. A small script that copies changed shifts and messages from Convex back to Postgres is the fallback. Write it before the night.
+Rolling back before step 6 means turning maintenance off, removing the Caddy block, re-enabling the Supabase crons and changing the Apple URL back. After step 6, Convex has writes that Postgres doesn't. A small script that copies changed shifts and messages from Convex back to Postgres is the fallback. Write it before the night.
 
 ## Phase 4. Remove the Supabase data path (N+2)
 
