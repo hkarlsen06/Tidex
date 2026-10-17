@@ -936,7 +936,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\n/usr/bin/python3 \"${SRCROOT}/Scripts/validate-version-config.py\" \"${SRCROOT}\"\nBUILD=\"$(TZ=Europe/Oslo date +%Y%m%d.%H%M)\"\nOUT=\"${SRCROOT}/BuildNumber.xcconfig\"\nprintf 'CURRENT_PROJECT_VERSION = %s\\n' \"$BUILD\" > \"$OUT\"\necho \"Generated CURRENT_PROJECT_VERSION=$BUILD\"\n";
+			shellScript = "set -eu\n/usr/bin/python3 \"${SRCROOT}/Scripts/validate-version-config.py\" \"${SRCROOT}\"\n# The App scheme's build pre-action writes BuildNumber.xcconfig before Xcode reads it.\n# Writing it here would be too late for this build, so only catch a build that skipped it.\nOUT=\"${SRCROOT}/BuildNumber.xcconfig\"\nWRITTEN=\"$(sed -n 's/^CURRENT_PROJECT_VERSION = //p' \"$OUT\" 2>/dev/null || true)\"\nif [ \"$WRITTEN\" != \"$CURRENT_PROJECT_VERSION\" ]; then\n  echo \"warning: This build is numbered $CURRENT_PROJECT_VERSION, not ${WRITTEN:-a fresh timestamp}. Build with the App scheme so its pre-action sets the number.\"\nfi\nif [ -z \"$WRITTEN\" ]; then\n  printf 'CURRENT_PROJECT_VERSION = %s\\n' \"$(TZ=Europe/Oslo date +%Y%m%d.%H%M)\" > \"$OUT\"\nfi\n";
 			showEnvVarsInLog = 0;
 		};
 		2A769897854F4D269CC244B9 /* Include Giphy dSYM */ = {

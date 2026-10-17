@@ -6,6 +6,24 @@
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
       buildArchitectures = "Automatic">
+      <PreActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Generate BuildNumber.xcconfig"
+               scriptText = "set -eu&#10;# Runs before Xcode reads build settings, so this build gets this timestamp.&#10;printf &apos;CURRENT_PROJECT_VERSION = %s\n&apos; &quot;$(TZ=Europe/Oslo date +%Y%m%d.%H%M)&quot; &gt; &quot;${SRCROOT}/BuildNumber.xcconfig&quot;&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "504EC3031FED79650016851F"
+                     BuildableName = "Tidex.app"
+                     BlueprintName = "TidexApp"
+                     ReferencedContainer = "container:Tidex.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PreActions>
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"

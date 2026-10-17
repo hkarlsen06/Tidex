@@ -4,12 +4,12 @@
 // The build script validates that targets and Info.plists inherit these values.
 //
 // MARKETING_VERSION = User-visible version (e.g., 2.0.0)
-// CURRENT_PROJECT_VERSION = Generated at build time from BuildNumber.xcconfig (Europe/Oslo timestamp)
+// CURRENT_PROJECT_VERSION = Europe/Oslo timestamp from BuildNumber.xcconfig, written by the App scheme's build pre-action
 
 MARKETING_VERSION = 3.0.1
 
-// Build number is generated at build time by the "Generate BuildNumber.xcconfig"
-// Run Script phase. BuildNumber.xcconfig is git-ignored and never committed.
+// The App scheme's "Generate BuildNumber.xcconfig" build pre-action writes the build number
+// before Xcode reads build settings. BuildNumber.xcconfig is git-ignored and never committed.
 // Placeholder — overridden at build time by BuildNumber.xcconfig (git-ignored).
 CURRENT_PROJECT_VERSION = 00000000.0000
 #include? "BuildNumber.xcconfig"
