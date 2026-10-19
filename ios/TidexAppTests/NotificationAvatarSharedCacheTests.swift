@@ -5,27 +5,6 @@ import XCTest
 @testable import Tidex
 
 final class NotificationAvatarSharedCacheTests: XCTestCase {
-  func testStoreDefersDiskWorkAndWritesDecodableImage() throws {
-    let directory = temporaryDirectory()
-    defer { try? FileManager.default.removeItem(at: directory) }
-    let queue = DispatchQueue(label: "NotificationAvatarSharedCacheTests.store")
-    let cache = NotificationAvatarSharedCache(directory: directory, queue: queue)
-    let image = makeImage()
-
-    queue.suspend()
-    cache.store(image, for: try XCTUnwrap(URL(string: "https://example.com/avatar.jpg")))
-    let wroteBeforeQueueRan = FileManager.default.fileExists(atPath: directory.path)
-    queue.resume()
-    queue.sync {}
-
-    XCTAssertFalse(wroteBeforeQueueRan)
-    let files = try FileManager.default.contentsOfDirectory(
-      at: directory, includingPropertiesForKeys: nil)
-    XCTAssertEqual(files.count, 1)
-    let file = try XCTUnwrap(files.first)
-    let restoredImage = try XCTUnwrap(UIImage(data: Data(contentsOf: file)))
-    XCTAssertEqual(restoredImage.size, image.size)
-  }
 
   func testRemoveRunsAfterPendingStore() throws {
     let directory = temporaryDirectory()

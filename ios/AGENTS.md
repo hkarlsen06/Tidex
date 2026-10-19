@@ -29,7 +29,11 @@ Paths are under `ios/TidexApp/` unless they start with `ios/`.
 
 ## Project file
 
-All app and extension folders are synchronized groups, so adding or deleting a Swift file there needs no `project.pbxproj` edit. `TidexAppTests` is the exception. A new test file needs a `PBXBuildFile`, a `PBXFileReference`, a group child and a Sources entry in `ios/Tidex.xcodeproj/project.pbxproj`. Copy the pattern of an existing test file.
+All app and extension folders are synchronized groups, so adding or deleting a Swift file there needs no `project.pbxproj` edit. `TidexAppTests` and `TidexAppUITests` are the exceptions. A new test file needs a `PBXBuildFile`, a `PBXFileReference`, a group child and a Sources entry in `ios/Tidex.xcodeproj/project.pbxproj`. Copy the pattern of an existing test file. A file without them never compiles or runs, and nothing warns you. Seven test files sat outside the target from September to October 2026. This prints any test file missing from the target:
+
+```bash
+for f in ios/TidexAppTests/*.swift ios/TidexAppTests/*/*.swift ios/TidexAppUITests/*.swift; do grep -q "/\* ${f##*/} in Sources \*/" ios/Tidex.xcodeproj/project.pbxproj || echo "$f"; done
+```
 
 ## SwiftLint baseline
 
@@ -41,44 +45,14 @@ Use the existing Swift Supabase client with the user's JWT for RLS-protected que
 
 The current service layer uses `.rpc(...)` and `supabase.functions.invoke(...)`; examples include `Services/Data/FriendsMessagingService.swift` and `Services/Auth/ImpersonationManager.swift` under `ios/TidexApp/`. Backend source and self-hosted deployment guidance are in the root AGENTS.md. Static marketing and compatibility sites are not an authenticated application API server.
 
-## Testing Requirements (REQUIRED for feature work)
+## Tests
 
-Agents must add or update tests when implementing new behavior.
+[Tests](../AGENTS.md#tests) in the root AGENTS.md says when to add a test and which kind. On iOS:
 
-### Default rule
+- `TidexAppUITests` holds the end-to-end journeys. Launch with `-ui-testing` and `TIDEX_UI_TEST_SCENARIO=app-store-screenshots` to get the real `MainTabView` on an in-memory store that `AppStoreScreenshotFixture` seeds, with Supabase pointed at an unreachable address. `design-review` opens single screens (`TIDEX_DESIGN_SCREEN`), and `friends-chat` opens a thread with the real repository and a fake service. The fixture seeds shifts in the current month, so derive dates from today. A month name written into a test breaks the next month.
+- `TidexAppTests` holds the integration tests and the unit layer. `TestSupport/TestFixtures.swift` builds wage snapshots, shifts, jobs and computed shifts.
 
-- Every feature PR/change must include test coverage for changed behavior, not just compile-clean code.
-- If behavior changes and no tests are added, explicitly explain why in the final handoff.
-
-### What to test
-
-- Happy path: primary user flow works and returns expected values.
-- Edge cases: invalid/missing input, time/date boundaries, empty states.
-- Regression guard: at least one test that would fail if the new logic is removed or reverted.
-- Bug fixes: add a test that reproduces the bug before/alongside the fix (when feasible).
-
-### Where to place tests
-
-- Business logic, parsing, sync, repositories, and view-model logic:
-  - `ios/TidexAppTests/`
-- UI launch/smoke and critical interaction checks:
-  - `ios/TidexAppUITests/`
-
-Prefer small focused unit tests over broad UI tests unless the behavior is UI-only.
-
-### Coverage expectations by change type
-
-- New service/repository logic: add unit tests for success + failure/edge paths.
-- New date/time/payroll logic: add boundary tests (cross-midnight, month boundary, invalid input).
-- Sync/conflict logic changes: add tests for dirty tracking, conflict states, and resolution paths.
-- New user-facing flows/screens: add at least one smoke UI test when feasible.
-
-### Agent completion checklist
-
-- Added/updated tests for new behavior.
-- Confirmed tests are included in the correct test target (new `TidexAppTests` files need `project.pbxproj` entries, see "Project file").
-- Ran fast validation (`swiftlint --quiet`) and reported results.
-- Did not build or run tests unless the user asked; listed in one or two lines what the user should run or check.
+Handoff: name any test you added and the rule that called for it, confirm new test files have `project.pbxproj` entries (see "Project file"), run `swiftlint --quiet`, and list in one or two lines what the user should run or check.
 
 ## Localization
 

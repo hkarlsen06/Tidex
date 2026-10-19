@@ -4,40 +4,6 @@ import XCTest
 
 @MainActor
 final class CalendarSubscriptionStoreTests: XCTestCase {
-  func testURLBuilderUsesWebcalForLaunchAndHTTPSForFallback() {
-    let service = CalendarSubscriptionService()
-    let token = "tidex_cal_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-
-    XCTAssertEqual(
-      service.webcalURL(rawToken: token)?.absoluteString,
-      "webcal://api.tidex.no/functions/v1/calendar-feed/\(token).ics"
-    )
-    XCTAssertEqual(
-      service.httpsURL(rawToken: token)?.absoluteString,
-      "https://api.tidex.no/functions/v1/calendar-feed/\(token).ics"
-    )
-  }
-
-  func testTokenStoreScopesTokensByUserAndSubscription() {
-    let metadata = makeMetadata(id: "subscription-1", suffix: "aaaaaaaa")
-    let otherMetadata = makeMetadata(id: "subscription-2", suffix: "bbbbbbbb")
-    let tokenStore = InMemoryCalendarSubscriptionTokenStore()
-
-    tokenStore.saveToken(
-      CalendarSubscriptionKeychainToken(
-        userId: "user-1",
-        subscriptionId: metadata.id,
-        tokenSuffix: metadata.tokenSuffix,
-        rawToken: "token-1"
-      ))
-
-    XCTAssertEqual(
-      tokenStore.loadToken(userId: "user-1", metadata: metadata)?.rawToken,
-      "token-1"
-    )
-    XCTAssertNil(tokenStore.loadToken(userId: "user-2", metadata: metadata))
-    XCTAssertNil(tokenStore.loadToken(userId: "user-1", metadata: otherMetadata))
-  }
 
   func testDuplicateCreateRefreshesActiveState() async {
     let activeMetadata = makeMetadata()

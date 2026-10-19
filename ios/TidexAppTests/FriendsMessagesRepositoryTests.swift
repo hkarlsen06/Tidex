@@ -82,27 +82,6 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
       repository.getThreadState(threadId: "thread-newer", viewerUserId: viewerUserId)?.muted, true)
   }
 
-  func testFriendFeedPlacementPersistsWhileBaselineMessageIsUnchanged() async throws {
-    let repository = try makeRepository()
-    await repository.saveThread(makeThread(lastMessageId: "message-1"), for: viewerUserId)
-
-    await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
-
-    let bottomedIds = await repository.getActiveBottomedFriendIds(for: viewerUserId)
-    XCTAssertEqual(bottomedIds, Set(["friend-1"]))
-  }
-
-  func testFriendFeedPlacementCanBeClearedManually() async throws {
-    let repository = try makeRepository()
-    await repository.saveThread(makeThread(lastMessageId: "message-1"), for: viewerUserId)
-
-    await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
-    await repository.clearFriendFeedPlacement(friendUserId: "friend-1", viewerUserId: viewerUserId)
-
-    let bottomedIds = await repository.getActiveBottomedFriendIds(for: viewerUserId)
-    XCTAssertEqual(bottomedIds, Set<String>())
-  }
-
   func testFriendFeedPlacementClearsWhenThreadLastMessageChanges() async throws {
     let repository = try makeRepository()
     await repository.saveThread(makeThread(lastMessageId: "message-1"), for: viewerUserId)

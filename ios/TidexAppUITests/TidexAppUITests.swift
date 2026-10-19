@@ -1149,6 +1149,12 @@ final class TidexAppUITests: XCTestCase {
       waitForComposerToClear(in: app, timeout: defaultTimeout),
       "Expected composer to clear after submitting message"
     )
+    assertExists(
+      staticText(withExactLabel: sentMessageText, in: app),
+      in: app,
+      timeout: defaultTimeout,
+      message: "Expected the sent message to show in the thread"
+    )
   }
 
   @MainActor

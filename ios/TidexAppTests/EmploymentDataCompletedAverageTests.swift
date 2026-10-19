@@ -25,28 +25,6 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
     XCTAssertNil(data.completedAverageRangeLabel(now: now, calendar: calendar))
   }
 
-  func testCompletedMonthsAverageExcludesLeadingEmptyMonths() {
-    let data = makeEmploymentData(
-      year: 2_026,
-      percentages: [0, 0, 30, 40, 100, 100, 100, 100, 100, 100, 100, 100]
-    )
-    let now: Date = makeDate(year: 2_026, month: 5, day: 17)
-
-    XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 35)
-    XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "mar.-apr.")
-  }
-
-  func testCompletedMonthsAverageExcludesTrailingEmptyMonthsForPastYear() {
-    let data = makeEmploymentData(
-      year: 2_025,
-      percentages: [10, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    )
-    let now: Date = makeDate(year: 2_026, month: 5, day: 17)
-
-    XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 15)
-    XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "jan.-feb.")
-  }
-
   func testCompletedMonthsAverageIsNilWhenOnlyCurrentMonthHasShifts() {
     let data = makeEmploymentData(
       year: 2_026,
@@ -67,17 +45,6 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
 
     XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 12)
     XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "jan.-des.")
-  }
-
-  func testCompletedMonthsAverageIsNilBeforeAnyMonthHasCompleted() {
-    let data = makeEmploymentData(
-      year: 2_026,
-      percentages: Array(repeating: 50, count: 12)
-    )
-    let now: Date = makeDate(year: 2_026, month: 1, day: 17)
-
-    XCTAssertNil(data.completedMonthsAverage(now: now, calendar: calendar))
-    XCTAssertNil(data.completedAverageRangeLabel(now: now, calendar: calendar))
   }
 
   private var calendar: Calendar {

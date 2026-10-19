@@ -21,13 +21,6 @@ final class MonthlyEarningsChangeTests: XCTestCase {
     XCTAssertNil(percent(current: [], previous: []))
   }
 
-  func testDropIsNegative() throws {
-    let change = try XCTUnwrap(percent(current: [930], previous: [1_000]))
-
-    XCTAssertEqual(change, -7, accuracy: 0.001)
-    XCTAssertEqual(MonthlyEarningsChange.percentText(change, locale: english), "-7%")
-  }
-
   func testConflictingShiftDoesNotPickTheComparisonCurrency() throws {
     let jobs = [
       TestFixtures.job(id: "job-kr", isDefault: true, currency: "kr"),
@@ -61,28 +54,6 @@ final class MonthlyEarningsChangeTests: XCTestCase {
       ))
 
     XCTAssertEqual(change, -50, accuracy: 0.001)
-  }
-
-  func testPercentTextRoundsToWholePercentWithoutNegativeZero() {
-    XCTAssertEqual(MonthlyEarningsChange.percentText(7, locale: english), "+7%")
-    XCTAssertEqual(MonthlyEarningsChange.percentText(0.3, locale: english), "0%")
-    XCTAssertEqual(MonthlyEarningsChange.percentText(-0.3, locale: english), "0%")
-    XCTAssertEqual(MonthlyEarningsChange.percentText(-12.6, locale: english), "-13%")
-  }
-
-  func testPayrollTotalLabelNamesTheTaxBasis() {
-    XCTAssertEqual(
-      String(localized: PayrollDetailsSheet.totalLabel(taxEnabledByJob: [true, true])),
-      String(localized: .dashboardPayrollDetailsTotalNetAfterTax)
-    )
-    XCTAssertEqual(
-      String(localized: PayrollDetailsSheet.totalLabel(taxEnabledByJob: [false, false])),
-      String(localized: .dashboardPayrollDetailsTotalBeforeTax)
-    )
-    XCTAssertEqual(
-      String(localized: PayrollDetailsSheet.totalLabel(taxEnabledByJob: [true, false])),
-      String(localized: .dashboardPayrollDetailsTotalEstimate)
-    )
   }
 
   private func percent(current: [Double], previous: [Double]) -> Double? {

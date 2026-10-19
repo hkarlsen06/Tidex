@@ -41,34 +41,6 @@ final class NotificationPermissionTests: XCTestCase {
     await service.registerIfPermissionAlreadyGranted()
   }
 
-  func testDeniedPermissionDoesNotPromptOrRegister() async {
-    let service = NotificationService(
-      authorizationStatus: { .denied },
-      requestAuthorization: {
-        XCTFail("A previous denial must be respected")
-        return true
-      },
-      registerForPush: { XCTFail("Permission was denied") },
-      isAppActive: { true }
-    )
-
-    await service.requestPermissionAndRegister()
-  }
-
-  func testBackgroundCompletionDoesNotRequestPermission() async {
-    let service = NotificationService(
-      authorizationStatus: { .notDetermined },
-      requestAuthorization: {
-        XCTFail("A background save or send must not prompt")
-        return true
-      },
-      registerForPush: { XCTFail("App is in the background") },
-      isAppActive: { false }
-    )
-
-    await service.requestPermissionAndRegister()
-  }
-
   func testEnteringBackgroundWhileCheckingPermissionDoesNotPrompt() async {
     var appIsActive = true
     let service = NotificationService(

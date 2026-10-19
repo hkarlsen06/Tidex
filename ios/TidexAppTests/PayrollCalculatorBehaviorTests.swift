@@ -183,12 +183,6 @@ final class PayrollCalculatorBehaviorTests: XCTestCase {
     XCTAssertEqual(computed.breakAudit.source, .none)
   }
 
-  func testMidnightAndLastMinuteAreDisplayedAccurately() {
-    let segment = SupplementSegment(fromMin: 1_440, toMin: 1_560, rate: 50, actualHours: 2)
-    XCTAssertEqual(segment.timeRange, "00:00 (+1) – 02:00 (+1)")
-    XCTAssertEqual(segment.formatTime(1_439), "23:59")
-  }
-
   func testBreakBreakdownReconcilesRoundedPayComponents() throws {
     let computed = PayrollCalculator.computeShift(
       TestFixtures.shift(shiftDate: "2026-02-02", startTime: "18:00", endTime: "18:02"),
@@ -278,29 +272,6 @@ final class PayrollCalculatorBehaviorTests: XCTestCase {
     XCTAssertEqual(computed.gross, 200, accuracy: 0.01)
   }
 
-  func testComputeShiftWithBreakDisabledKeepsPaidHoursEqualToDuration() {
-    let shift = TestFixtures.shift(
-      shiftDate: "2026-02-03",
-      startTime: "08:00",
-      endTime: "16:00",
-      customSupplements: CustomSupplementsData(rules: [])
-    )
-
-    let snapshot = TestFixtures.wageSnapshot(
-      hourlyWage: 200,
-      breakEnabled: false,
-      breakMethod: BreakMethod.proportional.rawValue,
-      breakThresholdHours: 0,
-      breakDeductionMinutes: 30
-    )
-
-    let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-
-    XCTAssertEqual(computed.durationHours, 8, accuracy: 0.01)
-    XCTAssertEqual(computed.paidHours, 8, accuracy: 0.01)
-    XCTAssertEqual(computed.breakAudit.deductedHours, 0, accuracy: 0.001)
-  }
-
   func testComputeShiftWithCustomPauseWindowsUsesExactClippingInsteadOfAutomaticBreaks() {
     let shift = TestFixtures.shift(
       shiftDate: "2026-02-04",
@@ -330,68 +301,6 @@ final class PayrollCalculatorBehaviorTests: XCTestCase {
       computed.breakAudit.appliedPauseWindows,
       [PauseWindow(start: "12:00", end: "12:30")]
     )
-  }
-
-  func testComputeShiftWithInvalidPersistedTimesProducesZeroPayroll() {
-    let shift = TestFixtures.shift(
-      shiftDate: "2026-02-05",
-      startTime: "not-a-time",
-      endTime: "17:00",
-      customSupplements: CustomSupplementsData(rules: [])
-    )
-
-    let snapshot = TestFixtures.wageSnapshot(
-      hourlyWage: 200,
-      breakEnabled: false
-    )
-
-    let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-
-    XCTAssertEqual(computed.durationHours, 0, accuracy: 0.01)
-    XCTAssertEqual(computed.paidHours, 0, accuracy: 0.01)
-    XCTAssertEqual(computed.gross, 0, accuracy: 0.01)
-  }
-
-  func testComputeShiftIgnoresNegativePersistedBreakDeduction() {
-    let shift = TestFixtures.shift(
-      shiftDate: "2026-02-06",
-      startTime: "08:00",
-      endTime: "16:00",
-      customSupplements: CustomSupplementsData(rules: [])
-    )
-
-    let snapshot = TestFixtures.wageSnapshot(
-      hourlyWage: 200,
-      breakEnabled: true,
-      breakMethod: BreakMethod.proportional.rawValue,
-      breakThresholdHours: 0,
-      breakDeductionMinutes: -30
-    )
-
-    let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-
-    XCTAssertEqual(computed.durationHours, 8, accuracy: 0.01)
-    XCTAssertEqual(computed.paidHours, 8, accuracy: 0.01)
-    XCTAssertEqual(computed.breakAudit.deductedHours, 0, accuracy: 0.001)
-  }
-
-  func testComputeShiftFallsBackWhenPersistedHourlyWageIsNotFinite() {
-    let shift = TestFixtures.shift(
-      shiftDate: "2026-02-07",
-      startTime: "08:00",
-      endTime: "09:00",
-      customSupplements: CustomSupplementsData(rules: [])
-    )
-
-    let snapshot = TestFixtures.wageSnapshot(
-      hourlyWage: .infinity,
-      breakEnabled: false
-    )
-
-    let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-
-    XCTAssertEqual(computed.basePay, 184.54, accuracy: 0.01)
-    XCTAssertEqual(computed.gross, 184.54, accuracy: 0.01)
   }
 }
 

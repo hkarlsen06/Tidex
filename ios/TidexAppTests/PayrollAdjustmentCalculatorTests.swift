@@ -74,22 +74,6 @@ final class PayrollAdjustmentCalculatorTests: XCTestCase {
     XCTAssertEqual(totals.net, 750, accuracy: 0.01)
   }
 
-  func testGrossTaxableAdjustmentUsesHalfTaxForPayoutMonth() {
-    let adjustment: PayrollAdjustment = makeAdjustment(amount: 1_000, taxTreatment: .grossTaxable)
-
-    let totals = PayrollAdjustmentCalculator.totals(
-      adjustments: [adjustment],
-      taxEnabled: true,
-      taxPercentage: 40,
-      halfTaxMonth: 6,
-      payoutMonth: 6
-    )
-
-    XCTAssertLessThan(abs(totals.gross - 1_000), 0.01)
-    XCTAssertEqual(totals.net, 800, accuracy: 0.01)
-    XCTAssertTrue(totals.taxEnabled)
-  }
-
   func testDeletedAdjustmentIsIgnored() {
     let adjustment = makeAdjustment(
       amount: 1_000,

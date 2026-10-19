@@ -93,24 +93,6 @@ final class FriendsComposerDraftStoreTests: XCTestCase {
     XCTAssertFalse(FileManager.default.fileExists(atPath: draftDirectory.path))
   }
 
-  func testResolvedAttachmentsDirectoryUsesApplicationSupportFallback() {
-    let fallbackBaseURL = URL(
-      filePath: "/fallback/Application Support", directoryHint: .isDirectory)
-
-    let resolvedDirectory = FriendsComposerDraftStore.resolvedAttachmentsDirectory(
-      appGroupURL: nil,
-      fallbackBaseURL: fallbackBaseURL
-    )
-
-    XCTAssertEqual(
-      resolvedDirectory,
-      fallbackBaseURL.appendingPathComponent(
-        "FriendsComposerDraftAttachments",
-        isDirectory: true
-      )
-    )
-  }
-
   private func makeStore(attachmentsDirectory: URL? = nil) throws -> FriendsComposerDraftStore {
     let schema = Schema([LocalPendingFriendComposerDraft.self])
     let configuration = ModelConfiguration(

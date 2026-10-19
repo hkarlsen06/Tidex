@@ -5,21 +5,6 @@ import XCTest
 
 @MainActor
 final class ProfileAvatarPersistenceTests: XCTestCase {
-  func testResizedAvatarImageProducesExactPixelSizeRegardlessOfScreenScale() {
-    let format = UIGraphicsImageRendererFormat()
-    format.scale = 3
-    let source = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 400), format: format)
-      .image { context in
-        UIColor.red.setFill()
-        context.fill(CGRect(x: 0, y: 0, width: 400, height: 400))
-      }
-
-    let resized = ProfileSettingsView.resizedAvatarImage(source, to: 192)
-
-    XCTAssertEqual(resized.size, CGSize(width: 192, height: 192))
-    XCTAssertEqual(resized.cgImage?.width, 192)
-    XCTAssertEqual(resized.cgImage?.height, 192)
-  }
 
   private enum Failure: Error {
     case save

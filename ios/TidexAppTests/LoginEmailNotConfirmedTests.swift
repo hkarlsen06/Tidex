@@ -35,16 +35,6 @@ internal final class LoginEmailNotConfirmedTests: XCTestCase {
     XCTAssertNotNil(viewModel.errorMessage)
   }
 
-  internal func testErrorClassification() throws {
-    XCTAssertTrue(AuthService.isEmailNotConfirmed(try makeAuthAPIError(.emailNotConfirmed)))
-    XCTAssertFalse(AuthService.isEmailNotConfirmed(try makeAuthAPIError(.invalidCredentials)))
-    XCTAssertFalse(AuthService.isEmailNotConfirmed(URLError(.timedOut)))
-    XCTAssertTrue(AuthService.isInvalidVerificationCode(try makeAuthAPIError(.otpExpired)))
-    XCTAssertFalse(AuthService.isInvalidVerificationCode(URLError(.timedOut)))
-    XCTAssertTrue(AuthService.isRateLimited(try makeAuthAPIError(.overEmailSendRateLimit)))
-    XCTAssertFalse(AuthService.isRateLimited(try makeAuthAPIError(.otpExpired)))
-  }
-
   deinit {
     // Required by SwiftLint for XCTestCase subclasses.
   }

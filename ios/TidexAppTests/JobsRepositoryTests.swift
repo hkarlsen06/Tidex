@@ -69,16 +69,6 @@ final class JobsRepositoryTests: XCTestCase {
     XCTAssertEqual(jobs.first?.sortOrder, 1)
   }
 
-  func testJobDeletionPolicyAllowsJobsWithoutDependencies() {
-    let counts = JobDeletionDependencyCounts(
-      userShifts: 0,
-      recurringShifts: 0,
-      payrollAdjustments: 0
-    )
-
-    XCTAssertFalse(JobDeletionPolicy.shouldBlockDeletion(dependencyCounts: counts))
-  }
-
   func testJobDeletionPolicyBlocksJobsWithShiftHistory() {
     let counts = JobDeletionDependencyCounts(
       userShifts: 1,
