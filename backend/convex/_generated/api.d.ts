@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as account from "../account.js";
 import type * as admin from "../admin.js";
 import type * as appActivity from "../appActivity.js";
 import type * as calendarSubscriptions from "../calendarSubscriptions.js";
@@ -64,6 +65,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  account: typeof account;
   admin: typeof admin;
   appActivity: typeof appActivity;
   calendarSubscriptions: typeof calendarSubscriptions;

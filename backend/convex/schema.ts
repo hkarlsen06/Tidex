@@ -70,7 +70,9 @@ export default defineSchema({
     provider: literals("apple", "google"),
     sub: v.string(),
     user_id: uuid,
-  }).index("by_provider_sub", ["provider", "sub"]),
+  })
+    .index("by_provider_sub", ["provider", "sub"])
+    .index("by_user", ["user_id"]),
 
   // More Clerk users for one users row. Created when users.linkOrCreate matches a new
   // Clerk user to an imported one by legacy sub. Deleting or banning an account must

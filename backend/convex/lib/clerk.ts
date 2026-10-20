@@ -55,3 +55,14 @@ export async function setClerkBan(clerkUserId: string, banned: boolean): Promise
   // A Clerk user already deleted has nothing left to ban.
   if (!response.ok && response.status !== 404) throw new Error(`Clerk POST ${path} failed with ${response.status}`);
 }
+
+/** DELETE /users/<id>. A Clerk user that is already gone counts as deleted. */
+export async function deleteClerkUser(clerkUserId: string): Promise<void> {
+  const key = process.env.CLERK_SECRET_KEY;
+  if (!key) throw new Error("CLERK_SECRET_KEY is not set");
+  const response = await fetch(`https://api.clerk.com/v1/users/${encodeURIComponent(clerkUserId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  if (!response.ok && response.status !== 404) throw new Error(`Clerk DELETE user failed with ${response.status}`);
+}
