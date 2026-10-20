@@ -1,6 +1,10 @@
 import { httpRouter } from "convex/server";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
+import { createFeedWindow } from "./lib/calendarFeed/date";
+import { buildICalendarFeed } from "./lib/calendarFeed/ics";
+import { normalizeCalendarFeedLocale } from "./lib/calendarFeed/locale";
+import { projectRecurringShifts } from "./lib/calendarFeed/project";
 
 const http = httpRouter();
 
@@ -78,5 +82,50 @@ http.route({
     }
   }),
 });
+
+/**
+ * The calendar feed, ported from the calendar-feed Edge Function. The token is the last
+ * path segment, with or without ".ics". Unknown and revoked tokens get an empty 404.
+ */
+const calendarFeed = httpAction(async (ctx, request) => {
+  const requestId = crypto.randomUUID();
+  const empty = (status: number) =>
+    new Response(null, { status, headers: { "Cache-Control": "private, no-store", "x-calendar-feed-request-id": requestId } });
+  const segment = new URL(request.url).pathname.split("/").filter(Boolean).at(-1) ?? "";
+  const token = segment.endsWith(".ics") ? segment.slice(0, -4) : segment;
+  if (!/^tidex_cal_[0-9a-f]{64}$/.test(token)) return empty(404);
+  try {
+    const subscription = await ctx.runMutation(internal.calendarFeed.resolve, { raw_token: token });
+    if (subscription === null) return empty(404);
+    const window = createFeedWindow(new Date());
+    const data = await ctx.runQuery(internal.calendarFeed.data, {
+      user_id: subscription.user_id,
+      content_mode: subscription.content_mode,
+      start_date: window.startDate,
+      end_date: window.endDate,
+    });
+    const body =
+      request.method === "HEAD"
+        ? null
+        : await buildICalendarFeed(
+            data,
+            projectRecurringShifts(data.recurringShifts, window, data.shifts),
+            window,
+            normalizeCalendarFeedLocale(subscription.locale),
+          );
+    return new Response(body, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/calendar; charset=utf-8",
+        "Cache-Control": "private, no-store",
+        "x-calendar-feed-request-id": requestId,
+      },
+    });
+  } catch (error) {
+    console.error(JSON.stringify({ scope: "calendar-feed", requestId, message: error instanceof Error ? error.message : String(error) }));
+    return empty(500);
+  }
+});
+http.route({ pathPrefix: "/calendar-feed/", method: "GET", handler: calendarFeed });
 
 export default http;
