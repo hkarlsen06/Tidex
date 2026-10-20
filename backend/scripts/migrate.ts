@@ -340,7 +340,12 @@ async function main() {
   // Counts.
   let mismatches = 0;
   for (const [table, n] of Object.entries(expected)) {
-    const got = await convexRun("migration:count", { table });
+    let got = 0;
+    for (let cursor: string | null = null, done = false; !done; ) {
+      const page: { n: number; cursor: string; done: boolean } = await convexRun("migration:count", { table, cursor });
+      got += page.n;
+      ({ cursor, done } = page);
+    }
     if (got !== n) {
       mismatches += 1;
       log(`MISMATCH ${table}: expected ${n}, Convex has ${got}`);

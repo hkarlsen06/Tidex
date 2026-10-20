@@ -23,11 +23,11 @@ export const deleteFiles = internalMutation({
 });
 
 /** Row counts, to compare with Postgres when the migration finishes. */
+/** Counts one page of a table, so a table of large documents stays under the query time limit. */
 export const count = internalQuery({
-  args: { table: v.string() },
-  handler: async (ctx, { table }) => {
-    let n = 0;
-    for await (const _ of (ctx.db as any).query(table)) n += 1;
-    return n;
+  args: { table: v.string(), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { table, cursor }) => {
+    const page = await (ctx.db as any).query(table).paginate({ cursor, numItems: 2000 });
+    return { n: page.page.length as number, cursor: page.continueCursor as string, done: page.isDone as boolean };
   },
 });
