@@ -17,14 +17,21 @@ export async function userByUuid(ctx: QueryCtx, id: string): Promise<Doc<"users"
     .unique();
 }
 
+/** Finds the user by their main Clerk user, or by one in clerk_user_aliases. */
 export async function userByClerkId(
   ctx: QueryCtx,
   clerkUserId: string,
 ): Promise<Doc<"users"> | null> {
-  return await ctx.db
+  const user = await ctx.db
     .query("users")
     .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", clerkUserId))
     .unique();
+  if (user !== null) return user;
+  const alias = await ctx.db
+    .query("clerk_user_aliases")
+    .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", clerkUserId))
+    .unique();
+  return alias === null ? null : await userByUuid(ctx, alias.user_id);
 }
 
 /**
@@ -45,8 +52,9 @@ export async function getViewer(ctx: QueryCtx): Promise<Viewer | null> {
       )
       .order("desc")
       .first();
-    // Queries cache Date.now(), so ending a session at expires_at is also scheduled
-    // when the session starts. This check covers the gap.
+    // Subscriptions don't rerun when time passes, so starting a session must also
+    // schedule a mutation that sets ended_at at expires_at (not ported yet). This
+    // check covers queries that run after expiry but before that mutation.
     if (session !== null && Date.parse(session.expires_at) > Date.now()) {
       const target = await userByUuid(ctx, session.target_user_id);
       if (target !== null) {

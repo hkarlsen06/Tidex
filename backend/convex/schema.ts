@@ -68,6 +68,17 @@ export default defineSchema({
     user_id: uuid,
   }).index("by_provider_sub", ["provider", "sub"]),
 
+  // More Clerk users for one users row. Created when users.linkOrCreate matches a new
+  // Clerk user to an imported one by legacy sub. Deleting or banning an account must
+  // act on these Clerk users too.
+  clerk_user_aliases: defineTable({
+    clerk_user_id: v.string(),
+    user_id: uuid,
+    created_at: ts,
+  })
+    .index("by_clerk_user_id", ["clerk_user_id"])
+    .index("by_user", ["user_id"]),
+
   // `id` is the user's uuid.
   profiles: defineTable({
     id: uuid,

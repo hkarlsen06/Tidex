@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { getViewer, userByClerkId, userByUuid } from "./lib/auth";
-import { deleteClerkUser, getClerkUser } from "./lib/clerk";
+import { getClerkUser } from "./lib/clerk";
 import { nextRevision } from "./lib/revision";
 
 /** The signed-in user, or null until `ensureCurrent` has run after sign-in. */
@@ -44,7 +44,7 @@ export const ensureCurrent = action({
       (e) => e.id === clerkUser.primary_email_address_id,
     )?.email_address;
     const name = [clerkUser.first_name, clerkUser.last_name].filter(Boolean).join(" ");
-    const result = await ctx.runMutation(internal.users.linkOrCreate, {
+    return await ctx.runMutation(internal.users.linkOrCreate, {
       clerk_user_id: clerkUser.id,
       email: email?.toLowerCase(),
       name: name || undefined,
@@ -54,13 +54,6 @@ export const ensureCurrent = action({
         provider_user_id: a.provider_user_id,
       })),
     });
-    // ponytail: the imported Clerk user's password and extra emails are lost here. Only
-    // users whose Google or Apple email changed since their last Supabase sign-in get
-    // this far, and they sign in with that provider. Merge the Clerk users if one reports it.
-    if (result.replaced_clerk_user_id !== null) {
-      await deleteClerkUser(result.replaced_clerk_user_id);
-    }
-    return result.id;
   },
 });
 
@@ -74,8 +67,9 @@ export const idForClerkUser = internalQuery({
 /**
  * Clerk links a Google or Apple sign-in to an imported user only by email. When that
  * fails, Clerk creates a new user, and this matches its provider account against the
- * subs the migration copied from auth.identities. Without a match it creates a new
- * user, like handle_new_user did. Safe to call twice.
+ * subs the migration copied from auth.identities. On a match the new Clerk user becomes
+ * an alias, so the imported Clerk user and its password keep working too. Without a
+ * match it creates a new user, like handle_new_user did. Safe to call twice.
  */
 export const linkOrCreate = internalMutation({
   args: {
@@ -87,7 +81,7 @@ export const linkOrCreate = internalMutation({
   },
   handler: async (ctx, args) => {
     const existing = await userByClerkId(ctx, args.clerk_user_id);
-    if (existing !== null) return { id: existing.id, replaced_clerk_user_id: null };
+    if (existing !== null) return existing.id;
 
     for (const account of args.accounts) {
       const provider = account.provider.replace(/^oauth_/, "");
@@ -100,11 +94,20 @@ export const linkOrCreate = internalMutation({
         .unique();
       const user = legacy === null ? null : await userByUuid(ctx, legacy.user_id);
       if (user === null) continue;
-      await ctx.db.patch(user._id, {
-        clerk_user_id: args.clerk_user_id,
-        revision: await nextRevision(ctx),
-      });
-      return { id: user.id, replaced_clerk_user_id: user.clerk_user_id ?? null };
+      if (user.clerk_user_id === undefined) {
+        // Phone-only GoTrue users got no Clerk user at import.
+        await ctx.db.patch(user._id, {
+          clerk_user_id: args.clerk_user_id,
+          revision: await nextRevision(ctx),
+        });
+      } else {
+        await ctx.db.insert("clerk_user_aliases", {
+          clerk_user_id: args.clerk_user_id,
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+        });
+      }
+      return user.id;
     }
 
     const id = crypto.randomUUID();
@@ -126,6 +129,6 @@ export const linkOrCreate = internalMutation({
       updated_at: now,
       revision,
     });
-    return { id, replaced_clerk_user_id: null };
+    return id;
   },
 });
