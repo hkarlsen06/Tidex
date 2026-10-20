@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { getViewer } from "./lib/auth";
+import { queueAuthDiagnostic } from "./lib/notify";
 import { reject } from "./lib/syncWrite";
 import { literals } from "./lib/validators";
 
@@ -77,7 +78,7 @@ export const recordAuthEvent = mutation({
       if (args.user_id !== undefined) metadata = { ...metadata, reported_user_id: args.user_id };
     }
     const iso = now.toISOString();
-    await ctx.db.insert("auth_diagnostic_events", {
+    const eventId = await ctx.db.insert("auth_diagnostic_events", {
       id: crypto.randomUUID(),
       user_id: userId,
       occurred_at: iso,
@@ -95,6 +96,7 @@ export const recordAuthEvent = mutation({
       metadata,
       created_at: iso,
     });
+    await queueAuthDiagnostic(ctx, (await ctx.db.get(eventId))!);
     return { success: true };
   },
 });

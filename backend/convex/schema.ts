@@ -58,6 +58,7 @@ export default defineSchema({
     .index("by_clerk_user_id", ["clerk_user_id"])
     .index("by_supabase_user_id", ["supabase_user_id"])
     .index("by_email", ["email"])
+    .index("by_role", ["role"])
     .index("by_revision", ["revision"]),
 
   // Apple and Google account ids (`sub`) from auth.identities, copied by the migration.
@@ -768,6 +769,7 @@ export default defineSchema({
     .index("by_status_due_at", ["status", "due_at"])
     .index("by_idempotency_key", ["idempotency_key"])
     .index("by_recipient_type_thread", ["recipient_id", "notification_type", "thread_id"])
+    .index("by_owner_type_status", ["owner_id", "notification_type", "status"])
     .index("by_broadcast", ["broadcast_id"]),
 
   // Onboarding steps reached before sign-in, keyed by a random install id.

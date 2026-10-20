@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
-import { action, internalMutation, internalQuery, query } from "./_generated/server";
-import { getViewer, userByClerkId, userByUuid } from "./lib/auth";
+import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { getViewer, requireViewer, userByClerkId, userByUuid } from "./lib/auth";
 import { getClerkUser } from "./lib/clerk";
 import { nextRevision } from "./lib/revision";
 
@@ -130,5 +130,22 @@ export const linkOrCreate = internalMutation({
       revision: await nextRevision(ctx),
     });
     return id;
+  },
+});
+
+/**
+ * The app's language, for push text. GoTrue kept it in user metadata. The app sends
+ * it after sign-in and when the user changes language.
+ */
+export const setLocale = mutation({
+  args: { locale: v.string() },
+  handler: async (ctx, { locale }) => {
+    const { actor, impersonationSessionId } = await requireViewer(ctx);
+    if (impersonationSessionId !== null) return null;
+    const value = locale.trim().slice(0, 32);
+    if (value !== "" && value !== actor.locale) {
+      await ctx.db.patch(actor._id, { locale: value, revision: await nextRevision(ctx) });
+    }
+    return null;
   },
 });

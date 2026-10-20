@@ -8,6 +8,7 @@ import {
   pairBlocked,
   threadSummary,
 } from "./lib/messaging";
+import { queueAbuseReport, queueScreenshot, queueTyping } from "./lib/notify";
 import { nextRevision } from "./lib/revision";
 import { reject } from "./lib/syncWrite";
 import { literals } from "./lib/validators";
@@ -370,7 +371,7 @@ export const reportAbuse = mutation({
         reject("invalid", "Reported message is invalid for this thread and user");
       }
     }
-    await ctx.db.insert("abuse_reports", {
+    const reportId = await ctx.db.insert("abuse_reports", {
       id: crypto.randomUUID(),
       reporter_user_id: user.id,
       reported_user_id: args.reported_user_id,
@@ -381,7 +382,40 @@ export const reportAbuse = mutation({
       status: "open",
       created_at: new Date().toISOString(),
     });
+    await queueAbuseReport(ctx, (await ctx.db.get(reportId))!);
     return null;
+  },
+});
+
+/** Port of queue_thread_typing_notification. True when a push was queued. */
+export const queueTypingNotification = mutation({
+  args: { thread_id: v.string() },
+  handler: async (ctx, { thread_id }) => {
+    const { user, impersonationSessionId } = await requireViewer(ctx);
+    if (impersonationSessionId !== null) return false;
+    await requireAccess(ctx, thread_id, user.id);
+    return await queueTyping(ctx, thread_id, user.id);
+  },
+});
+
+/** Port of report_thread_screenshot: tells the other member of a direct thread. */
+export const reportScreenshot = mutation({
+  args: { thread_id: v.string() },
+  handler: async (ctx, { thread_id }) => {
+    const { user } = await requireViewer(ctx);
+    const member = await membership(ctx, thread_id, user.id);
+    if (member === null || member.status !== "active") reject("thread_access_denied", "No access to thread");
+    const thread = await threadById(ctx, thread_id);
+    if (thread?.kind !== "direct") return { success: true, skipped: true };
+    const recipient = (
+      await ctx.db
+        .query("thread_memberships")
+        .withIndex("by_thread_user", (q) => q.eq("thread_id", thread_id))
+        .collect()
+    ).find((m) => m.status === "active" && m.user_id !== user.id);
+    if (recipient === undefined) return { success: true, skipped: true };
+    await queueScreenshot(ctx, user.id, recipient.user_id, thread_id);
+    return { success: true };
   },
 });
 

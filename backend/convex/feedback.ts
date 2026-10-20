@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
+import { queueFeedbackSubmitted } from "./lib/notify";
 import { publicRow, reject } from "./lib/syncWrite";
 
 /** The insert into feedback. The email comes from the account, not from the app. */
@@ -11,14 +12,14 @@ export const submit = mutation({
     const length = [...message].length;
     if (length < 1 || length > 2000) reject("invalid", "feedback_message_check");
     const id = crypto.randomUUID();
-    await ctx.db.insert("feedback", {
+    const docId = await ctx.db.insert("feedback", {
       id,
       user_id: user.id,
       message,
       user_email: user.email ?? "",
       created_at: new Date().toISOString(),
     });
-    // on_feedback_submitted_notify moves with the other notifications in phase 1, step 5.
+    await queueFeedbackSubmitted(ctx, (await ctx.db.get(docId))!);
     return id;
   },
 });

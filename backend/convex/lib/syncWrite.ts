@@ -34,6 +34,8 @@ export type Hooks<T extends IdTable> = {
     prev: Doc<T> | null,
     changed: ReadonlySet<string>,
   ) => Promise<void>;
+  /** Runs after an insert only, after afterWrite. */
+  afterInsert?: (ctx: MutationCtx, row: Doc<T>) => Promise<void>;
   /** Runs after an insert or update. Every other row it changes needs nextRevision(). */
   afterWrite?: (ctx: MutationCtx, row: Doc<T>, changed: ReadonlySet<string>) => Promise<void>;
   beforeRemove?: (ctx: MutationCtx, row: Doc<T>) => Promise<void>;
@@ -103,6 +105,7 @@ export function syncedTable<T extends IdTable>(
       await hooks.check?.(ctx, doc, null, changed);
       const saved: Doc<T> = await db(ctx).get(await db(ctx).insert(table, doc));
       await hooks.afterWrite?.(ctx, saved, changed);
+      await hooks.afterInsert?.(ctx, saved);
       return { status: "ok" as const, row: publicRow(saved as any) };
     },
   });

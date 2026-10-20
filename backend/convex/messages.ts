@@ -20,6 +20,7 @@ import {
   richContentKind,
   threadSummary,
 } from "./lib/messaging";
+import { queueReaction, queueThreadMessage } from "./lib/notify";
 import { nextRevision } from "./lib/revision";
 import { reject } from "./lib/syncWrite";
 import { ensureState, requireAccess, threadById } from "./threads";
@@ -372,9 +373,9 @@ export const send = mutation({
       .withIndex("by_thread_user", (q) => q.eq("thread_id", args.thread_id).eq("user_id", user.id))
       .unique();
     if (typing !== null) await ctx.db.delete(typing._id);
-    // The new-message push (queue_thread_message_notification) moves to Convex with the
-    // other notifications in phase 1, step 5.
-    return await messagePayload(ctx, (await messageById(ctx, id))!, user.id);
+    const sent = (await messageById(ctx, id))!;
+    await queueThreadMessage(ctx, sent, t.kind);
+    return await messagePayload(ctx, sent, user.id);
   },
 });
 
@@ -480,7 +481,7 @@ export const toggleReaction = mutation({
     if (existing !== undefined) {
       await ctx.db.delete(existing._id);
     } else {
-      await ctx.db.insert("message_reactions", {
+      const reactionId = await ctx.db.insert("message_reactions", {
         id: crypto.randomUUID(),
         thread_id: message.thread_id,
         message_id: message.id,
@@ -489,8 +490,7 @@ export const toggleReaction = mutation({
         emoji,
         created_at: new Date().toISOString(),
       });
-      // The reaction push (queue_message_reaction_notification) moves with the other
-      // notifications in phase 1, step 5.
+      await queueReaction(ctx, (await ctx.db.get(reactionId))!);
     }
     await touchMessage(ctx, message);
     return await messagePayload(ctx, (await ctx.db.get(message._id))!, user.id);

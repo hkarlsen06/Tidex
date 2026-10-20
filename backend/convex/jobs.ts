@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
+import { cancelShiftAdded } from "./lib/notify";
 import { nextRevision } from "./lib/revision";
 import { chars, reject, syncedTable } from "./lib/syncWrite";
 
@@ -218,6 +219,7 @@ export const deleteArchived = mutation({
         revision: await nextRevision(ctx),
       });
     }
+    for (const shift of history.user_shifts) await cancelShiftAdded(ctx, shift);
     const jobRevision = await nextRevision(ctx);
     await ctx.db.patch(job._id, {
       deleted_at: deletedAt,

@@ -11,6 +11,7 @@ import {
 } from "./_generated/server";
 import { getViewer, requireViewer, userByClerkId, userByUuid } from "./lib/auth";
 import { clerkUsersWithVerifiedEmail } from "./lib/clerk";
+import { queueScreenshot, queueShareStarted } from "./lib/notify";
 import { nextRevision } from "./lib/revision";
 import { publicRow, reject } from "./lib/syncWrite";
 
@@ -543,8 +544,7 @@ export const startShare = internalMutation({
       created_at: new Date().toISOString(),
       revision: await nextRevision(ctx),
     });
-    // The share_started push (queue_share_started_notification) moves to Convex with the
-    // other notifications in phase 1, step 5.
+    await queueShareStarted(ctx, owner_id, target_id);
     return { success: true };
   },
 });
@@ -617,4 +617,16 @@ export const userIdForUsername = internalQuery({
         .withIndex("by_username", (q) => q.eq("username", username))
         .first()
     )?.id ?? null,
+});
+
+/** Port of report_sharing_screenshot: tells the owner whose shifts were captured. */
+export const reportScreenshot = mutation({
+  args: { sharer_id: v.string() },
+  handler: async (ctx, { sharer_id }) => {
+    const { user } = await requireViewer(ctx);
+    if (sharer_id === user.id) return { success: true, skipped: true };
+    if ((await shareBetween(ctx, sharer_id, user.id)) === null) reject("forbidden", "No access to sharer");
+    await queueScreenshot(ctx, user.id, sharer_id, undefined);
+    return { success: true };
+  },
 });
