@@ -717,6 +717,7 @@ export default defineSchema({
     .index("by_uuid", ["id"])
     .index("by_user", ["user_id"])
     .index("by_fcm_token", ["fcm_token"])
+    .index("by_apns_token", ["apns_token"])
     .index("by_live_activity_push_to_start_token", ["live_activity_push_to_start_token"]),
 
   live_activity_deliveries: defineTable({
