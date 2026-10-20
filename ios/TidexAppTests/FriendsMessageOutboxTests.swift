@@ -119,21 +119,6 @@ final class FriendsMessageOutboxTests: XCTestCase {
     XCTAssertEqual(repository.getMessage(id: "local-a1", viewerUserId: viewerId)?.sendState, .failed)
   }
 
-  func testServerFaultRetriesBeforeFailing() async throws {
-    let repository = try makeRepository()
-    let service = OutboxStubService()
-    service.sendError = FriendsMessagingServiceError.httpError(statusCode: 503, message: nil)
-    let outbox = makeOutbox(service: service, repository: repository)
-    await queue(makeMessage(id: "local-a1", threadId: "thread-a", second: 1), in: repository)
-
-    await outbox.drain(userId: viewerId)
-    await outbox.drain(userId: viewerId)
-    XCTAssertEqual(repository.getMessage(id: "local-a1", viewerUserId: viewerId)?.sendState, .sending)
-
-    await outbox.drain(userId: viewerId)
-    XCTAssertEqual(repository.getMessage(id: "local-a1", viewerUserId: viewerId)?.sendState, .failed)
-  }
-
   func testDeletingQueuedMessageRemovesItAndItsPendingBytes() async throws {
     let repository = try makeRepository()
     let service = OutboxStubService()

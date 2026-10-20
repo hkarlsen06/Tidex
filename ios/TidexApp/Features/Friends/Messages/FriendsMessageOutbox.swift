@@ -387,11 +387,7 @@ final class FriendsMessageOutbox {
       case .networkError:
         return false
 
-      // A server fault may pass, so it gets the retries of an unclassified failure.
-      case .httpError(let statusCode, _):
-        return statusCode < 500
-
-      case .notAuthenticated, .decodingError:
+      case .notAuthenticated, .decodingError, .httpError:
         return true
       }
     }
