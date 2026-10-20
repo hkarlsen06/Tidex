@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
-import { counterpartOf, pairBlocked } from "./lib/messaging";
+import { userByUuid } from "./lib/auth";
+import { canAccessThread, counterpartOf, pairBlocked } from "./lib/messaging";
 
 // Port of the send-push-notifications edge function, APNs only. Every active device
 // has an APNs token. The 13 FCM-only rows were last seen in January 2026, from app
@@ -32,39 +33,116 @@ export const claim = internalMutation({
       .withIndex("by_status_due_at", (q) => q.eq("status", "sending"))
       .collect()) {
       if (n.claimed_at === undefined || n.claimed_at >= staleBefore) continue;
-      const gaveUp = n.attempts >= MAX_ATTEMPTS;
+      const attempts = n.attempts + 1;
+      const gaveUp = attempts >= MAX_ATTEMPTS;
       await ctx.db.patch(n._id, {
         status: gaveUp ? "failed" : "pending",
         claimed_at: undefined,
-        attempts: n.attempts + 1,
+        attempts,
         error_message: gaveUp ? "Max retry attempts exceeded" : n.error_message,
       });
     }
-    const due = await ctx.db
-      .query("notifications_outbox")
-      .withIndex("by_status_due_at", (q) => q.eq("status", "pending").lte("due_at", now.toISOString()))
-      .take(BATCH_SIZE * 2);
-    const claimed = due.filter((n) => n.attempts < MAX_ATTEMPTS).slice(0, BATCH_SIZE);
-    for (const n of claimed) {
-      await ctx.db.patch(n._id, { status: "sending", claimed_at: now.toISOString() });
+    // Rows out of attempts are failed on the way past, so they can't fill every batch.
+    // Every row a round reads leaves "pending", so the next round reads new rows.
+    const claimed: Outbox[] = [];
+    while (claimed.length < BATCH_SIZE) {
+      const due = await ctx.db
+        .query("notifications_outbox")
+        .withIndex("by_status_due_at", (q) => q.eq("status", "pending").lte("due_at", now.toISOString()))
+        .take(BATCH_SIZE - claimed.length);
+      if (due.length === 0) break;
+      for (const n of due) {
+        if (n.attempts >= MAX_ATTEMPTS) {
+          await ctx.db.patch(n._id, { status: "failed", error_message: "Max retry attempts exceeded" });
+        } else {
+          await ctx.db.patch(n._id, { status: "sending", claimed_at: now.toISOString() });
+          claimed.push(n);
+        }
+      }
     }
     return claimed.map((n) => ({ ...n, status: "sending" as const, claimed_at: now.toISOString() }));
   },
 });
 
-/** The claimed rows still in "sending". A newer message can supersede a typing push. */
-export const stillSending = internalQuery({
-  args: { ids: v.array(v.string()) },
-  handler: async (ctx, { ids }) => {
-    const rows = await Promise.all(
-      ids.map((id) =>
-        ctx.db
-          .query("notifications_outbox")
-          .withIndex("by_uuid", (q) => q.eq("id", id))
-          .unique(),
-      ),
-    );
-    return rows.filter((n): n is Outbox => n !== null && n.status === "sending");
+/**
+ * Whether the recipient may still get this push. Access, blocks, mutes and preferences
+ * can change between queueing and sending, for example during a shift batch's 90 seconds.
+ */
+async function stillEligible(ctx: QueryCtx, n: Outbox) {
+  const d = (n.data_payload ?? {}) as Payload;
+  const prefsAllowShared = async () =>
+    (
+      await ctx.db
+        .query("notification_preferences")
+        .withIndex("by_user_revision", (q) => q.eq("user_id", n.recipient_id))
+        .unique()
+    )?.shared_shifts_enabled !== false;
+  const share = (owner: string, viewer: string) =>
+    ctx.db
+      .query("shift_shares")
+      .withIndex("by_owner_viewer", (q) => q.eq("owner_id", owner).eq("viewer_id", viewer))
+      .unique();
+  switch (n.notification_type) {
+    case "thread_message":
+    case "thread_typing":
+    case "thread_reaction":
+    case "thread_screenshot": {
+      const threadId = typeof d.thread_id === "string" ? d.thread_id : n.thread_id;
+      if (threadId === undefined || !(await canAccessThread(ctx, threadId, n.recipient_id))) return false;
+      if (n.notification_type === "thread_screenshot") return true;
+      const state = await ctx.db
+        .query("thread_user_state")
+        .withIndex("by_thread_user", (q) => q.eq("thread_id", threadId).eq("user_id", n.recipient_id))
+        .unique();
+      return !state?.muted;
+    }
+    case "shared_shift_added": {
+      if (n.owner_id === undefined || !(await prefsAllowShared())) return false;
+      const s = await share(n.owner_id, n.recipient_id);
+      return s !== null && s.blocked_by_user_id === undefined && !s.hidden && !s.muted && !s.owner_muted;
+    }
+    case "share_started": {
+      if (n.owner_id === undefined || !(await prefsAllowShared())) return false;
+      const s = await share(n.owner_id, n.recipient_id);
+      return s !== null && s.blocked_by_user_id === undefined;
+    }
+    case "shifts_screenshotted":
+      return n.owner_id !== undefined && !(await pairBlocked(ctx, n.owner_id, n.recipient_id));
+    case "feedback_submitted":
+    case "abuse_report_submitted":
+      return (await userByUuid(ctx, n.recipient_id))?.role === "admin";
+    default:
+      return true;
+  }
+}
+
+/**
+ * Just before sending: the claimed rows still in "sending" (a newer message can
+ * supersede a typing push), whether the recipient may still get them, and the
+ * recipient's current devices and badge. Devices are read here, not once per batch,
+ * because a token can move to another account while earlier pushes are in flight.
+ */
+export const deliverable = internalQuery({
+  args: { ids: v.array(v.string()), recipient_id: v.string() },
+  handler: async (ctx, { ids, recipient_id }) => {
+    const rows = (
+      await Promise.all(
+        ids.map((id) =>
+          ctx.db
+            .query("notifications_outbox")
+            .withIndex("by_uuid", (q) => q.eq("id", id))
+            .unique(),
+        ),
+      )
+    ).filter((n): n is Outbox => n !== null && n.status === "sending");
+    const eligible = rows.length > 0 && (await stillEligible(ctx, rows[0]!));
+    const devices = (
+      await ctx.db
+        .query("push_devices")
+        .withIndex("by_user", (q) => q.eq("user_id", recipient_id))
+        .collect()
+    ).map((d) => ({ id: d.id, apns_token: d.apns_token ?? null, apns_environment: d.apns_environment ?? null }));
+    return { rows, eligible, devices, badge: eligible ? await unreadDirectCount(ctx, recipient_id) : 0 };
   },
 });
 
@@ -91,29 +169,6 @@ async function unreadDirectCount(ctx: QueryCtx, userId: string) {
   return total;
 }
 
-/** Devices and badge counts for the recipients of a batch. */
-export const recipients = internalQuery({
-  args: { user_ids: v.array(v.string()) },
-  handler: async (ctx, { user_ids }) => {
-    return await Promise.all(
-      [...new Set(user_ids)].map(async (userId) => ({
-        user_id: userId,
-        badge: await unreadDirectCount(ctx, userId),
-        devices: (
-          await ctx.db
-            .query("push_devices")
-            .withIndex("by_user", (q) => q.eq("user_id", userId))
-            .collect()
-        ).map((d) => ({
-          id: d.id,
-          apns_token: d.apns_token ?? null,
-          apns_environment: d.apns_environment ?? null,
-        })),
-      })),
-    );
-  },
-});
-
 const statusUpdate = v.object({
   ids: v.array(v.string()),
   status: v.union(v.literal("sent"), v.literal("failed"), v.literal("skipped"), v.literal("pending")),
@@ -137,7 +192,8 @@ export const record = internalMutation({
           .query("notifications_outbox")
           .withIndex("by_uuid", (q) => q.eq("id", id))
           .unique();
-        if (n === null) continue;
+        // A message can mark a typing push skipped while it is in flight. Keep that.
+        if (n === null || n.status !== "sending") continue;
         if (n.broadcast_id !== undefined) broadcasts.add(n.broadcast_id);
         await ctx.db.patch(n._id, {
           status: u.status,
@@ -312,7 +368,8 @@ function apnsHeaders(n: Outbox): Record<string, string> {
 
 function alertPayload(n: Outbox, badge: number): Payload {
   const visible = Object.fromEntries(Object.entries(data(n)).filter(([k]) => !k.startsWith("_internal_")));
-  return { aps: apsPayload(n, badge), type: n.notification_type, ...visible };
+  // recipient_user_id lets the app drop a push meant for another account on this device.
+  return { aps: apsPayload(n, badge), type: n.notification_type, ...visible, recipient_user_id: n.recipient_id };
 }
 
 /** The silent push that lets the app fetch a chat message before the user opens it. */
@@ -432,11 +489,6 @@ export const run = internalAction({
     const claimed: Outbox[] = await ctx.runMutation(internal.push.claim, {});
     if (claimed.length === 0) return { processed: 0 };
     const jobs = coalesce(claimed);
-    const people = new Map(
-      (await ctx.runQuery(internal.push.recipients, { user_ids: jobs.map((j) => j.notification.recipient_id) })).map(
-        (r) => [r.user_id, r] as const,
-      ),
-    );
 
     const updates: { ids: string[]; status: "sent" | "failed" | "skipped" | "pending"; attempts?: number; error_message?: string }[] = [];
     const deadTokens: string[] = [];
@@ -453,32 +505,50 @@ export const run = internalAction({
       while (next < jobs.length) {
         const job = jobs[next++]!;
         try {
-          const fresh: Outbox[] = await ctx.runQuery(internal.push.stillSending, { ids: job.rows.map((r) => r.id) });
-          const current = coalesce(fresh)[0];
+          const now = await ctx.runQuery(internal.push.deliverable, {
+            ids: job.rows.map((r) => r.id),
+            recipient_id: job.notification.recipient_id,
+          });
+          const current = coalesce(now.rows)[0];
           if (current === undefined) continue;
           const ids = current.rows.map((r) => r.id);
           const n = current.notification;
+          if (!now.eligible) {
+            updates.push({ ids, status: "skipped", error_message: "Recipient can no longer receive this push" });
+            continue;
+          }
           const internalChanges = data(n)._internal_changes;
           if (n.notification_type === "shared_shift_added" && Array.isArray(internalChanges) && internalChanges.length === 0) {
             updates.push({ ids, status: "skipped", error_message: "No shared shift additions remained before delivery" });
             continue;
           }
-          const person = people.get(n.recipient_id);
-          const devices = person?.devices ?? [];
+          const devices = now.devices;
           if (devices.length === 0) {
             updates.push({ ids, status: "skipped" });
             continue;
           }
           const results = await Promise.all(
-            devices.map(async (device) => {
-              if (device.apns_token === null) return { success: false } as SendResult;
-              const result = await sendToApns(device.apns_token, alertPayload(n, person!.badge), apnsHeaders(n), device.apns_environment);
+            devices.map(async (device): Promise<SendResult> => {
+              if (device.apns_token === null) return { success: false };
+              // A transport error on one device must not undo another device's delivery.
+              let result: SendResult;
+              try {
+                result = await sendToApns(device.apns_token, alertPayload(n, now.badge), apnsHeaders(n), device.apns_environment);
+              } catch (error) {
+                console.error(`[Push] APNs request failed for ${n.id} on device ${device.id}:`, error);
+                return { success: false, retryable: true };
+              }
               if (result.invalidToken) deadTokens.push(device.id);
               if (result.environment !== undefined) environments.push({ device_id: device.id, environment: result.environment });
               const silent = result.success ? prefetch(n) : null;
               if (silent !== null) {
-                const prefetched = await sendToApns(device.apns_token, silent.payload, silent.headers, result.environment ?? device.apns_environment);
-                if (!prefetched.success) console.warn(`[Push] Prefetch failed for ${n.id} on device ${device.id}`);
+                // The alert is delivered. A failed prefetch only costs the app a fetch.
+                try {
+                  const prefetched = await sendToApns(device.apns_token, silent.payload, silent.headers, result.environment ?? device.apns_environment);
+                  if (!prefetched.success) console.warn(`[Push] Prefetch failed for ${n.id} on device ${device.id}`);
+                } catch (error) {
+                  console.warn(`[Push] Prefetch failed for ${n.id} on device ${device.id}:`, error);
+                }
               }
               return result;
             }),
