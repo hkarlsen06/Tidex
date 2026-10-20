@@ -4,7 +4,11 @@
 export type ClerkUser = {
   id: string;
   primary_email_address_id: string | null;
-  email_addresses: { id: string; email_address: string }[];
+  email_addresses: {
+    id: string;
+    email_address: string;
+    verification: { status: string } | null;
+  }[];
   external_accounts: { provider: string; provider_user_id: string }[];
   first_name: string | null;
   last_name: string | null;
@@ -24,4 +28,17 @@ async function clerkGet(path: string): Promise<unknown> {
 
 export async function getClerkUser(id: string): Promise<ClerkUser> {
   return (await clerkGet(`/users/${encodeURIComponent(id)}`)) as ClerkUser;
+}
+
+/** Clerk users that have `email` as a verified address. */
+export async function clerkUsersWithVerifiedEmail(email: string): Promise<ClerkUser[]> {
+  const address = email.trim().toLowerCase();
+  const users = (await clerkGet(
+    `/users?email_address=${encodeURIComponent(address)}&limit=10`,
+  )) as ClerkUser[];
+  return users.filter((u) =>
+    u.email_addresses.some(
+      (e) => e.email_address.toLowerCase() === address && e.verification?.status === "verified",
+    ),
+  );
 }

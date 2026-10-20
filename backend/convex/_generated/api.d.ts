@@ -20,6 +20,7 @@ import type * as lib_validators from "../lib/validators.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
 import type * as payrollAdjustments from "../payrollAdjustments.js";
 import type * as recurringShifts from "../recurringShifts.js";
+import type * as sharing from "../sharing.js";
 import type * as sync from "../sync.js";
 import type * as userSettings from "../userSettings.js";
 import type * as userShifts from "../userShifts.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   notificationPreferences: typeof notificationPreferences;
   payrollAdjustments: typeof payrollAdjustments;
   recurringShifts: typeof recurringShifts;
+  sharing: typeof sharing;
   sync: typeof sync;
   userSettings: typeof userSettings;
   userShifts: typeof userShifts;
