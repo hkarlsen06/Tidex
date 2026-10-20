@@ -66,3 +66,16 @@ export async function deleteClerkUser(clerkUserId: string): Promise<void> {
   });
   if (!response.ok && response.status !== 404) throw new Error(`Clerk DELETE user failed with ${response.status}`);
 }
+
+/** POST /sign_in_tokens: a one-time ticket the app redeems with Clerk's "ticket" strategy. */
+export async function createSignInToken(clerkUserId: string): Promise<string> {
+  const key = process.env.CLERK_SECRET_KEY;
+  if (!key) throw new Error("CLERK_SECRET_KEY is not set");
+  const response = await fetch("https://api.clerk.com/v1/sign_in_tokens", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: clerkUserId, expires_in_seconds: 600 }),
+  });
+  if (!response.ok) throw new Error(`Clerk POST /sign_in_tokens failed with ${response.status}`);
+  return ((await response.json()) as { token: string }).token;
+}

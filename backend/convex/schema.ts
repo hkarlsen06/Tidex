@@ -688,6 +688,11 @@ export default defineSchema({
     .index("by_admin_ended_at", ["admin_user_id", "ended_at"])
     .index("by_admin_created_at", ["admin_user_id", "created_at"]),
 
+  // GoTrue session ids that impersonation sessions on N used, copied by the migration.
+  // The session exchange refuses them, so an admin's phone that updates mid-impersonation
+  // can't turn the target's GoTrue session into a Clerk session.
+  legacy_impersonation_sessions: defineTable({ auth_session_id: v.string() }).index("by_auth_session_id", ["auth_session_id"]),
+
   impersonation_audit_log: defineTable({
     id: uuid,
     session_id: optUuid,

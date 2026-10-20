@@ -59,6 +59,7 @@ import type * as onboarding from "../onboarding.js";
 import type * as payrollAdjustments from "../payrollAdjustments.js";
 import type * as push from "../push.js";
 import type * as recurringShifts from "../recurringShifts.js";
+import type * as sessionExchange from "../sessionExchange.js";
 import type * as sharing from "../sharing.js";
 import type * as sync from "../sync.js";
 import type * as tariffs from "../tariffs.js";
@@ -126,6 +127,7 @@ declare const fullApi: ApiFromModules<{
   payrollAdjustments: typeof payrollAdjustments;
   push: typeof push;
   recurringShifts: typeof recurringShifts;
+  sessionExchange: typeof sessionExchange;
   sharing: typeof sharing;
   sync: typeof sync;
   tariffs: typeof tariffs;
