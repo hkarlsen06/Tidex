@@ -52,6 +52,7 @@ import type * as lib_shared_timeUtils from "../lib/shared/timeUtils.js";
 import type * as lib_syncWrite from "../lib/syncWrite.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as liveActivities from "../liveActivities.js";
+import type * as maintenance from "../maintenance.js";
 import type * as messages from "../messages.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
 import type * as onboarding from "../onboarding.js";
@@ -118,6 +119,7 @@ declare const fullApi: ApiFromModules<{
   "lib/syncWrite": typeof lib_syncWrite;
   "lib/validators": typeof lib_validators;
   liveActivities: typeof liveActivities;
+  maintenance: typeof maintenance;
   messages: typeof messages;
   notificationPreferences: typeof notificationPreferences;
   onboarding: typeof onboarding;
