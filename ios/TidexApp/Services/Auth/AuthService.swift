@@ -261,18 +261,24 @@ final class AuthService: EmailAuthProviding {
     isLoading = true
     defer { isLoading = false }
 
-    let result = try await Clerk.shared.auth.signInWithIdToken(
-      idToken, provider: .apple, transferable: true)
-    let isNewUser = try await finish(result)
-
-    // Best-effort: don't block login if Clerk refuses the name.
-    if isNewUser, let fullName,
-      fullName.givenName?.nilIfEmpty != nil || fullName.familyName?.nilIfEmpty != nil
+    // The same order as Clerk's own Apple flow: a sign-up, which Clerk turns into a sign-in
+    // for an existing account, and a plain sign-in only when sign-ups are closed. Starting
+    // with the sign-in made production Clerk refuse the token.
+    let result: TransferFlowResult
+    do {
+      result = try await Clerk.shared.auth.signUpWithIdToken(
+        idToken, provider: .apple,
+        firstName: fullName?.givenName?.nilIfEmpty, lastName: fullName?.familyName?.nilIfEmpty)
+    } catch let error as ClerkAPIError
+      where ["sign_up_mode_restricted", "sign_up_restricted_waitlist"].contains(error.code)
     {
-      _ = try? await Clerk.shared.user?.update(
-        .init(firstName: fullName.givenName?.nilIfEmpty, lastName: fullName.familyName?.nilIfEmpty)
-      )
+      result = try await Clerk.shared.auth.signInWithIdToken(
+        idToken, provider: .apple, transferable: false)
     }
+    if case .signIn(let signIn) = result, let error = signIn.firstFactorVerification?.error {
+      throw error
+    }
+    _ = try await finish(result)
   }
 
   /// Sign in with Google in a web sheet. Clerk has no native Google ID token path.
