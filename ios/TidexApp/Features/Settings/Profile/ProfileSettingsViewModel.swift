@@ -1,11 +1,13 @@
+import ClerkKit
 import Foundation
-import ImageIO
 import Observation
-import Supabase
-import UniformTypeIdentifiers
 
-private struct ProfileUsernameRow: Decodable {
-  let username: String?
+private struct UsernameArgs: Encodable, Sendable {
+  let username: String
+}
+
+private struct ProfilePictureReply: Decodable {
+  let url: String?
 }
 
 /// View model for profile settings
@@ -55,7 +57,9 @@ final class ProfileSettingsViewModel {
   /// Email change state
   var showEmailChangeSheet = false
   var newEmail: String = ""
-  var emailChangeSent = false
+  /// Clerk emailed a code to `newEmail`, and the sheet asks for it.
+  var awaitingEmailCode = false
+  var emailCode: String = ""
 
   /// Delete account confirmation state
   var showDeleteConfirmation = false
@@ -67,7 +71,8 @@ final class ProfileSettingsViewModel {
   private var originalDisplayName: String = ""
   /// Original username (for detecting changes)
   private var originalUsername: String = ""
-  private let storageBucket = "profile-pictures"
+  /// The new address while its code is pending.
+  private var pendingEmailAddress: EmailAddress?
 
   // MARK: - Initialization
 
@@ -90,55 +95,27 @@ final class ProfileSettingsViewModel {
     hydrateCachedProfileForImmediateDisplay()
 
     do {
-      // Fetch fresh user data to get identities (not available in JWT)
-      let freshUser = try await supabase.auth.user()
-
-      userId = freshUser.normalizedId
-
-      // Extract display name from user metadata
-      if let fullName = freshUser.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
-        displayName = fullName
-      } else if let name = freshUser.userMetadata["name"]?.value as? String, !name.isEmpty {
-        displayName = name
-      } else {
-        displayName = ""
-      }
+      let session = try await AuthSessionManager.shared.getSession()
+      userId = session.normalizedUserId
+      displayName = session.user.name ?? ""
       originalDisplayName = displayName
 
-      // Extract email
-      email = freshUser.email ?? ""
+      // Clerk holds the email and the sign-in methods. They are on the device already.
+      let clerkUser = Clerk.shared.user
+      email = clerkUser?.primaryEmailAddress?.emailAddress ?? session.user.email ?? ""
 
       do {
-        let usernameResponse: ProfileUsernameRow =
-          try await supabase
-          .rpc("get_my_profile_username")
-          .single()
-          .execute()
-          .value
-        username = usernameResponse.username ?? ""
+        let name: String? = try await ConvexAPI.app.query("sharing:myUsername")
+        username = name ?? ""
         originalUsername = username
       } catch {
         username = ""
         originalUsername = ""
       }
 
-      // Determine authentication capabilities from identities
-      let identities = freshUser.identities ?? []
-      let providers = Set(identities.map(\.provider))  // swiftlint:disable:this explicit_type_interface
-
-      // Supabase may not add an "email" identity when setting a password on OAuth users.
-      let metadataHasPassword = freshUser.userMetadata["hasPassword"]?.value as? Bool ?? false
-      let appMetadataProviders =
-        freshUser.appMetadata["providers"]?.value as? [String]
-        ?? (freshUser.appMetadata["providers"]?.value as? [Any])?.compactMap { $0 as? String }
-        ?? []
-      let hasEmailProvider = providers.contains("email") || appMetadataProviders.contains("email")
-
-      hasPassword = hasEmailProvider || metadataHasPassword
-      let hasGoogle = providers.contains("google")
-      let hasApple = providers.contains("apple")
-      let hasPhone = providers.contains("phone")
-      isOAuthOnly = (hasGoogle || hasApple) && !hasPassword && !hasPhone
+      // Determine authentication capabilities
+      hasPassword = clerkUser?.passwordEnabled ?? false
+      isOAuthOnly = !hasPassword && !(clerkUser?.verifiedExternalAccounts.isEmpty ?? true)
 
       // Get profile picture from local settings
       if let currentUserId = userId,
@@ -217,13 +194,11 @@ final class ProfileSettingsViewModel {
     errorMessage = nil
 
     do {
-      // Update Supabase auth user metadata
-      _ = try await supabase.auth.update(
-        user: UserAttributes(
-          data: ["full_name": .string(normalizedDisplayName)]
-        ))
-
-      // Refresh session to get updated JWT via serialized auth path
+      // Friends read the name from Clerk. The users row follows through the sync action.
+      let parts = normalizedDisplayName.split(separator: " ", maxSplits: 1).map(String.init)
+      _ = try await Clerk.shared.user?.update(
+        .init(firstName: parts.first ?? "", lastName: parts.count > 1 ? parts[1] : ""))
+      _ = try await ConvexAPI.app.action("users:syncFromClerk", as: ConvexAPI.Ignored.self)
       _ = try? await AuthSessionManager.shared.forceRefresh()
 
       displayName = normalizedDisplayName
@@ -293,27 +268,22 @@ final class ProfileSettingsViewModel {
     usernameErrorMessage = nil
 
     do {
-      let params: [String: AnyJSON] = ["p_username": .string(normalizedUsername)]
-      let response: ProfileUsernameRow =
-        try await supabase
-        .rpc(
-          "set_my_profile_username",
-          params: params
-        )
-        .single()
-        .execute()
-        .value
-
-      username = response.username ?? ""
+      let saved: String? = try await ConvexAPI.app.mutation(
+        "sharing:setMyUsername", UsernameArgs(username: normalizedUsername))
+      username = saved ?? ""
       originalUsername = username
-    } catch let error as PostgrestError {
-      if Self.isUsernameTaken(error) {
+    } catch let failure as ConvexAPI.Failure {
+      switch failure.code {
+      case "username_taken":
         setUsernameError(String(localized: .profileErrorsUsernameTaken))
-      } else if Self.isUsernameSafetyFilterViolation(error) {
+
+      case "username_blocked":
         setUsernameError(String(localized: .profileErrorsNameSafetyFilter))
-      } else if Self.isUsernameCheckConstraintViolation(error) {
+
+      case "username_invalid":
         setUsernameError(String(localized: .profileErrorsUsernameInvalid))
-      } else {
+
+      default:
         setUsernameError(String(localized: .profileErrorsUsernameSaveFailed))
       }
     } catch {
@@ -344,7 +314,7 @@ extension ProfileSettingsViewModel {
     return email.range(of: emailRegex, options: .regularExpression) != nil
   }
 
-  /// Initiate email change - sends confirmation to both old and new email
+  /// Add the new address in Clerk and email it a code
   func initiateEmailChange() async {
     // Prevent duplicate taps
     guard !isChangingEmail else { return }
@@ -368,16 +338,43 @@ extension ProfileSettingsViewModel {
     errorMessage = nil
 
     do {
-      // Supabase will send confirmation emails to both old and new addresses
-      _ = try await supabase.auth.update(
-        user: UserAttributes(
-          email: newEmail
-        ))
-
-      emailChangeSent = true
-
+      guard let user = Clerk.shared.user else { throw AuthError.sessionMissing }
+      let address = try await user.createEmailAddress(newEmail)
+      pendingEmailAddress = try await address.sendCode()
+      awaitingEmailCode = true
     } catch {
-      errorMessage = ErrorTranslations.translate(error)
+      errorMessage = AuthService.message(for: error)
+    }
+
+    isChangingEmail = false
+  }
+
+  /// Check the code, make the new address the primary one and drop the old one
+  func confirmEmailChange() async {
+    guard !isChangingEmail, let pending = pendingEmailAddress, let user = Clerk.shared.user
+    else { return }
+
+    isChangingEmail = true
+    errorMessage = nil
+
+    do {
+      let verified = try await pending.verifyCode(emailCode)
+      let oldAddress = user.primaryEmailAddress
+      _ = try await user.update(.init(primaryEmailAddressId: verified.id))
+      // Best-effort: a leftover old address still works for sign-in until it is removed.
+      if let oldAddress, oldAddress.id != verified.id {
+        _ = try? await oldAddress.destroy()
+      }
+      _ = try await ConvexAPI.app.action("users:syncFromClerk", as: ConvexAPI.Ignored.self)
+      _ = try? await AuthSessionManager.shared.forceRefresh()
+      email = verified.emailAddress
+      Haptics.play(.success)
+      resetEmailChangeState()
+    } catch {
+      emailCode = ""
+      errorMessage =
+        AuthService.isInvalidVerificationCode(error)
+        ? String(localized: .signupVerifyErrorsInvalidCode) : AuthService.message(for: error)
     }
 
     isChangingEmail = false
@@ -386,61 +383,42 @@ extension ProfileSettingsViewModel {
   /// Reset email change state
   func resetEmailChangeState() {
     newEmail = ""
-    emailChangeSent = false
+    emailCode = ""
+    awaitingEmailCode = false
+    pendingEmailAddress = nil
     showEmailChangeSheet = false
   }
 
   // MARK: - Avatar Upload
 
-  /// Extract storage path from a public URL
-  /// e.g. "https://xxx.supabase.co/storage/v1/object/public/profile-pictures/user-id/file.jpg"
-  /// returns "user-id/file.jpg"
-  private func extractStoragePath(from url: String) -> String? {
-    let marker = "/storage/v1/object/public/\(storageBucket)/"
-    guard let range = url.range(of: marker) else { return nil }
-    return String(url[range.upperBound...])
-  }
-
-  /// Delete a file from storage given its public URL
-  private func deleteStorageFile(from url: String) async {
-    guard let path = extractStoragePath(from: url) else { return }
-    do {
-      try await supabase.storage
-        .from(storageBucket)
-        .remove(paths: [path])
-    } catch {
-      // Best-effort cleanup after the settings change has been saved.
+  /// Sends the image to the deployment, which stores it and replaces the previous one.
+  /// - Returns: The URL of the stored picture.
+  private func uploadAvatarFile(_ preparedUpload: ProfileAvatarEncoder.PreparedUpload) async throws
+    -> String
+  {
+    var forceRefresh = false
+    while true {
+      var request = URLRequest(url: ConvexAPI.configuredSiteURL.appending(path: "profile-picture"))
+      request.httpMethod = "POST"
+      request.setValue(preparedUpload.contentType, forHTTPHeaderField: "Content-Type")
+      if let token = try await AuthSessionManager.shared.convexToken(forceRefresh: forceRefresh) {
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+      }
+      let (data, response) = try await URLSession.shared.upload(
+        for: request, from: preparedUpload.data)
+      let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+      if status == 401, !forceRefresh {
+        forceRefresh = true
+        continue
+      }
+      guard status == 200,
+        let url = try JSONDecoder().decode(ProfilePictureReply.self, from: data).url
+      else { throw URLError(.badServerResponse) }
+      return url
     }
   }
 
-  /// Uploads the encoded avatar under a unique name and returns its public URL.
-  private func uploadAvatarFile(
-    _ preparedUpload: ProfileAvatarEncoder.PreparedUpload,
-    userId: String
-  ) async throws -> String {
-    let filename = "\(userId)/\(UUID().uuidString).\(preparedUpload.fileExtension)"
-
-    // Upload directly to Supabase Storage
-    try await supabase.storage
-      .from(storageBucket)
-      .upload(
-        filename,
-        data: preparedUpload.data,
-        options: FileOptions(
-          cacheControl: "3600",
-          contentType: preparedUpload.contentType,
-          upsert: true
-        )
-      )
-
-    // Get the public URL
-    return try supabase.storage
-      .from(storageBucket)
-      .getPublicURL(path: filename)
-      .absoluteString
-  }
-
-  /// Upload a new profile picture directly to Supabase Storage
+  /// Upload a new profile picture
   /// - Parameter imageData: The image data to upload (will be converted to WebP)
   func uploadProfilePicture(_ imageData: Data) async {
     // Prevent duplicate taps
@@ -457,15 +435,9 @@ extension ProfileSettingsViewModel {
       // Priority: WebP > HEIC > JPEG.
       let preparedUpload = await ProfileAvatarEncoder.prepareUpload(imageData)
 
-      let publicUrl = try await uploadAvatarFile(preparedUpload, userId: currentUserId)
-
-      try await Self.commitAvatarChange(from: previousUrl, to: publicUrl) {
-        try await self.settingsRepository.updateSettings(
-          for: currentUserId, profilePictureUrl: publicUrl
-        ) != nil
-      } removeStoredAvatar: { url in
-        await self.deleteStorageFile(from: url)
-      }
+      let publicUrl = try await uploadAvatarFile(preparedUpload)
+      _ = try await settingsRepository.updateSettings(
+        for: currentUserId, profilePictureUrl: publicUrl)
 
       if let previousUrl, let url = URL(string: previousUrl) {
         ImageCache.shared.remove(for: url)
@@ -482,7 +454,7 @@ extension ProfileSettingsViewModel {
     }
   }
 
-  /// Remove the profile picture directly from Supabase Storage
+  /// Remove the profile picture
   func removeProfilePicture() async {
     guard !isUploadingAvatar else { return }
     guard let currentUserId = userId else { return }
@@ -493,11 +465,9 @@ extension ProfileSettingsViewModel {
     defer { isUploadingAvatar = false }
 
     do {
-      try await Self.commitAvatarChange(from: currentUrl, to: nil) {
-        try await self.settingsRepository.clearProfilePictureUrl(for: currentUserId) != nil
-      } removeStoredAvatar: { url in
-        await self.deleteStorageFile(from: url)
-      }
+      _ = try await ConvexAPI.app.mutation(
+        "userSettings:clearProfilePicture", as: ConvexAPI.Ignored.self)
+      _ = try await settingsRepository.clearProfilePictureUrl(for: currentUserId)
 
       if let url = URL(string: currentUrl) {
         ImageCache.shared.remove(for: url)
@@ -527,7 +497,7 @@ extension ProfileSettingsViewModel {
     deleteConfirmText == expectedDeleteConfirmText
   }
 
-  /// Delete the user's account via Edge Function (requires service role)
+  /// Delete the user's account with the Convex `account:deleteAccount` action
   func deleteAccount() async {
     // Prevent duplicate taps
     guard !isDeletingAccount else { return }
@@ -545,17 +515,11 @@ extension ProfileSettingsViewModel {
         let success: Bool
       }
 
-      let response: DeleteAccountResponse = try await supabase.functions.invoke(
-        "delete-account",
-        options: FunctionInvokeOptions(body: AnyJSON.object([:]))
-      )
+      let response: DeleteAccountResponse = try await ConvexAPI.app.action("account:deleteAccount")
 
       if response.success {
-        // Account deleted successfully - sign out locally
+        // Account deleted successfully. Clear local data and the Clerk session.
         Haptics.play(.warning)
-        try? await supabase.auth.signOut(scope: .local)
-
-        // Clear local data via AppCoordinator
         await AppCoordinator.shared.signOut()
       } else {
         throw URLError(.badServerResponse)

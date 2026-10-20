@@ -219541,6 +219541,42 @@
         }
       }
     },
+    "profile.emailChange.codeInstructions" : {
+      "comment" : "Instructions in the change email sheet before the person enters a new address",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your new email address. We'll send a code to confirm it."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv inn den nye e-postadressen din. Vi sender en kode for å bekrefte den."
+          }
+        }
+      }
+    },
+    "profile.emailChange.codePlaceholder" : {
+      "comment" : "Placeholder of the field where the person types the code emailed to the new address",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmation code"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bekreftelseskode"
+          }
+        }
+      }
+    },
     "profile.emailChange.confirmationMessage" : {
       "comment" : "Message on the email change sheet after confirmation emails are sent to both addresses.",
       "extractionState" : "manual",

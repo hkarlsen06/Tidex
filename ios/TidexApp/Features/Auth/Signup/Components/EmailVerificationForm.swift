@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Code entry for the confirmation email sent at signup.
-/// Mirrors `PhoneOTPForm` and reuses `OTPInputField`.
+/// Mirrors `LoginCodeForm` and reuses `OTPInputField`.
 internal struct EmailVerificationForm: View {
   @Bindable internal var viewModel: SignupViewModel
 

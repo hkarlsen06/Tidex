@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Sheet that asks for a new email address and then confirms that the link was sent.
+/// Sheet that asks for a new email address, then for the code Clerk emailed to it.
 struct ProfileEmailChangeSheet: View {
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @Bindable var viewModel: ProfileSettingsViewModel
@@ -8,8 +8,8 @@ struct ProfileEmailChangeSheet: View {
   var body: some View {
     NavigationStack {
       Group {
-        if viewModel.emailChangeSent {
-          emailChangeSentView
+        if viewModel.awaitingEmailCode {
+          emailCodeForm
         } else {
           emailChangeForm
         }
@@ -17,17 +17,9 @@ struct ProfileEmailChangeSheet: View {
       .navigationTitle(String(localized: .profileEmailChangeTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        if viewModel.emailChangeSent {
-          ToolbarItem(placement: .confirmationAction) {
-            Button(String(localized: .commonDone)) {
-              viewModel.resetEmailChangeState()
-            }
-          }
-        } else {
-          ToolbarItem(placement: .cancellationAction) {
-            Button(String(localized: .commonCancel)) {
-              viewModel.resetEmailChangeState()
-            }
+        ToolbarItem(placement: .cancellationAction) {
+          Button(String(localized: .commonCancel)) {
+            viewModel.resetEmailChangeState()
           }
         }
       }
@@ -59,7 +51,7 @@ struct ProfileEmailChangeSheet: View {
               .foregroundColor(.tidexError)
               .announcesToVoiceOver(error)
           } else {
-            Text(.profileEmailChangeInstructions)
+            Text(.profileEmailChangeCodeInstructions)
           }
         }
 
@@ -104,16 +96,48 @@ struct ProfileEmailChangeSheet: View {
     .disabled(viewModel.newEmail.isEmpty || viewModel.isChangingEmail)
   }
 
-  private var emailChangeSentView: some View {
-    ContentUnavailableView {
-      Label(
-        String(localized: .profileEmailChangeConfirmationSent),
-        systemImage: "envelope.badge.fill"
-      )
-    } description: {
-      Text(.profileEmailChangeConfirmationMessage)
+  private var emailCodeForm: some View {
+    Form {
+      Group {
+        Section {
+          TextField(
+            String(localized: .profileEmailChangeCodePlaceholder),
+            text: $viewModel.emailCode
+          )
+          .keyboardType(.numberPad)
+          .textContentType(.oneTimeCode)
+        } header: {
+          Text(String(localized: .otpSubtitle(viewModel.newEmail)))
+        } footer: {
+          if let error = viewModel.errorMessage {
+            Text(error)
+              .foregroundColor(.tidexError)
+              .announcesToVoiceOver(error)
+          }
+        }
+
+        Section {
+          Button {
+            Task {
+              await viewModel.confirmEmailChange()
+            }
+          } label: {
+            HStack(spacing: Spacing.xs) {
+              if viewModel.isChangingEmail {
+                ProgressView()
+                  .controlSize(.small)
+              }
+
+              Text(.otpSubmitButton)
+                .font(.tidexBodyMedium)
+            }
+            .frame(maxWidth: .infinity)
+          }
+          .disabled(viewModel.emailCode.isEmpty || viewModel.isChangingEmail)
+        }
+      }
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Color.tidexBackground)
+    .tidexListBackground()
   }
 }

@@ -1,5 +1,4 @@
 import Foundation
-import Supabase
 
 // MARK: - Helpers
 
@@ -20,31 +19,6 @@ extension ProfileSettingsViewModel {
       return false
     }
     return username.range(of: "[a-z]", options: .regularExpression) != nil
-  }
-
-  static func isUsernameTaken(_ error: PostgrestError) -> Bool {
-    if error.code == "23505" {
-      return true
-    }
-
-    let message = "\(error.message) \(error.localizedDescription)".lowercased()
-    return message.contains("duplicate") || message.contains("unique")
-  }
-
-  static func isUsernameCheckConstraintViolation(_ error: PostgrestError) -> Bool {
-    guard error.code == "23514" else { return false }
-
-    let message = "\(error.message) \(error.localizedDescription)".lowercased()
-    return message.contains("profiles_username_format")
-      || message.contains("check constraint")
-      || message.contains("violates check")
-  }
-
-  static func isUsernameSafetyFilterViolation(_ error: PostgrestError) -> Bool {
-    let message = "\(error.message) \(error.localizedDescription)".lowercased()
-    return message.contains("profiles_username_safety_filter")
-      || message.contains("safety filter")
-      || message.contains("objectionable")
   }
 
   /// Get initials from display name or email
