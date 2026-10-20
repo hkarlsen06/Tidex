@@ -1,20 +1,11 @@
-import Auth
 import Foundation
-import os.log
-import Supabase
 import UIKit
-
-private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessagingService")
 
 @MainActor
 protocol FriendsMessagingServiceProviding: AnyObject {
   func getOrCreateDirectThread(otherUserId: String) async throws -> FriendThread
-  func listMyThreads(limit: Int, before cursor: FriendThreadCursor?) async throws -> [FriendThread]
   func fetchInboxSyncSnapshotV2(limit: Int, before cursor: FriendThreadCursor?) async throws
     -> FriendInboxSyncSnapshot
-  func listInboxEventsV2(afterVersion: Int64, limit: Int) async throws -> FriendInboxSyncEventsPage
-  func listThreadMessages(threadId: String, limit: Int, before cursor: FriendMessageCursor?)
-    async throws -> [FriendMessage]
   func listThreadMessagesV2(threadId: String, limit: Int, before cursor: FriendMessageCursor?)
     async throws -> FriendThreadMessagesPage
   func fetchThreadSyncSnapshotV2(threadId: String, messageLimit: Int) async throws
@@ -34,11 +25,8 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func deleteMessage(messageId: String) async throws -> FriendThread
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState
+  func setThreadTyping(threadId: String, isTyping: Bool) async throws
   func queueThreadTypingNotification(threadId: String) async throws -> Bool
-  func fetchUnreadDirectMessageCount(userId: String) async throws -> Int
-  func fetchThreadSummary(threadId: String) async throws -> FriendThread
-  func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState?
-  func fetchMessagePayload(messageId: String) async throws -> FriendMessage
   func fetchMessageSyncPayloadV2(messageId: String) async throws -> FriendMessage
   func toggleMessageReaction(messageId: String, emoji: String, attachmentId: String?)
     async throws -> FriendMessage
@@ -49,9 +37,17 @@ protocol FriendsMessagingServiceProviding: AnyObject {
     reason: FriendAbuseReportReason
   ) async throws
   func blockUserPair(otherUserId: String) async throws
+  /// Uploads the image and returns the attachment to send. `storagePath` of the result holds
+  /// the id of the stored file that `sendMessage` passes on to the server.
   func uploadImageAttachment(threadId: String, image: ImageAttachment) async throws
     -> FriendOutgoingAttachment
   func downloadAttachmentData(path: String) async throws -> Data
+}
+
+extension FriendsMessagingServiceProviding {
+  // Test doubles that ignore typing inherit this.
+  // swiftlint:disable:next async_without_await
+  func setThreadTyping(threadId _: String, isTyping _: Bool) async throws {}
 }
 
 enum FriendsMessagingServiceError: Error, LocalizedError {
@@ -83,175 +79,36 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
 final class FriendsMessagingService {
   static let shared = FriendsMessagingService()
 
-  private let storageBucket = "message-attachments"
+  private let api = ConvexAPI.app
   private let urlSession = URLSessionFactory.longRunning
 
   private init() {}
 
+  /// Lets a dictionary literal of `.string(...)` values pass as an argument, which the generic
+  /// parameter of `ConvexAPI.query` can't infer.
+  private func params(_ object: JSONObject) -> JSONObject { object }
+
   func getOrCreateDirectThread(otherUserId: String) async throws -> FriendThread {
-    let params: [String: AnyJSON] = [
-      "p_other_user_id": .string(otherUserId)
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingThreadSummaryRow =
-        try await supabase
-        .rpc("get_or_create_direct_thread", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendThread()
-    } catch let error as FriendsMessagingServiceError {
-      throw error
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let row: MessagingThreadSummaryRow = try await call {
+      try await api.mutation(
+        "threads:getOrCreateDirect", params(["other_user_id": .string(otherUserId)]))
     }
-  }
-
-  func listMyThreads(
-    limit: Int = 30,
-    before cursor: FriendThreadCursor? = nil
-  ) async throws -> [FriendThread] {
-    var params: [String: AnyJSON] = [
-      "p_limit": .integer(limit)
-    ]
-
-    if let cursor {
-      params["p_before_last_message_at"] = .string(
-        cursor.lastMessageAt.toISO8601String())
-      params["p_before_thread_id"] = .string(cursor.threadId)
-    }
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let rows: [MessagingThreadSummaryRow] =
-        try await supabase
-        .rpc("list_my_threads", params: params)
-        .execute()
-        .value
-
-      return rows.map { $0.toFriendThread() }
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
-    }
+    return row.toFriendThread()
   }
 
   func fetchInboxSyncSnapshotV2(
     limit: Int = 30,
     before cursor: FriendThreadCursor? = nil
   ) async throws -> FriendInboxSyncSnapshot {
-    var params: [String: AnyJSON] = [
-      "p_limit": .integer(limit)
-    ]
-
+    var args: [String: AnyJSON] = ["limit": .integer(limit)]
     if let cursor {
-      params["p_before_last_message_at"] = .string(cursor.lastMessageAt.toISO8601String())
-      params["p_before_thread_id"] = .string(cursor.threadId)
+      args["before_last_message_at"] = .string(ConvexTimestamp.string(from: cursor.lastMessageAt))
+      args["before_thread_id"] = .string(cursor.threadId)
     }
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let payload: MessagingInboxSyncSnapshotV2Row =
-        try await supabase
-        .rpc("get_inbox_sync_snapshot_v2", params: params)
-        .single()
-        .execute()
-        .value
-
-      return payload.toFriendInboxSyncSnapshot()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let payload: MessagingInboxRow = try await call {
+      try await api.query("threads:inbox", args)
     }
-  }
-
-  func listInboxEventsV2(
-    afterVersion: Int64,
-    limit: Int = 100
-  ) async throws -> FriendInboxSyncEventsPage {
-    let params: [String: AnyJSON] = [
-      "p_after_version": .integer(Int(afterVersion)),
-      "p_limit": .integer(limit),
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let payload: MessagingInboxSyncEventsPageV2Row =
-        try await supabase
-        .rpc("list_inbox_events_v2", params: params)
-        .single()
-        .execute()
-        .value
-
-      return try payload.toFriendInboxSyncEventsPage()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
-    }
-  }
-
-  func listThreadMessages(
-    threadId: String,
-    limit: Int = 50,
-    before cursor: FriendMessageCursor? = nil
-  ) async throws -> [FriendMessage] {
-    var params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId),
-      "p_limit": .integer(limit),
-    ]
-
-    if let cursor {
-      params["p_before_created_at"] = .string(cursor.createdAt.toISO8601String())
-      params["p_before_message_id"] = .string(cursor.messageId)
-    }
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let rows: [MessagingMessageRow] =
-        try await supabase
-        .rpc("list_thread_messages", params: params)
-        .execute()
-        .value
-
-      return rows.map { $0.toFriendMessage() }
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
-    }
+    return payload.toFriendInboxSyncSnapshot()
   }
 
   func listThreadMessagesV2(
@@ -259,124 +116,52 @@ final class FriendsMessagingService {
     limit: Int = 50,
     before cursor: FriendMessageCursor? = nil
   ) async throws -> FriendThreadMessagesPage {
-    var params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId),
-      "p_limit": .integer(limit),
-    ]
-
+    var args: [String: AnyJSON] = ["thread_id": .string(threadId), "limit": .integer(limit)]
     if let cursor {
-      params["p_before_created_at"] = .string(cursor.createdAt.toISO8601String())
-      params["p_before_message_id"] = .string(cursor.messageId)
+      args["before_created_at"] = .string(ConvexTimestamp.string(from: cursor.createdAt))
+      args["before_message_id"] = .string(cursor.messageId)
     }
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let payload: MessagingThreadMessagesPageV2Row =
-        try await supabase
-        .rpc("list_thread_messages_v2", params: params)
-        .single()
-        .execute()
-        .value
-
-      return payload.toFriendThreadMessagesPage()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let payload: MessagingThreadMessagesPageRow = try await call {
+      try await api.query("messages:list", args)
     }
+    return payload.toFriendThreadMessagesPage()
   }
 
   func fetchThreadSyncSnapshotV2(
     threadId: String,
     messageLimit: Int = 50
   ) async throws -> FriendThreadSyncSnapshot {
-    let params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId),
-      "p_message_limit": .integer(messageLimit),
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let payload: MessagingThreadSyncSnapshotV2Row =
-        try await supabase
-        .rpc("get_thread_sync_snapshot_v2", params: params)
-        .single()
-        .execute()
-        .value
-
-      return payload.toFriendThreadSyncSnapshot()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let payload: MessagingThreadSnapshotRow = try await call {
+      try await api.query(
+        "messages:thread",
+        params(["thread_id": .string(threadId), "message_limit": .integer(messageLimit)]))
     }
+    return payload.toFriendThreadSyncSnapshot()
   }
 
+  /// Message changes after the revision `afterVersion`, from `messages:changes`.
   func listThreadEventsV2(
     threadId: String,
     afterVersion: Int64,
     limit: Int = 100
   ) async throws -> FriendThreadSyncEventsPage {
-    let params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId),
-      "p_after_version": .integer(Int(afterVersion)),
-      "p_limit": .integer(limit),
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let payload: MessagingThreadSyncEventsPageV2Row =
-        try await supabase
-        .rpc("list_thread_events_v2", params: params)
-        .single()
-        .execute()
-        .value
-
-      return try payload.toFriendThreadSyncEventsPage()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let payload: MessagingThreadChangesRow = try await call {
+      try await api.query(
+        "messages:changes",
+        params([
+          "thread_id": .string(threadId),
+          "after": .integer(Int(afterVersion)),
+          "limit": .integer(limit),
+        ]))
     }
+    return payload.toFriendThreadSyncEventsPage()
   }
 
   func listThreadStates(threadId: String) async throws -> [FriendThreadState] {
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let response: [MessagingThreadUserStateRow] =
-        try await supabase
-        .from("thread_user_state")
-        .select()
-        .eq("thread_id", value: threadId)
-        .execute()
-        .value
-
-      return response.map { $0.toFriendThreadState() }
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let rows: [MessagingThreadUserStateRow] = try await call {
+      try await api.query("threads:states", params(["thread_id": .string(threadId)]))
     }
+    return rows.map { $0.toFriendThreadState() }
   }
 
   func sendMessage(
@@ -387,302 +172,87 @@ final class FriendsMessagingService {
     attachments: [FriendOutgoingAttachment] = [],
     metadataData: Data? = nil
   ) async throws -> FriendMessage {
-    let payload = try attachments.map { attachment -> AnyJSON in
-      let data = try JSONEncoder().encode(attachment)
-      return try AnyJSON.decoder.decode(AnyJSON.self, from: data)
-    }
-    let metadataPayload =
-      if let metadataData {
-        try AnyJSON.decoder.decode(AnyJSON.self, from: metadataData)
-      } else {
-        AnyJSON.object([:])
-      }
-
-    let params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId),
-      "p_client_id": .string(clientId),
-      "p_body": body.map(AnyJSON.string) ?? .null,
-      "p_reply_to_message_id": replyToMessageId.map(AnyJSON.string) ?? .null,
-      "p_attachments": .array(payload),
-      "p_metadata": metadataPayload,
-    ]
-
+    let metadata: AnyJSON
     do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingMessageRow =
-        try await supabase
-        .rpc("send_message", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendMessage()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
+      metadata =
+        if let metadataData {
+          try AnyJSON.decoder.decode(AnyJSON.self, from: metadataData)
+        } else {
+          AnyJSON.object([:])
+        }
     } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
     }
+
+    let args = SendMessageArgs(
+      threadId: threadId,
+      clientId: clientId,
+      body: body,
+      replyToMessageId: replyToMessageId,
+      attachments: attachments.map(SendMessageArgs.Attachment.init),
+      metadata: metadata
+    )
+    let row: MessagingMessageRow = try await call {
+      try await api.mutation("messages:send", args)
+    }
+    return row.toFriendMessage()
   }
 
   func editMessage(messageId: String, body: String) async throws -> FriendMessage {
-    let params: [String: AnyJSON] = [
-      "p_message_id": .string(messageId),
-      "p_body": .string(body),
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingMessageRow =
-        try await supabase
-        .rpc("edit_message", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendMessage()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let row: MessagingMessageRow = try await call {
+      try await api.mutation(
+        "messages:edit", params(["message_id": .string(messageId), "body": .string(body)]))
     }
+    return row.toFriendMessage()
   }
 
   func deleteMessage(messageId: String) async throws -> FriendThread {
-    let params: [String: AnyJSON] = [
-      "p_message_id": .string(messageId)
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingThreadSummaryRow =
-        try await supabase
-        .rpc("delete_message", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendThread()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let row: MessagingThreadSummaryRow = try await call {
+      try await api.mutation("messages:remove", params(["message_id": .string(messageId)]))
     }
+    return row.toFriendThread()
   }
 
   func markThreadRead(threadId: String, throughMessageId: String) async throws -> FriendThreadState
   {
-    let params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId),
-      "p_through_message_id": .string(throughMessageId),
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingThreadUserStateRow =
-        try await supabase
-        .rpc("mark_thread_read", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendThreadState()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let row: MessagingThreadUserStateRow = try await call {
+      try await api.mutation(
+        "threads:markRead",
+        params(["thread_id": .string(threadId), "through_message_id": .string(throughMessageId)]))
     }
+    return row.toFriendThreadState()
   }
 
   func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState {
-    let params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId),
-      "p_muted": .bool(muted),
-    ]
+    let row: MessagingThreadUserStateRow = try await call {
+      try await api.mutation(
+        "threads:setMuted", params(["thread_id": .string(threadId), "muted": .bool(muted)]))
+    }
+    return row.toFriendThreadState()
+  }
 
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingThreadUserStateRow =
-        try await supabase
-        .rpc("set_thread_muted", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendThreadState()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+  func setThreadTyping(threadId: String, isTyping: Bool) async throws {
+    let _: ConvexAPI.Ignored = try await call {
+      try await api.mutation(
+        "threads:setTyping", params(["thread_id": .string(threadId), "typing": .bool(isTyping)]))
     }
   }
 
   func queueThreadTypingNotification(threadId: String) async throws -> Bool {
-    let params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId)
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      return try await supabase
-        .rpc("queue_thread_typing_notification", params: params)
-        .execute()
-        .value as Bool
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
-    }
-  }
-
-  func fetchUnreadDirectMessageCount(userId: String) async throws -> Int {
-    let params: [String: AnyJSON] = [
-      "p_user_id": .string(userId)
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let count: Int =
-        try await supabase
-        .rpc("get_unread_direct_message_count", params: params)
-        .execute()
-        .value
-
-      return max(0, count)
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
-    }
-  }
-
-  func fetchThreadSummary(threadId: String) async throws -> FriendThread {
-    let params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId)
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingThreadSummaryRow =
-        try await supabase
-        .rpc("get_thread_summary", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendThread()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
-    }
-  }
-
-  func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState? {
-    let response: [MessagingThreadUserStateRow] =
-      try await supabase
-      .from("thread_user_state")
-      .select()
-      .eq("thread_id", value: threadId)
-      .eq("user_id", value: userId)
-      .limit(1)
-      .execute()
-      .value
-
-    return response.first?.toFriendThreadState()
-  }
-
-  func fetchMessagePayload(messageId: String) async throws -> FriendMessage {
-    let params: [String: AnyJSON] = [
-      "p_message_id": .string(messageId)
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingMessageRow =
-        try await supabase
-        .rpc("get_message_payload", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendMessage()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    try await call {
+      try await api.mutation(
+        "threads:queueTypingNotification", params(["thread_id": .string(threadId)]))
     }
   }
 
   func fetchMessageSyncPayloadV2(messageId: String) async throws -> FriendMessage {
-    let params: [String: AnyJSON] = [
-      "p_message_id": .string(messageId)
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingMessageRow =
-        try await supabase
-        .rpc("get_message_sync_payload_v2", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendMessage()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let row: MessagingMessageRow? = try await call {
+      try await api.query("messages:get", params(["message_id": .string(messageId)]))
     }
+    guard let row else {
+      throw FriendsMessagingServiceError.httpError(statusCode: 404, message: nil)
+    }
+    return row.toFriendMessage()
   }
 
   func toggleMessageReaction(
@@ -690,34 +260,14 @@ final class FriendsMessagingService {
     emoji: String,
     attachmentId: String? = nil
   ) async throws -> FriendMessage {
-    var params: [String: AnyJSON] = [
-      "p_message_id": .string(messageId),
-      "p_emoji": .string(emoji),
-    ]
+    var args: [String: AnyJSON] = ["message_id": .string(messageId), "emoji": .string(emoji)]
     if let attachmentId {
-      params["p_attachment_id"] = .string(attachmentId)
+      args["attachment_id"] = .string(attachmentId)
     }
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let row: MessagingMessageRow =
-        try await supabase
-        .rpc("toggle_message_reaction", params: params)
-        .single()
-        .execute()
-        .value
-
-      return row.toFriendMessage()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let row: MessagingMessageRow = try await call {
+      try await api.mutation("messages:toggleReaction", args)
     }
+    return row.toFriendMessage()
   }
 
   func createAbuseReport(
@@ -726,87 +276,62 @@ final class FriendsMessagingService {
     messageId: String?,
     reason: FriendAbuseReportReason
   ) async throws {
-    let params: [String: AnyJSON] = [
-      "p_thread_id": .string(threadId),
-      "p_reported_user_id": .string(reportedUserId),
-      "p_message_id": messageId.map(AnyJSON.string) ?? .null,
-      "p_reason": .string(reason.rawValue),
-      "p_note": .null,
+    var args: [String: AnyJSON] = [
+      "thread_id": .string(threadId),
+      "reported_user_id": .string(reportedUserId),
+      "reason": .string(reason.rawValue),
     ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      _ =
-        try await supabase
-        .rpc("create_abuse_report", params: params)
-        .execute()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    if let messageId {
+      args["message_id"] = .string(messageId)
+    }
+    let _: ConvexAPI.Ignored = try await call {
+      try await api.mutation("threads:reportAbuse", args)
     }
   }
 
   func blockUserPair(otherUserId: String) async throws {
-    let params: [String: AnyJSON] = [
-      "p_other_user_id": .string(otherUserId)
-    ]
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      _ =
-        try await supabase
-        .rpc("block_user_pair", params: params)
-        .execute()
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw FriendsMessagingServiceError.decodingError(underlying: error)
-    } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+    let _: ConvexAPI.Ignored = try await call {
+      try await api.mutation("sharing:blockUser", params(["other_user_id": .string(otherUserId)]))
     }
+  }
+
+  // MARK: - Images
+
+  /// The cache key and download path of an attachment, the same string the server puts in the
+  /// attachment `url`. The outbox files a just-sent image under it, so the sent message shows
+  /// the image without a download.
+  nonisolated static func attachmentPath(attachmentId: String) -> String {
+    ConvexAPI.configuredSiteURL.appending(path: "attachments/\(attachmentId)").absoluteString
   }
 
   func uploadImageAttachment(threadId: String, image: ImageAttachment) async throws
     -> FriendOutgoingAttachment
   {
-    let session = try await AuthSessionManager.shared.getSession()
-    let path =
-      "\(threadId)/\(session.normalizedUserId)/\(image.id).\(fileExtension(for: image.mediaType))"
+    var components = URLComponents(
+      url: ConvexAPI.configuredSiteURL.appending(path: "attachments"),
+      resolvingAgainstBaseURL: false
+    )
+    components?.queryItems = [URLQueryItem(name: "thread_id", value: threadId)]
+    guard let url = components?.url else {
+      throw FriendsMessagingServiceError.networkError(underlying: URLError(.badURL))
+    }
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue(image.mediaType, forHTTPHeaderField: "Content-Type")
 
+    // A retry uploads the file again. The server drops uploads that no message claims.
+    let data = try await send(request, body: image.data)
+    let reply: AttachmentUploadReply
     do {
-      try await supabase.storage
-        .from(storageBucket)
-        .upload(
-          path,
-          data: image.data,
-          options: FileOptions(
-            cacheControl: "3600",
-            contentType: image.mediaType,
-            upsert: false
-          )
-        )
+      reply = try JSONDecoder().decode(AttachmentUploadReply.self, from: data)
     } catch {
-      // The path is unique per attachment. A duplicate means an earlier attempt uploaded
-      // it before the send RPC failed, so the retry can reuse it. upsert: true would need
-      // an UPDATE policy on storage.objects that this bucket doesn't have.
-      if let failure = Self.attachmentUploadFailure(error) {
-        throw failure
-      }
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
     }
 
     let dimensions = imageDimensions(from: image.data)
     return FriendOutgoingAttachment(
       attachmentId: image.id,
-      storagePath: path,
+      storagePath: reply.storageId,
       mimeType: image.mediaType,
       byteSize: Int64(image.data.count),
       width: dimensions.width,
@@ -814,46 +339,59 @@ final class FriendsMessagingService {
     )
   }
 
-  /// Maps an attachment upload error. Returns nil when the object already exists.
-  /// Only transport errors become `.networkError`, so server rejections reach the
-  /// failed state instead of waiting for the network forever.
-  nonisolated static func attachmentUploadFailure(_ error: Error) -> Error? {
-    if let storageError = error as? StorageError {
-      if storageError.statusCode == "409" || storageError.error?.lowercased() == "duplicate" {
-        return nil
-      }
-      return FriendsMessagingServiceError.httpError(
-        statusCode: Int(storageError.statusCode ?? "") ?? 0,
-        message: storageError.message
-      )
-    }
-    if error is URLError {
-      return FriendsMessagingServiceError.networkError(underlying: error)
-    }
-    return error
+  /// `path` is the `url` of a message attachment, or the storage path that messages saved before
+  /// the move to Convex keep. Both end in the attachment id. The request always goes to the
+  /// configured server, so the token never reaches a host that a payload names.
+  func downloadAttachmentData(path: String) async throws -> Data {
+    let name = (path as NSString).lastPathComponent
+    let attachmentId =
+      path.hasPrefix("http") ? name : (name as NSString).deletingPathExtension.lowercased()
+    var request = URLRequest(
+      url: ConvexAPI.configuredSiteURL.appending(path: "attachments/\(attachmentId)"))
+    request.httpMethod = "GET"
+    return try await send(request)
   }
 
-  func downloadAttachmentData(path: String) async throws -> Data {
-    let session = try await AuthSessionManager.shared.getSession()
-    var request = URLRequest(url: authenticatedStorageURL(bucket: storageBucket, path: path))
-    request.httpMethod = "GET"
-    request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-    request.setValue(APIConfiguration.supabaseAnonKey, forHTTPHeaderField: "apikey")
+  // MARK: - Helpers
 
+  // Sends a request to the server's HTTP actions with the user's token. Tries once more with
+  // a fresh token when the server answers 401.
+  // swiftlint:disable:next cyclomatic_complexity
+  private func send(_ request: URLRequest, body: Data? = nil) async throws -> Data {
+    var retried = false
     do {
-      let (data, response) = try await urlSession.data(for: request)
-      guard let httpResponse = response as? HTTPURLResponse else {
-        throw FriendsMessagingServiceError.networkError(underlying: URLError(.badServerResponse))
-      }
+      while true {
+        guard let token = try await AuthSessionManager.shared.convexToken(forceRefresh: retried)
+        else {
+          throw FriendsMessagingServiceError.notAuthenticated
+        }
+        var authorized = request
+        authorized.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-      guard (200...299).contains(httpResponse.statusCode) else {
-        throw FriendsMessagingServiceError.httpError(
-          statusCode: httpResponse.statusCode,
-          message: String(data: data, encoding: .utf8)
-        )
-      }
+        let data: Data
+        let response: URLResponse
+        if let body {
+          (data, response) = try await urlSession.upload(for: authorized, from: body)
+        } else {
+          (data, response) = try await urlSession.data(for: authorized)
+        }
+        guard let httpResponse = response as? HTTPURLResponse else {
+          throw FriendsMessagingServiceError.networkError(underlying: URLError(.badServerResponse))
+        }
 
-      return data
+        if httpResponse.statusCode == 401 {
+          if retried { throw FriendsMessagingServiceError.notAuthenticated }
+          retried = true
+          continue
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+          throw FriendsMessagingServiceError.httpError(
+            statusCode: httpResponse.statusCode,
+            message: String(data: data, encoding: .utf8)
+          )
+        }
+        return data
+      }
     } catch let error as FriendsMessagingServiceError {
       throw error
     } catch {
@@ -861,50 +399,22 @@ final class FriendsMessagingService {
     }
   }
 
-  private func mapRPCError(_ error: Error) -> FriendsMessagingServiceError {
-    if error is AuthError {
-      return .notAuthenticated
-    }
-
-    if let postgrestError = error as? PostgrestError {
-      let message = postgrestError.message
-      let lowercasedMessage = message.lowercased()
-      let code = (postgrestError.code ?? "").uppercased()
-
-      if code == "PGRST301"
-        || lowercasedMessage.contains("jwt")
-        || lowercasedMessage.contains("unauthorized")
-      {
-        return .notAuthenticated
-      }
-
-      return .httpError(statusCode: 400, message: message)
-    }
-
-    if let decodingError = error as? DecodingError {
-      return .decodingError(underlying: decodingError)
-    }
-
-    logger.error("Friends messaging RPC failed: \(error.localizedDescription)")
-    return .networkError(underlying: error)
-  }
-
-  private func fileExtension(for mimeType: String) -> String {
-    switch mimeType {
-    case "image/webp":
-      return "webp"
-
-    case "image/heic":
-      return "heic"
-
-    case "image/heif":
-      return "heif"
-
-    case "image/png":
-      return "png"
-
-    default:
-      return "jpg"
+  /// Runs a Convex call and maps what it throws to `FriendsMessagingServiceError`.
+  private func call<T>(_ body: () async throws -> T) async throws -> T {
+    do {
+      return try await body()
+    } catch let error as FriendsMessagingServiceError {
+      throw error
+    } catch ConvexAPI.Failure.notSignedIn {
+      throw FriendsMessagingServiceError.notAuthenticated
+    } catch ConvexAPI.Failure.server(_, let message) {
+      throw FriendsMessagingServiceError.httpError(statusCode: 400, message: message)
+    } catch ConvexAPI.Failure.badResponse(let status) {
+      throw FriendsMessagingServiceError.httpError(statusCode: status, message: nil)
+    } catch let error as DecodingError {
+      throw FriendsMessagingServiceError.decodingError(underlying: error)
+    } catch {
+      throw FriendsMessagingServiceError.networkError(underlying: error)
     }
   }
 
@@ -918,26 +428,86 @@ final class FriendsMessagingService {
       height: Int(image.size.height.rounded())
     )
   }
-
-  private func authenticatedStorageURL(bucket: String, path: String) -> URL {
-    var url = APIConfiguration.supabaseURL
-      .appendingPathComponent("storage")
-      .appendingPathComponent("v1")
-      .appendingPathComponent("object")
-      .appendingPathComponent("authenticated")
-      .appendingPathComponent(bucket)
-
-    for component in path.split(separator: "/") {
-      url.appendPathComponent(String(component))
-    }
-
-    return url
-  }
 }
 
 extension FriendsMessagingService: FriendsMessagingServiceProviding {}
 
-private struct MessagingThreadSummaryRow: Decodable {
+// MARK: - Request payloads
+
+private struct SendMessageArgs: Encodable, Sendable {
+  let threadId: String
+  let clientId: String
+  let body: String?
+  let replyToMessageId: String?
+  let attachments: [Attachment]
+  let metadata: AnyJSON
+
+  enum CodingKeys: String, CodingKey {
+    case threadId = "thread_id"
+    case clientId = "client_id"
+    case body
+    case replyToMessageId = "reply_to_message_id"
+    case attachments
+    case metadata
+  }
+
+  struct Attachment: Encodable, Sendable {
+    let attachmentId: String
+    let storageId: String
+    let mimeType: String
+    let byteSize: Int64
+    let width: Int?
+    let height: Int?
+
+    enum CodingKeys: String, CodingKey {
+      case attachmentId = "attachment_id"
+      case storageId = "storage_id"
+      case mimeType = "mime_type"
+      case byteSize = "byte_size"
+      case width
+      case height
+    }
+
+    /// The outgoing attachment keeps the id of the stored file in `storagePath`.
+    init(_ attachment: FriendOutgoingAttachment) {
+      attachmentId = attachment.attachmentId
+      storageId = attachment.storagePath
+      mimeType = attachment.mimeType
+      byteSize = attachment.byteSize
+      width = attachment.width
+      height = attachment.height
+    }
+  }
+}
+
+private struct AttachmentUploadReply: Decodable {
+  let storageId: String
+}
+
+// MARK: - Response payloads
+
+/// A timestamp as Convex sends it, ISO 8601 with milliseconds. The decoders of `ConvexAPI` and of
+/// subscriptions have no date strategy, so rows read dates through this type.
+struct ConvexTimestamp: Decodable, Equatable, Sendable {
+  let date: Date
+
+  init(from decoder: Decoder) throws {
+    let string = try decoder.singleValueContainer().decode(String.self)
+    guard let date = ISO8601Timestamp.date(from: string) else {
+      throw DecodingError.dataCorrupted(
+        .init(codingPath: decoder.codingPath, debugDescription: "Invalid timestamp: \(string)"))
+    }
+    self.date = date
+  }
+
+  /// The string a pagination cursor sends. The server compares cursors with the stored
+  /// timestamps as text, so it has the same millisecond format.
+  static func string(from date: Date) -> String {
+    String(ISO8601Timestamp.microsecondString(from: date).dropLast(4)) + "Z"
+  }
+}
+
+struct MessagingThreadSummaryRow: Decodable {
   let threadId: String
   let kind: String
   let title: String?
@@ -949,15 +519,14 @@ private struct MessagingThreadSummaryRow: Decodable {
   let counterpartOAuthAvatarUrl: String?
   let lastMessageId: String?
   let lastMessageSenderId: String?
-  let lastMessageAt: Date?
+  let lastMessageAt: ConvexTimestamp?
   let lastMessageBody: String?
   let lastMessagePreviewKind: String?
   let lastMessageHasImage: Bool
   let unreadCount: Int
   let muted: Bool
-  let createdAt: Date
-  /// Parsed with ISO8601Timestamp to keep the microseconds it is compared at.
-  let viewerStateUpdatedAt: String?
+  let createdAt: ConvexTimestamp
+  let viewerStateUpdatedAt: ConvexTimestamp?
 
   enum CodingKeys: String, CodingKey {
     case threadId = "thread_id"
@@ -994,14 +563,14 @@ private struct MessagingThreadSummaryRow: Decodable {
       counterpartOAuthAvatarUrl: counterpartOAuthAvatarUrl,
       lastMessageId: lastMessageId,
       lastMessageSenderId: lastMessageSenderId,
-      lastMessageAt: lastMessageAt,
+      lastMessageAt: lastMessageAt?.date,
       lastMessageBody: lastMessageBody,
       lastMessagePreviewKind: lastMessagePreviewKind.flatMap(FriendLastMessagePreviewKind.init),
       lastMessageHasImage: lastMessageHasImage,
       unreadCount: unreadCount,
       muted: muted,
-      createdAt: createdAt,
-      viewerStateUpdatedAt: viewerStateUpdatedAt.flatMap(ISO8601Timestamp.date(from:))
+      createdAt: createdAt.date,
+      viewerStateUpdatedAt: viewerStateUpdatedAt?.date
     )
   }
 
@@ -1011,20 +580,17 @@ private struct MessagingThreadSummaryRow: Decodable {
   }
 }
 
-private struct MessagingInboxSyncSnapshotV2Row: Decodable {
+/// The `threads:inbox` result.
+struct MessagingInboxRow: Decodable {
   let threads: [MessagingThreadSummaryRow]
   let unreadDirectMessageCount: Int
   let nextCursor: MessagingThreadCursorRow?
-  let snapshotVersion: Int64
-  let retainedFromVersion: Int64
   let hasMore: Bool
 
   enum CodingKeys: String, CodingKey {
     case threads
     case unreadDirectMessageCount = "unread_direct_message_count"
     case nextCursor = "next_cursor"
-    case snapshotVersion = "snapshot_version"
-    case retainedFromVersion = "retained_from_version"
     case hasMore = "has_more"
   }
 
@@ -1033,47 +599,21 @@ private struct MessagingInboxSyncSnapshotV2Row: Decodable {
       threads: threads.map { $0.toFriendThread() },
       unreadDirectMessageCount: unreadDirectMessageCount,
       nextCursor: nextCursor?.toFriendThreadCursor(),
-      snapshotVersion: snapshotVersion,
-      retainedFromVersion: retainedFromVersion,
+      snapshotVersion: 0,
+      retainedFromVersion: 0,
       hasMore: hasMore
     )
   }
 }
 
-private struct MessagingInboxSyncEventsPageV2Row: Decodable {
-  let requiresSnapshot: Bool
-  let latestVersion: Int64
-  let retainedFromVersion: Int64
-  let hasMore: Bool
-  let events: [MessagingInboxSyncEventRow]
-
-  enum CodingKeys: String, CodingKey {
-    case requiresSnapshot = "requires_snapshot"
-    case latestVersion = "latest_version"
-    case retainedFromVersion = "retained_from_version"
-    case hasMore = "has_more"
-    case events
-  }
-
-  func toFriendInboxSyncEventsPage() throws -> FriendInboxSyncEventsPage {
-    try FriendInboxSyncEventsPage(
-      requiresSnapshot: requiresSnapshot,
-      latestVersion: latestVersion,
-      retainedFromVersion: retainedFromVersion,
-      hasMore: hasMore,
-      events: events.map { try $0.toFriendInboxSyncEvent() }
-    )
-  }
-}
-
-private struct MessagingThreadSyncSnapshotV2Row: Decodable {
+/// The `messages:thread` result. `latest_revision` is the cursor for `messages:changes`.
+struct MessagingThreadSnapshotRow: Decodable {
   let thread: MessagingThreadCoreRow
   let viewerState: MessagingThreadSyncViewerStateRow
   let counterpartState: MessagingThreadCounterpartPresenceRow?
   let messages: [MessagingMessageRow]
   let nextCursor: MessagingMessageCursorRow?
-  let snapshotVersion: Int64
-  let retainedFromVersion: Int64
+  let latestRevision: Int64
   let hasMore: Bool
 
   enum CodingKeys: String, CodingKey {
@@ -1082,8 +622,7 @@ private struct MessagingThreadSyncSnapshotV2Row: Decodable {
     case counterpartState = "counterpart_state"
     case messages
     case nextCursor = "next_cursor"
-    case snapshotVersion = "snapshot_version"
-    case retainedFromVersion = "retained_from_version"
+    case latestRevision = "latest_revision"
     case hasMore = "has_more"
   }
 
@@ -1110,7 +649,7 @@ private struct MessagingThreadSyncSnapshotV2Row: Decodable {
       lastMessageHasImage: latestMessage?.hasImageAttachment ?? false,
       unreadCount: viewerState.unreadCount,
       muted: viewerState.muted,
-      createdAt: thread.createdAt
+      createdAt: thread.createdAt.date
     )
 
     return FriendThreadSyncSnapshot(
@@ -1119,40 +658,50 @@ private struct MessagingThreadSyncSnapshotV2Row: Decodable {
       counterpartPresence: counterpartPresence,
       messages: friendMessages,
       nextCursor: nextCursor?.toFriendMessageCursor(),
-      snapshotVersion: snapshotVersion,
-      retainedFromVersion: retainedFromVersion,
+      snapshotVersion: latestRevision,
+      retainedFromVersion: FriendsMessagingService.revisionCursorMarker,
       hasMore: hasMore
     )
   }
 }
 
-private struct MessagingThreadSyncEventsPageV2Row: Decodable {
-  let requiresSnapshot: Bool
-  let latestVersion: Int64
-  let retainedFromVersion: Int64
-  let hasMore: Bool
-  let events: [MessagingThreadSyncEventRow]
+/// The `messages:changes` result.
+struct MessagingThreadChangesRow: Decodable {
+  let messages: [MessagingMessageRow]
+  let cursor: Int64
+  let done: Bool
 
-  enum CodingKeys: String, CodingKey {
-    case requiresSnapshot = "requires_snapshot"
-    case latestVersion = "latest_version"
-    case retainedFromVersion = "retained_from_version"
-    case hasMore = "has_more"
-    case events
-  }
-
-  func toFriendThreadSyncEventsPage() throws -> FriendThreadSyncEventsPage {
-    try FriendThreadSyncEventsPage(
-      requiresSnapshot: requiresSnapshot,
-      latestVersion: latestVersion,
-      retainedFromVersion: retainedFromVersion,
-      hasMore: hasMore,
-      events: events.map { try $0.toFriendThreadSyncEvent() }
+  func toFriendThreadSyncEventsPage() -> FriendThreadSyncEventsPage {
+    FriendThreadSyncEventsPage(
+      requiresSnapshot: false,
+      latestVersion: cursor,
+      retainedFromVersion: FriendsMessagingService.revisionCursorMarker,
+      hasMore: !done,
+      events: messages.map { message in
+        let version = message.revision ?? cursor
+        if message.deletedAt != nil {
+          return FriendThreadSyncEvent(
+            id: "\(message.id)@\(version)",
+            version: version,
+            eventType: .messageDeleted,
+            message: nil,
+            deletedMessageId: message.id
+          )
+        }
+        return FriendThreadSyncEvent(
+          id: "\(message.id)@\(version)",
+          version: version,
+          eventType: .messageUpserted,
+          message: message.toFriendMessage(),
+          deletedMessageId: nil
+        )
+      }
     )
   }
 }
 
-private struct MessagingThreadMessagesPageV2Row: Decodable {
+/// The `messages:list` result.
+struct MessagingThreadMessagesPageRow: Decodable {
   let messages: [MessagingMessageRow]
   let nextCursor: MessagingMessageCursorRow?
   let hasMore: Bool
@@ -1172,13 +721,13 @@ private struct MessagingThreadMessagesPageV2Row: Decodable {
   }
 }
 
-private struct MessagingThreadCoreRow: Decodable {
+struct MessagingThreadCoreRow: Decodable {
   let id: String
   let kind: String
   let title: String?
   let avatarUrl: String?
   let metadata: AnyJSON?
-  let createdAt: Date
+  let createdAt: ConvexTimestamp
 
   enum CodingKeys: String, CodingKey {
     case id
@@ -1190,14 +739,14 @@ private struct MessagingThreadCoreRow: Decodable {
   }
 }
 
-private struct MessagingThreadSyncViewerStateRow: Decodable {
+struct MessagingThreadSyncViewerStateRow: Decodable {
   let threadId: String
   let userId: String
   let lastReadMessageId: String?
-  let lastReadAt: Date?
+  let lastReadAt: ConvexTimestamp?
   let unreadCount: Int
   let muted: Bool
-  let updatedAt: Date
+  let updatedAt: ConvexTimestamp
 
   enum CodingKeys: String, CodingKey {
     case threadId = "thread_id"
@@ -1214,15 +763,15 @@ private struct MessagingThreadSyncViewerStateRow: Decodable {
       threadId: threadId,
       userId: userId,
       lastReadMessageId: lastReadMessageId,
-      lastReadAt: lastReadAt,
+      lastReadAt: lastReadAt?.date,
       muted: muted,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt.date,
       unreadCount: unreadCount
     )
   }
 }
 
-private struct MessagingThreadCounterpartPresenceRow: Decodable {
+struct MessagingThreadCounterpartPresenceRow: Decodable {
   let userId: String
   let displayName: String?
   let profilePictureUrl: String?
@@ -1245,8 +794,8 @@ private struct MessagingThreadCounterpartPresenceRow: Decodable {
   }
 }
 
-private struct MessagingThreadCursorRow: Decodable {
-  let beforeLastMessageAt: Date
+struct MessagingThreadCursorRow: Decodable {
+  let beforeLastMessageAt: ConvexTimestamp
   let beforeThreadId: String
 
   enum CodingKeys: String, CodingKey {
@@ -1255,117 +804,12 @@ private struct MessagingThreadCursorRow: Decodable {
   }
 
   func toFriendThreadCursor() -> FriendThreadCursor {
-    FriendThreadCursor(lastMessageAt: beforeLastMessageAt, threadId: beforeThreadId)
+    FriendThreadCursor(lastMessageAt: beforeLastMessageAt.date, threadId: beforeThreadId)
   }
 }
 
-private struct MessagingInboxSyncEventRow: Decodable {
-  let id: String
-  let version: Int64
-  let threadId: String?
-  let eventType: String
-  let payload: AnyJSON?
-
-  enum CodingKeys: String, CodingKey {
-    case id
-    case version
-    case threadId = "thread_id"
-    case eventType = "event_type"
-    case payload
-  }
-
-  func toFriendInboxSyncEvent() throws -> FriendInboxSyncEvent {
-    guard let resolvedEventType = FriendInboxSyncEvent.EventType(rawValue: eventType) else {
-      throw DecodingError.dataCorrupted(
-        .init(codingPath: [], debugDescription: "Unsupported inbox event type: \(eventType)")
-      )
-    }
-
-    let thread: FriendThread? =
-      if resolvedEventType == .threadUpserted, let payload {
-        try Self.decode(payload, as: MessagingThreadSummaryRow.self).toFriendThread()
-      } else {
-        nil
-      }
-
-    return FriendInboxSyncEvent(
-      id: id,
-      version: version,
-      threadId: threadId,
-      eventType: resolvedEventType,
-      thread: thread
-    )
-  }
-
-  private static func decode<T: Decodable>(_ value: AnyJSON, as type: T.Type) throws -> T {
-    let data: Data = try kCanonicalJSONEncoder.encode(value)
-    return try kSyncJSONDecoder.decode(type, from: data)
-  }
-}
-
-private struct MessagingThreadSyncEventRow: Decodable {
-  let id: String
-  let version: Int64
-  let eventType: String
-  let payload: AnyJSON?
-
-  enum CodingKeys: String, CodingKey {
-    case id
-    case version
-    case eventType = "event_type"
-    case payload
-  }
-
-  func toFriendThreadSyncEvent() throws -> FriendThreadSyncEvent {
-    guard let resolvedEventType = FriendThreadSyncEvent.EventType(rawValue: eventType) else {
-      throw DecodingError.dataCorrupted(
-        .init(codingPath: [], debugDescription: "Unsupported thread event type: \(eventType)")
-      )
-    }
-
-    let message: FriendMessage?
-    let deletedMessageId: String?
-
-    switch resolvedEventType {
-    case .messageUpserted:
-      guard let payload else {
-        throw DecodingError.valueNotFound(
-          AnyJSON.self,
-          .init(codingPath: [], debugDescription: "Missing message payload for message_upserted")
-        )
-      }
-      message = try Self.decode(payload, as: MessagingMessageRow.self).toFriendMessage()
-      deletedMessageId = nil
-
-    case .messageDeleted:
-      guard let payload else {
-        throw DecodingError.valueNotFound(
-          AnyJSON.self,
-          .init(codingPath: [], debugDescription: "Missing tombstone payload for message_deleted")
-        )
-      }
-      let tombstone = try Self.decode(payload, as: MessagingDeletedMessageRow.self)
-      message = nil
-      deletedMessageId = tombstone.id
-    }
-
-    return FriendThreadSyncEvent(
-      id: id,
-      version: version,
-      eventType: resolvedEventType,
-      message: message,
-      deletedMessageId: deletedMessageId
-    )
-  }
-
-  private static func decode<T: Decodable>(_ value: AnyJSON, as type: T.Type) throws -> T {
-    let data: Data = try kCanonicalJSONEncoder.encode(value)
-    return try kSyncJSONDecoder.decode(type, from: data)
-  }
-}
-
-private struct MessagingMessageCursorRow: Decodable {
-  let beforeCreatedAt: Date
+struct MessagingMessageCursorRow: Decodable {
+  let beforeCreatedAt: ConvexTimestamp
   let beforeMessageId: String
 
   enum CodingKeys: String, CodingKey {
@@ -1374,7 +818,7 @@ private struct MessagingMessageCursorRow: Decodable {
   }
 
   func toFriendMessageCursor() -> FriendMessageCursor {
-    FriendMessageCursor(createdAt: beforeCreatedAt, messageId: beforeMessageId)
+    FriendMessageCursor(createdAt: beforeCreatedAt.date, messageId: beforeMessageId)
   }
 }
 
@@ -1386,10 +830,11 @@ struct MessagingMessageRow: Decodable {
   let body: String?
   let clientId: String
   let replyToMessageId: String?
-  let createdAt: Date
-  let editedAt: Date?
-  let deletedAt: Date?
+  let createdAt: ConvexTimestamp
+  let editedAt: ConvexTimestamp?
+  let deletedAt: ConvexTimestamp?
   let metadata: AnyJSON?
+  let revision: Int64?
   let attachments: [MessagingAttachmentRow]
   let reactions: [MessagingReactionRow]?
 
@@ -1405,6 +850,7 @@ struct MessagingMessageRow: Decodable {
     case editedAt = "edited_at"
     case deletedAt = "deleted_at"
     case metadata
+    case revision
     case attachments
     case reactions
   }
@@ -1418,9 +864,9 @@ struct MessagingMessageRow: Decodable {
       body: body,
       clientId: clientId.lowercased(),
       replyToMessageId: replyToMessageId,
-      createdAt: createdAt,
-      editedAt: editedAt,
-      deletedAt: deletedAt,
+      createdAt: createdAt.date,
+      editedAt: editedAt?.date,
+      deletedAt: deletedAt?.date,
       metadataData: Self.encode(metadata),
       attachments: attachments.map { $0.toFriendAttachment() },
       reactions: (reactions ?? []).map { $0.toFriendReaction() },
@@ -1432,18 +878,6 @@ struct MessagingMessageRow: Decodable {
   private static func encode(_ value: AnyJSON?) -> Data? {
     guard let value else { return nil }
     return try? JSONEncoder().encode(value)
-  }
-}
-
-private struct MessagingDeletedMessageRow: Decodable {
-  let id: String
-  let threadId: String
-  let deletedAt: Date
-
-  enum CodingKeys: String, CodingKey {
-    case id
-    case threadId = "thread_id"
-    case deletedAt = "deleted_at"
   }
 }
 
@@ -1471,21 +905,20 @@ struct MessagingAttachmentRow: Decodable {
   let id: String
   let attachmentIndex: Int
   let kind: String
-  let storageBucket: String
-  let storagePath: String
+  /// Where the image downloads from, `{CONVEX_SITE_URL}/attachments/<id>`.
+  let url: String
   let mimeType: String
   let byteSize: Int64
   let width: Int?
   let height: Int?
-  let createdAt: Date
+  let createdAt: ConvexTimestamp
   let reactions: [MessagingReactionRow]?
 
   enum CodingKeys: String, CodingKey {
     case id
     case attachmentIndex = "attachment_index"
     case kind
-    case storageBucket = "storage_bucket"
-    case storagePath = "storage_path"
+    case url
     case mimeType = "mime_type"
     case byteSize = "byte_size"
     case width
@@ -1494,18 +927,20 @@ struct MessagingAttachmentRow: Decodable {
     case reactions
   }
 
+  /// The model still has the storage fields from Supabase. The URL goes in `storagePath`, which
+  /// is also the image cache key.
   func toFriendAttachment() -> FriendMessageAttachment {
     FriendMessageAttachment(
       id: id,
       attachmentIndex: attachmentIndex,
       kind: FriendMessageAttachmentKind(rawValue: kind) ?? .image,
-      storageBucket: storageBucket,
-      storagePath: storagePath,
+      storageBucket: "attachments",
+      storagePath: url,
       mimeType: mimeType,
       byteSize: byteSize,
       width: width,
       height: height,
-      createdAt: createdAt,
+      createdAt: createdAt.date,
       reactions: (reactions ?? []).map { $0.toFriendReaction() }
     )
   }
@@ -1515,9 +950,9 @@ struct MessagingThreadUserStateRow: Decodable {
   let threadId: String
   let userId: String
   let lastReadMessageId: String?
-  let lastReadAt: Date?
+  let lastReadAt: ConvexTimestamp?
   let muted: Bool
-  let updatedAt: Date
+  let updatedAt: ConvexTimestamp
   let unreadCount: Int?
 
   enum CodingKeys: String, CodingKey {
@@ -1535,10 +970,17 @@ struct MessagingThreadUserStateRow: Decodable {
       threadId: threadId,
       userId: userId,
       lastReadMessageId: lastReadMessageId,
-      lastReadAt: lastReadAt,
+      lastReadAt: lastReadAt?.date,
       muted: muted,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt.date,
       unreadCount: unreadCount
     )
   }
+}
+
+extension FriendsMessagingService {
+  /// Message sync states saved before the move to Convex hold event versions of the old
+  /// server. A state with this `retainedFromVersion` holds a Convex revision, and the
+  /// coordinator ignores any other, so the first sync after the update loads a full snapshot.
+  nonisolated static let revisionCursorMarker: Int64 = -1
 }  // swiftlint:disable:this file_length

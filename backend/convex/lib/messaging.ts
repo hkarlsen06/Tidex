@@ -318,5 +318,7 @@ export async function threadSummary(ctx: QueryCtx, thread: Doc<"threads">, viewe
     unread_count: state?.unread_count ?? 0,
     muted: state?.muted ?? false,
     created_at: thread.created_at,
+    // The app orders unread counts and mute by this, so a stale summary can't overwrite a newer one.
+    viewer_state_updated_at: state?.updated_at ?? null,
   };
 }
