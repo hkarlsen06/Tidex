@@ -588,12 +588,16 @@ extension JobsRepository {
     jobId: String, userId: String, confirmationToken: String?
   ) async throws -> JobDeletionPreview {
     struct Args: Encodable, Sendable {
-      let job_id: String
-      let confirmation_token: String?
+      let jobId: String
+      let confirmationToken: String?
+      enum CodingKeys: String, CodingKey {
+        case jobId = "job_id"
+        case confirmationToken = "confirmation_token"
+      }
     }
     do {
       let response: JobDeletionPreview = try await ConvexAPI.app.mutation(
-        "jobs:deleteArchived", Args(job_id: jobId, confirmation_token: confirmationToken))
+        "jobs:deleteArchived", Args(jobId: jobId, confirmationToken: confirmationToken))
       guard response.jobId == jobId, response.userId == userId else {
         throw JobsRepositoryError.jobNotFound
       }
