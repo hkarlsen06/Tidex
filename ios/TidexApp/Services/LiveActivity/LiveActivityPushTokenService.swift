@@ -1,6 +1,5 @@
 import ActivityKit
 import Foundation
-import Supabase
 import UIKit
 import os
 
@@ -34,6 +33,46 @@ final class LiveActivityPushTokenService {
   private var activityPushTokenTasks: [String: Task<Void, Never>] = [:]
   private var activityStateTasks: [String: Task<Void, Never>] = [:]
   private var locallyStartedActivityIds: Set<String> = []
+
+  private struct DeviceArgs: Encodable, Sendable {
+    let deviceId: String
+    enum CodingKeys: String, CodingKey { case deviceId = "device_id" }
+  }
+
+  private struct RegisterDeviceArgs: Encodable, Sendable {
+    let deviceId: String
+    let pushToStartToken: String
+    let timeZone: String
+    let appVersion: String?
+    enum CodingKeys: String, CodingKey {
+      case deviceId = "device_id"
+      case pushToStartToken = "push_to_start_token"
+      case timeZone = "time_zone"
+      case appVersion = "app_version"
+    }
+  }
+
+  private struct UpdateTokenArgs: Encodable, Sendable {
+    let deviceId: String
+    let shiftId: String
+    let activityId: String
+    let pushToken: String
+    enum CodingKeys: String, CodingKey {
+      case deviceId = "device_id"
+      case shiftId = "shift_id"
+      case activityId = "activity_id"
+      case pushToken = "push_token"
+    }
+  }
+
+  private struct EndActivityArgs: Encodable, Sendable {
+    let deviceId: String
+    let activityId: String
+    enum CodingKeys: String, CodingKey {
+      case deviceId = "device_id"
+      case activityId = "activity_id"
+    }
+  }
 
   private init() {}
 
@@ -117,12 +156,9 @@ final class LiveActivityPushTokenService {
     guard await hasAuthenticatedRegistrationContext() else { return }
 
     do {
-      try await supabase
-        .rpc(
-          "unregister_live_activity_device",
-          params: ["p_device_id": deviceId()]
-        )
-        .execute()
+      _ = try await ConvexAPI.app.mutation(
+        "devices:unregisterLiveActivityDevice", DeviceArgs(deviceId: deviceId()),
+        as: ConvexAPI.Ignored.self)
     } catch {
       liveActivityPushLogger.warning(
         "Failed to unregister Live Activity device: \(error.localizedDescription, privacy: .public)"
@@ -203,19 +239,16 @@ extension LiveActivityPushTokenService {
   private func registerPushToStartToken(_ token: String) async {
     guard await hasAuthenticatedRegistrationContext() else { return }
 
-    var params: [String: AnyJSON] = [
-      "p_device_id": .string(deviceId()),
-      "p_push_to_start_token": .string(token),
-      "p_time_zone": .string(TimeZone.current.identifier),
-    ]
-    if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-      params["p_app_version"] = .string(appVersion)
-    }
+    let args = RegisterDeviceArgs(
+      deviceId: deviceId(),
+      pushToStartToken: token,
+      timeZone: TimeZone.current.identifier,
+      appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+    )
 
     do {
-      try await supabase
-        .rpc("register_live_activity_device", params: params)
-        .execute()
+      _ = try await ConvexAPI.app.mutation(
+        "devices:registerLiveActivityDevice", args, as: ConvexAPI.Ignored.self)
     } catch {
       liveActivityPushLogger.warning(
         "Failed to register push-to-start token: \(error.localizedDescription, privacy: .public)"
@@ -239,17 +272,16 @@ extension LiveActivityPushTokenService {
   private func registerUpdateToken(_ pendingToken: PendingUpdateToken) async {
     guard await hasAuthenticatedRegistrationContext() else { return }
 
-    let params: [String: AnyJSON] = [
-      "p_device_id": .string(deviceId()),
-      "p_shift_id": .string(pendingToken.shiftId),
-      "p_activity_id": .string(pendingToken.activityId),
-      "p_push_token": .string(pendingToken.pushToken),
-    ]
+    let args = UpdateTokenArgs(
+      deviceId: deviceId(),
+      shiftId: pendingToken.shiftId,
+      activityId: pendingToken.activityId,
+      pushToken: pendingToken.pushToken
+    )
 
     do {
-      try await supabase
-        .rpc("register_live_activity_update_token", params: params)
-        .execute()
+      _ = try await ConvexAPI.app.mutation(
+        "devices:registerLiveActivityUpdateToken", args, as: ConvexAPI.Ignored.self)
       removePendingUpdateToken(activityId: pendingToken.activityId)
     } catch {
       liveActivityPushLogger.warning(
@@ -263,13 +295,10 @@ extension LiveActivityPushTokenService {
 
     if await hasAuthenticatedRegistrationContext() {
       do {
-        let params: [String: AnyJSON] = [
-          "p_device_id": .string(deviceId()),
-          "p_activity_id": .string(activity.id),
-        ]
-        try await supabase
-          .rpc("end_live_activity_registration", params: params)
-          .execute()
+        _ = try await ConvexAPI.app.mutation(
+          "devices:endLiveActivity",
+          EndActivityArgs(deviceId: deviceId(), activityId: activity.id),
+          as: ConvexAPI.Ignored.self)
       } catch {
         liveActivityPushLogger.warning(
           "Failed to end Live Activity registration: \(error.localizedDescription, privacy: .public)"

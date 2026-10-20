@@ -6,8 +6,8 @@ import { reject } from "./lib/syncWrite";
 import { literals } from "./lib/validators";
 
 // Ports of register_push_device, unregister_my_push_device,
-// register_live_activity_device, register_live_activity_update_token and
-// end_live_activity_registration.
+// register_live_activity_device, register_live_activity_update_token,
+// end_live_activity_registration and unregister_live_activity_device.
 
 const HEX_TOKEN = /^[0-9A-Fa-f]{32,512}$/;
 
@@ -264,6 +264,32 @@ export const endLiveActivity = mutation({
           updated_at: now,
         });
       }
+    }
+    return null;
+  },
+});
+
+/** Sign-out: stops Live Activity pushes to this device without deleting its push row. */
+export const unregisterLiveActivityDevice = mutation({
+  args: { device_id: v.string() },
+  handler: async (ctx, { device_id }) => {
+    const { user } = await requireViewer(ctx);
+    const now = new Date().toISOString();
+    for (const device of (await ownDevices(ctx, user.id)).filter((d) => d.device_id === device_id)) {
+      for (const d of await ctx.db
+        .query("live_activity_deliveries")
+        .withIndex("by_push_device_shift", (q) => q.eq("push_device_id", device.id))
+        .collect()) {
+        if (!["starting", "active", "ending"].includes(d.status)) continue;
+        await ctx.db.patch(d._id, {
+          status: "failed",
+          claimed_at: undefined,
+          update_token: undefined,
+          last_error: "Live Activity device unregistered",
+          updated_at: now,
+        });
+      }
+      await ctx.db.patch(device._id, { live_activity_push_to_start_token: undefined, updated_at: now });
     }
     return null;
   },
