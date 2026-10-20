@@ -1,4 +1,3 @@
-import Supabase
 import SwiftData
 import XCTest
 
@@ -179,18 +178,24 @@ internal final class SyncPushMergeTests: XCTestCase {
   // MARK: - B: row rejections do not stop the sync
 
   internal func testServerDataRejectionsAreRowLevel() {
-    for code in ["P0001", "23505", "23503", "22P02", "42501"] {
+    let codes = [
+      "invalid_row", "currency_immutable", "default_job_exists", "job_has_active_dependents",
+      "job_not_available", "id_taken",
+    ]
+    for code in codes {
       XCTAssertTrue(
-        SyncCoordinator.isRowRejection(PostgrestError(code: code, message: "rejected")), code)
+        SyncCoordinator.isRowRejection(ConvexAPI.Failure.server(code: code, message: "rejected")),
+        code)
     }
     XCTAssertTrue(
       SyncCoordinator.isRowRejection(SyncEncodingError.emptyUpdatePayload(type: "user_shifts")))
   }
 
   internal func testTransportAndAuthErrorsStillStopTheSync() {
+    XCTAssertFalse(SyncCoordinator.isRowRejection(ConvexAPI.Failure.notSignedIn))
+    XCTAssertFalse(SyncCoordinator.isRowRejection(ConvexAPI.Failure.badResponse(status: 502)))
     XCTAssertFalse(
-      SyncCoordinator.isRowRejection(PostgrestError(code: "PGRST301", message: "JWT expired")))
-    XCTAssertFalse(SyncCoordinator.isRowRejection(PostgrestError(message: "no code")))
+      SyncCoordinator.isRowRejection(ConvexAPI.Failure.server(code: nil, message: "Server Error")))
     XCTAssertFalse(SyncCoordinator.isRowRejection(URLError(.timedOut)))
     XCTAssertFalse(SyncCoordinator.isRowRejection(CancellationError()))
   }

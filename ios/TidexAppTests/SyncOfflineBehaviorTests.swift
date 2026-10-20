@@ -525,24 +525,21 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
 
   // MARK: - Pull poison row
 
-  internal func testCursorSkipsTrailingRowWithBadTimestamp() throws {
-    let good = "2026-03-02T09:00:00.000Z"
-    let position = SyncCoordinator.lastParseableCursorPosition(
-      [(updatedAt: good, id: "a"), (updatedAt: "not-a-date", id: "b")],
-      table: .userShifts
-    )
+  internal func testConvexCursorResetStartsEveryTableAtZeroOnce() {
+    let state = LocalSyncState(userId: userId, lastRevisionUserShifts: 812, lastRevisionJobs: 9)
+    state.updateCursor(for: .events, to: 40)
+    XCTAssertNil(state.convexCursorsResetAt)
 
-    XCTAssertEqual(position?.id, "a")
-    XCTAssertEqual(position?.updatedAt, ISO8601Timestamp.date(from: good))
-  }
+    state.resetCursorsForConvex(at: Date(timeIntervalSince1970: 5))
 
-  internal func testCursorIsNilWhenNoTimestampParses() {
-    let position = SyncCoordinator.lastParseableCursorPosition(
-      [(updatedAt: "bad", id: "a"), (updatedAt: "worse", id: "b")],
-      table: .userShifts
-    )
+    for table in SyncTable.allCases {
+      XCTAssertEqual(state.cursor(for: table), 0, table.rawValue)
+    }
+    XCTAssertEqual(state.convexCursorsResetAt, Date(timeIntervalSince1970: 5))
 
-    XCTAssertNil(position)
+    state.updateCursor(for: .jobs, to: 7)
+    XCTAssertEqual(state.cursor(for: .jobs), 7)
+    XCTAssertEqual(state.cursor(for: .userShifts), 0)
   }
 
   internal func testOnlyDataErrorsCountAsUnreadableRows() {
