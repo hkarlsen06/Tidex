@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
+import { checkColumns } from "./lib/columns";
 import { nextRevision } from "./lib/revision";
 import { publicRow, reject } from "./lib/syncWrite";
 
@@ -17,6 +18,7 @@ export const upsert = mutation({
   handler: async (ctx, args) => {
     const { user } = await requireViewer(ctx);
     if ((args.shift_reminder_minutes_array?.length ?? 0) > 4) reject("invalid_row", "max_four_reminders");
+    checkColumns("notification_preferences", args);
     const existing = await ctx.db
       .query("notification_preferences")
       .withIndex("by_user_revision", (q) => q.eq("user_id", user.id))

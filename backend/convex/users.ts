@@ -127,7 +127,7 @@ export const linkOrCreate = internalMutation({
       before_paywall: true,
       created_at: now,
       updated_at: now,
-      revision,
+      revision: await nextRevision(ctx),
     });
     return id;
   },

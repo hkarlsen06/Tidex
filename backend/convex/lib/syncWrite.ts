@@ -3,6 +3,7 @@ import type { Doc } from "../_generated/dataModel";
 import { type MutationCtx, mutation } from "../_generated/server";
 import schema from "../schema";
 import { requireViewer } from "./auth";
+import { checkColumns } from "./columns";
 import { nextRevision } from "./revision";
 
 // Writes for the synced tables keyed by `id`. They keep the contract the app's sync
@@ -33,15 +34,10 @@ export type Hooks<T extends IdTable> = {
     prev: Doc<T> | null,
     changed: ReadonlySet<string>,
   ) => Promise<void>;
-  /** Runs after an insert or update, with the revision the write used. */
-  afterWrite?: (
-    ctx: MutationCtx,
-    row: Doc<T>,
-    changed: ReadonlySet<string>,
-    revision: number,
-  ) => Promise<void>;
+  /** Runs after an insert or update. Every other row it changes needs nextRevision(). */
+  afterWrite?: (ctx: MutationCtx, row: Doc<T>, changed: ReadonlySet<string>) => Promise<void>;
   beforeRemove?: (ctx: MutationCtx, row: Doc<T>) => Promise<void>;
-  afterRemove?: (ctx: MutationCtx, row: Doc<T>, revision: number) => Promise<void>;
+  afterRemove?: (ctx: MutationCtx, row: Doc<T>) => Promise<void>;
   /** Extra fields a remove sets, such as is_default: false on jobs. */
   removePatch?: Partial<Doc<T>>;
 };
@@ -92,6 +88,7 @@ export function syncedTable<T extends IdTable>(
         if (existing.user_id !== user.id) reject("id_taken");
         return { status: "exists" as const, row: publicRow(existing) };
       }
+      checkColumns(table, row);
       const now = new Date().toISOString();
       const revision = await nextRevision(ctx);
       const doc = {
@@ -105,7 +102,7 @@ export function syncedTable<T extends IdTable>(
       const changed = new Set(Object.keys(row));
       await hooks.check?.(ctx, doc, null, changed);
       const saved: Doc<T> = await db(ctx).get(await db(ctx).insert(table, doc));
-      await hooks.afterWrite?.(ctx, saved, changed, revision);
+      await hooks.afterWrite?.(ctx, saved, changed);
       return { status: "ok" as const, row: publicRow(saved as any) };
     },
   });
@@ -132,6 +129,7 @@ export function syncedTable<T extends IdTable>(
       if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
         return { status: "conflict" as const, row: publicRow(prev) };
       }
+      checkColumns(table, args.set);
       const cleared = Object.fromEntries((args.clear ?? []).map((k) => [k, undefined]));
       const revision = await nextRevision(ctx);
       const patch = { ...args.set, ...cleared, updated_at: new Date().toISOString(), revision };
@@ -141,7 +139,7 @@ export function syncedTable<T extends IdTable>(
       await hooks.check?.(ctx, next, prev, changed);
       await db(ctx).patch(prev._id, patch);
       const saved: Doc<T> = await db(ctx).get(prev._id);
-      await hooks.afterWrite?.(ctx, saved, changed, revision);
+      await hooks.afterWrite?.(ctx, saved, changed);
       return { status: "ok" as const, row: publicRow(saved as any) };
     },
   });
@@ -161,7 +159,7 @@ export function syncedTable<T extends IdTable>(
       const revision = await nextRevision(ctx);
       await db(ctx).patch(prev._id, { ...hooks.removePatch, deleted_at: now, updated_at: now, revision });
       const saved: Doc<T> = await db(ctx).get(prev._id);
-      await hooks.afterRemove?.(ctx, saved, revision);
+      await hooks.afterRemove?.(ctx, saved);
       return { status: "ok" as const, row: publicRow(saved as any) };
     },
   });

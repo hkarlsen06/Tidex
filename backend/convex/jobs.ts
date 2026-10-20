@@ -1,5 +1,6 @@
 import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import { nextRevision } from "./lib/revision";
 import { chars, reject, syncedTable } from "./lib/syncWrite";
 
 const PAY_START_DAY = /^([1-9]|1[0-9]|2[0-8])$/;
@@ -79,7 +80,7 @@ export const { insert, update, remove } = syncedTable(
 
     // sync_default_job_to_legacy_settings: the default job's pay settings live in
     // user_settings too, for older code that still reads them there.
-    afterWrite: async (ctx, job, changed, revision) => {
+    afterWrite: async (ctx, job, changed) => {
       const mirrored = ["payroll_day", "half_tax_month", "monthly_goal", "is_default", "currency"];
       if (!job.is_default || !mirrored.some((k) => changed.has(k))) return;
       const settings = await userSettings(ctx, job.user_id);
@@ -90,7 +91,7 @@ export const { insert, update, remove } = syncedTable(
         monthly_goal: job.monthly_goal,
         currency: job.currency,
         updated_at: new Date().toISOString(),
-        revision,
+        revision: await nextRevision(ctx),
       });
     },
 
@@ -115,14 +116,18 @@ export const { insert, update, remove } = syncedTable(
     },
 
     // set_wage_snapshots_deleted_at_from_job
-    afterRemove: async (ctx, job, revision) => {
+    afterRemove: async (ctx, job) => {
       const snapshots = await ctx.db
         .query("wage_snapshots")
         .withIndex("by_job", (q) => q.eq("job_id", job.id))
         .collect();
       for (const s of snapshots) {
         if (s.deleted_at === job.deleted_at) continue;
-        await ctx.db.patch(s._id, { deleted_at: job.deleted_at, updated_at: job.updated_at, revision });
+        await ctx.db.patch(s._id, {
+          deleted_at: job.deleted_at,
+          updated_at: job.updated_at,
+          revision: await nextRevision(ctx),
+        });
       }
     },
 

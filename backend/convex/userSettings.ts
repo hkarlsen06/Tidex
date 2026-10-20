@@ -3,6 +3,7 @@ import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
 import { nextRevision } from "./lib/revision";
+import { checkColumns } from "./lib/columns";
 import { publicRow, reject } from "./lib/syncWrite";
 import schema from "./schema";
 
@@ -65,7 +66,7 @@ function check(settings: Doc<"user_settings">) {
 
 // sync_legacy_settings_to_default_job: the default job takes the pay settings, and the
 // settings take the default job's currency, because a job's currency never changes.
-async function mirrorToDefaultJob(ctx: MutationCtx, settings: Doc<"user_settings">, revision: number) {
+async function mirrorToDefaultJob(ctx: MutationCtx, settings: Doc<"user_settings">) {
   const job = (
     await ctx.db
       .query("jobs")
@@ -79,7 +80,7 @@ async function mirrorToDefaultJob(ctx: MutationCtx, settings: Doc<"user_settings
     half_tax_month: settings.half_tax_month,
     monthly_goal: settings.monthly_goal,
     updated_at: now,
-    revision,
+    revision: await nextRevision(ctx),
   });
   if (settings.currency !== job.currency) {
     await ctx.db.patch(settings._id, { currency: job.currency, updated_at: now });
@@ -96,6 +97,7 @@ export const insert = mutation({
     const { user } = await requireViewer(ctx);
     const existing = await ownSettings(ctx, user.id);
     if (existing !== null) return { status: "exists" as const, row: await settingsRow(ctx, existing) };
+    checkColumns("user_settings", row);
     const now = new Date().toISOString();
     const revision = await nextRevision(ctx);
     const doc = {
@@ -120,7 +122,7 @@ export const insert = mutation({
     };
     check(doc as Doc<"user_settings">);
     const saved = (await ctx.db.get(await ctx.db.insert("user_settings", doc)))!;
-    await mirrorToDefaultJob(ctx, saved, revision);
+    await mirrorToDefaultJob(ctx, saved);
     return { status: "ok" as const, row: await settingsRow(ctx, (await ctx.db.get(saved._id))!) };
   },
 });
@@ -138,6 +140,7 @@ export const update = mutation({
     if (prev.revision !== args.expected_revision) {
       return { status: "conflict" as const, row: await settingsRow(ctx, prev) };
     }
+    checkColumns("user_settings", args.set);
     const cleared = Object.fromEntries((args.clear ?? []).map((k) => [k, undefined]));
     const revision = await nextRevision(ctx);
     const patch = { ...args.set, ...cleared, updated_at: new Date().toISOString(), revision };
@@ -147,7 +150,7 @@ export const update = mutation({
     await ctx.db.patch(prev._id, patch);
     const changed = [...Object.keys(args.set), ...Object.keys(cleared)];
     if (mirrored.some((k) => changed.includes(k))) {
-      await mirrorToDefaultJob(ctx, (await ctx.db.get(prev._id))!, revision);
+      await mirrorToDefaultJob(ctx, (await ctx.db.get(prev._id))!);
     }
     return { status: "ok" as const, row: await settingsRow(ctx, (await ctx.db.get(prev._id))!) };
   },

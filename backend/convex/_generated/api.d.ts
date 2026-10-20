@@ -13,6 +13,7 @@ import type * as events from "../events.js";
 import type * as jobs from "../jobs.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_clerk from "../lib/clerk.js";
+import type * as lib_columns from "../lib/columns.js";
 import type * as lib_revision from "../lib/revision.js";
 import type * as lib_syncWrite from "../lib/syncWrite.js";
 import type * as lib_validators from "../lib/validators.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   jobs: typeof jobs;
   "lib/auth": typeof lib_auth;
   "lib/clerk": typeof lib_clerk;
+  "lib/columns": typeof lib_columns;
   "lib/revision": typeof lib_revision;
   "lib/syncWrite": typeof lib_syncWrite;
   "lib/validators": typeof lib_validators;

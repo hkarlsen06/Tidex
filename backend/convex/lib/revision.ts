@@ -1,8 +1,9 @@
 import type { MutationCtx } from "../_generated/server";
 
 /**
- * Returns the next revision. Call it once per mutation and stamp every row the mutation
- * writes with the result.
+ * Returns the next revision. Call it once for every row a mutation writes, so no two
+ * rows share a revision. Pages end at a row, and with shared revisions the next page's
+ * `revision > cursor` would skip the rest of a group, such as a job's cascaded snapshots.
  *
  * Every mutation that calls this reads and writes the same counter document, so Convex
  * commits them one at a time in revision order. A query that sees revision N therefore
