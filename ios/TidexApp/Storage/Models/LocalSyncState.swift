@@ -397,4 +397,6 @@ enum SyncReason: String {
   case manualRefresh = "manual_refresh"
   /// Sync after local changes (e.g., adding a shift)
   case localChange = "local_change"
+  /// The server has newer rows than the local cursors, seen by `SyncRevisionWatcher`
+  case remoteChange = "remote_change"
 }

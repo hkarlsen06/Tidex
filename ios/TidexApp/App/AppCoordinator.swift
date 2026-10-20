@@ -229,6 +229,9 @@ final class AppCoordinator {
       .sink { _ in
         Task { @MainActor in
           await FriendsMessagingRealtimeCoordinator.shared.handleAppDidBecomeActive()
+          if let userId = self.userId, !userId.isEmpty {
+            await SyncRevisionWatcher.shared.start(userId: userId)
+          }
         }
       }
   }
@@ -242,7 +245,10 @@ final class AppCoordinator {
         await FriendsMessagingRealtimeCoordinator.shared.startForAuthenticatedUser(
           viewerUserId: currentUserId
         )
+        // After messaging, whose start can sign the shared client out when the user changed.
+        await SyncRevisionWatcher.shared.start(userId: currentUserId)
       } else {
+        SyncRevisionWatcher.shared.stop()
         await FriendsMessagingRealtimeCoordinator.shared.stopForAuthenticatedUser()
       }
     }
@@ -1088,6 +1094,7 @@ final class AppCoordinator {
     // Stop messaging realtime first so in-flight callbacks can't write the previous
     // user's threads back after the local store is reset.
     friendsRealtimeTask?.cancel()
+    SyncRevisionWatcher.shared.stop()
     await FriendsMessagingRealtimeCoordinator.shared.stopForAuthenticatedUser()
 
     // Cancel all tracked background tasks to prevent stale state updates
