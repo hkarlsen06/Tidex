@@ -5,7 +5,6 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_magic_numbers prefixed_toplevel_constant required_deinit
 import Foundation
-import GoogleSignIn
 import Intents
 import UIKit
 import os.log
@@ -87,27 +86,10 @@ final class AppLifecycleHandler {
   // MARK: - URL Handling
 
   func handleOpenURL(_ url: URL) {
-    if GIDSignIn.sharedInstance.handle(url) {
-      return
-    }
-
-    let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-    let isAuthCallback =
-      url.host == "login-callback"
-      || queryItems.contains(where: {
-        $0.name == "code" || $0.name == "access_token" || $0.name == "refresh_token"
-      })
-
-    if url.scheme == "tidex", isAuthCallback {
-      Task { @MainActor in
-        await handleSupabaseCallback(url)
-      }
-      return
-    }
-
+    // Clerk's web sign-in (Google) returns to its own ASWebAuthenticationSession, so only the
+    // app's own tidex:// links arrive here.
     if url.scheme == "tidex" {
       handleDeepLink(url)
-      return
     }
   }
 
@@ -124,19 +106,6 @@ final class AppLifecycleHandler {
 
     print("[AppLifecycleHandler] Received Universal Link: \(url)")
     handleDeepLink(url)
-  }
-
-  private func handleSupabaseCallback(_ url: URL) async {
-    let isRecovery = Self.isPasswordRecoveryCallback(url)
-    do {
-      _ = try await supabase.auth.session(from: url)
-      print("[AppLifecycleHandler] Auth callback handled: \(url)")
-      if isRecovery {
-        NotificationCenter.default.post(name: .tidexPasswordRecoveryRequested, object: nil)
-      }
-    } catch {
-      print("[AppLifecycleHandler] Auth callback failed: \(error)")
-    }
   }
 
   private func handleDeepLink(_ url: URL) {
@@ -204,34 +173,5 @@ final class AppLifecycleHandler {
     }
 
     return value
-  }
-
-  /// Implicit-flow recovery links carry `type=recovery`. PKCE links only carry a code,
-  /// so the reset email redirects to tidex://login-callback/recovery instead.
-  nonisolated static func isPasswordRecoveryCallback(_ url: URL) -> Bool {
-    authCallbackParameters(from: url)["type"] == "recovery" || url.path == "/recovery"
-  }
-
-  private nonisolated static func authCallbackParameters(from url: URL) -> [String: String] {
-    var parameters: [String: String] = [:]
-
-    if let fragment = url.fragment {
-      parameters.merge(parseQueryString(fragment)) { _, new in new }
-    }
-
-    if let query = url.query {
-      parameters.merge(parseQueryString(query)) { _, new in new }
-    }
-
-    return parameters
-  }
-
-  private nonisolated static func parseQueryString(_ queryString: String) -> [String: String] {
-    var components = URLComponents()
-    components.percentEncodedQuery = queryString
-
-    return (components.queryItems ?? []).reduce(into: [:]) { parameters, item in
-      parameters[item.name] = item.value
-    }
   }
 }

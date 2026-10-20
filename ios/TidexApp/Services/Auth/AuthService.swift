@@ -1,6 +1,6 @@
-import Auth
+import AuthenticationServices
+import ClerkKit
 import Foundation
-import Supabase
 
 /// Error when session is missing from auth response
 enum AuthError: Error, LocalizedError {
@@ -16,49 +16,54 @@ enum AuthError: Error, LocalizedError {
 
 /// Result of an email signup.
 enum EmailSignupResult {
-  /// The server confirmed the email at once and the client holds a session.
+  /// Clerk completed the signup at once and the client holds a session.
   case signedIn
-  /// The server sent a confirmation code and returned no session yet.
+  /// Clerk sent a verification code and the signup needs it before a session exists.
   case needsVerification
-  /// The email already has a confirmed account. With autoconfirm off, GoTrue hides this
-  /// behind a user with no identities and sends no code.
+  /// The email already has an account.
   case alreadyRegistered
+}
+
+/// Result of an email and password sign-in.
+enum EmailSignInResult {
+  case signedIn
+  /// Clerk wants a code from the sign-in email first, for example on a device it has not seen.
+  case needsEmailCode
 }
 
 /// The email and password calls that the signup and login view models make.
 /// `AuthService` conforms, and tests substitute a stub.
 @MainActor
 protocol EmailAuthProviding: AnyObject {
-  func signInWithPassword(email: String, password: String) async throws -> Session
-  func signUpWithEmail(email: String, password: String, fullName: String?) async throws
-    -> EmailSignupResult
-  func verifySignupCode(email: String, token: String) async throws
-  func resendSignupCode(email: String) async throws
+  func signInWithPassword(email: String, password: String) async throws -> EmailSignInResult
+  func verifySignInCode(_ code: String) async throws
+  func resendSignInCode() async throws
+  func signUpWithEmail(email: String, password: String, firstName: String?, lastName: String?)
+    async throws -> EmailSignupResult
+  func verifySignupCode(_ code: String) async throws
+  func resendSignupCode() async throws
 }
 
 /// Authentication service for native iOS login
-/// Wraps Supabase auth operations and handles session management
+/// Wraps Clerk auth operations. The screens call this and nothing else in Clerk's sign-in API.
 ///
-/// Note: Auth state listening is centralized in `AppCoordinator` which handles
-/// all navigation state transitions (loading -> auth -> MFA -> authenticated).
+/// Note: Auth state listening is centralized in `AppCoordinator`, which handles all
+/// navigation state transitions (loading -> auth -> authenticated).
 /// This service focuses purely on auth operations without duplicating state listening.
 @MainActor
 final class AuthService: EmailAuthProviding {
   static let shared = AuthService()
-  // ponytail: production has no SMS provider since the 2026-09 self-hosting move.
-  // Flip back to true once GOTRUE_SMS_* is configured on the auth server.
-  static let isSMSAvailable = false
-  static let passwordRecoveryRedirectURL: URL = {
-    guard let url = URL(string: "tidex://login-callback/recovery") else {
-      preconditionFailure("Invalid password recovery redirect URL")
-    }
-    return url
-  }()
 
   // MARK: - Published State
 
   /// Loading indicator for auth operations
   private(set) var isLoading = false
+
+  // MARK: - Private State
+
+  /// The sign-in that waits for an email code, and the sign-up that waits for its code.
+  private var pendingSignIn: SignIn?
+  private var pendingSignUp: SignUp?
 
   // MARK: - Initialization
 
@@ -66,9 +71,9 @@ final class AuthService: EmailAuthProviding {
 
   // MARK: - Session Management
 
-  /// Get the current session, refreshing if needed.
+  /// Get the current session, resolving the Tidex user if needed.
   /// Uses AuthSessionManager to prevent concurrent refresh race conditions.
-  func getSession() async throws -> Session? {
+  func getSession() async throws -> AuthSession? {
     return try await AuthSessionManager.shared.getSession()
   }
 
@@ -80,388 +85,312 @@ final class AuthService: EmailAuthProviding {
   // MARK: - Email/Password Authentication
 
   /// Sign in with email and password
-  /// - Parameters:
-  ///   - email: User's email address
-  ///   - password: User's password
-  /// - Returns: The authenticated session
-  func signInWithPassword(email: String, password: String) async throws -> Session {
+  /// - Returns: `.signedIn` when Clerk created the session, or `.needsEmailCode` when it sent
+  ///   a code that `verifySignInCode` must check.
+  func signInWithPassword(email: String, password: String) async throws -> EmailSignInResult {
     isLoading = true
     defer { isLoading = false }
 
-    return try await supabase.auth.signIn(
-      email: email,
-      password: password
-    )
-  }
-
-  /// Sign in with phone and password
-  /// - Parameters:
-  ///   - phone: User's phone number in E.164 format
-  ///   - password: User's password
-  /// - Returns: The authenticated session
-  func signInWithPassword(phone: String, password: String) async throws -> Session {
-    isLoading = true
-    defer { isLoading = false }
-
-    return try await supabase.auth.signIn(
-      phone: phone,
-      password: password
-    )
-  }
-
-  // MARK: - Sign Up
-
-  /// Sign up with email and password
-  /// - Parameters:
-  ///   - email: User's email address
-  ///   - password: User's password
-  ///   - fullName: User's full name (optional)
-  /// - Returns: `.signedIn` when the server confirms the email at once (autoconfirm on), or
-  ///   `.needsVerification` when it emailed a code that `verifySignupCode` must check.
-  func signUpWithEmail(email: String, password: String, fullName: String? = nil) async throws
-    -> EmailSignupResult
-  {
-    isLoading = true
-    defer { isLoading = false }
-
-    // Build user metadata
-    let localeCode =
-      Locale.autoupdatingCurrent.language.languageCode?.identifier.lowercased() ?? "en"
-    var data: [String: AnyJSON] = [
-      "terms_accepted_at": .string(Date().toISO8601String()),
-      // Keep metadata locale aligned with current iPhone/app language from first write.
-      "locale": .string(localeCode),
-    ]
-    if let fullName, !fullName.isEmpty {
-      data["full_name"] = .string(fullName)
-    }
-
-    let response = try await supabase.auth.signUp(
-      email: email,
-      password: password,
-      data: data
-    )
-    if response.session != nil {
+    let signIn = try await Clerk.shared.auth.signInWithPassword(
+      identifier: email, password: password)
+    switch signIn.status {
+    case .complete:
       return .signedIn
-    }
-    if response.user.identities?.isEmpty == true {
-      return .alreadyRegistered
-    }
-    return .needsVerification
-  }
 
-  /// Verify the code from the signup confirmation email. The client stores the session it returns.
-  func verifySignupCode(email: String, token: String) async throws {
-    isLoading = true
-    defer { isLoading = false }
+    case .needsSecondFactor, .needsClientTrust:
+      // Authenticator apps and phones are gone, so an email code is the only second factor.
+      guard
+        let factor = signIn.supportedSecondFactors?.first(where: { $0.strategy == .emailCode })
+      else { throw AuthError.sessionMissing }
+      pendingSignIn = try await signIn.sendMfaEmailCode(emailAddressId: factor.emailAddressId)
+      return .needsEmailCode
 
-    let response = try await supabase.auth.verifyOTP(email: email, token: token, type: .signup)
-    guard response.session != nil else {
+    default:
       throw AuthError.sessionMissing
     }
   }
 
-  /// Send a new signup confirmation code.
-  func resendSignupCode(email: String) async throws {
+  /// Check the code from the second-factor email.
+  func verifySignInCode(_ code: String) async throws {
     isLoading = true
     defer { isLoading = false }
 
-    try await supabase.auth.resend(email: email, type: .signup)
+    guard let signIn = pendingSignIn ?? Clerk.shared.auth.currentSignIn else {
+      throw AuthError.sessionMissing
+    }
+    let result = try await signIn.verifyMfaCode(code, type: .emailCode)
+    guard result.status == .complete else { throw AuthError.sessionMissing }
+    pendingSignIn = nil
+  }
+
+  /// Send a new second-factor code.
+  func resendSignInCode() async throws {
+    isLoading = true
+    defer { isLoading = false }
+
+    guard let signIn = pendingSignIn ?? Clerk.shared.auth.currentSignIn else {
+      throw AuthError.sessionMissing
+    }
+    pendingSignIn = try await signIn.sendMfaEmailCode()
+  }
+
+  // MARK: - Sign Up
+
+  /// Sign up with email and password. Clerk creates the user once the emailed code is verified.
+  /// - Returns: `.signedIn` when Clerk needs no code, or `.needsVerification` when it emailed
+  ///   a code that `verifySignupCode` must check, or `.alreadyRegistered` for a known email.
+  func signUpWithEmail(
+    email: String,
+    password: String,
+    firstName: String? = nil,
+    lastName: String? = nil
+  ) async throws -> EmailSignupResult {
+    isLoading = true
+    defer { isLoading = false }
+
+    do {
+      let signUp = try await Clerk.shared.auth.signUp(
+        emailAddress: email,
+        password: password,
+        firstName: firstName?.nilIfEmpty,
+        lastName: lastName?.nilIfEmpty,
+        legalAccepted: true
+      )
+      if signUp.status == .complete {
+        return .signedIn
+      }
+      pendingSignUp = try await signUp.sendEmailCode()
+      return .needsVerification
+    } catch let error as ClerkAPIError where error.code == "form_identifier_exists" {
+      return .alreadyRegistered
+    }
+  }
+
+  /// Verify the code from the signup email. Clerk stores the session it creates.
+  func verifySignupCode(_ code: String) async throws {
+    isLoading = true
+    defer { isLoading = false }
+
+    guard let signUp = pendingSignUp ?? Clerk.shared.auth.currentSignUp else {
+      throw AuthError.sessionMissing
+    }
+    let result = try await signUp.verifyEmailCode(code)
+    guard result.status == .complete else { throw AuthError.sessionMissing }
+    pendingSignUp = nil
+  }
+
+  /// Send a new signup code.
+  func resendSignupCode() async throws {
+    isLoading = true
+    defer { isLoading = false }
+
+    guard let signUp = pendingSignUp ?? Clerk.shared.auth.currentSignUp else {
+      throw AuthError.sessionMissing
+    }
+    pendingSignUp = try await signUp.sendEmailCode()
   }
 
   /// Record that the current authenticated user accepted the current terms.
   func recordTermsAcceptance() async throws {
-    _ = try await supabase.auth.update(
-      user: UserAttributes(
-        data: ["terms_accepted_at": .string(Date().toISO8601String())]
-      ))
+    _ = try await ConvexAPI.app.mutation("users:acceptTerms", as: String?.self)
 
-    // Refresh session to make updated user metadata visible to coordinator checks.
+    // Refresh the user so the coordinator's terms check sees the new timestamp.
     _ = try await AuthSessionManager.shared.forceRefresh()
   }
 
   // MARK: - Password Reset
 
-  /// Send password reset email
-  /// - Parameter email: User's email address
+  /// Send a password reset code to the email address.
   func sendPasswordResetEmail(email: String) async throws {
     isLoading = true
     defer { isLoading = false }
 
-    try await supabase.auth.resetPasswordForEmail(
-      email,
-      redirectTo: Self.passwordRecoveryRedirectURL
-    )
+    let signIn = try await Clerk.shared.auth.signIn(email)
+    pendingSignIn = try await signIn.sendResetPasswordEmailCode()
   }
 
-  /// Send password reset OTP to phone
-  /// - Parameter phone: Phone number in E.164 format
-  func sendPasswordResetOTP(phone: String) async throws {
+  /// Verify the reset code. The sign-in then waits for a new password.
+  func verifyPasswordResetCode(_ code: String) async throws {
     isLoading = true
     defer { isLoading = false }
 
-    // For phone-based password reset, we use signInWithOTP
-    // and then update the password after verification
-    try await supabase.auth.signInWithOTP(phone: phone)
-  }
-
-  /// Verify password reset OTP and sign in
-  /// - Parameters:
-  ///   - phone: Phone number in E.164 format
-  ///   - token: The OTP code received via SMS
-  /// - Returns: The authenticated session (user can then update password)
-  func verifyPasswordResetOTP(phone: String, token: String) async throws -> Session {
-    isLoading = true
-    defer { isLoading = false }
-
-    let response = try await supabase.auth.verifyOTP(
-      phone: phone,
-      token: token,
-      type: .sms
-    )
-    guard let session = response.session else {
+    guard let signIn = pendingSignIn ?? Clerk.shared.auth.currentSignIn else {
       throw AuthError.sessionMissing
     }
-    return session
+    let result = try await signIn.verifyCode(code)
+    guard result.status == .needsNewPassword else { throw AuthError.sessionMissing }
+    pendingSignIn = result
   }
 
-  /// Verify password reset OTP sent by email and sign in.
-  /// - Parameters:
-  ///   - email: User's email address
-  ///   - token: The OTP code received by email
-  /// - Returns: The authenticated session (user can then update password)
-  func verifyPasswordResetOTP(email: String, token: String) async throws -> Session {
+  /// Set the new password after `verifyPasswordResetCode`. Clerk signs the user in with it.
+  func resetPassword(newPassword: String) async throws {
     isLoading = true
     defer { isLoading = false }
 
-    let response = try await supabase.auth.verifyOTP(
-      email: email,
-      token: token,
-      type: .recovery,
-      redirectTo: Self.passwordRecoveryRedirectURL
-    )
-    guard let session = response.session else {
+    guard let signIn = pendingSignIn ?? Clerk.shared.auth.currentSignIn else {
       throw AuthError.sessionMissing
     }
-    return session
+    let result = try await signIn.resetPassword(newPassword: newPassword)
+    guard result.status == .complete else { throw AuthError.sessionMissing }
+    pendingSignIn = nil
   }
 
-  /// Update user's password (requires authenticated session)
-  /// - Parameter newPassword: The new password
-  func updatePassword(newPassword: String) async throws {
+  /// Change the password of the signed-in user. `currentPassword` is nil for a user who has none.
+  func updatePassword(currentPassword: String?, newPassword: String) async throws {
     isLoading = true
     defer { isLoading = false }
 
-    _ = try await supabase.auth.update(
-      user: UserAttributes(
-        password: newPassword,
-        data: ["hasPassword": .bool(true)]
-      ))
-  }
-
-  // MARK: - Phone OTP Authentication
-
-  /// Send OTP code to phone number
-  /// - Parameter phone: Phone number in E.164 format
-  func sendOTP(phone: String) async throws {
-    isLoading = true
-    defer { isLoading = false }
-
-    try await supabase.auth.signInWithOTP(phone: phone)
-  }
-
-  /// Verify OTP code
-  /// - Parameters:
-  ///   - phone: Phone number in E.164 format
-  ///   - token: The OTP code received via SMS
-  /// - Returns: The authenticated session
-  func verifyOTP(phone: String, token: String) async throws -> Session {
-    isLoading = true
-    defer { isLoading = false }
-
-    let response = try await supabase.auth.verifyOTP(
-      phone: phone,
-      token: token,
-      type: .sms
-    )
-    guard let session = response.session else {
-      throw AuthError.sessionMissing
-    }
-    return session
+    guard let user = Clerk.shared.user else { throw AuthError.sessionMissing }
+    try await user.updatePassword(
+      .init(currentPassword: currentPassword, newPassword: newPassword))
   }
 
   // MARK: - OAuth Sign-In
 
-  /// Sign in with Apple using ID token
-  /// - Parameter idToken: The identity token from Apple Sign-In
-  /// - Parameter fullName: Optional name components from Apple (only provided on first sign-in)
-  /// - Returns: The authenticated session
-  func signInWithApple(idToken: String, fullName: PersonNameComponents? = nil) async throws
-    -> Session
-  {
+  /// Sign in with Apple using the ID token from the native sheet.
+  /// - Parameter fullName: Name components from Apple, which sends them only on the first sign-in.
+  func signInWithApple(idToken: String, fullName: PersonNameComponents? = nil) async throws {
     isLoading = true
     defer { isLoading = false }
 
-    let response = try await supabase.auth.signInWithIdToken(
-      credentials: OpenIDConnectCredentials(
-        provider: .apple,
-        idToken: idToken
+    let result = try await Clerk.shared.auth.signInWithIdToken(
+      idToken, provider: .apple, transferable: true)
+    let isNewUser = try await finish(result)
+
+    // Best-effort: don't block login if Clerk refuses the name.
+    if isNewUser, let fullName,
+      fullName.givenName?.nilIfEmpty != nil || fullName.familyName?.nilIfEmpty != nil
+    {
+      _ = try? await Clerk.shared.user?.update(
+        .init(firstName: fullName.givenName?.nilIfEmpty, lastName: fullName.familyName?.nilIfEmpty)
       )
-    )
+    }
+  }
 
-    if let fullName {
-      let formatter = PersonNameComponentsFormatter()
-      let displayName = formatter.string(from: fullName)
-        .trimmingCharacters(in: .whitespacesAndNewlines)
+  /// Sign in with Google in a web sheet. Clerk has no native Google ID token path.
+  func signInWithGoogle() async throws {
+    isLoading = true
+    defer { isLoading = false }
 
-      if !displayName.isEmpty {
-        // Best-effort: don't block login if the metadata update fails.
-        _ = try? await supabase.auth.update(
-          user: UserAttributes(data: ["full_name": .string(displayName)])
-        )
+    let result = try await Clerk.shared.auth.signInWithOAuth(provider: .google)
+    _ = try await finish(result)
+  }
+
+  /// Makes sure a sign-in or sign-up from Apple or Google ended with a session.
+  /// - Returns: true when the person is new.
+  private func finish(_ result: TransferFlowResult) async throws -> Bool {
+    switch result {
+    case .signIn(let signIn):
+      guard signIn.status == .complete else { throw AuthError.sessionMissing }
+      return false
+
+    case .signUp(var signUp):
+      // Only when the Clerk instance requires legal consent at sign-up.
+      if signUp.status != .complete, signUp.missingFields.contains(.legalAccepted) {
+        signUp = try await signUp.update(legalAccepted: true)
       }
+      guard signUp.status == .complete else { throw AuthError.sessionMissing }
+      return true
     }
-
-    return response
-  }
-
-  /// Sign in with Google using ID token
-  /// - Parameter idToken: The ID token from Google Sign-In
-  /// - Returns: The authenticated session
-  func signInWithGoogle(idToken: String) async throws -> Session {
-    isLoading = true
-    defer { isLoading = false }
-
-    return try await supabase.auth.signInWithIdToken(
-      credentials: OpenIDConnectCredentials(
-        provider: .google,
-        idToken: idToken
-      )
-    )
-  }
-
-  // MARK: - MFA
-
-  /// MFA status for the current user
-  struct MFAStatus {
-    let currentLevel: String
-    let nextLevel: String?
-    let factors: [MFAFactor]
-
-    var requiresVerification: Bool {
-      currentLevel == "aal1" && nextLevel == "aal2"
-    }
-  }
-
-  struct MFAFactor {
-    let id: String
-    let type: String
-    let friendlyName: String?
-    let status: String
-  }
-
-  /// Get MFA status for current session
-  func getMFAStatus() async throws -> MFAStatus {
-    let aal = try await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-    let factors = try await supabase.auth.mfa.listFactors()
-
-    let mfaFactors = factors.totp.map { factor in
-      MFAFactor(
-        id: factor.id,
-        type: factor.factorType,
-        friendlyName: factor.friendlyName,
-        status: factor.status.rawValue
-      )
-    }
-
-    let currentLevelValue: String
-    if let level = aal.currentLevel {
-      currentLevelValue = "\(level)"
-    } else {
-      currentLevelValue = "aal1"
-    }
-
-    let nextLevelValue: String?
-    if let level = aal.nextLevel {
-      nextLevelValue = "\(level)"
-    } else {
-      nextLevelValue = nil
-    }
-
-    return MFAStatus(
-      currentLevel: currentLevelValue,
-      nextLevel: nextLevelValue,
-      factors: mfaFactors
-    )
-  }
-
-  /// Create MFA challenge for a factor
-  /// - Parameter factorId: The MFA factor ID
-  /// - Returns: The challenge ID
-  func createMFAChallenge(factorId: String) async throws -> String {
-    let challenge = try await supabase.auth.mfa.challenge(
-      params: MFAChallengeParams(factorId: factorId, channel: nil)
-    )
-    return challenge.id
-  }
-
-  /// Verify MFA code
-  /// - Parameters:
-  ///   - factorId: The MFA factor ID
-  ///   - challengeId: The challenge ID from createMFAChallenge
-  ///   - code: The TOTP code from the authenticator app
-  func verifyMFA(factorId: String, challengeId: String, code: String) async throws {
-    isLoading = true
-    defer { isLoading = false }
-
-    _ = try await supabase.auth.mfa.verify(
-      params: MFAVerifyParams(
-        factorId: factorId,
-        challengeId: challengeId,
-        code: code
-      )
-    )
   }
 
   // MARK: - Sign Out
 
-  /// Sign out the current user from this device only (local scope)
+  /// Sign out the current user from this device only
   /// Other devices will remain logged in
   func signOut() async throws {
     isLoading = true
     defer { isLoading = false }
 
-    try await supabase.auth.signOut(scope: .local)
+    try await Clerk.shared.auth.signOut()
   }
 
-  /// Sign out the current user from ALL devices (global scope)
-  /// This invalidates all refresh tokens across all devices
+  /// Sign out the current user from ALL devices
+  /// This revokes every other Clerk session of the user, then ends this one.
   func signOutGlobal() async throws {
     isLoading = true
     defer { isLoading = false }
 
-    try await supabase.auth.signOut(scope: .global)
+    // Best-effort: this device still signs out when the session list is unavailable.
+    if let user = Clerk.shared.user, let sessions = try? await user.getSessions() {
+      let currentId = Clerk.shared.session?.id
+      for session in sessions where session.id != currentId {
+        _ = try? await Clerk.shared.auth.revokeSession(session)
+      }
+    }
+    try await Clerk.shared.auth.signOut()
   }
 }
 
 // MARK: - Error Classification
 
 extension AuthService {
-  /// True when GoTrue rejected a sign-in because the email has no confirmed code yet.
-  nonisolated static func isEmailNotConfirmed(_ error: Error) -> Bool {
-    (error as? Auth.AuthError)?.errorCode == .emailNotConfirmed
+  /// True when the person closed the Apple sheet or the Google web sheet.
+  nonisolated static func isCancellation(_ error: Error) -> Bool {
+    if error is CancellationError { return true }
+    if let error = error as? ASWebAuthenticationSessionError {
+      return error.code == .canceledLogin
+    }
+    return (error as? AppleAuthError)?.isCancellation == true
   }
 
-  /// True when GoTrue rejected a verification code as wrong or expired.
-  /// It reports both cases the same way.
+  /// True when Clerk rejected a verification code as wrong or expired.
   nonisolated static func isInvalidVerificationCode(_ error: Error) -> Bool {
-    guard let code = (error as? Auth.AuthError)?.errorCode else { return false }
-    return code == .otpExpired || code == .validationFailed
+    guard let code = (error as? ClerkAPIError)?.code else { return false }
+    return ["form_code_incorrect", "verification_expired", "verification_failed"].contains(code)
   }
 
-  /// True when GoTrue refused a request because of a rate limit.
+  /// True when Clerk refused a request because of a rate limit.
   nonisolated static func isRateLimited(_ error: Error) -> Bool {
-    guard let code = (error as? Auth.AuthError)?.errorCode else { return false }
-    return code == .overRequestRateLimit || code == .overEmailSendRateLimit
+    (error as? ClerkAPIError)?.code == "too_many_requests"
+  }
+
+  /// True when Clerk has no user for the email, so the person has to sign up.
+  nonisolated static func isUnknownIdentifier(_ error: Error) -> Bool {
+    (error as? ClerkAPIError)?.code == "form_identifier_not_found"
+  }
+
+  /// The text to show for a failed auth call. Clerk's known codes get the app's own copy.
+  @MainActor
+  static func message(for error: Error) -> String {
+    guard let clerkError = error as? ClerkAPIError else {
+      return ErrorTranslations.translate(error)
+    }
+    switch clerkError.code {
+    case "form_password_incorrect", "strategy_for_user_invalid":
+      return String(localized: .authErrorInvalidLoginCredentials)
+
+    case "form_identifier_not_found":
+      return String(localized: .authErrorUserNotFound)
+
+    case "form_identifier_exists", "external_account_exists":
+      return String(localized: .authErrorUserAlreadyRegistered)
+
+    case "form_password_length_too_short", "form_password_not_strong_enough",
+      "form_password_validation_failed", "form_password_size_in_bytes_exceeded":
+      return String(localized: .authErrorPasswordMin8)
+
+    case "form_param_format_invalid":
+      return String(localized: .authErrorInvalidEmailFormat)
+
+    case "form_code_incorrect", "verification_failed":
+      return String(localized: .authErrorInvalidCode)
+
+    case "verification_expired":
+      return String(localized: .authErrorCodeExpired)
+
+    case "too_many_requests":
+      return String(localized: .authErrorRequestRateLimited)
+
+    default:
+      return clerkError.errorDescription ?? ErrorTranslations.translate(error)
+    }
+  }
+}
+
+extension String {
+  fileprivate var nilIfEmpty: String? {
+    let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
   }
 }
