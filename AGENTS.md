@@ -136,7 +136,10 @@ runtime, because APNs needs HTTP/2 and fetch in the Node runtime (`"use node"`)
 can't speak it. Each deployment's environment holds `CLERK_JWT_ISSUER_DOMAIN`,
 `CLERK_SECRET_KEY`, the `APNS_*` keys and `GOTRUE_JWKS`. Set them with
 `bunx convex env set` and pipe secrets in on stdin, so they never reach the
-shell history or the chat.
+shell history or the chat. `APNS_RECIPIENTS` decides who a deployment may push
+to: `all`, or user IDs separated by commas. Unset sends nothing. Until cutover,
+keep it unset or set to a test account on both deployments, because they hold
+copies of real device tokens while Supabase still sends the real pushes.
 
 `backend/scripts/migrate.ts` copies Supabase into a Convex deployment and a
 Clerk instance. It reads one-s read-only and replaces every Convex table and
