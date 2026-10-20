@@ -1,2 +1,4 @@
 .env.local
+.env.production
+dev/.env
 node_modules

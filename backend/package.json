@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "convex dev",
-    "deploy": "convex deploy",
+    "deploy": "convex deploy --env-file .env.production",
     "typecheck": "tsc --noEmit -p convex"
   },
   "dependencies": {
