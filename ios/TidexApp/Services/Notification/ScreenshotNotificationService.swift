@@ -1,6 +1,5 @@
 import Foundation
 import os.log
-import Supabase
 
 internal enum ScreenshotServiceError: Error, LocalizedError {
   case httpError(statusCode: Int)
@@ -61,22 +60,22 @@ internal final class ScreenshotNotificationService {
   internal func reportScreenshot(sharerId: String) async throws {
     try await reportScreenshot(
       targetKey: "shifts:\(sharerId)",
-      rpcName: "report_sharing_screenshot",
-      params: ["p_sharer_id": .string(sharerId)]
+      path: "sharing:reportScreenshot",
+      params: ["sharer_id": .string(sharerId)]
     )
   }
 
   internal func reportChatScreenshot(threadId: String) async throws {
     try await reportScreenshot(
       targetKey: "thread:\(threadId)",
-      rpcName: "report_thread_screenshot",
-      params: ["p_thread_id": .string(threadId)]
+      path: "threads:reportScreenshot",
+      params: ["thread_id": .string(threadId)]
     )
   }
 
   private func reportScreenshot(
     targetKey: String,
-    rpcName: String,
+    path: String,
     params: [String: AnyJSON]
   ) async throws {
     guard !inFlightRequests.contains(targetKey) else {
@@ -98,7 +97,7 @@ internal final class ScreenshotNotificationService {
     try await authenticateReportingSession(targetKey: targetKey)
 
     Self.logger.info("Reporting screenshot notification for \(targetKey)")
-    try await submitScreenshotReport(targetKey: targetKey, rpcName: rpcName, params: params)
+    try await submitScreenshotReport(targetKey: targetKey, path: path, params: params)
 
     Self.logger.info("Screenshot reported successfully")
   }
@@ -130,14 +129,11 @@ internal final class ScreenshotNotificationService {
 
   private func submitScreenshotReport(
     targetKey: String,
-    rpcName: String,
+    path: String,
     params: [String: AnyJSON]
   ) async throws {
     do {
-      let response: ScreenshotRPCResponse = try await executeScreenshotRPC(
-        rpcName: rpcName,
-        params: params
-      )
+      let response: ScreenshotRPCResponse = try await ConvexAPI.app.mutation(path, params)
 
       guard response.success else {
         lastReportedTimestamps.removeValue(forKey: targetKey)
@@ -147,16 +143,6 @@ internal final class ScreenshotNotificationService {
       lastReportedTimestamps.removeValue(forKey: targetKey)
       throw error
     }
-  }
-
-  private func executeScreenshotRPC(rpcName: String, params: [String: AnyJSON]) async throws
-    -> ScreenshotRPCResponse
-  {
-    try await supabase
-      .rpc(rpcName, params: params)
-      .single()
-      .execute()
-      .value
   }
 
   deinit {

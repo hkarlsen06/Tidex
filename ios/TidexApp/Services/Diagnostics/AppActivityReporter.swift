@@ -1,5 +1,4 @@
 import Foundation
-import Supabase
 import UIKit
 import UserNotifications
 import WidgetKit
@@ -7,7 +6,7 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AppActivityReporter")
 
-/// Records an app open with `record_app_activity`. The admin user screen shows the build,
+/// Records an app open with `appActivity:record`. The admin user screen shows the build,
 /// device and settings sent here, and the admin home charts count the opens.
 @MainActor
 enum AppActivityReporter {
@@ -20,26 +19,36 @@ enum AppActivityReporter {
     let style = UIApplication.shared.connectedScenes
       .compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.traitCollection.userInterfaceStyle
 
+    // Convex rejects null for an optional argument, so a missing value is left out.
     var params: [String: AnyJSON] = [
-      "p_app_version": optional(info?["CFBundleShortVersionString"] as? String),
-      "p_build_number": optional(info?["CFBundleVersion"] as? String),
-      "p_os_version": .string("iOS \(UIDevice.current.systemVersion)"),
-      "p_device_model": .string(deviceModel()),
-      "p_locale": .string(Locale.autoupdatingCurrent.identifier),
-      "p_time_zone": .string(TimeZone.current.identifier),
-      "p_app_language": optional(Bundle.main.preferredLocalizations.first),
-      "p_notification_permission": .string(notificationPermissionCode(notificationStatus)),
-      "p_background_refresh": .string(backgroundRefreshCode(UIApplication.shared.backgroundRefreshStatus)),
-      "p_appearance": optional(style == .dark ? "dark" : style == .light ? "light" : nil),
-      "p_text_size": .string(textSizeCode(UIApplication.shared.preferredContentSizeCategory)),
-      "p_reduce_motion": .bool(UIAccessibility.isReduceMotionEnabled),
+      "os_version": .string("iOS \(UIDevice.current.systemVersion)"),
+      "device_model": .string(deviceModel()),
+      "locale": .string(Locale.autoupdatingCurrent.identifier),
+      "time_zone": .string(TimeZone.current.identifier),
+      "notification_permission": .string(notificationPermissionCode(notificationStatus)),
+      "background_refresh": .string(backgroundRefreshCode(UIApplication.shared.backgroundRefreshStatus)),
+      "text_size": .string(textSizeCode(UIApplication.shared.preferredContentSizeCategory)),
+      "reduce_motion": .bool(UIAccessibility.isReduceMotionEnabled),
     ]
+    if let version = info?["CFBundleShortVersionString"] as? String {
+      params["app_version"] = .string(version)
+    }
+    if let build = info?["CFBundleVersion"] as? String {
+      params["build_number"] = .string(build)
+    }
+    if let language = Bundle.main.preferredLocalizations.first {
+      params["app_language"] = .string(language)
+    }
+    if style == .dark || style == .light {
+      params["appearance"] = .string(style == .dark ? "dark" : "light")
+    }
     if let widgetKinds {
-      params["p_widget_kinds"] = .array(widgetKinds.map(AnyJSON.string))
+      params["widget_kinds"] = .array(widgetKinds.map(AnyJSON.string))
     }
 
     do {
-      try await supabase.rpc("record_app_activity", params: params).execute()
+      _ = try await ConvexAPI.app.mutation(
+        "appActivity:record", params, as: ConvexAPI.Ignored.self)
     } catch {
       logger.debug("Failed to record app activity: \(error.localizedDescription)")
     }
@@ -77,9 +86,5 @@ enum AppActivityReporter {
     return withUnsafeBytes(of: system.machine) {
       String(bytes: $0.prefix { $0 != 0 }, encoding: .utf8) ?? ""
     }
-  }
-
-  private static func optional(_ value: String?) -> AnyJSON {
-    value.map(AnyJSON.string) ?? .null
   }
 }
