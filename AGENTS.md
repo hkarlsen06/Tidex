@@ -128,6 +128,22 @@ Clerk secret key is in `Secrets/Tidex/clerk-dev.env` next to `fastlane.env`.
 Convex publishes its images under `ghcr.io/convex/`. The old
 `ghcr.io/get-convex/` path refuses pulls.
 
+The HTTP routes are in `backend/convex/http.ts`: message images
+(`/attachments`), App Store notifications (`/apple-server-notifications`) and
+the calendar feed (`/calendar-feed/<token>.ics`). The push and Live Activity
+senders in `push.ts` and `liveActivities.ts` must stay in Convex's default
+runtime, because APNs needs HTTP/2 and fetch in the Node runtime (`"use node"`)
+can't speak it. Each deployment's environment holds `CLERK_JWT_ISSUER_DOMAIN`,
+`CLERK_SECRET_KEY`, the `APNS_*` keys and `GOTRUE_JWKS`. Set them with
+`bunx convex env set` and pipe secrets in on stdin, so they never reach the
+shell history or the chat.
+
+`backend/scripts/migrate.ts` copies Supabase into a Convex deployment and a
+Clerk instance. It reads one-s read-only and replaces every Convex table and
+file, so never point it at production after cutover. The development Clerk
+instance holds at most 100 users, so dev runs use `--clerk-only <uuids>` or
+`--skip-clerk`.
+
 On one-s, `.env` sets `COMPOSE_FILE=compose-migration.json`. That file is a
 fully resolved config written during the move from `mdr`, with every value
 from `.env`, `gotrue-extra.env` and `functions-secrets.env` copied in. Editing
