@@ -246,7 +246,6 @@ export const hasDue = internalQuery({
 
 // ---------- Payloads (pure, from the edge function) ----------
 
-const richFormattingTypes = new Set(["thread_message", "thread_typing", "thread_reaction", "thread_screenshot", "shifts_screenshotted"]);
 const messagePrefetchTypes = new Set(["thread_message", "thread_reaction", "thread_screenshot"]);
 
 const str = (value: unknown) => (typeof value === "string" && value.trim() !== "" ? value.trim() : null);
@@ -306,7 +305,9 @@ export function coalesce(rows: Outbox[]): Job[] {
 function apsPayload(n: Outbox, badge: number): Payload {
   const aps: Payload = { alert: { title: n.title, body: n.body }, badge: Math.max(0, badge) };
   if (n.notification_type !== "shared_shift_added") aps.sound = "tidex_notification.caf";
-  if (richFormattingTypes.has(n.notification_type)) aps["mutable-content"] = 1;
+  // Every alert goes through the app's notification service extension, which also drops a
+  // push meant for another account (recipient_user_id).
+  aps["mutable-content"] = 1;
   const thread = threadIdOf(n);
   if (thread !== null) {
     if (n.notification_type === "thread_message") aps.category = "THREAD_MESSAGE";

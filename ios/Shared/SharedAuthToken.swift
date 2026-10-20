@@ -46,6 +46,8 @@ enum SharedAuthToken {
 
     let (data, response) = try await URLSession.shared.data(for: request)
     guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+    // A sign-out or a new sign-in during the request makes this token the wrong user's.
+    guard SharedKeychainStorage.clerkSessionId == sessionId else { return nil }
     if let rotated = http.value(forHTTPHeaderField: "Authorization"), !rotated.isEmpty {
       SharedKeychainStorage.clerkDeviceToken = rotated
     }

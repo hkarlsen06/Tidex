@@ -1,11 +1,13 @@
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
 import { reject } from "./lib/syncWrite";
 import { literals } from "./lib/validators";
 
 // Ports of get_my_calendar_subscription, create_my_calendar_subscription,
-// disable_my_calendar_subscription and set_my_calendar_subscription_content_mode. Only
+// rotate_my_calendar_subscription, disable_my_calendar_subscription and
+// set_my_calendar_subscription_content_mode. Only
 // the SHA-256 of the feed token is stored, in the same hex form as Postgres, so the
 // calendar feed can keep looking tokens up by hash after the migration.
 
@@ -59,23 +61,37 @@ export const create = mutation({
     if ((await activeToken(ctx, user.id)) !== undefined) {
       reject("already_exists", "active calendar subscription already exists");
     }
-    const raw = `tidex_cal_${hex(crypto.getRandomValues(new Uint8Array(32)))}`;
-    const now = new Date().toISOString();
-    const id = crypto.randomUUID();
-    const mode = content_mode ?? "shifts_only";
-    const suffix = raw.slice(-8);
-    await ctx.db.insert("calendar_subscription_tokens", {
-      id,
-      user_id: user.id,
-      token_hash: await hashCalendarToken(raw),
-      token_suffix: suffix,
-      content_mode: mode,
-      created_at: now,
-      updated_at: now,
-    });
-    return { id, raw_token: raw, content_mode: mode, token_suffix: suffix, created_at: now };
+    return await issue(ctx, user.id, content_mode ?? "shifts_only");
   },
 });
+
+/** rotate_my_calendar_subscription: revokes the active token and issues a new one in one step. */
+export const rotate = mutation({
+  args: { content_mode: v.optional(contentMode) },
+  handler: async (ctx, { content_mode }) => {
+    const { user } = await requireViewer(ctx);
+    const mode = content_mode ?? (await activeToken(ctx, user.id))?.content_mode ?? "shifts_only";
+    await revokeAll(ctx, user.id);
+    return await issue(ctx, user.id, mode);
+  },
+});
+
+async function issue(ctx: MutationCtx, userId: string, mode: Doc<"calendar_subscription_tokens">["content_mode"]) {
+  const raw = `tidex_cal_${hex(crypto.getRandomValues(new Uint8Array(32)))}`;
+  const now = new Date().toISOString();
+  const id = crypto.randomUUID();
+  const suffix = raw.slice(-8);
+  await ctx.db.insert("calendar_subscription_tokens", {
+    id,
+    user_id: userId,
+    token_hash: await hashCalendarToken(raw),
+    token_suffix: suffix,
+    content_mode: mode,
+    created_at: now,
+    updated_at: now,
+  });
+  return { id, raw_token: raw, content_mode: mode, token_suffix: suffix, created_at: now };
+}
 
 async function revokeAll(ctx: MutationCtx, userId: string) {
   const now = new Date().toISOString();

@@ -40,7 +40,7 @@ export const registerPush = mutation({
     app_version: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireViewer(ctx);
+    const { actor: user } = await requireViewer(ctx);
     const apns = args.apns_token || undefined;
     const fcm = args.fcm_token || undefined;
     if (apns === undefined && fcm === undefined) reject("invalid", "Either apnsToken or fcmToken is required");
@@ -115,7 +115,7 @@ export const registerPush = mutation({
 export const unregisterPush = mutation({
   args: { device_token: v.string() },
   handler: async (ctx, { device_token }) => {
-    const { user } = await requireViewer(ctx);
+    const { actor: user } = await requireViewer(ctx);
     if (device_token === "") return null;
     for (const d of await ownDevices(ctx, user.id)) {
       if (d.apns_token === device_token || d.fcm_token === device_token) await ctx.db.delete(d._id);
@@ -136,7 +136,7 @@ export const registerLiveActivityDevice = mutation({
     app_version: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireViewer(ctx);
+    const { actor: user } = await requireViewer(ctx);
     if (args.device_id.trim() === "") reject("invalid", "device id is required");
     if (!HEX_TOKEN.test(args.push_to_start_token)) reject("invalid", "invalid live activity push-to-start token");
     if (args.time_zone.trim() === "" || !validTimeZone(args.time_zone)) reject("invalid", "invalid IANA time zone");
@@ -176,7 +176,7 @@ export const registerLiveActivityDevice = mutation({
 export const registerLiveActivityUpdateToken = mutation({
   args: { device_id: v.string(), shift_id: v.string(), activity_id: v.string(), push_token: v.string() },
   handler: async (ctx, args) => {
-    const { user } = await requireViewer(ctx);
+    const { actor: user } = await requireViewer(ctx);
     if ([args.device_id, args.shift_id, args.activity_id].some((s) => s.trim() === "")) {
       reject("invalid", "device id, shift id, and activity id are required");
     }
@@ -248,7 +248,7 @@ export const registerLiveActivityUpdateToken = mutation({
 export const endLiveActivity = mutation({
   args: { device_id: v.string(), activity_id: v.string() },
   handler: async (ctx, { device_id, activity_id }) => {
-    const { user } = await requireViewer(ctx);
+    const { actor: user } = await requireViewer(ctx);
     const now = new Date().toISOString();
     for (const device of (await ownDevices(ctx, user.id)).filter((d) => d.device_id === device_id)) {
       for (const d of await ctx.db
@@ -273,7 +273,7 @@ export const endLiveActivity = mutation({
 export const unregisterLiveActivityDevice = mutation({
   args: { device_id: v.string() },
   handler: async (ctx, { device_id }) => {
-    const { user } = await requireViewer(ctx);
+    const { actor: user } = await requireViewer(ctx);
     const now = new Date().toISOString();
     for (const device of (await ownDevices(ctx, user.id)).filter((d) => d.device_id === device_id)) {
       for (const d of await ctx.db

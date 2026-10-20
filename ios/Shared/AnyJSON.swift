@@ -114,6 +114,14 @@ enum AnyJSON: Codable, Hashable, Sendable {
   }
 }
 
+extension AnyJSON: CustomStringConvertible {
+  /// The value as JSON text.
+  var description: String {
+    guard let data = try? Self.encoder.encode(self) else { return "" }
+    return String(decoding: data, as: UTF8.self)
+  }
+}
+
 typealias JSONObject = [String: AnyJSON]
 
 extension AnyJSON: ExpressibleByNilLiteral, ExpressibleByBooleanLiteral,

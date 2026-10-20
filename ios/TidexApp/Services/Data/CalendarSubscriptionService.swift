@@ -98,14 +98,14 @@ struct CalendarSubscriptionService: CalendarSubscriptionServicing {
     return row.created
   }
 
-  /// Convex has no rotate function. Revoking the token and creating a new one gives the
-  /// same result. Without a mode, the new token keeps the current one.
+  /// Revokes the token and issues a new one in one mutation. Without a mode, the new token
+  /// keeps the current one's.
   func rotateSubscription(mode: CalendarSubscriptionContentMode?) async throws
     -> CalendarSubscriptionCreated
   {
-    let current = try await getSubscription().metadata?.contentMode
-    _ = try await disableSubscription()
-    return try await createSubscription(mode: mode ?? current ?? .shiftsOnly)
+    let row: CalendarSubscriptionTokenRow = try await api.mutation(
+      "calendarSubscriptions:rotate", RotateArgs(contentMode: mode))
+    return row.created
   }
 
   func setContentMode(_ mode: CalendarSubscriptionContentMode) async throws
@@ -139,6 +139,12 @@ struct CalendarSubscriptionService: CalendarSubscriptionServicing {
 
   private struct ContentModeArgs: Encodable, Sendable {
     let contentMode: CalendarSubscriptionContentMode
+    enum CodingKeys: String, CodingKey { case contentMode = "content_mode" }
+  }
+
+  /// Leaves `content_mode` out when nil, so the server keeps the current mode.
+  private struct RotateArgs: Encodable, Sendable {
+    let contentMode: CalendarSubscriptionContentMode?
     enum CodingKeys: String, CodingKey { case contentMode = "content_mode" }
   }
 }

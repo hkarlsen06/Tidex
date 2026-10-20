@@ -1145,6 +1145,7 @@ final class AppCoordinator {
     // Clear the access token shared with iPhone extensions, and the cached user.
     AuthSessionManager.shared.clearSharedKeychain()
     AuthSessionManager.shared.clearCachedUser()
+    WidgetAppGroup.markSignedOut()
   }
 
   private func resetPayrollCaches() {

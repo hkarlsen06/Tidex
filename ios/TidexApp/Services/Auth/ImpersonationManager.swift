@@ -200,9 +200,11 @@ final class ImpersonationManager {
     guard let expiresAt else { return }
     expiryTask = Task { [weak self] in
       try? await Task.sleep(for: .seconds(max(expiresAt.timeIntervalSinceNow, 0) + 1))
-      guard !Task.isCancelled else { return }
+      guard !Task.isCancelled, let self else { return }
       logger.info("Impersonation session expired")
-      await self?.switchUser()
+      // switchUser cancels expiryTask, which is this task, so let it go first.
+      expiryTask = nil
+      await switchUser()
     }
   }
 }
