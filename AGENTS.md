@@ -116,7 +116,17 @@ Paeonia's stack is also in a folder called `convex`. The API is
 and the dashboard is on the tailnet-only `convex-dashboard.tidex.no` on 6792.
 `/srv/backup/tidex-convex-backup.sh` backs it up to `/srv/tidex/convex-backups`
 and R2, and the watchdog checks it. Deploy from `backend/` on the `convex`
-branch, with the admin key in the gitignored `backend/.env.local`.
+branch with `bun run deploy`, which reads the URL and admin key from the
+gitignored `backend/.env.production`.
+
+The dev deployment runs on the Mac under colima, from `backend/dev/compose.yml`
+on `127.0.0.1:3210` (dashboard on 6791). Start it with `colima start` and
+`docker compose -f dev/compose.yml --env-file dev/.env up -d` from `backend/`.
+The gitignored `backend/.env.local` points at it, so `bunx convex dev` never
+touches production. It trusts the development Clerk instance. The development
+Clerk secret key is in `Secrets/Tidex/clerk-dev.env` next to `fastlane.env`.
+Convex publishes its images under `ghcr.io/convex/`. The old
+`ghcr.io/get-convex/` path refuses pulls.
 
 On one-s, `.env` sets `COMPOSE_FILE=compose-migration.json`. That file is a
 fully resolved config written during the move from `mdr`, with every value
