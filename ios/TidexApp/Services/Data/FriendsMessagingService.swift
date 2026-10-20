@@ -927,8 +927,8 @@ struct MessagingAttachmentRow: Decodable {
     case reactions
   }
 
-  /// The model still has the storage fields from Supabase. The URL goes in `storagePath`, which
-  /// is also the image cache key.
+  /// The model still has the storage bucket and path of the old server. The URL goes in
+  /// `storagePath`, which is also the image cache key.
   func toFriendAttachment() -> FriendMessageAttachment {
     FriendMessageAttachment(
       id: id,

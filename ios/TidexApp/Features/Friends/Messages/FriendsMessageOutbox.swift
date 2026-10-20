@@ -312,7 +312,11 @@ final class FriendsMessageOutbox {
           threadId: message.threadId,
           image: pendingImage
         )
-        Self.cacheImage(pendingImage, for: uploadedAttachment.storagePath)
+        // The sent message names its image with this path, so it shows without a download.
+        Self.cacheImage(
+          pendingImage,
+          for: FriendsMessagingService.attachmentPath(attachmentId: uploadedAttachment.attachmentId)
+        )
         outgoingAttachments.append(uploadedAttachment)
         continue
       }
