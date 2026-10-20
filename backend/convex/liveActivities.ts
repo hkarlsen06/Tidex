@@ -17,7 +17,7 @@ import {
 } from "./lib/shared/liveActivityScheduling";
 import { computeShift } from "./lib/shared/payroll/calc";
 import type { UserSettings, WageSnapshot } from "./lib/shared/payroll/types";
-import { apnsConfigured, sendToApns } from "./push";
+import { allowedRecipients, apnsConfigured, mayPush, sendToApns } from "./push";
 
 // Port of _shared/live-activity-delivery.ts and the internal.*_live_activity_* SQL
 // functions. A cron pass every 15 minutes starts a Live Activity on each device for the
@@ -393,8 +393,12 @@ export const run = internalAction({
   args: {},
   handler: async (ctx): Promise<Record<string, unknown>> => {
     if (!apnsConfigured()) return { skipped: "APNs is not configured" };
+    const allowed = allowedRecipients();
+    if (allowed !== "all" && allowed.size === 0) return { skipped: "APNS_RECIPIENTS is not set" };
     const now = new Date();
-    const { devices, people }: Inputs = await ctx.runQuery(internal.liveActivities.inputs, {});
+    const inputs: Inputs = await ctx.runQuery(internal.liveActivities.inputs, {});
+    const people = inputs.people;
+    const devices = inputs.devices.filter((d) => mayPush(allowed, d.user_id));
     const summary = { devices: devices.length, started: 0, ended: 0, failed: 0, waitingForUpdateToken: 0 };
     const bundleId = process.env.APNS_BUNDLE_ID ?? "no.tidex.app";
     const headers = (expiration: Date, deviceId: string) =>

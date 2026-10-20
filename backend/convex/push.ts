@@ -427,6 +427,21 @@ function apnsCredentials(environment: ApnsEnvironment) {
     : { keyId: process.env.APNS_KEY_ID ?? "", privateKey: pem("APNS_PRIVATE_KEY") };
 }
 
+/**
+ * Who this deployment may push to, from APNS_RECIPIENTS: "all", or user ids separated by
+ * commas for testing on your own phone. Unset sends nothing. The dev deployment and the
+ * production rehearsal hold copies of real device tokens while Supabase still sends the real
+ * pushes, so keep it unset or a test list there. Cutover night sets "all" on production.
+ */
+export function allowedRecipients(): "all" | Set<string> {
+  const value = process.env.APNS_RECIPIENTS?.trim() ?? "";
+  if (value === "all") return "all";
+  return new Set(value.split(",").map((id) => id.trim().toLowerCase()).filter((id) => id !== ""));
+}
+
+export const mayPush = (allowed: "all" | Set<string>, userId: string) =>
+  allowed === "all" || allowed.has(userId.toLowerCase());
+
 export const apnsConfigured = () => Boolean(process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID && process.env.APNS_PRIVATE_KEY);
 const sandboxConfigured = () => Boolean(process.env.APNS_SANDBOX_KEY_ID && process.env.APNS_SANDBOX_PRIVATE_KEY);
 
@@ -486,6 +501,8 @@ export const run = internalAction({
   args: {},
   handler: async (ctx) => {
     if (!apnsConfigured()) return { skipped: "APNs is not configured" };
+    const allowed = allowedRecipients();
+    if (allowed !== "all" && allowed.size === 0) return { skipped: "APNS_RECIPIENTS is not set" };
     const claimed: Outbox[] = await ctx.runMutation(internal.push.claim, {});
     if (claimed.length === 0) return { processed: 0 };
     const jobs = coalesce(claimed);
@@ -513,6 +530,10 @@ export const run = internalAction({
           if (current === undefined) continue;
           const ids = current.rows.map((r) => r.id);
           const n = current.notification;
+          if (!mayPush(allowed, n.recipient_id)) {
+            updates.push({ ids, status: "skipped", error_message: "Recipient is not in APNS_RECIPIENTS" });
+            continue;
+          }
           if (!now.eligible) {
             updates.push({ ids, status: "skipped", error_message: "Recipient can no longer receive this push" });
             continue;
