@@ -19,6 +19,7 @@ export const current = query({
       name: user.name ?? null,
       avatar_url: user.avatar_url ?? null,
       role: user.role ?? null,
+      terms_accepted_at: user.terms_accepted_at ?? null,
       is_impersonating: impersonationSessionId !== null,
       actor_id: actor.id,
     };
@@ -159,5 +160,17 @@ export const setLocale = mutation({
       await ctx.db.patch(actor._id, { locale: value, revision: await nextRevision(ctx) });
     }
     return null;
+  },
+});
+
+/** Records that the signed-in person accepted the current terms. */
+export const acceptTerms = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { actor, impersonationSessionId } = await requireViewer(ctx);
+    if (impersonationSessionId !== null) return null;
+    const now = new Date().toISOString();
+    await ctx.db.patch(actor._id, { terms_accepted_at: now, revision: await nextRevision(ctx) });
+    return now;
   },
 });

@@ -148,6 +148,7 @@ type AuthUser = {
   name: string | null;
   avatar_url: string | null;
   locale: string | null;
+  terms_accepted_at: string | null;
   role: string | null;
   banned: boolean;
   last_sign_in_at: string | null;
@@ -209,6 +210,7 @@ async function main() {
       'name', coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name'),
       'avatar_url', coalesce(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture'),
       'locale', u.raw_user_meta_data->>'locale',
+      'terms_accepted_at', u.raw_user_meta_data->>'terms_accepted_at',
       'role', u.raw_app_meta_data->>'role',
       'banned', u.banned_until is not null and u.banned_until > now(),
       'last_sign_in_at', u.last_sign_in_at,
@@ -246,6 +248,7 @@ async function main() {
         name: u.name,
         avatar_url: u.avatar_url,
         locale: u.locale,
+        terms_accepted_at: u.terms_accepted_at,
         role: u.role === "admin" ? "admin" : null,
         banned_at: u.banned ? now : null,
         last_sign_in_at: u.last_sign_in_at,
