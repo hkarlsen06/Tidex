@@ -15,8 +15,6 @@
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
 		11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1C2F16B94B0076AFD6 /* PostgREST */; };
 		11923C1F2F16B94B0076AFD6 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1E2F16B94B0076AFD6 /* Storage */; };
-		11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C212F16B98A0076AFD6 /* GoogleSignIn */; };
-		11923C242F16B98A0076AFD6 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C232F16B98A0076AFD6 /* GoogleSignInSwift */; };
 		11923C262F16BB090076AFD6 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C252F16BB090076AFD6 /* Realtime */; };
 		11923C282F16BB090076AFD6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C272F16BB090076AFD6 /* Supabase */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
@@ -395,12 +393,10 @@
 				11923C262F16BB090076AFD6 /* Realtime in Frameworks */,
 				11923C1F2F16B94B0076AFD6 /* Storage in Frameworks */,
 				11263D3C2F2FF22700233D63 /* CropViewController in Frameworks */,
-				11923C242F16B98A0076AFD6 /* GoogleSignInSwift in Frameworks */,
 				11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */,
 				11923C192F16B94B0076AFD6 /* Auth in Frameworks */,
 				11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */,
 				11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */,
-				11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -681,8 +677,6 @@
 				11923C1A2F16B94B0076AFD6 /* Functions */,
 				11923C1C2F16B94B0076AFD6 /* PostgREST */,
 				11923C1E2F16B94B0076AFD6 /* Storage */,
-				11923C212F16B98A0076AFD6 /* GoogleSignIn */,
-				11923C232F16B98A0076AFD6 /* GoogleSignInSwift */,
 				11923C252F16BB090076AFD6 /* Realtime */,
 				11923C272F16BB090076AFD6 /* Supabase */,
 				11263D3B2F2FF22700233D63 /* CropViewController */,
@@ -819,7 +813,6 @@
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
 				11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */,
-				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
 				11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */,
 				C1E4C0012F80000000A1B2C3 /* XCRemoteSwiftPackageReference "clerk-ios" */,
@@ -1743,14 +1736,6 @@
 				minimumVersion = 2.5.1;
 			};
 		};
-		11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 		11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/hkarlsen06/Chat.git";
@@ -1807,16 +1792,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Storage;
-		};
-		11923C212F16B98A0076AFD6 /* GoogleSignIn */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignIn;
-		};
-		11923C232F16B98A0076AFD6 /* GoogleSignInSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignInSwift;
 		};
 		11923C252F16BB090076AFD6 /* Realtime */ = {
 			isa = XCSwiftPackageProductDependency;
