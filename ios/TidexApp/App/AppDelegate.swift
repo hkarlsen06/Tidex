@@ -797,6 +797,19 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
     }
   }
 
+  /// True when the push names a recipient and the stored signed-in user is someone else.
+  /// A device token that moved between accounts can still get the old account's push.
+  /// Without a stored user id, the push counts as the user's own.
+  private func isForAnotherAccount(_ userInfo: [AnyHashable: Any]) -> Bool {
+    guard let recipient = (userInfo["recipient_user_id"] as? String)?.lowercased(),
+      !recipient.isEmpty,
+      let signedIn = WidgetAppGroup.sharedUserDefaults()?
+        .string(forKey: WidgetAppGroup.signedInUserIdKey),
+      !signedIn.isEmpty
+    else { return false }
+    return recipient != signedIn.lowercased()
+  }
+
   // Handle notification when app is in foreground
   func userNotificationCenter(
     _: UNUserNotificationCenter,
@@ -804,7 +817,8 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
     withCompletionHandler completionHandler: (UNNotificationPresentationOptions) -> Void
   ) {
     let userInfo = notification.request.content.userInfo
-    if shouldSuppressForegroundPresentation(for: userInfo) {
+    // Foreground pushes skip the notification service extension, so this repeats its check.
+    if isForAnotherAccount(userInfo) || shouldSuppressForegroundPresentation(for: userInfo) {
       completionHandler([])
       return
     }
