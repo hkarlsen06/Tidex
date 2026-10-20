@@ -6,7 +6,7 @@ import SwiftData
 // MARK: - Local Recurring Shift
 
 /// SwiftData model for locally persisted recurring shifts
-/// Maps to the `recurring_shifts` table in Supabase
+/// Maps to the `recurring_shifts` table
 @Model
 final class LocalRecurringShift {
   // MARK: - Primary Key & Foreign Key

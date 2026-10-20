@@ -6,7 +6,7 @@ import SwiftData
 // MARK: - Local User Settings
 
 /// SwiftData model for locally persisted user settings
-/// Maps to the `user_settings` table in Supabase
+/// Maps to the `user_settings` table
 /// Note: This is a single-row-per-user table, so userId is the unique key
 @Model
 final class LocalUserSettings {

@@ -2,10 +2,6 @@ import Foundation
 
 // MARK: - Server Row Types for Sync
 
-internal struct SyncRowId: Codable {
-  internal let id: String
-}
-
 /// Extended shift row with sync metadata fields
 /// Used when fetching from server for sync (includes updated_at, revision, deleted_at)
 internal struct SyncShiftRow: Codable {
@@ -339,7 +335,7 @@ internal struct SyncUserSettingsRow: Codable {
 }
 
 /// Notification preferences row for sync
-/// Note: This table has no revision column - iOS is the source of truth
+/// iOS is the source of truth. The server row also has a revision, which the app does not use.
 internal struct SyncNotificationPreferencesRow: Codable {
   internal let user_id: String
   internal let shift_reminders_enabled: Bool

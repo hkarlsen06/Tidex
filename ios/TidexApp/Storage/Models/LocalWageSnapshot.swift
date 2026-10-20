@@ -6,7 +6,7 @@ import SwiftData
 // MARK: - Local Wage Snapshot
 
 /// SwiftData model for locally persisted wage snapshots
-/// Maps to the `wage_snapshots` table in Supabase
+/// Maps to the `wage_snapshots` table
 @Model
 final class LocalWageSnapshot {
   // MARK: - Primary Key & Foreign Key
