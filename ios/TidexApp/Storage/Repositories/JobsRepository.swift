@@ -1,5 +1,4 @@
 import Foundation
-import Supabase
 import SwiftData
 import os.log
 
@@ -588,25 +587,22 @@ extension JobsRepository {
   private func requestJobDeletion(
     jobId: String, userId: String, confirmationToken: String?
   ) async throws -> JobDeletionPreview {
-    var params: [String: AnyJSON] = ["p_job_id": .string(jobId)]
-    if let confirmationToken {
-      params["p_confirmation_token"] = .string(confirmationToken)
+    struct Args: Encodable, Sendable {
+      let job_id: String
+      let confirmation_token: String?
     }
     do {
-      let response: JobDeletionPreview =
-        try await supabase
-        .rpc("delete_archived_job", params: params)
-        .execute()
-        .value
+      let response: JobDeletionPreview = try await ConvexAPI.app.mutation(
+        "jobs:deleteArchived", Args(job_id: jobId, confirmation_token: confirmationToken))
       guard response.jobId == jobId, response.userId == userId else {
         throw JobsRepositoryError.jobNotFound
       }
       return response
-    } catch let error as PostgrestError {
+    } catch let error as ConvexAPI.Failure {
       switch error.code {
-      case "PT409": throw JobsRepositoryError.deletionChanged
-      case "PT400": throw JobsRepositoryError.cannotDeleteUnarchivedJob
-      case "PT404": throw JobsRepositoryError.jobNotFound
+      case "history_changed": throw JobsRepositoryError.deletionChanged
+      case "not_archived": throw JobsRepositoryError.cannotDeleteUnarchivedJob
+      case "not_found": throw JobsRepositoryError.jobNotFound
       default: throw error
       }
     }
