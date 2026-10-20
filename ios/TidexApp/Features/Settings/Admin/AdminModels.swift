@@ -1,16 +1,15 @@
 import Foundation
-import Supabase
 
-// Response types for the admin RPCs in AdminAPI.
+// Response types for the `admin` Convex functions in AdminAPI.
 
 // MARK: - Models
 
-/// Parses the Postgres timestamps the admin RPCs return.
+/// Parses the timestamps the admin functions return.
 private func adminDate(_ value: String?) -> Date? {
   value.flatMap(ISO8601Timestamp.date(from:))
 }
 
-/// Parses a Postgres `date` such as "2026-09-28" as midnight in the device's time zone.
+/// Parses a date such as "2026-09-28" as midnight in the device's time zone.
 func adminDay(_ value: String?) -> Date? {
   guard let value else { return nil }
   return try? Date.ISO8601FormatStyle(timeZone: .current).year().month().day().parse(value)
@@ -57,7 +56,7 @@ struct AdminUser: Decodable, Identifiable, Hashable, Sendable {
   var created: Date? { adminDate(createdAt) }
 }
 
-/// Matches `p_sort` in `admin_list_users_api`.
+/// Matches `sort` in `admin:listUsers`.
 enum AdminUserSort: String, CaseIterable, Identifiable, Sendable {
   case name
   case newest
@@ -102,7 +101,7 @@ enum AdminLanguage: String, CaseIterable, Identifiable, Sendable {
   var code: String { self == .english ? "EN" : "NO" }
 }
 
-/// Usage numbers from `admin_get_user_stats_api`. Deleted shifts, jobs and messages are excluded.
+/// Usage numbers from `admin:userStats`. Deleted shifts, jobs and messages are excluded.
 struct AdminUserStats: Decodable, Sendable {
   let shiftCount: Int
   let shiftsLast30Days: Int
@@ -178,7 +177,7 @@ struct AdminUserStats: Decodable, Sendable {
   var calendarFeedLastUsed: Date? { adminDate(calendarFeedLastUsedAt) }
 }
 
-/// A user's pay configuration from `admin_get_user_wage_setup_api`. Jobs, snapshots and
+/// A user's pay configuration from `admin:userWageSetup`. Jobs, snapshots and
 /// adjustments are table rows, so they decode with the app's own models.
 struct AdminWageSetup: Decodable, Sendable {
   /// Active jobs, default job first.
@@ -203,7 +202,7 @@ struct AdminWageSetup: Decodable, Sendable {
   }
 }
 
-/// Distinct users with an app open, from `admin_get_active_users_chart_api`.
+/// Distinct users with an app open, from `admin:activeUsersChart`.
 /// Only counts builds that record app opens.
 struct AdminActiveUsersChart: Decodable, Sendable {
   /// The last 24 hours, oldest first. The last bucket is the current hour.
@@ -212,7 +211,7 @@ struct AdminActiveUsersChart: Decodable, Sendable {
   let days: [Bucket]
 
   struct Bucket: Decodable, Identifiable, Sendable {
-    /// Hour buckets have `start`, a timestamp. Day buckets have `date`, a Postgres date.
+    /// Hour buckets have `start`, a timestamp. Day buckets have `date`, a date such as "2026-09-28".
     let start: String?
     let date: String?
     let users: Int

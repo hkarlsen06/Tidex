@@ -110,6 +110,24 @@ final class AuthDiagnosticsReporter {
 
   private func send(_ pendingEvent: PendingEvent) async {
     eventSequence += 1
+    var params = eventParams(for: pendingEvent)
+    params["metadata"] = .object(eventMetadata(for: pendingEvent))
+
+    do {
+      let response: Response = try await ConvexAPI.app.mutation(
+        "diagnostics:recordAuthEvent", params)
+
+      if !response.success {
+        authDiagnosticsLog.debug("Auth diagnostic returned success=false")
+      }
+    } catch {
+      authDiagnosticsLog.debug(
+        "Failed to record auth diagnostic: \(error.localizedDescription, privacy: .public)"
+      )
+    }
+  }
+
+  private func eventParams(for pendingEvent: PendingEvent) -> [String: AnyJSON] {
     // Convex rejects null for an optional argument, so a missing value is left out.
     var params: [String: AnyJSON] = [
       "event_type": .string(pendingEvent.eventType.rawValue),
@@ -129,7 +147,10 @@ final class AuthDiagnosticsReporter {
     if let reportUserId = normalizedUserId(pendingEvent.userId) {
       params["user_id"] = .string(reportUserId)
     }
+    return params
+  }
 
+  private func eventMetadata(for pendingEvent: PendingEvent) -> [String: AnyJSON] {
     var eventMetadata = pendingEvent.metadata
     if let lastAuthenticatedUserId = normalizedUserId(lastAuthenticatedUserId) {
       eventMetadata["client_last_authenticated_user_id"] = .string(lastAuthenticatedUserId)
@@ -149,20 +170,7 @@ final class AuthDiagnosticsReporter {
     if let vendorId = UIDevice.current.identifierForVendor?.uuidString {
       eventMetadata["vendor_id"] = .string(vendorId)
     }
-    params["metadata"] = .object(eventMetadata)
-
-    do {
-      let response: Response = try await ConvexAPI.app.mutation(
-        "diagnostics:recordAuthEvent", params)
-
-      if !response.success {
-        authDiagnosticsLog.debug("Auth diagnostic RPC returned success=false")
-      }
-    } catch {
-      authDiagnosticsLog.debug(
-        "Failed to record auth diagnostic: \(error.localizedDescription, privacy: .public)"
-      )
-    }
+    return eventMetadata
   }
 
   private var installId: String {

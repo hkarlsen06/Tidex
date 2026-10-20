@@ -1,4 +1,3 @@
-import Supabase
 import XCTest
 
 @testable import Tidex
@@ -33,13 +32,21 @@ internal final class AdminAPITests: XCTestCase {
     XCTAssertNil(draft.problem)
   }
 
-  internal func testRPCParamsSendRecipientIDsOnlyForSpecificTarget() {
+  internal func testArgsSendRecipientIDsOnlyForSpecificTarget() {
     var draft: AdminBroadcastDraft = filledDraft()
     draft.recipients = [user(id: "a"), user(id: "b")]
-    XCTAssertEqual(draft.rpcParams["p_specific_user_ids"], .null)
+    XCTAssertNil(draft.convexArgs["specific_user_ids"])
 
     draft.target = .specific
-    XCTAssertEqual(draft.rpcParams["p_specific_user_ids"], .array([.string("a"), .string("b")]))
+    XCTAssertEqual(draft.convexArgs["specific_user_ids"], .array([.string("a"), .string("b")]))
+  }
+
+  internal func testArgsLeaveOutBlankFieldsBecauseConvexRejectsNull() {
+    let draft: AdminBroadcastDraft = AdminBroadcastDraft(title: "Hi", body: "News")
+
+    XCTAssertEqual(draft.convexArgs["title"], .string("Hi"))
+    XCTAssertNil(draft.convexArgs["title_no"])
+    XCTAssertFalse(draft.convexArgs.values.contains(.null))
   }
 
   internal func testEveryoneAudienceNeedsBothLanguagesEvenWithStaleRecipients() {
