@@ -11,7 +11,6 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable type_body_length
 import ActivityKit
-import Supabase
 import UIKit
 import os
 
@@ -631,7 +630,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   }
 
-  /// Register APNs token via authenticated Supabase RPC.
+  /// Register APNs token with Convex as the signed-in user.
   private func registerAPNsToken(_ token: String) async {
     // Prevent duplicate in-flight registrations
     guard !apnsRegistrationInFlight else { return }
@@ -653,6 +652,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let success: Bool
       }
 
+      struct PushDeviceArgs: Encodable, Sendable {
+        let apnsToken: String
+        let platform = "ios"
+        let deviceId: String?
+        let deviceModel: String
+        let appVersion: String?
+        enum CodingKeys: String, CodingKey {
+          case apnsToken = "apns_token"
+          case platform
+          case deviceId = "device_id"
+          case deviceModel = "device_model"
+          case appVersion = "app_version"
+        }
+      }
+
       // Push tokens are user-scoped server records. If APNs returns a token
       // while the app is signed out, keep the cached token and retry after login.
       guard await AuthSessionManager.shared.getSessionIfAvailable() != nil else {
@@ -660,38 +674,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return
       }
 
-      var payload: [String: AnyJSON] = [
-        "p_apns_token": .string(token),
-        "p_platform": .string("ios"),
-      ]
-
-      // Add device metadata
+      // Use identifierForVendor as device ID for token rotation detection
       let (deviceModel, deviceId) = await MainActor.run {
         let device = UIDevice.current
         return (device.model, device.identifierForVendor?.uuidString)
       }
-      payload["p_device_model"] = .string(deviceModel)
-      if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-        payload["p_app_version"] = .string(appVersion)
-      }
-      // Use identifierForVendor as device ID for token rotation detection
-      if let deviceId {
-        payload["p_device_id"] = .string(deviceId)
-      }
+      let payload = PushDeviceArgs(
+        apnsToken: token,
+        deviceId: deviceId,
+        deviceModel: deviceModel,
+        appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+      )
 
-      let response: PushDeviceResponse =
-        try await supabase
-        .rpc("register_push_device", params: payload)
-        .single()
-        .execute()
-        .value
+      let response: PushDeviceResponse = try await ConvexAPI.app.mutation(
+        "devices:registerPush", payload)
 
       if response.success {
         await MainActor.run {
           PushNotificationManager.shared.registrationSucceeded()
         }
       } else {
-        print("[APNs] RPC error: registration did not succeed")
+        print("[APNs] Registration did not succeed")
         await MainActor.run {
           PushNotificationManager.shared.serverRegistrationFailed(
             "Registration failed", underlying: nil)
@@ -742,9 +745,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func unregisterCachedAPNsToken() async {
     guard let token = cachedAPNsToken() else { return }
     do {
-      try await supabase
-        .rpc("unregister_my_push_device", params: ["p_device_token": token])
-        .execute()
+      struct Args: Encodable, Sendable {
+        let deviceToken: String
+        enum CodingKeys: String, CodingKey { case deviceToken = "device_token" }
+      }
+      _ = try await ConvexAPI.app.mutation(
+        "devices:unregisterPush", Args(deviceToken: token), as: ConvexAPI.Ignored.self)
     } catch {
       print("[APNs] Failed to unregister token: \(error)")
     }
