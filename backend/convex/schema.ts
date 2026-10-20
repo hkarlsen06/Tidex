@@ -288,8 +288,9 @@ export default defineSchema({
 
   // ---- Messaging ----
   // thread_events, inbox_events, user_inbox_sync_state and threads.state_version are
-  // not here. They fed Realtime and the versioned sync RPCs. Convex subscriptions and
-  // revision cursors replace them (phase 1, step 4).
+  // not here. They fed Realtime and the versioned sync RPCs. The app subscribes to
+  // threads.inbox and messages.thread instead, and catches up on older messages with
+  // messages.changes, which pages by_thread_revision.
 
   threads: defineTable({
     id: uuid,
@@ -380,10 +381,11 @@ export default defineSchema({
     created_at: ts,
   })
     .index("by_uuid", ["id"])
-    .index("by_message", ["message_id", "attachment_index"]),
+    .index("by_message", ["message_id", "attachment_index"])
+    .index("by_storage_id", ["storage_id"]),
 
-  // Removing a reaction deletes the row, so revision cursors alone can't tell the app
-  // about it. Decide how when porting toggle_message_reaction.
+  // Reactions reach the app inside their message's payload. A toggle gives the message a
+  // new revision, so removing a reaction can delete the row and still sync.
   message_reactions: defineTable({
     id: uuid,
     thread_id: uuid,
@@ -393,13 +395,21 @@ export default defineSchema({
     user_id: uuid,
     emoji: v.string(),
     created_at: ts,
-    revision: v.number(),
   })
     .index("by_uuid", ["id"])
-    .index("by_thread_revision", ["thread_id", "revision"])
     .index("by_message_user_emoji", ["message_id", "user_id", "emoji"])
     .index("by_attachment", ["attachment_id"])
     .index("by_user", ["user_id"]),
+
+  // Who is typing in which thread. Replaces the Realtime typing broadcasts. Rows older
+  // than a few seconds are stale, and the app ignores them by updated_at.
+  typing_indicators: defineTable({
+    thread_id: uuid,
+    user_id: uuid,
+    updated_at: ts,
+  })
+    .index("by_thread_user", ["thread_id", "user_id"])
+    .index("by_updated_at", ["updated_at"]),
 
   abuse_reports: defineTable({
     id: uuid,
