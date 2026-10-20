@@ -427,7 +427,7 @@ function apnsCredentials(environment: ApnsEnvironment) {
     : { keyId: process.env.APNS_KEY_ID ?? "", privateKey: pem("APNS_PRIVATE_KEY") };
 }
 
-const apnsConfigured = () => Boolean(process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID && process.env.APNS_PRIVATE_KEY);
+export const apnsConfigured = () => Boolean(process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID && process.env.APNS_PRIVATE_KEY);
 const sandboxConfigured = () => Boolean(process.env.APNS_SANDBOX_KEY_ID && process.env.APNS_SANDBOX_PRIVATE_KEY);
 
 /** An ES256 provider token. Web Crypto returns the raw r||s signature APNs expects. */
@@ -445,10 +445,10 @@ async function apnsToken(environment: ApnsEnvironment) {
   return token;
 }
 
-type SendResult = { success: boolean; invalidToken?: boolean; retryable?: boolean; environment?: ApnsEnvironment };
+export type SendResult = { success: boolean; invalidToken?: boolean; retryable?: boolean; environment?: ApnsEnvironment };
 
 /** Tries the device's known environment first, then the other one. */
-async function sendToApns(
+export async function sendToApns(
   deviceToken: string,
   payload: Payload,
   headers: Record<string, string>,
