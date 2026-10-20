@@ -55,6 +55,26 @@ http.route({
 });
 
 /**
+ * POST /profile-picture with `Authorization: Bearer <Clerk token>` and the image as the
+ * body. Replaces the caller's profile picture and returns `{ url }`.
+ */
+http.route({
+  path: "/profile-picture",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if ((await ctx.auth.getUserIdentity()) === null) return new Response("Not signed in", { status: 401 });
+    const blob = await request.blob();
+    if (blob.size === 0 || blob.size > 5 * 1024 * 1024) {
+      return new Response("Image size exceeds the 5 MB limit", { status: 413 });
+    }
+    if (!blob.type.startsWith("image/")) return new Response("Not an image", { status: 415 });
+    const storageId = await ctx.storage.store(blob);
+    const url = await ctx.runMutation(internal.userSettings.storeProfilePicture, { storage_id: storageId });
+    return Response.json({ url });
+  }),
+});
+
+/**
  * App Store Server Notifications V2. App Store Connect points here from cutover night.
  * Apple retries anything but a 200, which is what a failed write needs.
  */

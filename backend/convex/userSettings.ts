@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
-import { type MutationCtx, mutation, type QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { internalMutation, type MutationCtx, mutation, type QueryCtx } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
 import { nextRevision } from "./lib/revision";
 import { checkColumns } from "./lib/columns";
@@ -153,5 +153,38 @@ export const update = mutation({
       await mirrorToDefaultJob(ctx, (await ctx.db.get(prev._id))!);
     }
     return { status: "ok" as const, row: await settingsRow(ctx, (await ctx.db.get(prev._id))!) };
+  },
+});
+
+/** Points the settings row at `storageId`, or clears the picture, and deletes the old file. */
+async function swapProfilePicture(ctx: MutationCtx, storageId: Id<"_storage"> | undefined) {
+  const { user } = await requireViewer(ctx);
+  const prev = await ownSettings(ctx, user.id);
+  if (prev === null) {
+    if (storageId !== undefined) await ctx.storage.delete(storageId);
+    reject("not_found", "No settings row yet");
+  }
+  await ctx.db.patch(prev._id, {
+    profile_picture_storage_id: storageId,
+    updated_at: new Date().toISOString(),
+    revision: await nextRevision(ctx),
+  });
+  if (prev.profile_picture_storage_id !== undefined && prev.profile_picture_storage_id !== storageId) {
+    await ctx.storage.delete(prev.profile_picture_storage_id);
+  }
+  return storageId === undefined ? null : await ctx.storage.getUrl(storageId);
+}
+
+/** Called by POST /profile-picture in http.ts after it stored the image. Returns the file URL. */
+export const storeProfilePicture = internalMutation({
+  args: { storage_id: v.id("_storage") },
+  handler: async (ctx, { storage_id }) => await swapProfilePicture(ctx, storage_id),
+});
+
+export const clearProfilePicture = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await swapProfilePicture(ctx, undefined);
+    return null;
   },
 });

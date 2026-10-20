@@ -11,6 +11,7 @@ import {
 } from "./_generated/server";
 import { getViewer, requireViewer, userByClerkId, userByUuid } from "./lib/auth";
 import { clerkUsersWithVerifiedEmail } from "./lib/clerk";
+import { isObjectionable } from "./lib/messaging";
 import { queueScreenshot, queueShareStarted } from "./lib/notify";
 import { nextRevision } from "./lib/revision";
 import { publicRow, reject } from "./lib/syncWrite";
@@ -360,6 +361,50 @@ export const myUsername = query({
       .withIndex("by_uuid", (q) => q.eq("id", user.id))
       .unique();
     return profile?.username ?? null;
+  },
+});
+
+/**
+ * Port of set_my_profile_username. An empty name clears it. Errors carry the codes
+ * "username_invalid", "username_blocked" and "username_taken".
+ */
+export const setMyUsername = mutation({
+  args: { username: v.string() },
+  handler: async (ctx, { username }) => {
+    const { user } = await requireViewer(ctx);
+    const value = username.trim().toLowerCase();
+    if (value !== "") {
+      if (isObjectionable(value)) reject("username_blocked", "Username blocked by safety filter");
+      if (!/^[a-z0-9_]{3,20}$/.test(value) || !/[a-z]/.test(value)) reject("username_invalid");
+      const taken = await ctx.db
+        .query("profiles")
+        .withIndex("by_username", (q) => q.eq("username", value))
+        .first();
+      if (taken !== null && taken.id !== user.id) reject("username_taken");
+    }
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_uuid", (q) => q.eq("id", user.id))
+      .unique();
+    const now = new Date().toISOString();
+    const revision = await nextRevision(ctx);
+    if (profile === null) {
+      await ctx.db.insert("profiles", {
+        id: user.id,
+        before_paywall: true,
+        username: value === "" ? undefined : value,
+        created_at: now,
+        updated_at: now,
+        revision,
+      });
+    } else {
+      await ctx.db.patch(profile._id, {
+        username: value === "" ? undefined : value,
+        updated_at: now,
+        revision,
+      });
+    }
+    return value === "" ? null : value;
   },
 });
 

@@ -164,6 +164,24 @@ export const setLocale = mutation({
   },
 });
 
+/**
+ * The display name from the profile screen. The app also sets it on the Clerk user, which
+ * is where friends read it. This keeps `users.current` in step for the app itself.
+ */
+export const setName = mutation({
+  args: { name: v.string() },
+  handler: async (ctx, { name }) => {
+    const { actor, impersonationSessionId } = await requireViewer(ctx);
+    if (impersonationSessionId !== null) return null;
+    const value = name.trim().slice(0, 200);
+    await ctx.db.patch(actor._id, {
+      name: value === "" ? undefined : value,
+      revision: await nextRevision(ctx),
+    });
+    return null;
+  },
+});
+
 /** Records that the signed-in person accepted the current terms. */
 export const acceptTerms = mutation({
   args: {},
