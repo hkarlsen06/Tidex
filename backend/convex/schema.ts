@@ -8,7 +8,8 @@ import { literals } from "./lib/validators";
 // - uuid columns are lowercase strings. Rows point to each other by uuid, and user_id
 //   style fields hold `users.id`. Convex does not enforce foreign keys, so account
 //   deletion has to clean up every table that holds a user's uuid.
-// - Timestamps are ISO-8601 UTC strings and dates are YYYY-MM-DD, like PostgREST returns.
+// - Timestamps are ISO-8601 UTC strings in `Date.toISOString()` form, so they sort as
+//   strings. The migration converts Postgres timestamps to that form. Dates are YYYY-MM-DD.
 // - Nullable columns are v.optional(...) and are omitted when null.
 // - jsonb columns are v.any() until the functions that write them are ported.
 // - `revision` comes from lib/revision.ts. It increases across all tables, so
@@ -58,6 +59,14 @@ export default defineSchema({
     .index("by_supabase_user_id", ["supabase_user_id"])
     .index("by_email", ["email"])
     .index("by_revision", ["revision"]),
+
+  // Apple and Google account ids (`sub`) from auth.identities, copied by the migration.
+  // users.linkOrCreate matches on them when Clerk could not link a sign-in by email.
+  legacy_identities: defineTable({
+    provider: literals("apple", "google"),
+    sub: v.string(),
+    user_id: uuid,
+  }).index("by_provider_sub", ["provider", "sub"]),
 
   // `id` is the user's uuid.
   profiles: defineTable({
