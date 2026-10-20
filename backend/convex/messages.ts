@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
-import { requireViewer } from "./lib/auth";
+import { internalQuery, type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
+import { getViewer, requireViewer } from "./lib/auth";
 import {
   canAccessThread,
   canPostToThread,
@@ -476,3 +476,19 @@ export const toggleReaction = mutation({
   },
 });
 
+
+/** The storage id of an attachment the caller may read, for the download route in http.ts. */
+export const readableAttachment = internalQuery({
+  args: { attachment_id: v.string() },
+  handler: async (ctx, { attachment_id }) => {
+    const viewer = await getViewer(ctx);
+    if (viewer === null) return null;
+    const attachment = await ctx.db
+      .query("message_attachments")
+      .withIndex("by_uuid", (q) => q.eq("id", attachment_id))
+      .unique();
+    const message = attachment === null ? null : await messageById(ctx, attachment.message_id);
+    if (message === null || !(await canAccessThread(ctx, message.thread_id, viewer.user.id))) return null;
+    return attachment!.storage_id;
+  },
+});

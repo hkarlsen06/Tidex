@@ -211,8 +211,10 @@ function reactionSummary(reactions: Reaction[], viewerId: string) {
 }
 
 /**
- * get_message_payload, as `viewerId` sees it. Attachments carry a `url` from Convex
- * file storage in place of storage_bucket and storage_path.
+ * get_message_payload, as `viewerId` sees it. Attachments carry a `url` in place of
+ * storage_bucket and storage_path. It points at the HTTP action in http.ts, which
+ * checks the caller's Clerk token and thread access on every download, as the
+ * authenticated storage GET did.
  */
 export async function messagePayload(ctx: QueryCtx, message: Doc<"messages">, viewerId: string) {
   const reactions = await ctx.db
@@ -241,7 +243,7 @@ export async function messagePayload(ctx: QueryCtx, message: Doc<"messages">, vi
         id: a.id,
         attachment_index: a.attachment_index,
         kind: a.kind,
-        url: await ctx.storage.getUrl(a.storage_id),
+        url: `${process.env.CONVEX_SITE_URL}/attachments/${a.id}`,
         mime_type: a.mime_type,
         byte_size: a.byte_size,
         width: a.width ?? null,

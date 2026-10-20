@@ -10,6 +10,7 @@
 
 import type * as appActivity from "../appActivity.js";
 import type * as events from "../events.js";
+import type * as http from "../http.js";
 import type * as jobs from "../jobs.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_clerk from "../lib/clerk.js";
@@ -39,6 +40,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   appActivity: typeof appActivity;
   events: typeof events;
+  http: typeof http;
   jobs: typeof jobs;
   "lib/auth": typeof lib_auth;
   "lib/clerk": typeof lib_clerk;
