@@ -1,7 +1,6 @@
 import Foundation
-import Supabase
 
-/// One row in `public.onboarding_funnel_steps`.
+/// One row in the `onboarding_funnel_steps` table.
 struct OnboardingFunnelStepRow: Encodable, Equatable {
   let user_id: String  // swiftlint:disable:this identifier_name
   let step: String
@@ -10,7 +9,7 @@ struct OnboardingFunnelStepRow: Encodable, Equatable {
 
 /// Records the first time a user reaches each onboarding step, for funnel analysis.
 ///
-/// Rows go to `public.onboarding_funnel_steps`, where the insert ignores duplicates so the
+/// Rows go to the `onboarding_funnel_steps` table through `onboarding:recordSteps`, which ignores duplicates so the
 /// first timestamp wins. Pre-auth pages wait in UserDefaults until post-auth onboarding
 /// records its first step. Each pre-auth page is also sent right away without a user,
 /// keyed by a random install id, so people who never sign up are counted too. Writes run
@@ -31,7 +30,7 @@ final class OnboardingFunnelRecorder {
   static let anonymousSentDefaultsKey = "onboardingFunnel.anonymousSentSteps"
 
   private let defaults: UserDefaults
-  private let currentUserId: () -> String?
+  private let currentUserId: @MainActor () -> String?
   private let send: ([OnboardingFunnelStepRow]) async throws -> Void
   private let sendPreAuth: (_ installId: String, _ step: String, _ reachedAt: String) async throws -> Void
   private var isSending = false
@@ -39,22 +38,39 @@ final class OnboardingFunnelRecorder {
 
   init(
     defaults: UserDefaults = .standard,
-    currentUserId: @escaping () -> String? = { supabase.auth.currentUser?.normalizedId },
+    currentUserId: @escaping @MainActor () -> String? = {
+      AuthSessionManager.shared.localSession()?.normalizedUserId
+    },
     send: @escaping ([OnboardingFunnelStepRow]) async throws -> Void = { rows in
-      _ =
-        try await supabase
-        .from("onboarding_funnel_steps")
-        .upsert(rows, onConflict: "user_id,step", returning: .minimal, ignoreDuplicates: true)
-        .execute()
+      struct Step: Encodable, Sendable {
+        let step: String
+        let reachedAt: String
+        enum CodingKeys: String, CodingKey {
+          case step
+          case reachedAt = "reached_at"
+        }
+      }
+      struct Args: Encodable, Sendable { let steps: [Step] }
+      let args = Args(steps: rows.map { Step(step: $0.step, reachedAt: $0.reached_at) })
+      _ = try await ConvexAPI.app.mutation(
+        "onboarding:recordSteps", args, as: ConvexAPI.Ignored.self)
     },
     sendPreAuth: @escaping (_ installId: String, _ step: String, _ reachedAt: String) async throws
       -> Void = { installId, step, reachedAt in
-        let params: [String: AnyJSON] = [
-          "p_install_id": .string(installId),
-          "p_step": .string(step),
-          "p_reached_at": .string(reachedAt),
-        ]
-        _ = try await supabase.rpc("record_onboarding_preauth_step", params: params).execute()
+        struct Args: Encodable, Sendable {
+          let installId: String
+          let step: String
+          let reachedAt: String
+          enum CodingKeys: String, CodingKey {
+            case installId = "install_id"
+            case step
+            case reachedAt = "reached_at"
+          }
+        }
+        _ = try await ConvexAPI.anonymous.mutation(
+          "onboarding:recordPreauthStep",
+          Args(installId: installId, step: step, reachedAt: reachedAt),
+          as: ConvexAPI.Ignored.self)
       }
   ) {
     self.defaults = defaults
