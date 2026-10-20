@@ -21,7 +21,7 @@ struct SettingsView: View {
   @State private var profileEmail: String?
 
   /// Whether the current user can access admin settings
-  /// Requires both admin role and AAL2 assurance level.
+  /// Requires the admin role.
   @State private var canAccessAdminSettings = false
   /// Whether to show the pay job chooser before opening pay settings.
   @State private var showPayJobChooser = false
