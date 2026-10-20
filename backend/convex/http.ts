@@ -24,4 +24,30 @@ http.route({
   }),
 });
 
+/**
+ * POST /attachments?thread_id=<uuid> with `Authorization: Bearer <Clerk token>` and the
+ * image as the body. Stores it and returns `{ storageId }` for messages.send, which only
+ * accepts the uploader's own files for that thread.
+ */
+http.route({
+  path: "/attachments",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const threadId = new URL(request.url).searchParams.get("thread_id") ?? "";
+    const userId = await ctx.runQuery(internal.messages.uploaderFor, { thread_id: threadId });
+    if (userId === null) return new Response("Posting is not allowed for this thread", { status: 403 });
+    const blob = await request.blob();
+    if (blob.size === 0 || blob.size > 5 * 1024 * 1024) {
+      return new Response("Attachment size exceeds the 5 MB limit", { status: 413 });
+    }
+    const storageId = await ctx.storage.store(blob);
+    await ctx.runMutation(internal.messages.recordUpload, {
+      storage_id: storageId,
+      user_id: userId,
+      thread_id: threadId,
+    });
+    return Response.json({ storageId });
+  }),
+});
+
 export default http;

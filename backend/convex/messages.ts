@@ -1,6 +1,13 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import { internalQuery, type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  type MutationCtx,
+  mutation,
+  type QueryCtx,
+  query,
+} from "./_generated/server";
 import { getViewer, requireViewer } from "./lib/auth";
 import {
   canAccessThread,
@@ -29,10 +36,7 @@ async function messageById(ctx: QueryCtx, id: string) {
     .unique();
 }
 
-const newestFirst = (a: Doc<"messages">, b: Doc<"messages">) =>
-  b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id);
-
-/** Live messages older than the cursor, newest first. */
+/** Live messages older than the cursor, newest first. The index orders ties by id. */
 async function liveMessagesBefore(
   ctx: QueryCtx,
   threadId: string,
@@ -53,7 +57,7 @@ async function liveMessagesBefore(
     out.push(m);
     if (out.length === count) break;
   }
-  return out.sort(newestFirst);
+  return out;
 }
 
 async function page(
@@ -188,15 +192,20 @@ export const get = query({
   },
 });
 
-/** An upload URL for one image. The app posts the file there and sends the storage id. */
-export const generateUploadUrl = mutation({
+/** The caller's user id if they may upload an image to the thread, for POST /attachments. */
+export const uploaderFor = internalQuery({
   args: { thread_id: v.string() },
   handler: async (ctx, { thread_id }) => {
-    const { user } = await requireViewer(ctx);
-    if (!(await canPostToThread(ctx, thread_id, user.id))) {
-      reject("posting_not_allowed", "Posting is not allowed for this thread");
-    }
-    return await ctx.storage.generateUploadUrl();
+    const viewer = await getViewer(ctx);
+    if (viewer === null || !(await canPostToThread(ctx, thread_id, viewer.user.id))) return null;
+    return viewer.user.id;
+  },
+});
+
+export const recordUpload = internalMutation({
+  args: { storage_id: v.id("_storage"), user_id: v.string(), thread_id: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("attachment_uploads", { ...args, created_at: new Date().toISOString() });
   },
 });
 
@@ -273,8 +282,27 @@ export const send = mutation({
       reject("invalid", "A message must include text, at least one attachment, or supported rich content");
     }
     if (attachments.length > MAX_ATTACHMENTS) reject("invalid", "Too many attachments");
+    const ids = attachments.map((a) => a.attachment_id);
+    if (new Set(ids).size !== ids.length) reject("invalid", "Attachment ids must be unique");
+    const dimension = (n: number | undefined) =>
+      n === undefined || (Number.isInteger(n) && n > 0 && n <= 2147483647);
+    const uploads = [];
     for (const a of attachments) {
       if (!ATTACHMENT_TYPES.has(a.mime_type)) reject("invalid", `Unsupported attachment mime type: ${a.mime_type}`);
+      const taken = await ctx.db
+        .query("message_attachments")
+        .withIndex("by_uuid", (q) => q.eq("id", a.attachment_id))
+        .first();
+      if (taken !== null) reject("invalid", "Attachment id is already used");
+      // Only the caller's own upload to this thread, as the storage.objects owner check did.
+      const upload = await ctx.db
+        .query("attachment_uploads")
+        .withIndex("by_storage_id", (q) => q.eq("storage_id", a.storage_id))
+        .unique();
+      if (upload === null || upload.user_id !== user.id || upload.thread_id !== args.thread_id) {
+        reject("invalid", "Attachment upload not found for this thread and user");
+      }
+      uploads.push(upload);
       const file = await ctx.db.system.get(a.storage_id);
       if (file === null) reject("invalid", "Attachment object not found");
       if (file.contentType !== a.mime_type) {
@@ -284,18 +312,11 @@ export const send = mutation({
       if (a.byte_size <= 0 || a.byte_size > MAX_ATTACHMENT_BYTES) {
         reject("invalid", "Attachment size exceeds the 5 MB limit");
       }
-      if ((a.width !== undefined && a.width <= 0) || (a.height !== undefined && a.height <= 0)) {
-        reject("invalid", "Attachment width and height must be positive");
+      if (!dimension(a.width) || !dimension(a.height)) {
+        reject("invalid", "Attachment width and height must be positive integers");
       }
-      // ponytail: Convex file storage has no owner. Storage ids are unguessable, so this
-      // only stops one file from being attached twice. Track uploads per user if the
-      // ids ever leave a thread.
-      const used = await ctx.db
-        .query("message_attachments")
-        .withIndex("by_storage_id", (q) => q.eq("storage_id", a.storage_id))
-        .first();
-      if (used !== null) reject("invalid", "Attachment is already used");
     }
+    for (const upload of uploads) await ctx.db.delete(upload._id);
 
     const now = new Date().toISOString();
     const id = crypto.randomUUID();

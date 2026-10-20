@@ -361,7 +361,7 @@ export default defineSchema({
   })
     .index("by_uuid", ["id"])
     .index("by_thread_revision", ["thread_id", "revision"])
-    .index("by_thread_created_at", ["thread_id", "created_at"])
+    .index("by_thread_created_at", ["thread_id", "created_at", "id"])
     .index("by_thread_sender_client", ["thread_id", "sender_user_id", "client_id"])
     .index("by_sender", ["sender_user_id"]),
 
@@ -381,8 +381,7 @@ export default defineSchema({
     created_at: ts,
   })
     .index("by_uuid", ["id"])
-    .index("by_message", ["message_id", "attachment_index"])
-    .index("by_storage_id", ["storage_id"]),
+    .index("by_message", ["message_id", "attachment_index"]),
 
   // Reactions reach the app inside their message's payload. A toggle gives the message a
   // new revision, so removing a reaction can delete the row and still sync.
@@ -400,6 +399,18 @@ export default defineSchema({
     .index("by_message_user_emoji", ["message_id", "user_id", "emoji"])
     .index("by_attachment", ["attachment_id"])
     .index("by_user", ["user_id"]),
+
+  // Images uploaded through POST /attachments on the HTTP actions domain and not sent
+  // yet. messages.send accepts only the caller's own upload for that thread, as the
+  // Postgres check on storage.objects.owner_id did, and deletes the row.
+  attachment_uploads: defineTable({
+    storage_id: v.id("_storage"),
+    user_id: uuid,
+    thread_id: uuid,
+    created_at: ts,
+  })
+    .index("by_storage_id", ["storage_id"])
+    .index("by_created_at", ["created_at"]),
 
   // Who is typing in which thread. Replaces the Realtime typing broadcasts. Rows older
   // than a few seconds are stale, and the app ignores them by updated_at.
