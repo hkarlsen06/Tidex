@@ -697,6 +697,9 @@ export default defineSchema({
     expires_at: ts,
     ended_at: optTs,
     ended_by_admin_user_id: optUuid,
+    // The Clerk session (the token's `sid`) that started it. Only that session acts as the
+    // target, so the admin's other devices stay signed in as the admin.
+    clerk_session_id: optString,
   })
     .index("by_uuid", ["id"])
     .index("by_admin_ended_at", ["admin_user_id", "ended_at"])

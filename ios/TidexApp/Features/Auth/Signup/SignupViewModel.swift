@@ -199,7 +199,7 @@ final class SignupViewModel {
   /// Open the code step for an address that has a pending confirmation.
   func showEmailVerification(email: String) {
     pendingEmail = email
-    email = email
+    self.email = email
     otpCode = ""
     fieldErrors.clear()
     clearMessages()

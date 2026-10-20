@@ -61,12 +61,13 @@ actor ClerkConvexAuthProvider: AuthProvider {
 final class ConvexRealtime {
   static let shared = ConvexRealtime()
 
-  private let authProvider = ClerkConvexAuthProvider()
   // ConvexMobile's client is not Sendable and its login is an async method, so the compiler
   // would reject passing it out of the main actor. Only this class touches it.
   private nonisolated(unsafe) var client: ConvexClientWithAuth<String>?
   private var isSignedIn = false
   private var signInTask: Task<Bool, Never>?
+  /// Bumped by every sign-out. A login that finishes after one belongs to the old account.
+  private var generation = 0
 
   private init() {}
 
@@ -78,10 +79,16 @@ final class ConvexRealtime {
     if NSClassFromString("XCTestCase") != nil { return false }
     if let signInTask { return await signInTask.value }
 
+    let started = generation
     let task = Task { @MainActor [self] in
       nonisolated(unsafe) let client = makeClient()
       switch await client.login() {
       case .success:
+        // Signed out while the login ran, so its token may be the previous account's.
+        guard generation == started else {
+          await client.logout()
+          return false
+        }
         isSignedIn = true
         return true
 
@@ -92,17 +99,18 @@ final class ConvexRealtime {
     }
     signInTask = task
     let signedIn = await task.value
-    signInTask = nil
+    if generation == started { signInTask = nil }
     return signedIn
   }
 
-  /// Ends the session of the client. Cancel the subscriptions first.
+  /// Ends the session of the client. Cancel the subscriptions first. The next sign-in gets a
+  /// new client and token provider, so nothing from this account carries over.
   func signOut() async {
-    signInTask?.cancel()
+    generation += 1
     signInTask = nil
-    guard isSignedIn, client != nil else { return }
     isSignedIn = false
     nonisolated(unsafe) let client = client
+    self.client = nil
     await client?.logout()
   }
 
@@ -136,7 +144,7 @@ final class ConvexRealtime {
     if let client { return client }
     let created = ConvexClientWithAuth<String>(
       deploymentUrl: ConvexAPI.appDeploymentURL.absoluteString,
-      authProvider: authProvider
+      authProvider: ClerkConvexAuthProvider()
     )
     client = created
     return created

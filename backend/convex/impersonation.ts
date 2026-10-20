@@ -2,11 +2,12 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
-import { requireViewer, userByUuid } from "./lib/auth";
+import { clerkSessionId, requireViewer, userByUuid } from "./lib/auth";
 
 // Port of the impersonation Edge Function. The admin stays signed in as themselves.
-// While their session is open and not expired, lib/auth.ts getViewer returns the target,
-// so every query and mutation acts as the target. No magic link, target session or
+// While their session is open and not expired, lib/auth.ts getViewer returns the target
+// for requests from the Clerk session that started it, so every query and mutation from
+// that device acts as the target and the admin's other devices don't change. No magic link, target session or
 // stored admin token is needed.
 
 const SUPERADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
@@ -61,6 +62,9 @@ export const start = mutation({
   handler: async (ctx, { target_user_id, reason }) => {
     const { actor, impersonationSessionId } = await requireViewer(ctx);
     if (actor.role !== "admin") fail("Admin access required");
+    const identity = await ctx.auth.getUserIdentity();
+    const sid = identity === null ? undefined : clerkSessionId(identity);
+    if (sid === undefined) fail("No Clerk session in the token");
     if (impersonationSessionId !== null) fail("Nested impersonation is not allowed");
     const targetedByOthers = (await ctx.db.query("impersonation_sessions").collect()).some(
       (s) => s.target_user_id === actor.id && s.ended_at === undefined && Date.parse(s.expires_at) > Date.now(),
@@ -94,6 +98,7 @@ export const start = mutation({
       reason: reason.trim(),
       created_at: new Date(now).toISOString(),
       expires_at: new Date(now + SESSION_MS).toISOString(),
+      clerk_session_id: sid,
     });
     const session = (await ctx.db.get(docId))!;
     await audit(ctx, session, "start", { reason: session.reason, metadata: { target_email: target!.email ?? null } });
@@ -134,12 +139,16 @@ export const expire = internalMutation({
   },
 });
 
-/** The admin's open session, for the app's impersonation banner. */
+/** The open session this device's requests act under, for the app's impersonation banner. */
 export const active = query({
   args: {},
   handler: async (ctx) => {
-    const { actor } = await requireViewer(ctx);
-    const session = await openSessionFor(ctx, actor.id);
-    return session === null || Date.parse(session.expires_at) <= Date.now() ? null : sessionJson(session);
+    const { impersonationSessionId } = await requireViewer(ctx);
+    if (impersonationSessionId === null) return null;
+    const session = await ctx.db
+      .query("impersonation_sessions")
+      .withIndex("by_uuid", (q) => q.eq("id", impersonationSessionId))
+      .unique();
+    return session === null ? null : sessionJson(session);
   },
 });

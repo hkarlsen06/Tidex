@@ -1,6 +1,5 @@
 import ClerkKit
 import Foundation
-import SwiftData
 // swiftlint:disable:next sorted_imports
 import os.log
 
@@ -266,25 +265,11 @@ final class AuthSessionManager {
     return error is AuthSessionManagerError
   }
 
-  /// The user id of the most recently updated local settings row, for offline launches
-  /// before the user was ever resolved on this device.
+  /// The Tidex user this device last resolved for the current Clerk session, for offline
+  /// use. Nil when it never resolved, so local data is never opened for a guessed user,
+  /// such as a store kept for a previous account.
   func offlineUserIdFallback() -> String? {
-    if let user = Clerk.shared.session.flatMap({ storedUser(clerkUserId: $0.userId) }) {
-      return user.normalizedId
-    }
-    let descriptor = FetchDescriptor<LocalUserSettings>(
-      sortBy: [SortDescriptor(\LocalUserSettings.localUpdatedAt, order: .reverse)]
-    )
-    do {
-      if let userId = try LocalStore.shared.mainContext.fetch(descriptor).first?.userId,
-        !userId.isEmpty
-      {
-        return userId
-      }
-    } catch {
-      logger.error("Failed reading offline user id fallback: \(error.localizedDescription)")
-    }
-    return nil
+    Clerk.shared.session.flatMap { storedUser(clerkUserId: $0.userId) }?.normalizedId
   }
 
   /// Clears the extensions' token on sign-out.

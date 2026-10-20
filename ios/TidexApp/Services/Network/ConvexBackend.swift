@@ -1,4 +1,5 @@
-import ClerkKit
+// setDeviceToken is SPI: the only way to end Clerk's session on the device without the network.
+@_spi(FrameworkIntegration) import ClerkKit
 import Foundation
 import os.log
 
@@ -47,6 +48,17 @@ enum ClerkSetup {
   }
 }
 
+extension ClerkSetup {
+  /// Ends the Clerk session on this device without a request, for a sign-out that couldn't
+  /// reach Clerk. Clearing the device token also clears Clerk's cached client, so the next
+  /// launch is signed out. The server session stays until it expires, with nobody holding it.
+  @MainActor
+  static func forgetLocalSession() async {
+    let current = SharedKeychainStorage.clerkDeviceToken
+    _ = try? await Clerk.shared.setDeviceToken(nil, expected: current)
+  }
+}
+
 /// Keeps users signed in across the update to N+1. Version N stored a GoTrue session. On the
 /// first launch without a Clerk session, this refreshes it, trades it for a Clerk sign-in
 /// token with `sessionExchange.exchange`, and signs in with that ticket.
@@ -82,10 +94,10 @@ enum LegacySessionExchange {
       logger.info("Exchanged the GoTrue session for a Clerk session")
       return .signedIn
     } catch {
-      // Only a definite refusal drops the GoTrue session. A Convex, Clerk or GoTrue outage
-      // must not sign the user out.
+      // Only a definite refusal by GoTrue or the exchange drops the GoTrue session. An outage
+      // or a Clerk error waits for the next launch, which gets a new ticket. A manual
+      // sign-in discards the GoTrue session too.
       let refused = isLegacyGoTrueRefusal(error) || (error as? ConvexAPI.Failure)?.code != nil
-        || error is ClerkAPIError
       guard refused else {
         logger.warning("Session exchange postponed: \(error.localizedDescription)")
         return .retryLater

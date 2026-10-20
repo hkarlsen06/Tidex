@@ -34,9 +34,16 @@ export async function userByClerkId(
   return alias === null ? null : await userByUuid(ctx, alias.user_id);
 }
 
+/** The Clerk session id (`sid` claim) of the request's token. */
+export function clerkSessionId(identity: object): string | undefined {
+  const sid = (identity as { sid?: unknown }).sid;
+  return typeof sid === "string" ? sid : undefined;
+}
+
 /**
  * Returns null when signed out, banned, or before `users.ensureCurrent` has created the
- * row. While an admin has an active impersonation session, `user` is the target.
+ * row. While an admin has an active impersonation session started from this Clerk
+ * session, `user` is the target.
  */
 export async function getViewer(ctx: QueryCtx): Promise<Viewer | null> {
   const identity = await ctx.auth.getUserIdentity();
@@ -55,7 +62,12 @@ export async function getViewer(ctx: QueryCtx): Promise<Viewer | null> {
     // Subscriptions don't rerun when time passes. impersonation.start schedules
     // impersonation.expire to set ended_at at expires_at, and this check covers a
     // query that runs between the two.
-    if (session !== null && Date.parse(session.expires_at) > Date.now()) {
+    if (
+      session !== null &&
+      session.clerk_session_id !== undefined &&
+      session.clerk_session_id === clerkSessionId(identity) &&
+      Date.parse(session.expires_at) > Date.now()
+    ) {
       const target = await userByUuid(ctx, session.target_user_id);
       if (target !== null) {
         return { user: target, actor, impersonationSessionId: session.id };

@@ -604,6 +604,8 @@ final class AppCoordinator {
     switch timeoutError {
     case .sessionFetchTimedOut, .refreshTimedOut:
       return true
+    case .notSignedIn:
+      return false
     }
   }
 
@@ -875,7 +877,11 @@ final class AppCoordinator {
         // user's next sign-in. Read this before the local sign-out removes the session.
         let unsyncedUserId = await userIdWithUnsyncedChanges()
         isUserInitiatedSignOutInProgress = true
-        try? await Clerk.shared.auth.signOut()
+        do {
+          try await Clerk.shared.auth.signOut()
+        } catch {
+          await ClerkSetup.forgetLocalSession()
+        }
         // Run outside this task: clearAllCachedData() cancels foregroundTask.
         Task { @MainActor [weak self] in
           guard let self else { return }
@@ -1045,7 +1051,9 @@ final class AppCoordinator {
         try await authService.signOut()
       }
     } catch {
+      // Offline, Clerk keeps its session and would restore it on the next launch.
       launchLog.warning("[Auth] Clerk sign-out failed: \(error.localizedDescription)")
+      await ClerkSetup.forgetLocalSession()
     }
 
     // Always transition immediately; auth listener can still emit signedOut afterward.
