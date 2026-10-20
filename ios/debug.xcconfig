@@ -10,3 +10,6 @@ CONVEX_URL = http:/$()/127.0.0.1:3210
 // HTTP actions (http.ts): chat images and the calendar feed.
 CONVEX_SITE_URL = http:/$()/127.0.0.1:3211
 CLERK_PUBLISHABLE_KEY = pk_test_ZWxlY3RyaWMtY29yYWwtNjcxMy5jbGVyay5hY2NvdW50cy5kZXYk
+
+// ConvexMobile ships only arm64 simulator slices, so simulator builds skip x86_64.
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64

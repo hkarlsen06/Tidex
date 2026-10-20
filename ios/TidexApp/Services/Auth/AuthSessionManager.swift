@@ -153,7 +153,7 @@ final class AuthSessionManager {
       }
     #endif
     guard let clerkSession = Clerk.shared.session,
-      let user = storedUser(clerkUserId: clerkSession.userId)
+      let user = storedUser(clerkUserId: clerkSession.clerkUserId)
     else { return nil }
     return AuthSession(
       user: user,
@@ -269,7 +269,7 @@ final class AuthSessionManager {
   /// use. Nil when it never resolved, so local data is never opened for a guessed user,
   /// such as a store kept for a previous account.
   func offlineUserIdFallback() -> String? {
-    Clerk.shared.session.flatMap { storedUser(clerkUserId: $0.userId) }?.normalizedId
+    Clerk.shared.session.flatMap { storedUser(clerkUserId: $0.clerkUserId) }?.normalizedId
   }
 
   /// Clears the extensions' token on sign-out.
@@ -291,7 +291,7 @@ final class AuthSessionManager {
       throw AuthSessionManagerError.notSignedIn
     }
     remember(token: token, sessionId: clerkSession.id)
-    let user = try await currentUser(clerkUserId: clerkSession.userId)
+    let user = try await currentUser(clerkUserId: clerkSession.clerkUserId)
     return AuthSession(
       user: user,
       accessToken: token,
@@ -316,7 +316,7 @@ final class AuthSessionManager {
     userTask = task
     defer { userTask = nil }
     let user = try await task.value
-    guard Clerk.shared.session?.userId == clerkUserId else {
+    guard Clerk.shared.session?.clerkUserId == clerkUserId else {
       throw AuthSessionManagerError.notSignedIn
     }
     cachedUser = user
@@ -370,5 +370,13 @@ final class AuthSessionManager {
       guard let value = try await group.next() else { throw CancellationError() }
       return value
     }
+  }
+}
+
+extension Session {
+  /// The Clerk user id. Sessions carry it in `user`, or in `publicUserData` before the user
+  /// has loaded. Empty when neither has it, which matches no cached user.
+  var clerkUserId: String {
+    user?.id ?? publicUserData?.userId ?? ""
   }
 }
