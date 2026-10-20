@@ -65,6 +65,8 @@ Start with the Clerk checks below. Any of them can change the plan, so answer th
    - Sharing by email asks Clerk for users with that verified address. Sharing by phone number matches nobody, since N+1 has no phone sign-in.
    - The app sends Clerk's ordinary session token. The Convex integration puts `aud: "convex"` on it, and there is no `convex` JWT template.
    - The widget and the share extension call the friends bootstrap and `send_message` over raw REST today. In N+1 they need the Convex client too.
+   - Every push payload carries `recipient_user_id`. The notification service extension should drop a push whose recipient isn't the signed-in user, in case a device token moved between accounts while a push was in flight.
+   - The app calls `users.setLocale` after sign-in and when the language changes. Push text uses it, and users who sign up on N+1 have no GoTrue metadata to copy it from.
 5. Replace the server-side parts:
    - Cron jobs become Convex crons. This covers push notifications, Live Activities, soft-delete purges and the sync-event and diagnostics purges.
    - `send-push-notifications`, `delete-account`, `admin-user-ban`, `admin-user-role` and `impersonation` become Convex actions. `delete-account` and bans also have to act on the Clerk user. Impersonation stays inside Convex. The admin stays signed in as themselves, and while an impersonation session is active, the current-user lookup returns the target user.
