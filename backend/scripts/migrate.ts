@@ -202,8 +202,10 @@ async function main() {
   };
 
   // Users and Clerk. Proven emails follow find_user_by_email: a verified email
-  // identity, or the email on a Google or Apple identity. Clerk treats imported
-  // addresses as verified, so an unconfirmed one must never reach it.
+  // identity, or the email on a Google or Apple identity. The account's email
+  // counts too once GoTrue confirmed it, because many email identities still say
+  // email_verified false after the confirmation. Clerk treats imported addresses
+  // as verified, so an unconfirmed one must never reach it.
   const authUsers = (await pg(`
     select json_build_object(
       'id', u.id,
@@ -220,11 +222,15 @@ async function main() {
       'providers', u.raw_app_meta_data->'providers',
       'password_hash', u.encrypted_password,
       'proven_emails', (
-        select json_agg(distinct lower(i.identity_data->>'email'))
-        from auth.identities i
-        where i.user_id = u.id
-          and i.identity_data->>'email' like '%@%'
-          and (i.provider in ('google', 'apple') or (i.provider = 'email' and i.identity_data->>'email_verified' = 'true'))
+        select json_agg(distinct e) from (
+          select lower(i.identity_data->>'email') as e
+          from auth.identities i
+          where i.user_id = u.id
+            and i.identity_data->>'email' like '%@%'
+            and (i.provider in ('google', 'apple') or (i.provider = 'email' and i.identity_data->>'email_verified' = 'true'))
+          union all
+          select lower(u.email) where u.email_confirmed_at is not null and u.email like '%@%'
+        ) proven
       )
     )
     from auth.users u order by u.created_at`)) as AuthUser[];
@@ -327,7 +333,7 @@ async function main() {
   log(`Copied ${pictureIds.length} profile pictures`);
 
   // Tables that start empty in Convex.
-  for (const table of ["impersonation_sessions", "clerk_user_aliases", "typing_indicators", "attachment_uploads"]) await put(table, []);
+  for (const table of ["impersonation_sessions", "clerk_user_aliases", "typing_indicators", "attachment_uploads", "account_deletions"]) await put(table, []);
   await importTable("revision_counter", [{ value: revision }]);
   log(`revision_counter: ${revision}`);
 
