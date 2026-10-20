@@ -2386,6 +2386,8 @@ final class SyncCoordinator: @unchecked Sendable {
         return .noChange
       }
 
+      // Take the server's profile picture instead of keeping a stale local edit of it.
+      await storeActor.dropServerOwnedSettingsFields(userId: serverRow.user_id)
       await storeActor.autoMergeUserSettings(
         userId: serverRow.user_id,
         serverRow: serverRow,
@@ -4532,6 +4534,8 @@ final class SyncCoordinator: @unchecked Sendable {
 
   private func pushUserSettings(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    // The profile picture is server owned, so it never counts as a local edit.
+    await storeActor.dropServerOwnedSettingsFields(userId: userId)
     guard let settings = try await storeActor.dirtyUserSettingsCopy(userId: userId) else {
       return TablePushResult(table: .userSettings, rowsPushed: 0, newConflicts: 0, rebased: 0)
     }
@@ -4590,9 +4594,6 @@ final class SyncCoordinator: @unchecked Sendable {
     update.set(
       .defaultShiftsView, "default_shifts_view",
       settings.defaultShiftsView.jsonOrNull { .string($0) })
-    update.set(
-      .profilePictureUrl, "profile_picture_url",
-      settings.profilePictureUrl.jsonOrNull { .string($0) })
     update.set(.payrollDay, "payroll_day", settings.payrollDay.jsonOrNull { .integer($0) })
     update.set(.theme, "theme", .string(settings.theme))
     update.set(
@@ -4700,9 +4701,6 @@ final class SyncCoordinator: @unchecked Sendable {
     }
     if let view = settings.defaultShiftsView {
       insertData["default_shifts_view"] = .string(view)
-    }
-    if let url = settings.profilePictureUrl {
-      insertData["profile_picture_url"] = .string(url)
     }
     if let day = settings.payrollDay {
       insertData["payroll_day"] = .integer(day)

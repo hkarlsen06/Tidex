@@ -89,10 +89,8 @@ internal enum SyncConvex {
     "user_id", "created_at", "updated_at", "revision", "deleted_at",
   ]
 
-  /// The server has no `profile_picture_url` column. The profile picture has its own upload.
-  private static func isSent(_ table: SyncTable, column: String) -> Bool {
-    if serverColumns.contains(column) { return false }
-    return !(table == .userSettings && column == "profile_picture_url")
+  private static func isSent(_ column: String) -> Bool {
+    !serverColumns.contains(column)
   }
 
   static func pull<Row: Decodable>(
@@ -120,7 +118,7 @@ internal enum SyncConvex {
   static func insert<Row: Decodable>(
     _ table: SyncTable, row: [String: AnyJSON]
   ) async throws -> SyncInsertOutcome<Row> {
-    let sent = row.filter { isSent(table, column: $0.key) && $0.value != .null }
+    let sent = row.filter { isSent($0.key) && $0.value != .null }
     let reply: WriteReply<Row> = try await ConvexAPI.app.mutation(
       "\(table.convexModule):insert", InsertArgs(row: sent))
     switch (reply.status, reply.row) {
@@ -134,7 +132,7 @@ internal enum SyncConvex {
   static func update<Row: Decodable>(
     _ table: SyncTable, id: String?, expectedRevision: Int64, data: [String: AnyJSON]
   ) async throws -> SyncWriteOutcome<Row> {
-    let columns = data.filter { isSent(table, column: $0.key) }
+    let columns = data.filter { isSent($0.key) }
     let cleared = columns.filter { $0.value == .null }.map { $0.key }.sorted()
     let args = UpdateArgs(
       id: id,
