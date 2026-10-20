@@ -94,6 +94,8 @@
 	<true/>
 	<key>CLERK_PUBLISHABLE_KEY</key>
 	<string>$(CLERK_PUBLISHABLE_KEY)</string>
+	<key>CONVEX_SITE_URL</key>
+	<string>$(CONVEX_SITE_URL)</string>
 	<key>CONVEX_URL</key>
 	<string>$(CONVEX_URL)</string>
 	<key>NSAppTransportSecurity</key>

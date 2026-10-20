@@ -6,5 +6,7 @@
 // Debug builds use the dev Convex deployment on the Mac (backend/dev/compose.yml) and the
 // development Clerk instance. A phone reaches the Mac through Tailscale, so for a device build
 // set CONVEX_URL to the Mac's `tailscale serve` address for port 3210.
+// HTTP actions (http.ts): chat images and the calendar feed.
+CONVEX_SITE_URL = http:/$()/127.0.0.1:3211
 CONVEX_URL = http:/$()/127.0.0.1:3210
 CLERK_PUBLISHABLE_KEY = pk_test_ZWxlY3RyaWMtY29yYWwtNjcxMy5jbGVyay5hY2NvdW50cy5kZXYk

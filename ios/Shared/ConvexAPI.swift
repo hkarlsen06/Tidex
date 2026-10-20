@@ -47,6 +47,15 @@ struct ConvexAPI: Sendable {
     return url
   }()
 
+  /// `CONVEX_SITE_URL`: the deployment's HTTP actions in `backend/convex/http.ts`, such as
+  /// chat image uploads and downloads.
+  static let configuredSiteURL: URL = {
+    guard let value = Bundle.main.infoDictionary?["CONVEX_SITE_URL"] as? String,
+      let url = URL(string: value), url.scheme != nil
+    else { return URL(string: "https://actions.tidex.no")! }
+    return url
+  }()
+
   private static let session: URLSession = {
     let config = URLSessionConfiguration.default
     config.timeoutIntervalForRequest = 15
