@@ -56,12 +56,20 @@ export const registerPush = mutation({
       }
     }
     const mine = await ownDevices(ctx, user.id);
-    let existing =
+    const existing =
       (args.device_id !== undefined ? newest(mine.filter((d) => d.device_id === args.device_id)) : undefined) ??
       (fcm !== undefined ? mine.find((d) => d.fcm_token === fcm) : undefined) ??
       (apns !== undefined && fcm === undefined ? newest(mine.filter((d) => d.platform === args.platform)) : undefined);
 
     if (existing !== undefined) {
+      // fcm_token is unique in Postgres, so an update could not take another row's token.
+      if (fcm !== undefined && fcm !== existing.fcm_token) {
+        const holder = await ctx.db
+          .query("push_devices")
+          .withIndex("by_fcm_token", (q) => q.eq("fcm_token", fcm))
+          .first();
+        if (holder !== null) reject("conflict", "fcm token is registered to another device");
+      }
       await ctx.db.patch(existing._id, {
         device_id: args.device_id,
         device_model: args.device_model,
