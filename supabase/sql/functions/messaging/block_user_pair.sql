@@ -36,6 +36,19 @@ BEGIN
     RAISE EXCEPTION 'No sharing relationship exists for this user pair';
   END IF;
 
+  -- One block per pair. Overwriting the other user's block would let the blocked
+  -- user take it over and then call unblock_user_pair to restore the share.
+  IF EXISTS (
+    SELECT 1
+    FROM public.shift_shares ss
+    WHERE ((ss.owner_id = v_uid AND ss.viewer_id = p_other_user_id)
+        OR (ss.owner_id = p_other_user_id AND ss.viewer_id = v_uid))
+      AND ss.blocked_by_user_id IS NOT NULL
+      AND ss.blocked_by_user_id <> v_uid
+  ) THEN
+    RAISE EXCEPTION 'The other user has blocked this pair';
+  END IF;
+
   v_user_low_id := LEAST(v_uid, p_other_user_id);
   v_user_high_id := GREATEST(v_uid, p_other_user_id);
 
