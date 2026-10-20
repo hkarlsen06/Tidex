@@ -6,6 +6,15 @@ import { buildICalendarFeed } from "./lib/calendarFeed/ics";
 import { normalizeCalendarFeedLocale } from "./lib/calendarFeed/locale";
 import { projectRecurringShifts } from "./lib/calendarFeed/project";
 
+/** False without a usable token. An expired or malformed one throws, which would be a 500. */
+async function signedIn(ctx: { auth: { getUserIdentity: () => Promise<unknown> } }) {
+  try {
+    return (await ctx.auth.getUserIdentity()) !== null;
+  } catch {
+    return false;
+  }
+}
+
 const http = httpRouter();
 
 /**
@@ -16,6 +25,7 @@ http.route({
   pathPrefix: "/attachments/",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
+    if (!(await signedIn(ctx))) return new Response("Not signed in", { status: 401 });
     const attachmentId = new URL(request.url).pathname.slice("/attachments/".length);
     const storageId = await ctx.runQuery(internal.messages.readableAttachment, {
       attachment_id: attachmentId,
@@ -37,6 +47,8 @@ http.route({
   path: "/attachments",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
+    // 401 tells the app to renew its token and retry. 403 means no access to the thread.
+    if (!(await signedIn(ctx))) return new Response("Not signed in", { status: 401 });
     const threadId = new URL(request.url).searchParams.get("thread_id") ?? "";
     const userId = await ctx.runQuery(internal.messages.uploaderFor, { thread_id: threadId });
     if (userId === null) return new Response("Posting is not allowed for this thread", { status: 403 });
@@ -62,7 +74,7 @@ http.route({
   path: "/profile-picture",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    if ((await ctx.auth.getUserIdentity()) === null) return new Response("Not signed in", { status: 401 });
+    if (!(await signedIn(ctx))) return new Response("Not signed in", { status: 401 });
     const blob = await request.blob();
     if (blob.size === 0 || blob.size > 5 * 1024 * 1024) {
       return new Response("Image size exceeds the 5 MB limit", { status: 413 });
