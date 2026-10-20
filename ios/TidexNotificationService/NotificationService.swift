@@ -143,6 +143,25 @@ private enum SenderAvatarLoader {
   }
 }
 
+private enum SignedInUser {
+  // Same App Group and key as `WidgetAppGroup.id` and `WidgetAppGroup.signedInUserIdKey`.
+  // This target doesn't compile that file.
+  private static let appGroupId = "group.no.tidex.app"
+  private static let userIdKey = "signed_in_user_id"
+
+  /// True when the push names a recipient and the app has stored a different signed-in user.
+  /// Every push from Convex carries `recipient_user_id`. A device token that moved between
+  /// accounts can still get a push for the old account. Without a stored user id, the push
+  /// counts as the user's own.
+  static func isForAnotherAccount(_ userInfo: [AnyHashable: Any]) -> Bool {
+    guard let recipient = (userInfo["recipient_user_id"] as? String)?.nonEmpty?.lowercased(),
+      let signedIn = UserDefaults(suiteName: appGroupId)?.string(forKey: userIdKey)?
+        .nonEmpty?.lowercased()
+    else { return false }
+    return recipient != signedIn
+  }
+}
+
 final class NotificationService: UNNotificationServiceExtension {
   private var contentHandler: ((UNNotificationContent) -> Void)?
   private var bestAttemptContent: UNMutableNotificationContent?
@@ -152,6 +171,13 @@ final class NotificationService: UNNotificationServiceExtension {
     _ request: UNNotificationRequest,
     withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
   ) {
+    // Empty content shows nothing.
+    if SignedInUser.isForAnotherAccount(request.content.userInfo) {
+      logger.info("Dropped a push meant for another account")
+      contentHandler(UNNotificationContent())
+      return
+    }
+
     self.contentHandler = contentHandler
 
     guard let bestAttemptContent = request.content.mutableCopy() as? UNMutableNotificationContent
