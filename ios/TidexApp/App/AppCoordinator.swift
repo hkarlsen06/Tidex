@@ -834,6 +834,9 @@ final class AppCoordinator {
       }
 
       await AppDelegate.shared?.registerCachedAPNsTokenIfNeeded()
+      // An impersonation can expire while the app is in the background.
+      await ImpersonationManager.shared.refresh()
+      guard self.userId == userId else { return }
 
       await syncCoordinator.loadTrackingState(userId: userId)
       _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
