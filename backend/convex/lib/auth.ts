@@ -52,9 +52,9 @@ export async function getViewer(ctx: QueryCtx): Promise<Viewer | null> {
       )
       .order("desc")
       .first();
-    // Subscriptions don't rerun when time passes, so starting a session must also
-    // schedule a mutation that sets ended_at at expires_at (not ported yet). This
-    // check covers queries that run after expiry but before that mutation.
+    // Subscriptions don't rerun when time passes. impersonation.start schedules
+    // impersonation.expire to set ended_at at expires_at, and this check covers a
+    // query that runs between the two.
     if (session !== null && Date.parse(session.expires_at) > Date.now()) {
       const target = await userByUuid(ctx, session.target_user_id);
       if (target !== null) {

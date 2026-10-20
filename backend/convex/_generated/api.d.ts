@@ -18,6 +18,7 @@ import type * as diagnostics from "../diagnostics.js";
 import type * as events from "../events.js";
 import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
+import type * as impersonation from "../impersonation.js";
 import type * as jobs from "../jobs.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_clerk from "../lib/clerk.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   feedback: typeof feedback;
   http: typeof http;
+  impersonation: typeof impersonation;
   jobs: typeof jobs;
   "lib/auth": typeof lib_auth;
   "lib/clerk": typeof lib_clerk;
