@@ -167,7 +167,7 @@ final class ManageSharingViewModel {
 
   // MARK: - Add Friend
 
-  /// Add a new friend by email, phone, or username. Returns whether the friend was added.
+  /// Add a new friend by email or username. Returns whether the friend was added.
   @discardableResult
   func addFriend() async -> Bool {
     // Prevent duplicate taps

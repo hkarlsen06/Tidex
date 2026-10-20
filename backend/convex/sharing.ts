@@ -552,10 +552,10 @@ export const unblockUser = mutation({
   },
 });
 
-// manage_sharing_action returned these Norwegian messages, and the app shows them as they are.
+// The app shows these Norwegian messages as they are. manage_sharing_action's versions also named phone numbers.
 const shareErrors = {
-  noIdentifier: "Vennligst oppgi en gyldig e-post, telefonnummer eller brukernavn",
-  notFound: "Fant ingen bruker med denne e-posten, telefonnummeret eller brukernavnet",
+  noIdentifier: "Vennligst oppgi en gyldig e-post eller et brukernavn",
+  notFound: "Fant ingen bruker med denne e-posten eller dette brukernavnet",
   self: "Du kan ikke dele med deg selv",
   blocked: "Du kan ikke dele vaktene dine med denne brukeren",
   exists: "Du deler allerede vaktene dine med denne brukeren",
