@@ -165,17 +165,37 @@ export const setLocale = mutation({
 });
 
 /**
- * The display name from the profile screen. The app also sets it on the Clerk user, which
- * is where friends read it. This keeps `users.current` in step for the app itself.
+ * The app calls this after the person changes their name or primary email in Clerk. It
+ * copies both from the Clerk user to the `users` row, so `users.current` stays in step.
+ * The values come from Clerk, never from the app.
  */
-export const setName = mutation({
-  args: { name: v.string() },
-  handler: async (ctx, { name }) => {
-    const { actor, impersonationSessionId } = await requireViewer(ctx);
-    if (impersonationSessionId !== null) return null;
-    const value = name.trim().slice(0, 200);
-    await ctx.db.patch(actor._id, {
-      name: value === "" ? undefined : value,
+export const syncFromClerk = action({
+  args: {},
+  handler: async (ctx): Promise<null> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) throw new ConvexError({ code: "not_authorized" });
+    const clerkUser = await getClerkUser(identity.subject);
+    const primary = clerkUser.email_addresses.find((e) => e.id === clerkUser.primary_email_address_id);
+    const name = [clerkUser.first_name, clerkUser.last_name].filter(Boolean).join(" ");
+    await ctx.runMutation(internal.users.applyClerkProfile, {
+      clerk_user_id: clerkUser.id,
+      email: primary?.verification?.status === "verified" ? primary.email_address.toLowerCase() : undefined,
+      name,
+    });
+    return null;
+  },
+});
+
+export const applyClerkProfile = internalMutation({
+  args: { clerk_user_id: v.string(), email: v.optional(v.string()), name: v.string() },
+  handler: async (ctx, { clerk_user_id, email, name }) => {
+    const user = await userByClerkId(ctx, clerk_user_id);
+    if (user === null) return null;
+    const nextName = name === "" ? undefined : name;
+    if (user.name === nextName && (email === undefined || user.email === email)) return null;
+    await ctx.db.patch(user._id, {
+      name: nextName,
+      ...(email === undefined ? {} : { email }),
       revision: await nextRevision(ctx),
     });
     return null;
