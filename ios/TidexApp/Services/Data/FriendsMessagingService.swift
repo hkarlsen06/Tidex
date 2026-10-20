@@ -407,8 +407,9 @@ final class FriendsMessagingService {
       throw error
     } catch ConvexAPI.Failure.notSignedIn {
       throw FriendsMessagingServiceError.notAuthenticated
-    } catch ConvexAPI.Failure.server(_, let message) {
-      throw FriendsMessagingServiceError.httpError(statusCode: 400, message: message)
+    } catch ConvexAPI.Failure.server(let code, let message) {
+      // A function that threw without a code hit a server fault, not a rejection.
+      throw FriendsMessagingServiceError.httpError(statusCode: code == nil ? 500 : 400, message: message)
     } catch ConvexAPI.Failure.badResponse(let status) {
       throw FriendsMessagingServiceError.httpError(statusCode: status, message: nil)
     } catch let error as DecodingError {
