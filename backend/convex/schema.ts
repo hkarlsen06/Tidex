@@ -453,6 +453,7 @@ export default defineSchema({
     .index("by_uuid", ["id"])
     .index("by_status_created_at", ["status", "created_at"])
     .index("by_reporter", ["reporter_user_id"])
+    .index("by_thread", ["thread_id"])
     .index("by_reported_user", ["reported_user_id", "created_at"]),
 
   // ---- Account ----
@@ -526,6 +527,15 @@ export default defineSchema({
   }).index("by_user_step", ["user_id", "step"]),
 
   // ---- Server-only tables (internal schema in Postgres) ----
+
+  // Account deletions in progress. A job stays until the Convex data and every Clerk
+  // user of the account are gone, so a Clerk failure can be retried and the leftover
+  // Clerk user can't sign up again into an empty account meanwhile.
+  account_deletions: defineTable({
+    user_id: uuid,
+    clerk_user_ids: v.array(v.string()),
+    created_at: ts,
+  }).index("by_user", ["user_id"]),
 
   admin_audit_log: defineTable({
     id: uuid,

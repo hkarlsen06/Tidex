@@ -83,6 +83,9 @@ export const linkOrCreate = internalMutation({
   handler: async (ctx, args) => {
     const existing = await userByClerkId(ctx, args.clerk_user_id);
     if (existing !== null) return existing.id;
+    // A Clerk user whose account is being deleted must not sign up again into a new one.
+    const deleting = (await ctx.db.query("account_deletions").collect()).some((j) => j.clerk_user_ids.includes(args.clerk_user_id));
+    if (deleting) throw new ConvexError({ code: "account_deleted", message: "This account is being deleted" });
 
     for (const account of args.accounts) {
       const provider = account.provider.replace(/^oauth_/, "");

@@ -514,7 +514,15 @@ export const readableAttachment = internalQuery({
       .withIndex("by_uuid", (q) => q.eq("id", attachment_id))
       .unique();
     const message = attachment === null ? null : await messageById(ctx, attachment.message_id);
-    if (message === null || !(await canAccessThread(ctx, message.thread_id, viewer.user.id))) return null;
-    return attachment!.storage_id;
+    if (message === null) return null;
+    if (await canAccessThread(ctx, message.thread_id, viewer.user.id)) return attachment!.storage_id;
+    // can_read_message_attachment_object let admins see images in reported threads.
+    const reported =
+      viewer.actor.role === "admin" &&
+      (await ctx.db
+        .query("abuse_reports")
+        .withIndex("by_thread", (q) => q.eq("thread_id", message.thread_id))
+        .first()) !== null;
+    return reported ? attachment!.storage_id : null;
   },
 });

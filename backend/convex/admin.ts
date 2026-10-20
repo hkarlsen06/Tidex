@@ -1324,9 +1324,13 @@ export const setBanned = mutation({
     if (target === null) return await fail(404, "User not found");
     if (ban && target.role === "admin") return await fail(403, "Cannot ban another admin");
     const wasBanned = target.banned_at !== undefined;
-    if (wasBanned === ban) return { success: true, message: ban ? "User is already banned" : "User is not banned" };
+    if (wasBanned === ban) {
+      // Clerk may have missed the earlier change, so a repeat syncs it again.
+      await ctx.scheduler.runAfter(0, internal.admin.syncClerkBan, { user_id: target.id, attempt: 0 });
+      return { success: true, message: ban ? "User is already banned" : "User is not banned" };
+    }
     await ctx.db.patch(target._id, { banned_at: ban ? new Date().toISOString() : undefined, revision: await nextRevision(ctx) });
-    await ctx.scheduler.runAfter(0, internal.admin.syncClerkBan, { user_id: target.id, ban });
+    await ctx.scheduler.runAfter(0, internal.admin.syncClerkBan, { user_id: target.id, attempt: 0 });
     await logAction(ctx, admin, intended, target_user_id, target.email, {
       old_value: { banned: wasBanned, banned_until: target.banned_at ?? null },
       new_value: { banned: ban },
@@ -1335,23 +1339,38 @@ export const setBanned = mutation({
   },
 });
 
-export const clerkUserIds = internalQuery({
+export const clerkBanState = internalQuery({
   args: { user_id: v.string() },
   handler: async (ctx, { user_id }) => {
     const user = await userByUuid(ctx, user_id);
+    if (user === null) return null;
     const aliases = await ctx.db
       .query("clerk_user_aliases")
       .withIndex("by_user", (q) => q.eq("user_id", user_id))
       .collect();
-    return [...(user?.clerk_user_id === undefined ? [] : [user.clerk_user_id]), ...aliases.map((a) => a.clerk_user_id)];
+    return {
+      banned: user.banned_at !== undefined,
+      clerk_user_ids: [...(user.clerk_user_id === undefined ? [] : [user.clerk_user_id]), ...aliases.map((a) => a.clerk_user_id)],
+    };
   },
 });
 
+/**
+ * Makes Clerk match the ban state stored at the time it runs, so a late retry never
+ * undoes a newer change. Scheduled actions aren't retried, so this reschedules itself.
+ */
 export const syncClerkBan = internalAction({
-  args: { user_id: v.string(), ban: v.boolean() },
-  handler: async (ctx, { user_id, ban }) => {
-    const ids: string[] = await ctx.runQuery(internal.admin.clerkUserIds, { user_id });
-    for (const id of ids) await setClerkBan(id, ban);
+  args: { user_id: v.string(), attempt: v.number() },
+  handler: async (ctx, { user_id, attempt }) => {
+    const state = await ctx.runQuery(internal.admin.clerkBanState, { user_id });
+    if (state === null) return;
+    try {
+      for (const id of state.clerk_user_ids) await setClerkBan(id, state.banned);
+    } catch (error) {
+      if (attempt >= 8) throw error;
+      console.warn(`[admin] Clerk ban sync failed, retrying: ${error instanceof Error ? error.message : error}`);
+      await ctx.scheduler.runAfter(Math.min(60_000 * 2 ** attempt, 3_600_000), internal.admin.syncClerkBan, { user_id, attempt: attempt + 1 });
+    }
   },
 });
 

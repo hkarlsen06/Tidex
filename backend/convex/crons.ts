@@ -17,4 +17,7 @@ crons.cron("purge auth diagnostics", "45 4 * * 0", internal.maintenance.purgeDia
 crons.cron("purge app activity hours", "50 4 * * *", internal.maintenance.purgeActivityHours, {});
 crons.cron("purge stale typing and uploads", "10 * * * *", internal.maintenance.purgeStaleMessagingRows, {});
 
+// Account deletions that stopped partway, for example on a Clerk outage.
+crons.interval("resume account deletions", { minutes: 15 }, internal.account.resume, {});
+
 export default crons;

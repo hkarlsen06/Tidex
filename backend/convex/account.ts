@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { action, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { getViewer, userByUuid } from "./lib/auth";
 import { deleteClerkUser } from "./lib/clerk";
 
@@ -312,14 +312,79 @@ export const step = internalMutation({
   },
 });
 
+/** Records the deletion before anything goes, with every Clerk user of the account. */
+export const begin = internalMutation({
+  args: { user_id: v.string(), clerk_user_ids: v.array(v.string()) },
+  handler: async (ctx, { user_id, clerk_user_ids }) => {
+    const job = await ctx.db
+      .query("account_deletions")
+      .withIndex("by_user", (q) => q.eq("user_id", user_id))
+      .unique();
+    if (job === null) {
+      await ctx.db.insert("account_deletions", { user_id, clerk_user_ids, created_at: new Date().toISOString() });
+      return true;
+    }
+    await ctx.db.patch(job._id, { clerk_user_ids: [...new Set([...job.clerk_user_ids, ...clerk_user_ids])] });
+    return false;
+  },
+});
+
+export const job = internalQuery({
+  args: { user_id: v.string() },
+  handler: async (ctx, { user_id }) =>
+    await ctx.db
+      .query("account_deletions")
+      .withIndex("by_user", (q) => q.eq("user_id", user_id))
+      .unique(),
+});
+
+/** Drops a Clerk user from the job once Clerk has deleted it, and the job when none are left. */
+export const clerkDeleted = internalMutation({
+  args: { user_id: v.string(), clerk_user_id: v.string() },
+  handler: async (ctx, { user_id, clerk_user_id }) => {
+    const job = await ctx.db
+      .query("account_deletions")
+      .withIndex("by_user", (q) => q.eq("user_id", user_id))
+      .unique();
+    if (job === null) return;
+    const left = job.clerk_user_ids.filter((id) => id !== clerk_user_id);
+    if (left.length === 0) await ctx.db.delete(job._id);
+    else await ctx.db.patch(job._id, { clerk_user_ids: left });
+  },
+});
+
+/** Deletes the Convex data, then the Clerk users. Safe to run again after a failure. */
+export const process = internalAction({
+  args: { user_id: v.string(), first: v.boolean() },
+  handler: async (ctx, { user_id, first }) => {
+    let firstStep = first;
+    while (!(await ctx.runMutation(internal.account.step, { user_id, first: firstStep }))) firstStep = false;
+    const pending = await ctx.runQuery(internal.account.job, { user_id });
+    for (const clerkUserId of pending?.clerk_user_ids ?? []) {
+      await deleteClerkUser(clerkUserId);
+      await ctx.runMutation(internal.account.clerkDeleted, { user_id, clerk_user_id: clerkUserId });
+    }
+  },
+});
+
+/** Picks up deletions that stopped partway, for example on a Clerk outage. crons.ts runs it. */
+export const resume = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const stale = new Date(Date.now() - 10 * 60_000).toISOString();
+    for (const job of await ctx.db.query("account_deletions").collect()) {
+      if (job.created_at < stale) await ctx.scheduler.runAfter(0, internal.account.process, { user_id: job.user_id, first: false });
+    }
+  },
+});
+
 export const deleteAccount = action({
   args: {},
   handler: async (ctx): Promise<{ success: boolean; error?: string }> => {
     const target = await ctx.runQuery(internal.account.deletionTarget, {});
     if ("error" in target) throw new ConvexError({ code: "forbidden", message: target.error });
-    let first = true;
-    while (!(await ctx.runMutation(internal.account.step, { user_id: target.user_id, first }))) first = false;
-    for (const id of target.clerk_user_ids) await deleteClerkUser(id);
+    const first = await ctx.runMutation(internal.account.begin, target);
+    await ctx.runAction(internal.account.process, { user_id: target.user_id, first });
     return { success: true };
   },
 });
