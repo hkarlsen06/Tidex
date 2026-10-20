@@ -576,6 +576,33 @@ export async function queueFeedbackResponded(ctx: MutationCtx, feedback: Doc<"fe
   });
 }
 
+/**
+ * The before-user-created hook's alert, sent when users.linkOrCreate creates a user.
+ * Every N+1 sign-up reaches that on the app's first launch, so no Clerk webhook is needed.
+ */
+export async function queueNewSignup(ctx: MutationCtx, user: Doc<"users">) {
+  const provider = user.providers?.[0] ?? "email";
+  const lines = [user.name, user.email, provider !== "email" && provider !== "phone" ? `via ${provider}` : undefined].filter(
+    (line): line is string => line !== undefined && line !== "",
+  );
+  for (const admin of await admins(ctx)) {
+    await enqueue(ctx, {
+      recipient_id: admin.id,
+      notification_type: "admin_new_signup",
+      title: "New user signed up",
+      body: lines.join("\n") || "No contact info provided",
+      data_payload: {
+        new_user_id: user.id,
+        new_user_name: user.name ?? null,
+        new_user_email: user.email ?? null,
+        new_user_phone: null,
+        provider,
+      },
+      idempotency_key: `new-signup-${user.id}-${admin.id}`,
+    });
+  }
+}
+
 /** queue_abuse_report_notification: tells every admin. */
 export async function queueAbuseReport(ctx: MutationCtx, report: Doc<"abuse_reports">) {
   const reporter = await userByUuid(ctx, report.reporter_user_id);

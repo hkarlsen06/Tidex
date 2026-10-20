@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { getViewer, requireViewer, userByClerkId, userByUuid } from "./lib/auth";
 import { getClerkUser } from "./lib/clerk";
+import { queueNewSignup } from "./lib/notify";
 import { nextRevision } from "./lib/revision";
 
 /** The signed-in user, or null until `ensureCurrent` has run after sign-in. */
@@ -129,6 +130,7 @@ export const linkOrCreate = internalMutation({
       created_at: now,
       revision,
     });
+    await queueNewSignup(ctx, (await userByUuid(ctx, id))!);
     await ctx.db.insert("profiles", {
       id,
       before_paywall: true,
