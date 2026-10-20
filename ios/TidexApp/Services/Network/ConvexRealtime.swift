@@ -64,6 +64,12 @@ final class ConvexRealtime {
   // ConvexMobile's client is not Sendable and its login is an async method, so the compiler
   // would reject passing it out of the main actor. Only this class touches it.
   private nonisolated(unsafe) var client: ConvexClientWithAuth<String>?
+  /// Clients of earlier sign-ins. Freeing one panics in the Rust library when its last
+  /// reference goes away on one of the library's own threads, which happens after a sign-out,
+  /// so they stay alive.
+  /// ponytail: keeps one idle client per sign-out until the app quits. Reuse one client if
+  /// people start switching accounts often.
+  private nonisolated(unsafe) var retiredClients: [ConvexClientWithAuth<String>] = []
   private var isSignedIn = false
   private var signInTask: Task<Bool, Never>?
   /// Bumped by every sign-out. A login that finishes after one belongs to the old account.
@@ -86,6 +92,7 @@ final class ConvexRealtime {
       case .success:
         // Signed out while the login ran, so its token may be the previous account's.
         guard generation == started else {
+          retiredClients.append(client)
           await client.logout()
           return false
         }
@@ -111,7 +118,9 @@ final class ConvexRealtime {
     isSignedIn = false
     nonisolated(unsafe) let client = client
     self.client = nil
-    await client?.logout()
+    guard let client else { return }
+    retiredClients.append(client)
+    await client.logout()
   }
 
   /// Subscribes to a query. `onUpdate` runs on the main actor with each new result, the first
