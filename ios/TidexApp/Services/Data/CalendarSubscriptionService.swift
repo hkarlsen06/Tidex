@@ -1,6 +1,5 @@
 import Foundation
 import Security
-import Supabase
 import os.log
 
 private let calendarSubscriptionLogger = Logger(
@@ -80,92 +79,67 @@ struct CalendarSubscriptionService: CalendarSubscriptionServicing {
   // swiftlint:disable:next redundant_type_annotation
   internal static let shared: Self = Self()
 
-  private let supabaseClient: SupabaseClient
+  private let api: ConvexAPI
 
-  init(supabaseClient: SupabaseClient = supabase) {
-    self.supabaseClient = supabaseClient
+  init(api: ConvexAPI = .app) {
+    self.api = api
   }
 
   func getSubscription() async throws -> CalendarSubscriptionState {
-    _ = try await AuthSessionManager.shared.getSession()
-
-    let row: CalendarSubscriptionStateRow =
-      try await supabaseClient
-      .rpc("get_my_calendar_subscription")
-      .single()
-      .execute()
-      .value
-
+    let row: CalendarSubscriptionStateRow = try await api.query("calendarSubscriptions:get")
     return row.state
   }
 
   func createSubscription(mode: CalendarSubscriptionContentMode) async throws
     -> CalendarSubscriptionCreated
   {
-    _ = try await AuthSessionManager.shared.getSession()
-
-    let row: CalendarSubscriptionTokenRow =
-      try await supabaseClient
-      .rpc("create_my_calendar_subscription", params: contentModeParams(mode))
-      .single()
-      .execute()
-      .value
-
+    let row: CalendarSubscriptionTokenRow = try await api.mutation(
+      "calendarSubscriptions:create", ContentModeArgs(contentMode: mode))
     return row.created
   }
 
+  /// Convex has no rotate function. Revoking the token and creating a new one gives the
+  /// same result. Without a mode, the new token keeps the current one.
   func rotateSubscription(mode: CalendarSubscriptionContentMode?) async throws
     -> CalendarSubscriptionCreated
   {
-    _ = try await AuthSessionManager.shared.getSession()
-
-    let row: CalendarSubscriptionTokenRow =
-      try await supabaseClient
-      .rpc(
-        "rotate_my_calendar_subscription",
-        params: ["p_content_mode": mode.map { AnyJSON.string($0.rawValue) } ?? AnyJSON.null]
-      )
-      .single()
-      .execute()
-      .value
-
-    return row.created
+    let current = try await getSubscription().metadata?.contentMode
+    _ = try await disableSubscription()
+    return try await createSubscription(mode: mode ?? current ?? .shiftsOnly)
   }
 
   func setContentMode(_ mode: CalendarSubscriptionContentMode) async throws
     -> CalendarSubscriptionMetadata
   {
-    _ = try await AuthSessionManager.shared.getSession()
-
-    let row: CalendarSubscriptionMetadataRow =
-      try await supabaseClient
-      .rpc("set_my_calendar_subscription_content_mode", params: contentModeParams(mode))
-      .single()
-      .execute()
-      .value
-
+    let row: CalendarSubscriptionMetadataRow = try await api.mutation(
+      "calendarSubscriptions:setContentMode", ContentModeArgs(contentMode: mode))
     return row.metadata
   }
 
   func disableSubscription() async throws -> Bool {
-    _ = try await AuthSessionManager.shared.getSession()
-
-    return try await supabaseClient
-      .rpc("disable_my_calendar_subscription")
-      .execute()
-      .value as Bool
+    try await api.mutation("calendarSubscriptions:disable")
   }
 
+  /// Feed URLs point at the Convex HTTP action. Tokens issued before the move still work on
+  /// the old `api.tidex.no/functions/v1/calendar-feed/` URL, which the server forwards.
   func webcalURL(rawToken: String) -> URL? {
-    URL(string: "webcal://api.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
+    feedURL(rawToken: rawToken, scheme: "webcal")
   }
 
   func httpsURL(rawToken: String) -> URL? {
-    URL(string: "https://api.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
+    feedURL(rawToken: rawToken, scheme: "https")
   }
 
-  private func contentModeParams(_ mode: CalendarSubscriptionContentMode) -> [String: AnyJSON] {
-    ["p_content_mode": .string(mode.rawValue)]
+  private func feedURL(rawToken: String, scheme: String) -> URL? {
+    var components = URLComponents(url: ConvexAPI.configuredSiteURL, resolvingAgainstBaseURL: false)
+    components?.scheme = scheme
+    components?.path = "/calendar-feed/\(rawToken).ics"
+    return components?.url
+  }
+
+  private struct ContentModeArgs: Encodable, Sendable {
+    let contentMode: CalendarSubscriptionContentMode
+    enum CodingKeys: String, CodingKey { case contentMode = "content_mode" }
   }
 }
 
@@ -361,9 +335,8 @@ private struct CalendarSubscriptionTokenRow: Decodable {
 
 extension CalendarSubscriptionService {
   static func isDuplicateActiveSubscriptionError(_ error: Error) -> Bool {
-    if let postgrestError = error as? PostgrestError {
-      return postgrestError.message.localizedCaseInsensitiveContains(
-        "active calendar subscription already exists")
+    if let failure = error as? ConvexAPI.Failure, failure.code == "already_exists" {
+      return true
     }
 
     return error.localizedDescription.localizedCaseInsensitiveContains(
