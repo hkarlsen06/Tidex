@@ -494,16 +494,7 @@ extension SettingsView {
     do {
       let session = try await AuthSessionManager.shared.getSession()
       profileEmail = session.user.email
-      guard let appMetadata = session.user.appMetadata["role"],
-        case .string(let role) = appMetadata,
-        role == "admin"
-      else {
-        canAccessAdminSettings = false
-        return
-      }
-
-      let mfaStatus = try await AuthService.shared.getMFAStatus()
-      canAccessAdminSettings = mfaStatus.currentLevel == "aal2"
+      canAccessAdminSettings = session.user.isAdmin
     } catch {
       // Silently fail closed - hide admin menu item by default.
       canAccessAdminSettings = false
