@@ -1,13 +1,12 @@
 import Foundation
 import os.log
-import Supabase
 
 private let kSettingsServiceLogger: Logger = Logger(
   subsystem: "com.tidex.app",
   category: "SettingsService"
 )
 
-/// Service for fetching user settings from Supabase
+/// Service for fetching user settings from Convex
 @MainActor
 internal final class SettingsService {
   internal static let shared: SettingsService = SettingsService()
@@ -42,16 +41,10 @@ internal final class SettingsService {
         // Check for cancellation before making network request
         try Task.checkCancellation()
 
-        // Use single() and catch error if no rows exist
-        // Swift SDK doesn't have maybeSingle(), so we handle the error case
-        let response: UserSettings =
-          try await supabase
-          .from("user_settings")
-          .select()
-          .eq("user_id", value: userId)
-          .single()
-          .execute()
-          .value
+        // The user has one settings row, or none before the first sync.
+        let rows: [SyncUserSettingsRow] = try await SyncConvex.pullAll(.userSettings)
+        let response = rows.first { $0.user_id.lowercased() == userId.lowercased() }?
+          .toUserSettings()
 
         // Check for cancellation after network request
         try Task.checkCancellation()
@@ -62,14 +55,6 @@ internal final class SettingsService {
         kSettingsServiceLogger.info("Settings fetch was cancelled")
         throw CancellationError()
       } catch {
-        // Check if error is "no rows returned" - return nil instead of throwing
-        if let postgrestError = error as? PostgrestError,
-          postgrestError.code == "PGRST116"
-        {
-          // PGRST116 = "The result contains 0 rows"
-          settings = nil
-          return nil
-        }
         self.error = error
         throw error
       }
@@ -81,7 +66,7 @@ internal final class SettingsService {
   /// Get current authenticated user ID
   private func getCurrentUserId() async throws -> String? {
     // Use AuthSessionManager to prevent concurrent refresh race conditions
-    let session: Session = try await AuthSessionManager.shared.getSession()
+    let session: AuthSession = try await AuthSessionManager.shared.getSession()
     return session.normalizedUserId
   }
 
