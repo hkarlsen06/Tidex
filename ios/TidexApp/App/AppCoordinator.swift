@@ -167,6 +167,7 @@ final class AppCoordinator {
   // MARK: - Private
 
   @ObservationIgnored private var authStateTask: Task<Void, Never>?
+  @ObservationIgnored private var legacyExchangeRetryTask: Task<Void, Never>?
   @ObservationIgnored private var friendsRealtimeTask: Task<Void, Never>?
   @ObservationIgnored private var appActiveObserver: AnyCancellable?
   @ObservationIgnored private var backgroundTasks: [UUID: Task<Void, Never>] = [:]
@@ -347,8 +348,10 @@ final class AppCoordinator {
   /// Routes the app at launch. A GoTrue session left by version N is exchanged for a Clerk
   /// session first, so updating keeps the user signed in.
   private func handleInitialSession() async {
+    var exchangeOutcome: LegacySessionExchange.Outcome?
     if Clerk.shared.session == nil, LegacySessionExchange.hasLegacySession {
       let outcome = await LegacySessionExchange.run()
+      exchangeOutcome = outcome
       AuthDiagnosticsReporter.shared.record(
         .authStateChanged,
         severity: outcome == .failed ? .warning : .info,
@@ -369,6 +372,7 @@ final class AppCoordinator {
         authEvent: "initial_session"
       )
       appState = .unauthenticated
+      if exchangeOutcome == .retryLater { retryLegacyExchange() }
       return
     }
     resetLaunchSessionTimeoutCount()
@@ -379,6 +383,22 @@ final class AppCoordinator {
       // Signed in to Clerk, but the Tidex user was never resolved on this device, as after
       // the exchange. That needs the network.
       await checkSignInAndUpdateState()
+    }
+  }
+
+  /// An update installed offline could not exchange the GoTrue session at launch. Try again
+  /// every 15 seconds while the sign-in screen shows. A sign-in by ticket reaches the events
+  /// loop as `signInCompleted`, which routes into the app.
+  private func retryLegacyExchange() {
+    legacyExchangeRetryTask?.cancel()
+    legacyExchangeRetryTask = Task { [weak self] in
+      while !Task.isCancelled {
+        try? await Task.sleep(for: .seconds(15))
+        guard let self, appState == .unauthenticated, Clerk.shared.session == nil,
+          LegacySessionExchange.hasLegacySession
+        else { return }
+        if await LegacySessionExchange.run() != .retryLater { return }
+      }
     }
   }
 
