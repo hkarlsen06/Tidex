@@ -4,7 +4,7 @@
 #include "Version.xcconfig"
 
 // TestFlight and App Store builds use production Convex and Clerk.
+CONVEX_URL = https:/$()/convex.tidex.no
 // HTTP actions (http.ts): chat images and the calendar feed.
 CONVEX_SITE_URL = https:/$()/actions.tidex.no
-CONVEX_URL = https:/$()/convex.tidex.no
 CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsudGlkZXgubm8k
