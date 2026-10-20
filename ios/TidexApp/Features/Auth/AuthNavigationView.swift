@@ -66,9 +66,6 @@ struct AuthNavigationView: View {
     .motionAnimation(.navigationPush, value: currentScreen, reduceMotion: reduceMotion)
     .onAppear {
       refreshAuthCurrency()
-      loginViewModel.onEmailNotConfirmed = { email in
-        routeToEmailVerification(email: email)
-      }
     }
     .onReceive(NotificationCenter.default.publisher(for: .tidexNavigateToLoginRequested)) { _ in
       navigateTo(.login)
@@ -88,22 +85,15 @@ struct AuthNavigationView: View {
 
   private func navigateToSignup() {
     signupViewModel.applyLoginPrefill(
-      emailOrPhone: loginViewModel.emailOrPhone,
+      email: loginViewModel.email,
       password: loginViewModel.password
     )
     navigateTo(.signup)
   }
 
-  /// The account exists but its email has no confirmed code. Open the code step and send a new code.
-  private func routeToEmailVerification(email: String) {
-    signupViewModel.showEmailVerification(email: email)
-    navigateTo(.signup)
-    Task { await signupViewModel.resendCode() }
-  }
-
   private func navigateToLoginFromSignup() {
     loginViewModel.applySignupPrefill(
-      emailOrPhone: signupViewModel.emailOrPhone,
+      email: signupViewModel.email,
       password: signupViewModel.password
     )
     navigateTo(.login)

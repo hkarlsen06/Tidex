@@ -13,13 +13,12 @@ final class SignupViewModel {
   private let emailAuth: EmailAuthProviding
   private let onAuthenticated: () async -> Void
   private let appleAuthProvider: AppleAuthProvider
-  private let googleAuthProvider: GoogleAuthProvider
 
   // MARK: - Published State
 
   var firstName: String = ""
   var lastName: String = ""
-  var emailOrPhone: String = ""
+  var email: String = ""
   var password: String = ""
   var confirmPassword: String = ""
   var otpCode: String = ""
@@ -42,7 +41,7 @@ final class SignupViewModel {
   enum Step {
     /// Name, email and password.
     case form
-    /// Code from the confirmation email, used when the server sends no session at signup.
+    /// Code from the confirmation email. Clerk creates the user only after it is verified.
     case verifyEmail
   }
 
@@ -53,7 +52,7 @@ final class SignupViewModel {
   struct FieldErrors {
     var firstName: String?
     var lastName: String?
-    var emailOrPhone: String?
+    var email: String?
     var password: String?
     var confirmPassword: String?
     var otp: String?
@@ -62,7 +61,7 @@ final class SignupViewModel {
       otp = nil
       firstName = nil
       lastName = nil
-      emailOrPhone = nil
+      email = nil
       password = nil
       confirmPassword = nil
     }
@@ -87,19 +86,15 @@ final class SignupViewModel {
     authService: AuthService? = nil,
     emailAuth: EmailAuthProviding? = nil,
     appleAuthProvider: AppleAuthProvider? = nil,
-    googleAuthProvider: GoogleAuthProvider? = nil,
     onAuthenticated: (() async -> Void)? = nil
   ) {
     self.authService = authService ?? AuthService.shared
     self.emailAuth = emailAuth ?? AuthService.shared
     self.onAuthenticated =
       onAuthenticated ?? {
-        // The AppCoordinator listens to Supabase auth state changes
-        // and will automatically transition to the appropriate state
-        await AppCoordinator.shared.handleLoginSuccess()
+        await Self.finishSignup()
       }
     self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
-    self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
   }
 
   // MARK: - Actions
@@ -115,20 +110,20 @@ final class SignupViewModel {
     defer { isLoading = false }
 
     do {
-      let email = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+      let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
       let result = try await emailAuth.signUpWithEmail(
-        email: email,
+        email: trimmedEmail,
         password: password,
-        fullName: fullName
+        firstName: firstName,
+        lastName: lastName
       )
       switch result {
       case .signedIn:
         await handleSuccessfulSignup()
       case .needsVerification:
-        showEmailVerification(email: email)
+        showEmailVerification(email: trimmedEmail)
         startResendCooldown()
       case .alreadyRegistered:
-        // Same message as the autoconfirm path, where GoTrue returns "User already registered".
         errorMessage = String(localized: .authErrorUserAlreadyRegistered)
       }
     } catch {
@@ -155,7 +150,7 @@ final class SignupViewModel {
     defer { isLoading = false }
 
     do {
-      try await emailAuth.verifySignupCode(email: pendingEmail, token: otpCode)
+      try await emailAuth.verifySignupCode(otpCode)
       await handleSuccessfulSignup()
     } catch {
       otpCode = ""
@@ -180,7 +175,7 @@ final class SignupViewModel {
     defer { isLoading = false }
 
     do {
-      try await emailAuth.resendSignupCode(email: pendingEmail)
+      try await emailAuth.resendSignupCode()
       successMessage = String(localized: .signupVerifyResendSent)
       startResendCooldown()
     } catch {
@@ -193,11 +188,10 @@ final class SignupViewModel {
     }
   }
 
-  /// Open the code step for an address that has a pending confirmation. Login uses this when the
-  /// server reports `email_not_confirmed`. The caller sends the fresh code with `resendCode()`.
+  /// Open the code step for an address that has a pending confirmation.
   func showEmailVerification(email: String) {
     pendingEmail = email
-    emailOrPhone = email
+    email = email
     otpCode = ""
     fieldErrors.clear()
     clearMessages()
@@ -229,11 +223,9 @@ final class SignupViewModel {
     defer { isLoading = false }
 
     do {
-      let idToken = try await googleAuthProvider.signIn()
-      _ = try await authService.signInWithGoogle(idToken: idToken)
-      try await authService.recordTermsAcceptance()
+      try await authService.signInWithGoogle()
       await handleSuccessfulSignup()
-    } catch let error as GoogleAuthError where error.isCancellation {
+    } catch where AuthService.isCancellation(error) {
       // User cancelled - do nothing
     } catch {
       handleError(error)
@@ -250,13 +242,12 @@ final class SignupViewModel {
 
     do {
       let result = try await appleAuthProvider.signIn()
-      _ = try await authService.signInWithApple(
+      try await authService.signInWithApple(
         idToken: result.idToken,
         fullName: result.fullName
       )
-      try await authService.recordTermsAcceptance()
       await handleSuccessfulSignup()
-    } catch let error as AppleAuthError where error.isCancellation {
+    } catch where AuthService.isCancellation(error) {
       // User cancelled - do nothing
     } catch {
       handleError(error)
@@ -268,11 +259,11 @@ final class SignupViewModel {
     onNavigateToLogin?()
   }
 
-  func applyLoginPrefill(emailOrPhone: String, password: String) {
-    let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
-    let isEmail = AuthIdentityInput.detectType(trimmed) == .email
+  func applyLoginPrefill(email: String, password: String) {
+    let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+    let isEmail = AuthIdentityInput.isEmail(trimmed)
 
-    self.emailOrPhone = isEmail ? trimmed : ""
+    self.email = isEmail ? trimmed : ""
     self.password = isEmail ? password : ""
     otpCode = ""
     step = .form
@@ -285,7 +276,7 @@ final class SignupViewModel {
 
   private func validateInput() -> Bool {
     var isValid = true
-    let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
 
     if firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       fieldErrors.firstName = String(localized: .signupErrorsFirstNameRequired)
@@ -298,10 +289,10 @@ final class SignupViewModel {
     }
 
     if trimmed.isEmpty {
-      fieldErrors.emailOrPhone = String(localized: .signupErrorsEmailRequired)
+      fieldErrors.email = String(localized: .signupErrorsEmailRequired)
       isValid = false
-    } else if AuthIdentityInput.detectType(trimmed) != .email {
-      fieldErrors.emailOrPhone = String(localized: .signupErrorsInvalidEmail)
+    } else if !AuthIdentityInput.isEmail(trimmed) {
+      fieldErrors.email = String(localized: .signupErrorsInvalidEmail)
       isValid = false
     }
 
@@ -325,13 +316,27 @@ final class SignupViewModel {
     await onAuthenticated()
   }
 
+  /// The signup is complete, so the person accepted the terms on this screen. Convex has a
+  /// user row only once the first session lookup has created it, so resolve it first.
+  /// If this fails, the terms screen asks again.
+  private static func finishSignup() async {
+    if (try? await AuthSessionManager.shared.getSession()) != nil,
+      (try? await AuthService.shared.recordTermsAcceptance()) != nil,
+      AppCoordinator.shared.appState == .termsRequired
+    {
+      // The coordinator checked the terms before this call saved them.
+      AppCoordinator.shared.handleTermsAccepted()
+      return
+    }
+    await AppCoordinator.shared.handleLoginSuccess()
+  }
+
   private func startResendCooldown() {
     resendAvailableAt = Date().addingTimeInterval(Self.resendCooldown)
   }
 
   private func handleError(_ error: Error) {
-    let translated = ErrorTranslations.translate(error)
-    errorMessage = translated
+    errorMessage = AuthService.message(for: error)
   }
 
   private func clearMessages() {

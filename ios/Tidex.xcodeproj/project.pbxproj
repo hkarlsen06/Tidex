@@ -48,7 +48,7 @@
 		1847EF026673EA7136F772C1 /* SyncConflictRowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3116E5D98E664C2165F5A1C /* SyncConflictRowTests.swift */; };
 		1B46278EBD6D91626E9A3CE0 /* OfflineErrorHandlingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 627E06C3772CE6997C9D1649 /* OfflineErrorHandlingTests.swift */; };
 		D868B9E2816D88314E4D6B3D /* OfflineAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEEA59F6FFB6407AF85926A2 /* OfflineAuthTests.swift */; };
-		98F9C5ACAE370E56C1CC6AC6 /* LoginEmailNotConfirmedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A279EAE368EC6919DB3A3286 /* LoginEmailNotConfirmedTests.swift */; };
+		98F9C5ACAE370E56C1CC6AC6 /* LoginViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A279EAE368EC6919DB3A3286 /* LoginViewModelTests.swift */; };
 		E5B018160CBA9E8002B3E805 /* FriendsMessageOutboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20E80B43C6E5D97484C6D54 /* FriendsMessageOutboxTests.swift */; };
 		4B3D7651AE9F32BEEA034C5C /* FriendsThreadExyteChatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22B2C74EE4D759997785799C /* FriendsThreadExyteChatTests.swift */; };
 		4E346A3A0E58579B880E41D7 /* FriendsThreadShareVisibilityResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E4A0F5573D74A1AF23E91D /* FriendsThreadShareVisibilityResolverTests.swift */; };
@@ -267,7 +267,7 @@
 		C3116E5D98E664C2165F5A1C /* SyncConflictRowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncConflictRowTests.swift; sourceTree = "<group>"; };
 		627E06C3772CE6997C9D1649 /* OfflineErrorHandlingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OfflineErrorHandlingTests.swift; sourceTree = "<group>"; };
 		CEEA59F6FFB6407AF85926A2 /* OfflineAuthTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OfflineAuthTests.swift; sourceTree = "<group>"; };
-		A279EAE368EC6919DB3A3286 /* LoginEmailNotConfirmedTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginEmailNotConfirmedTests.swift; sourceTree = "<group>"; };
+		A279EAE368EC6919DB3A3286 /* LoginViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginViewModelTests.swift; sourceTree = "<group>"; };
 		A20E80B43C6E5D97484C6D54 /* FriendsMessageOutboxTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsMessageOutboxTests.swift; sourceTree = "<group>"; };
 		F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollCalculatorBehaviorTests.swift; sourceTree = "<group>"; };
 		F6595302ED840034D4E34591 /* StatsServiceCurrencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsServiceCurrencyTests.swift; sourceTree = "<group>"; };
@@ -529,7 +529,7 @@
 				C3116E5D98E664C2165F5A1C /* SyncConflictRowTests.swift */,
 				627E06C3772CE6997C9D1649 /* OfflineErrorHandlingTests.swift */,
 				CEEA59F6FFB6407AF85926A2 /* OfflineAuthTests.swift */,
-				A279EAE368EC6919DB3A3286 /* LoginEmailNotConfirmedTests.swift */,
+				A279EAE368EC6919DB3A3286 /* LoginViewModelTests.swift */,
 				A20E80B43C6E5D97484C6D54 /* FriendsMessageOutboxTests.swift */,
 				9F127D6D1264B4630495885E /* WorkSetupStatusResolverTests.swift */,
 			);
@@ -1068,7 +1068,7 @@
 				1847EF026673EA7136F772C1 /* SyncConflictRowTests.swift in Sources */,
 				1B46278EBD6D91626E9A3CE0 /* OfflineErrorHandlingTests.swift in Sources */,
 				D868B9E2816D88314E4D6B3D /* OfflineAuthTests.swift in Sources */,
-				98F9C5ACAE370E56C1CC6AC6 /* LoginEmailNotConfirmedTests.swift in Sources */,
+				98F9C5ACAE370E56C1CC6AC6 /* LoginViewModelTests.swift in Sources */,
 				E5B018160CBA9E8002B3E805 /* FriendsMessageOutboxTests.swift in Sources */,
 				4ED7B1067119677EE782EF19 /* WorkSetupStatusResolverTests.swift in Sources */,
 			);

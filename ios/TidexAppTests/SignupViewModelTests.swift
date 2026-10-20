@@ -1,5 +1,4 @@
-import Auth
-import Supabase
+import ClerkKit
 import XCTest
 
 @testable import Tidex
@@ -10,34 +9,48 @@ import XCTest
 @MainActor
 internal final class StubEmailAuth: EmailAuthProviding {
   internal var signUpResult: Result<EmailSignupResult, Error> = .success(.signedIn)
-  internal var signInError: Error = URLError(.notConnectedToInternet)
+  internal var signInResult: Result<EmailSignInResult, Error> = .failure(
+    URLError(.notConnectedToInternet))
   internal var verifyError: Error?
   internal var resendError: Error?
 
   internal private(set) var signedUpEmails: [String] = []
   internal private(set) var verifiedCodes: [String] = []
-  internal private(set) var resentEmails: [String] = []
+  internal private(set) var resendCount = 0
 
-  internal func signInWithPassword(email: String, password: String) async throws -> Session {
-    throw signInError
+  internal func signInWithPassword(email: String, password: String) async throws
+    -> EmailSignInResult
+  {
+    try signInResult.get()
+  }
+
+  internal func verifySignInCode(_ code: String) async throws {
+    verifiedCodes.append(code)
+    if let verifyError { throw verifyError }
+  }
+
+  internal func resendSignInCode() async throws {
+    resendCount += 1
+    if let resendError { throw resendError }
   }
 
   internal func signUpWithEmail(
     email: String,
     password: String,
-    fullName: String?
+    firstName: String?,
+    lastName: String?
   ) async throws -> EmailSignupResult {
     signedUpEmails.append(email)
     return try signUpResult.get()
   }
 
-  internal func verifySignupCode(email: String, token: String) async throws {
-    verifiedCodes.append("\(email):\(token)")
+  internal func verifySignupCode(_ code: String) async throws {
+    verifiedCodes.append(code)
     if let verifyError { throw verifyError }
   }
 
-  internal func resendSignupCode(email: String) async throws {
-    resentEmails.append(email)
+  internal func resendSignupCode() async throws {
+    resendCount += 1
     if let resendError { throw resendError }
   }
 
@@ -48,28 +61,16 @@ internal final class StubEmailAuth: EmailAuthProviding {
 
 // swiftlint:enable async_without_await
 
-/// Builds the GoTrue API error that carries the given `error_code`.
-internal func makeAuthAPIError(_ code: ErrorCode) throws -> Error {
-  let response = try XCTUnwrap(
-    HTTPURLResponse(
-      url: try XCTUnwrap(URL(string: "https://api.tidex.no/auth/v1/verify")),
-      statusCode: 400,
-      httpVersion: nil,
-      headerFields: nil
-    )
-  )
-  return Auth.AuthError.api(
-    message: code.rawValue,
-    errorCode: code,
-    underlyingData: Data(),
-    underlyingResponse: response
-  )
+/// Builds the Clerk API error that carries the given error code.
+internal func makeClerkAPIError(_ code: String) throws -> Error {
+  let json = Data(#"{"code":"\#(code)","message":"\#(code)"}"#.utf8)
+  return try JSONDecoder().decode(ClerkAPIError.self, from: json)
 }
 
 @MainActor
 internal final class SignupViewModelTests: XCTestCase {
 
-  // MARK: - Signup with a session (autoconfirm on)
+  // MARK: - Signup completed at once
 
   internal func testSignupWithSessionContinuesWithoutCodeStep() async {
     let stub = StubEmailAuth()
@@ -85,7 +86,7 @@ internal final class SignupViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  // MARK: - Signup without a session (autoconfirm off)
+  // MARK: - Signup that needs the emailed code
 
   internal func testSignupWithoutSessionOpensCodeStepAndStartsCooldown() async {
     let stub = StubEmailAuth()
@@ -126,7 +127,7 @@ internal final class SignupViewModelTests: XCTestCase {
     viewModel.otpCode = "123456"
     await viewModel.verifyEmailCode()
 
-    XCTAssertEqual(stub.verifiedCodes, ["new@example.com:123456"])
+    XCTAssertEqual(stub.verifiedCodes, ["123456"])
     XCTAssertEqual(authenticatedCount, 1)
     XCTAssertNil(viewModel.fieldErrors.otp)
     XCTAssertNil(viewModel.errorMessage)
@@ -134,7 +135,7 @@ internal final class SignupViewModelTests: XCTestCase {
 
   internal func testVerifyWithWrongOrExpiredCodeShowsMessageAndClearsCode() async throws {
     let stub = StubEmailAuth()
-    stub.verifyError = try makeAuthAPIError(.otpExpired)
+    stub.verifyError = try makeClerkAPIError("verification_expired")
     var authenticatedCount = 0
     let viewModel = makeViewModel(stub) { authenticatedCount += 1 }
     viewModel.showEmailVerification(email: "new@example.com")
@@ -162,7 +163,7 @@ internal final class SignupViewModelTests: XCTestCase {
     let viewModel = SignupViewModel(emailAuth: stub, onAuthenticated: onAuthenticated)
     viewModel.firstName = "New"
     viewModel.lastName = "User"
-    viewModel.emailOrPhone = " new@example.com "
+    viewModel.email = " new@example.com "
     viewModel.password = "password123"
     return viewModel
   }

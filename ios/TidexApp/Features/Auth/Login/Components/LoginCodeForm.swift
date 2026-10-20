@@ -1,10 +1,8 @@
 import SwiftUI
 
-/// OTP verification form for phone login with native iOS styling
-internal struct PhoneOTPForm: View {
+/// Code entry for the email Clerk sends when a sign-in needs a second factor.
+internal struct LoginCodeForm: View {
   @Bindable internal var viewModel: LoginViewModel
-
-  private let otpCodeLength: Int = 6
 
   internal var body: some View {
     VStack(spacing: Spacing.lg) {
@@ -18,14 +16,13 @@ internal struct PhoneOTPForm: View {
         }
       )
 
-      // Verify button
       PrimaryButton(
         title: String(localized: .otpSubmitButton),
         action: {
           Task { await viewModel.verifyOTP() }
         },
         isLoading: viewModel.isLoading,
-        isDisabled: viewModel.otpCode.count < otpCodeLength
+        isDisabled: viewModel.otpCode.count < LoginViewModel.codeLength
       )
 
       footerActions
@@ -40,7 +37,7 @@ internal struct PhoneOTPForm: View {
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 
-      Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
+      Text(String(localized: .otpSubtitle(viewModel.email)))
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
@@ -89,7 +86,7 @@ internal struct PhoneOTPForm: View {
 }
 
 #Preview {
-  PhoneOTPForm(viewModel: LoginViewModel())
+  LoginCodeForm(viewModel: LoginViewModel())
     .padding()
     .background(Color.tidexBackground)
 }

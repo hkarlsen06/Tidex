@@ -1,4 +1,3 @@
-import Supabase
 import SwiftUI
 import os.log
 
@@ -221,15 +220,8 @@ internal struct AcceptTermsView: View {
 
     Task {
       do {
-        // Update user metadata with terms acceptance timestamp
-        _ = try await supabase.auth.update(
-          user: UserAttributes(
-            data: ["terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date()))]
-          )
-        )
-
-        // Refresh session to get updated JWT via serialized auth path
-        _ = try await AuthSessionManager.shared.forceRefresh()
+        // Saves the timestamp on the user row and reloads the user for the coordinator.
+        try await AuthService.shared.recordTermsAcceptance()
 
         // Notify coordinator that terms were accepted
         await MainActor.run {

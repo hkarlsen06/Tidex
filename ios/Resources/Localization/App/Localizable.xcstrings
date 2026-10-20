@@ -235943,6 +235943,24 @@
         }
       }
     },
+    "resetPassword.codeHint" : {
+      "comment" : "Hint under the email field on the reset password screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We'll email you a code to reset your password"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi sender deg en kode på e-post for å tilbakestille passordet"
+          }
+        }
+      }
+    },
     "resetPassword.confirmPasswordPlaceholder" : {
       "comment" : "Placeholder in the confirm password field when setting a new password.",
       "extractionState" : "manual",
@@ -236503,6 +236521,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "name@example.com 或 +47 12345678"
+          }
+        }
+      }
+    },
+    "resetPassword.emailSubtitle" : {
+      "comment" : "Subtitle on the reset password screen, where the person enters the email address of the account",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your email to reset your password"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv inn e-postadressen din for å tilbakestille passordet"
           }
         }
       }

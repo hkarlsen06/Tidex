@@ -2,7 +2,8 @@ import Foundation
 import Observation
 
 /// View model for the reset password screen
-/// Handles three-step flow: Input -> OTP verification -> New password
+/// Handles the flow: Input -> Code verification -> New password. Clerk signs the person in
+/// once the new password is set, so the flow has no success step.
 @MainActor
 @Observable
 final class ResetPasswordViewModel {
@@ -13,7 +14,7 @@ final class ResetPasswordViewModel {
 
   // MARK: - Published State
 
-  var emailOrPhone: String = ""
+  var email: String = ""
   var otpCode: String = ""
   var newPassword: String = ""
   var confirmPassword: String = ""
@@ -33,27 +34,26 @@ final class ResetPasswordViewModel {
   // MARK: - Types
 
   enum ResetStep {
-    case input  // Email/phone input
-    case otp  // OTP verification (for phone)
+    case input  // Email input
+    case otp  // Code from the reset email
     case newPassword  // Enter new password
-    case success  // Password reset complete
   }
 
+  /// `.recovery` served the old reset link. Nothing starts it any more, so `RootView` can
+  /// drop its recovery cover and this enum with it.
   enum PresentationMode {
     case standard
     case recovery
   }
 
-  typealias InputType = AuthIdentityInputType
-
   struct FieldErrors {
-    var emailOrPhone: String?
+    var email: String?
     var otp: String?
     var newPassword: String?
     var confirmPassword: String?
 
     mutating func clear() {
-      emailOrPhone = nil
+      email = nil
       otp = nil
       newPassword = nil
       confirmPassword = nil
@@ -63,19 +63,8 @@ final class ResetPasswordViewModel {
   // MARK: - Private State
 
   private let presentationMode: PresentationMode
-  @ObservationIgnored private var authTask: Task<Void, Never>?
 
   // MARK: - Computed Properties
-
-  /// Detected input type based on current emailOrPhone value
-  var inputType: InputType {
-    AuthIdentityInput.detectType(emailOrPhone)
-  }
-
-  /// Normalized phone number in E.164 format
-  var normalizedPhone: String {
-    AuthIdentityInput.normalizedPhone(emailOrPhone)
-  }
 
   var isRecoveryMode: Bool {
     presentationMode == .recovery
@@ -95,43 +84,28 @@ final class ResetPasswordViewModel {
     }
   }
 
-  deinit {
-    authTask?.cancel()
-  }
-
   // MARK: - Actions
 
-  /// Send reset code/link based on input type
+  /// Send the reset code to the email address
   func sendResetCode() async {
     clearMessages()
     fieldErrors.clear()
 
-    guard validateEmailOrPhone() else { return }
+    guard validateEmail() else { return }
 
     isLoading = true
     defer { isLoading = false }
 
     do {
-      switch inputType {
-      case .email:
-        try await authService.sendPasswordResetEmail(email: emailOrPhone)
-        successMessage = String(localized: .resetPasswordSuccessEmailSent)
-        currentStep = .otp
-
-      case .phone:
-        try await authService.sendPasswordResetOTP(phone: normalizedPhone)
-        successMessage = String(localized: .resetPasswordSuccessOtpSent)
-        currentStep = .otp
-
-      case .unknown:
-        fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsInvalidEmailOrPhone)
-      }
+      try await authService.sendPasswordResetEmail(
+        email: email.trimmingCharacters(in: .whitespacesAndNewlines))
+      currentStep = .otp
     } catch {
       handleError(error)
     }
   }
 
-  /// Verify OTP code for phone reset
+  /// Verify the code from the reset email
   func verifyOTP() async {
     clearMessages()
     fieldErrors.clear()
@@ -142,25 +116,20 @@ final class ResetPasswordViewModel {
     defer { isLoading = false }
 
     do {
-      switch inputType {
-      case .email:
-        _ = try await authService.verifyPasswordResetOTP(email: emailOrPhone, token: otpCode)
-
-      case .phone:
-        _ = try await authService.verifyPasswordResetOTP(phone: normalizedPhone, token: otpCode)
-
-      case .unknown:
-        fieldErrors.otp = String(localized: .otpErrorsCodeInvalid)
-        return
-      }
-
-      NotificationCenter.default.post(name: .tidexPasswordRecoveryRequested, object: nil)
+      try await authService.verifyPasswordResetCode(otpCode)
+      currentStep = .newPassword
     } catch {
-      handleError(error)
+      otpCode = ""
+      if AuthService.isInvalidVerificationCode(error) {
+        fieldErrors.otp = String(localized: .signupVerifyErrorsInvalidCode)
+        Haptics.play(.error)
+      } else {
+        handleError(error)
+      }
     }
   }
 
-  /// Update password after verification
+  /// Set the new password. Clerk signs the person in, and the coordinator moves on.
   func updatePassword() async {
     clearMessages()
     fieldErrors.clear()
@@ -171,9 +140,9 @@ final class ResetPasswordViewModel {
     defer { isLoading = false }
 
     do {
-      try await authService.updatePassword(newPassword: newPassword)
-      successMessage = String(localized: .resetPasswordSuccessPasswordUpdated)
-      currentStep = .success
+      try await authService.resetPassword(newPassword: newPassword)
+      Haptics.play(.success)
+      await AppCoordinator.shared.handleLoginSuccess()
     } catch {
       handleError(error)
     }
@@ -189,8 +158,7 @@ final class ResetPasswordViewModel {
     }
 
     switch currentStep {
-    case .input, .success:
-      // Already at start or end
+    case .input:
       break
 
     case .otp:
@@ -198,39 +166,30 @@ final class ResetPasswordViewModel {
       currentStep = .input
 
     case .newPassword:
+      // The code is spent, so start over.
       newPassword = ""
       confirmPassword = ""
-      // If phone flow, go back to OTP
-      // If they got here via email magic link, they should start over
-      if inputType == .phone {
-        currentStep = .otp
-      } else {
-        currentStep = .input
-      }
+      otpCode = ""
+      currentStep = .input
     }
   }
 
-  /// Resend OTP code
+  /// Send a new reset code
   func resendOTP() async {
     clearMessages()
     isLoading = true
     defer { isLoading = false }
 
     do {
-      switch inputType {
-      case .email:
-        try await authService.sendPasswordResetEmail(email: emailOrPhone)
-        successMessage = String(localized: .resetPasswordSuccessEmailSent)
-
-      case .phone:
-        try await authService.sendPasswordResetOTP(phone: normalizedPhone)
-        successMessage = String(localized: .resetPasswordSuccessOtpResent)
-
-      case .unknown:
-        fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsInvalidEmailOrPhone)
-      }
+      try await authService.sendPasswordResetEmail(
+        email: email.trimmingCharacters(in: .whitespacesAndNewlines))
+      successMessage = String(localized: .resetPasswordSuccessOtpResent)
     } catch {
-      handleError(error)
+      if AuthService.isRateLimited(error) {
+        errorMessage = String(localized: .signupVerifyErrorsTooManyRequests)
+      } else {
+        handleError(error)
+      }
     }
   }
 
@@ -239,31 +198,18 @@ final class ResetPasswordViewModel {
     onNavigateToLogin?()
   }
 
-  func handleSuccessAction() async {
-    if presentationMode == .recovery {
-      await AppCoordinator.shared.signOutKeepingUnsyncedChanges()
-    }
-
-    navigateToLogin()
-  }
-
   // MARK: - Validation
 
-  private func validateEmailOrPhone() -> Bool {
-    let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+  private func validateEmail() -> Bool {
+    let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
 
     if trimmed.isEmpty {
-      fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsEmailOrPhoneRequired)
+      fieldErrors.email = String(localized: .signupErrorsEmailRequired)
       return false
     }
 
-    if inputType == .unknown {
-      fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsInvalidEmailOrPhone)
-      return false
-    }
-
-    if inputType == .phone, !AuthService.isSMSAvailable {
-      fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsPhoneUnavailable)
+    if !AuthIdentityInput.isEmail(trimmed) {
+      fieldErrors.email = String(localized: .signupErrorsInvalidEmail)
       return false
     }
 
@@ -309,8 +255,7 @@ final class ResetPasswordViewModel {
   // MARK: - Private Methods
 
   private func handleError(_ error: Error) {
-    let translated = ErrorTranslations.translate(error)
-    errorMessage = translated
+    errorMessage = AuthService.message(for: error)
   }
 
   private func clearMessages() {

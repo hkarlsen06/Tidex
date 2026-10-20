@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Main login screen view with native iOS styling
-/// Supports email/password, phone/OTP, Google, and Apple sign-in
+/// Supports email/password, Google, and Apple sign-in
 struct LoginView: View {
   @Bindable var viewModel: LoginViewModel
   let currency: String
@@ -88,7 +88,7 @@ struct LoginView: View {
           inputStepContent(scrollProxy: scrollProxy)
 
         case .otp:
-          PhoneOTPForm(viewModel: viewModel)
+          LoginCodeForm(viewModel: viewModel)
         }
       }
 
@@ -143,7 +143,6 @@ struct LoginView: View {
       OAuthButtonsView(
         onGoogleTap: { Task { await viewModel.signInWithGoogle() } },
         onAppleTap: { Task { await viewModel.signInWithApple() } },
-        onPasskeyTap: { Task { await viewModel.signInWithPasskey() } },
         isLoading: viewModel.isLoading
       )
 
@@ -151,7 +150,7 @@ struct LoginView: View {
       dividerView
         .padding(.vertical, Spacing.xs)
 
-      // Email/phone form or reveal button
+      // Email form or reveal button
       if viewModel.showEmailForm {
         emailFormSection
       } else {
@@ -166,16 +165,8 @@ struct LoginView: View {
     VStack(spacing: Spacing.md) {
       credentialFields
 
-      fieldError(viewModel.fieldErrors.emailOrPhone)
+      fieldError(viewModel.fieldErrors.email)
       fieldError(viewModel.fieldErrors.password)
-
-      // Phone hint - password is optional for OTP flow
-      if viewModel.inputType == .phone, AuthService.isSMSAvailable {
-        Text(.loginPhonePasswordHint)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      }
 
       // Submit button
       PrimaryButton(
@@ -190,10 +181,10 @@ struct LoginView: View {
 
   private var credentialFields: some View {
     VStack(spacing: 0) {
-      // Email/Phone field
+      // Email field
       NativeTextField(
-        placeholder: String(localized: .loginEmailOrPhonePlaceholder),
-        text: $viewModel.emailOrPhone,
+        placeholder: String(localized: .signupEmailPlaceholder),
+        text: $viewModel.email,
         keyboardType: .emailAddress,
         textContentType: .emailAddress
       )
@@ -204,9 +195,7 @@ struct LoginView: View {
 
       // Password field
       NativeSecureField(
-        placeholder: viewModel.inputType == .phone && AuthService.isSMSAvailable
-          ? String(localized: .loginPasswordOptionalLabel)
-          : String(localized: .loginPasswordPlaceholder),
+        placeholder: String(localized: .loginPasswordPlaceholder),
         text: $viewModel.password,
         onSubmit: {
           Task { await viewModel.signIn() }
@@ -250,7 +239,7 @@ struct LoginView: View {
         Image(systemName: "envelope")
           .font(.tidexBodyMedium)
           .accessibilityHidden(true)
-        Text(.loginEmailOrPhoneReveal)
+        Text(.signupEmailReveal)
           .font(.tidexBodyMedium)
           .multilineTextAlignment(.center)
           .fixedSize(horizontal: false, vertical: true)
