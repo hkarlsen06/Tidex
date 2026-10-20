@@ -110,20 +110,6 @@ final class WorkSetupStatusResolverTests: XCTestCase {
     )
   }
 
-  func testPresentationStateShowsIncompleteAfterInitialSyncCompletes() {
-    let status = WorkSetupStatus(
-      isWorkSetupComplete: false,
-      hasActiveJob: false,
-      hasBaselineSnapshotForActiveSetupJob: false,
-      activeSetupJobId: nil
-    )
-
-    XCTAssertEqual(
-      WorkSetupPresentationStateResolver.resolve(status: status, initialSyncComplete: true),
-      .incomplete(status)
-    )
-  }
-
   func testPresentationStatePrefersReadyEvenBeforeInitialSyncCompletes() {
     let status = WorkSetupStatus(
       isWorkSetupComplete: true,

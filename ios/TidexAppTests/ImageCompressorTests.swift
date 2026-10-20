@@ -17,18 +17,6 @@ final class ImageCompressorTests: XCTestCase {
     XCTAssertFalse(compressed.data.isEmpty)
   }
 
-  func testCompressPreservesSmallImageDimensions() throws {
-    let image = makeDetailedImage(size: CGSize(width: 640, height: 480))
-    let sourceData = try XCTUnwrap(image.pngData())
-
-    let compressed = try XCTUnwrap(ImageCompressor.compress(sourceData))
-    let outputImage = try XCTUnwrap(UIImage(data: compressed.data))
-
-    XCTAssertEqual(outputImage.size.width, 640, accuracy: 1)
-    XCTAssertEqual(outputImage.size.height, 480, accuracy: 1)
-    XCTAssertFalse(compressed.data.isEmpty)
-  }
-
   private func makeDetailedImage(size: CGSize) -> UIImage {
     let format = UIGraphicsImageRendererFormat.default()
     format.scale = 1

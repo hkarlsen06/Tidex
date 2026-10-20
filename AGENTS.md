@@ -9,7 +9,7 @@ Hjalmar builds, runs and tests the app himself in Xcode. What he wants from you 
 - **Do not build, test or launch anything with Xcode tools unless the user asks for it in this conversation.** No `./scripts/xcode-build-agent.sh`, no `./scripts/xcode-test-agent.sh`, no `xcodebuild`, no simulators. That includes a quick build to check that it compiles, running tests you just wrote, and a final check before handoff. The exception at the end of this section says when you may do these anyway.
 - **A task is not a request to build or test.** "Fix X", "add Y" or "refactor Z" means edit the code and hand back. Only "build it", "run the tests" or similar counts.
 - **Allowed without asking:** fast static checks that finish in seconds, such as `swiftlint --quiet` and `rg`.
-- **Still write tests** when the task needs them. Just don't run them.
+- Write a test only when [Tests](#tests) calls for one, and leave running it to the user.
 - **Handoff:** one or two lines on what you did not verify and what the user should run or check, for example "run `FooTests`" or "check the settings screen in dark mode".
 
 When the user does ask for a build or test:
@@ -43,6 +43,28 @@ Agents in several repos share this Mac, and simulators created by agents once fi
 - Do not create, clone or erase simulators, and do not boot any simulator other than these two. To clear the app's data, uninstall it instead of erasing the simulator.
 - Do not download simulator runtimes or platforms, through `xcodebuild -downloadPlatform`, `xcrun simctl runtime add` or Xcode's Components settings. If a shared simulator is missing or no runtime is installed, stop and ask the user.
 - `./scripts/xcode-build-agent.sh` builds for the generic simulator destination. That needs no simulator or runtime, so these rules don't change it.
+
+## Tests
+
+Most of the test weight sits on end-to-end and integration tests that walk real user journeys and the backend contract. Unit tests are a thin layer for pure logic. Tests an agent writes for its own change mostly restate its own reading of the task, so they cost time and catch little.
+
+**When to add a test.** Add or extend a test when the user asks for one, or when a change touches one of the unit-test areas listed below and no existing test would go red if the change were reverted. A bug fix in those areas gets a test that reproduces the bug. Every other change ships with the tests that already exist, and the handoff says so in one line.
+
+**Which kind.** Pick the first kind that can see the behavior:
+
+1. An end-to-end UI test in `ios/TidexAppUITests/` that walks a journey through the real app, such as `ShiftJourneyUITests`.
+2. An integration test in `ios/TidexAppTests/` that drives real collaborators together: the in-memory `LocalStore`, repositories, the sync merge, view models with only the network edge faked. `SyncOfflineBehaviorTests` and `FriendsMessageOutboxTests` are examples.
+3. A backend test next to the edge function in `supabase/functions/` for handlers and payload contracts, or a SQL script in `supabase/tests/` for RLS.
+4. A unit test, for pure logic where a bug costs money, data or privacy and is hard to see on screen:
+   - parsers and decoders for server, calendar (ICS) and file formats
+   - date, time zone, pay period, cross-midnight and DST math
+   - pay, overtime, tax, supplement and currency rules
+   - security and authorization checks: who sees whose shifts, earnings and messages, user isolation, admin gating, auth routing
+   - sync, merge, conflict, outbox and dedup logic
+
+A test earns its place by checking an outcome a user would notice. Assertions on constants, enum raw values, mapping tables copied from the code, localized copy, mock call counts, layout, focus, gesture thresholds or animation restate the implementation, so leave those out.
+
+**Failing tests.** A red test means the code or the test has a bug. Fix the code, or stop and report the failure with its output. Never delete, skip or loosen a failing test to get a green run, and never add `XCTSkip` or `XCTExpectFailure` for that purpose. Delete a test only when the user asks, or when the behavior it checks was removed on purpose.
 
 ## Project Overview
 

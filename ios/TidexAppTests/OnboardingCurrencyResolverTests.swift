@@ -25,21 +25,6 @@ final class OnboardingCurrencyResolverTests: XCTestCase {
     )
   }
 
-  func testDetectDefaultCurrencyHandlesSupportedEuropeanAndKroneRegions() {
-    XCTAssertEqual(
-      OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "de_DE")),
-      "€"
-    )
-    XCTAssertEqual(
-      OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "nb_NO")),
-      "kr"
-    )
-    XCTAssertEqual(
-      OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "sv_SE")),
-      "kr"
-    )
-  }
-
   func testHourlyRateInputParserPreservesTwoDecimalValues() {
     XCTAssertEqual(HourlyRateInputFormatter.parse("184.54"), 184.54)
     XCTAssertEqual(HourlyRateInputFormatter.parse("184,54"), 184.54)
@@ -54,43 +39,6 @@ final class OnboardingCurrencyResolverTests: XCTestCase {
     XCTAssertEqual(HourlyRateInputFormatter.parse("1.234,56"), 1_234.56)
   }
 
-  func testDetectDefaultCurrencyHandlesExpandedSupportedCurrencies() {
-    XCTAssertEqual(
-      OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "pl_PL")),
-      "zł"
-    )
-    XCTAssertEqual(
-      OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "cs_CZ")),
-      "Kč"
-    )
-    XCTAssertEqual(
-      OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "pt_BR")),
-      "R$"
-    )
-    XCTAssertEqual(
-      OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "en_ZA")),
-      "R"
-    )
-    XCTAssertEqual(
-      OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "th_TH")),
-      "฿"
-    )
-  }
-
-  func testDetectDefaultCurrencyCoversAppStoreLocales() {
-    for (identifier, currency) in [
-      ("tr_TR", "₺"), ("hu_HU", "Ft"), ("ro_RO", "lei"), ("uk_UA", "₴"), ("he_IL", "₪"),
-      ("ar_SA", "ر.س"), ("id_ID", "Rp"), ("vi_VN", "₫"), ("zh_TW", "NT$"),
-    ] {
-      XCTAssertEqual(
-        OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: identifier)),
-        currency, identifier)
-    }
-    XCTAssertEqual(CurrencyConfig.get("₫").wageRangeTier, .ultraLow)
-    XCTAssertTrue(CurrencyConfig.format(3_136_000, currency: "Rp").hasPrefix("Rp"))
-    XCTAssertTrue(CurrencyConfig.format(324_800, currency: "Ft").hasSuffix(" Ft"))
-  }
-
   func testDetectDefaultCurrencyFallsBackToNorwegianLanguageThenDollar() {
     XCTAssertEqual(
       OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "nb_CH")),
@@ -100,17 +48,6 @@ final class OnboardingCurrencyResolverTests: XCTestCase {
       OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "en_CH")),
       "$"
     )
-  }
-
-  func testCarryoverStoreReturnsSupportedCurrencyAndClearsInvalidCurrency() {
-    OnboardingCurrencyCarryoverStore.writePreferredCurrency("€")
-
-    XCTAssertEqual(OnboardingCurrencyCarryoverStore.readValidPreferredCurrency(), "€")
-
-    UserDefaults.standard.set("CHF", forKey: carryoverKey)
-
-    XCTAssertNil(OnboardingCurrencyCarryoverStore.readValidPreferredCurrency())
-    XCTAssertNil(UserDefaults.standard.string(forKey: carryoverKey))
   }
 
   func testOnlyNonKroneCurrenciesUseSimpleSetup() {

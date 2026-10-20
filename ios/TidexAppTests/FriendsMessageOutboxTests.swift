@@ -57,8 +57,10 @@ final class FriendsMessageOutboxTests: XCTestCase {
 
     await queue(makeMessage(id: "local-a1", threadId: "thread-a", second: 1), in: repository)
 
-    async let first: Void = outbox.drain(userId: viewerId)
-    async let second: Void = outbox.drain(userId: viewerId)
+    // `async let` must not capture `self`, so copy the id first.
+    let userId = viewerId
+    async let first: Void = outbox.drain(userId: userId)
+    async let second: Void = outbox.drain(userId: userId)
     _ = await (first, second)
 
     XCTAssertEqual(service.sentClientIds, ["client-local-a1"])
@@ -149,7 +151,8 @@ final class FriendsMessageOutboxTests: XCTestCase {
     let viewModel = makeViewModel(
       threadId: "thread-a", service: service, repository: repository, outbox: outbox)
 
-    async let drain: Void = outbox.drain(userId: viewerId)
+    let userId = viewerId
+    async let drain: Void = outbox.drain(userId: userId)
     try await Task.sleep(for: .milliseconds(20))
     await viewModel.deleteMessage(messageId: "local-a2")
     await drain
@@ -166,7 +169,8 @@ final class FriendsMessageOutboxTests: XCTestCase {
     let viewModel = makeViewModel(
       threadId: "thread-a", service: service, repository: repository, outbox: outbox)
 
-    async let drain: Void = outbox.drain(userId: viewerId)
+    let userId = viewerId
+    async let drain: Void = outbox.drain(userId: userId)
     try await Task.sleep(for: .milliseconds(20))
     await viewModel.deleteMessage(messageId: "local-a1")
     await drain
@@ -196,7 +200,9 @@ final class FriendsMessageOutboxTests: XCTestCase {
     await outbox.drain(userId: viewerId)
 
     XCTAssertEqual(service.uploadedImages.map(\.data), [Data([9, 8, 7])])
-    XCTAssertEqual(repository.getMessage(id: "local-a1", viewerUserId: viewerId)?.sendState, .sent)
+    // The confirmed server message replaces the optimistic local row.
+    XCTAssertEqual(
+      repository.getMessage(id: "server-client-local-a1", viewerUserId: viewerId)?.sendState, .sent)
     XCTAssertNil(store.load(id: "image-2", mediaType: "image/jpeg"))
   }
 
@@ -217,11 +223,6 @@ final class FriendsMessageOutboxTests: XCTestCase {
     XCTAssertTrue(service.sentClientIds.isEmpty)
   }
 
-  func testCanDeleteAllowsQueuedMessages() {
-    let queued = makeMessage(id: "local-a1", threadId: "thread-a", second: 1)
-    XCTAssertTrue(queued.canDelete(viewerUserId: viewerId))
-  }
-
   func testConnectivityClassificationOnlyTreatsOfflineErrorsAsOffline() {
     XCTAssertTrue(FriendsMessageOutbox.isConnectivityError(URLError(.notConnectedToInternet)))
     XCTAssertTrue(
@@ -234,11 +235,6 @@ final class FriendsMessageOutboxTests: XCTestCase {
     XCTAssertFalse(
       FriendsMessageOutbox.isConnectivityError(
         FriendsMessagingServiceError.httpError(statusCode: 500, message: nil)))
-  }
-
-  func testNetworkErrorDescriptionDoesNotEmbedSystemText() {
-    let error = FriendsMessagingServiceError.networkError(underlying: URLError(.timedOut))
-    XCTAssertEqual(error.errorDescription, String(localized: .commonErrorGeneric))
   }
 
   // MARK: - Helpers

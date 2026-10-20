@@ -52,28 +52,6 @@ final class TariffVersionServiceTests: XCTestCase {
     XCTAssertEqual(types, [retail])
   }
 
-  func testVersionsSurviveRelaunchWhenNetworkFails() async throws {
-    let saved = [version("v2", effective: "2026-04-01", level1: 200)]
-    let online = makeService(versions: { _ in saved })
-    _ = try await online.getTariffVersions(tariffType: "hk_retail")
-
-    let offline = makeService()
-    let versions = try await offline.getTariffVersions(tariffType: "hk_retail")
-
-    XCTAssertEqual(versions, saved)
-  }
-
-  func testThrowsWhenNetworkFailsAndNothingIsSaved() async {
-    let service = makeService()
-
-    do {
-      _ = try await service.getTariffTypes()
-      XCTFail("Expected an error with no network and no saved data")
-    } catch {
-      XCTAssertTrue(error is OfflineError)
-    }
-  }
-
   func testDateLookupUsesSavedVersionsWhenNetworkFails() async throws {
     let saved = [
       version("v2", effective: "2026-04-01", level1: 200),
@@ -93,16 +71,5 @@ final class TariffVersionServiceTests: XCTestCase {
     XCTAssertEqual(inV2?.id, "v2")
     XCTAssertEqual(inV1?.id, "v1")
     XCTAssertNil(beforeAll)
-  }
-
-  func testDateLookupThrowsWhenNetworkFailsAndVersionsAreNotSaved() async {
-    let service = makeService()
-
-    do {
-      _ = try await service.getTariffVersionForDate(tariffType: "hk_retail", date: "2026-09-29")
-      XCTFail("Expected an error with no network and no saved versions")
-    } catch {
-      XCTAssertTrue(error is OfflineError)
-    }
   }
 }

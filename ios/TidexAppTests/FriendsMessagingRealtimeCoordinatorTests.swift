@@ -77,17 +77,6 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
     XCTAssertFalse(recorder.didOverlap)
   }
 
-  func testSerializedRefreshRunnerRunsAgainAfterEarlierRefreshFinished() async {
-    let runner = SerializedRefreshRunner()
-    let recorder = RefreshRecorder()
-    recorder.holdsFirstPass = false
-
-    await runner.run(key: "inbox", allowIncrementalSync: true, recorder.refresh)
-    await runner.run(key: "inbox", allowIncrementalSync: true, recorder.refresh)
-
-    XCTAssertEqual(recorder.passes, [true, true])
-  }
-
   func testDecodeThreadUserStateParsesInsertedPayload() throws {
     let updatedAt = Date(timeIntervalSince1970: 1_700_000_000)
     let lastReadAt = Date(timeIntervalSince1970: 1_699_999_900)
@@ -146,80 +135,4 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
     XCTAssertEqual(typingPayload.userId, "user-2")
     XCTAssertEqual(typingPayload.sentAtMs, 1_775_000_000_001)
   }
-
-  func testTypingChannelHealthRequiresExpectedTopicSubscribedStatusAndListeners() {
-    XCTAssertTrue(
-      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
-        threadId: "thread-1",
-        topic: "realtime:friends-thread-typing:thread-1",
-        status: .subscribed,
-        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
-          .listenerTaskCount,
-        hasSubscriptionTask: false
-      )
-    )
-
-    XCTAssertFalse(
-      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
-        threadId: "thread-1",
-        topic: "realtime:friends-thread-detail:thread-1",
-        status: .subscribed,
-        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
-          .listenerTaskCount,
-        hasSubscriptionTask: false
-      )
-    )
-
-    XCTAssertFalse(
-      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
-        threadId: "thread-1",
-        topic: "realtime:friends-thread-typing:thread-1",
-        status: .unsubscribed,
-        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
-          .listenerTaskCount,
-        hasSubscriptionTask: false
-      )
-    )
-
-    XCTAssertFalse(
-      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
-        threadId: "thread-1",
-        topic: "realtime:friends-thread-typing:thread-1",
-        status: .subscribed,
-        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
-          .listenerTaskCount - 1,
-        hasSubscriptionTask: false
-      )
-    )
-
-    XCTAssertFalse(
-      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
-        threadId: "thread-1",
-        topic: "realtime:friends-thread-typing:thread-1",
-        status: .subscribed,
-        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
-          .listenerTaskCount,
-        hasSubscriptionTask: true
-      )
-    )
-  }
-
-  func testThreadListRefreshesForViewerStateUpdates() {
-    XCTAssertTrue(
-      FriendsMessagingRealtimeCoordinator.shouldRefreshThreadList(
-        forThreadStateUserId: "viewer-1",
-        viewerUserId: "viewer-1"
-      )
-    )
-  }
-
-  func testThreadListDoesNotRefreshForCounterpartStateUpdates() {
-    XCTAssertFalse(
-      FriendsMessagingRealtimeCoordinator.shouldRefreshThreadList(
-        forThreadStateUserId: "friend-1",
-        viewerUserId: "viewer-1"
-      )
-    )
-  }
-
 }

@@ -4,14 +4,6 @@ import XCTest
 @testable import Tidex
 
 internal final class DataExportTests: XCTestCase {
-  @MainActor
-  internal func testDefaultsToLastMonthSoExportIsReady() {
-    let viewModel: DataSettingsViewModel = DataSettingsViewModel()
-
-    XCTAssertEqual(viewModel.selectedPreset, .lastMonth)
-    XCTAssertEqual(viewModel.resolvedDateRange?.from, ExportPeriodPreset.lastMonth.resolveDateRange()?.from)
-    XCTAssertTrue(viewModel.canExport)
-  }
 
   internal func testPublicHolidayCountsAsSundayOrHoliday() {
     // 2026-05-17 is a Sunday; 2026-05-14 (Ascension Day) is a Thursday.

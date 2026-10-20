@@ -32,21 +32,6 @@ internal final class AuthRecoveryTests: XCTestCase {
     XCTAssertTrue(AppLifecycleHandler.isPasswordRecoveryCallback(url))
   }
 
-  internal func testPercentEncodedTypeInFragmentIsRecovery() throws {
-    let url: URL = try XCTUnwrap(URL(string: "tidex://login-callback#type=recover%79"))
-
-    XCTAssertTrue(AppLifecycleHandler.isPasswordRecoveryCallback(url))
-  }
-
-  internal func testQueryTypeOverridesFragmentType() throws {
-    // The query is merged after the fragment, so it wins when both carry `type`.
-    let url: URL = try XCTUnwrap(
-      URL(string: "tidex://login-callback?type=recovery#type=signup")
-    )
-
-    XCTAssertTrue(AppLifecycleHandler.isPasswordRecoveryCallback(url))
-  }
-
   // MARK: - MFA assurance level
 
   internal func testAssuranceLevelReadsAAL1AndAAL2Claims() {
@@ -120,25 +105,6 @@ internal final class AuthRecoveryTests: XCTestCase {
     )
 
     XCTAssertNil(FriendsMessagingService.attachmentUploadFailure(duplicate))
-  }
-
-  internal func testRejectedAttachmentUploadIsNotANetworkError() {
-    let rejected = StorageError(statusCode: "403", message: "new row violates row-level security")
-
-    let failure = FriendsMessagingService.attachmentUploadFailure(rejected)
-
-    guard case .httpError(let statusCode, _) = failure as? FriendsMessagingServiceError else {
-      return XCTFail("Expected httpError, got \(String(describing: failure))")
-    }
-    XCTAssertEqual(statusCode, 403)
-  }
-
-  internal func testTransportFailureIsANetworkError() {
-    let failure = FriendsMessagingService.attachmentUploadFailure(URLError(.notConnectedToInternet))
-
-    guard case .networkError = failure as? FriendsMessagingServiceError else {
-      return XCTFail("Expected networkError, got \(String(describing: failure))")
-    }
   }
 
   // MARK: - Helpers

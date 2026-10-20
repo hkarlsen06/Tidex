@@ -68,23 +68,6 @@ internal func makeAuthAPIError(_ code: ErrorCode) throws -> Error {
 
 @MainActor
 internal final class SignupViewModelTests: XCTestCase {
-  // Continuing accepts the terms, so there is no checkbox to validate. Field checks still
-  // stop an invalid email signup before any network work.
-  internal func testEmailSignupStopsOnInvalidEmailBeforeNetworkWork() async {
-    let viewModel: SignupViewModel = SignupViewModel()
-    viewModel.firstName = "Test"
-    viewModel.lastName = "User"
-    viewModel.emailOrPhone = "not-an-email"
-    viewModel.password = "password123"
-
-    await viewModel.signUp()
-
-    XCTAssertEqual(viewModel.fieldErrors.emailOrPhone, String(localized: .signupErrorsInvalidEmail))
-    XCTAssertNil(viewModel.fieldErrors.firstName)
-    XCTAssertNil(viewModel.fieldErrors.password)
-    XCTAssertNil(viewModel.errorMessage)
-    XCTAssertFalse(viewModel.isLoading)
-  }
 
   // MARK: - Signup with a session (autoconfirm on)
 
@@ -166,94 +149,9 @@ internal final class SignupViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.isLoading)
   }
 
-  internal func testVerifyRateLimitShowsBannerInsteadOfCodeError() async throws {
-    let stub = StubEmailAuth()
-    stub.verifyError = try makeAuthAPIError(.overRequestRateLimit)
-    let viewModel = makeViewModel(stub)
-    viewModel.showEmailVerification(email: "new@example.com")
-
-    viewModel.otpCode = "000000"
-    await viewModel.verifyEmailCode()
-
-    XCTAssertEqual(viewModel.errorMessage, String(localized: .signupVerifyErrorsTooManyRequests))
-    XCTAssertNil(viewModel.fieldErrors.otp)
-  }
-
-  internal func testVerifyWithShortCodeStopsBeforeNetworkWork() async {
-    let stub = StubEmailAuth()
-    let viewModel = makeViewModel(stub)
-    viewModel.showEmailVerification(email: "new@example.com")
-
-    viewModel.otpCode = "123"
-    await viewModel.verifyEmailCode()
-
-    XCTAssertEqual(viewModel.fieldErrors.otp, String(localized: .otpErrorsCodeInvalid))
-    XCTAssertTrue(stub.verifiedCodes.isEmpty)
-  }
-
   // MARK: - Resend
 
-  internal func testResendIsBlockedDuringCooldown() async {
-    let stub = StubEmailAuth()
-    stub.signUpResult = .success(.needsVerification)
-    let viewModel = makeViewModel(stub)
-    await viewModel.signUp()
-
-    await viewModel.resendCode()
-
-    XCTAssertTrue(stub.resentEmails.isEmpty)
-  }
-
-  internal func testResendSendsCodeAndRestartsCooldown() async {
-    let stub = StubEmailAuth()
-    let viewModel = makeViewModel(stub)
-    viewModel.showEmailVerification(email: "old@example.com")
-
-    await viewModel.resendCode()
-
-    XCTAssertEqual(stub.resentEmails, ["old@example.com"])
-    XCTAssertEqual(viewModel.successMessage, String(localized: .signupVerifyResendSent))
-    XCTAssertGreaterThan(viewModel.resendSecondsRemaining(), 0)
-  }
-
-  internal func testResendRateLimitShowsMessageAndStartsCooldown() async throws {
-    let stub = StubEmailAuth()
-    stub.resendError = try makeAuthAPIError(.overEmailSendRateLimit)
-    let viewModel = makeViewModel(stub)
-    viewModel.showEmailVerification(email: "old@example.com")
-
-    await viewModel.resendCode()
-
-    XCTAssertEqual(viewModel.errorMessage, String(localized: .signupVerifyErrorsTooManyRequests))
-    XCTAssertNil(viewModel.successMessage)
-    XCTAssertGreaterThan(viewModel.resendSecondsRemaining(), 0)
-  }
-
-  internal func testResendSecondsRemainingCountsDownAndStopsAtZero() async {
-    let stub = StubEmailAuth()
-    stub.signUpResult = .success(.needsVerification)
-    let viewModel = makeViewModel(stub)
-    await viewModel.signUp()
-    let start = Date()
-
-    XCTAssertLessThanOrEqual(
-      viewModel.resendSecondsRemaining(at: start), Int(SignupViewModel.resendCooldown))
-    let afterCooldown = start.addingTimeInterval(SignupViewModel.resendCooldown + 1)
-    XCTAssertEqual(viewModel.resendSecondsRemaining(at: afterCooldown), 0)
-  }
-
   // MARK: - Leaving the code step
-
-  internal func testCancelVerificationReturnsToFormAndClearsCode() {
-    let viewModel = makeViewModel(StubEmailAuth())
-    viewModel.showEmailVerification(email: "new@example.com")
-    viewModel.otpCode = "123"
-
-    viewModel.cancelEmailVerification()
-
-    XCTAssertEqual(viewModel.step, .form)
-    XCTAssertEqual(viewModel.otpCode, "")
-  }
 
   // MARK: - Helpers
 

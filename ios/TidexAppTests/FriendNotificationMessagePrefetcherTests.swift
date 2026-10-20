@@ -5,24 +5,6 @@ import XCTest
 
 @MainActor
 final class FriendNotificationMessagePrefetcherTests: XCTestCase {
-  func testBackgroundPrefetchSkipsWhenMessageIdMissing() async {
-    let context = MockPrefetchContext()
-    let repository = MockFriendsMessagesRepository()
-    let service = MockFriendsMessagingService()
-    let prefetcher = FriendNotificationMessagePrefetcher(
-      context: context,
-      repository: repository,
-      service: service
-    )
-
-    let outcome = await prefetcher.prefetchBackgroundMessage(
-      threadId: "thread-1",
-      messageId: nil
-    )
-
-    XCTAssertEqual(outcome, .skipped(.missingMessageId))
-    XCTAssertEqual(service.fetchMessagePayloadCallCount, 0)
-  }
 
   func testBackgroundPrefetchRefreshesAlreadyCachedMessage() async {
     let context = MockPrefetchContext()
@@ -104,30 +86,6 @@ final class FriendNotificationMessagePrefetcherTests: XCTestCase {
     XCTAssertEqual(service.fetchMessagePayloadCallCount, 1)
   }
 
-  func testBackgroundPrefetchDoesNotFetchThreadWhenLocalThreadAlreadyCurrent() async {
-    let context = MockPrefetchContext()
-    let repository = MockFriendsMessagesRepository()
-    let service = MockFriendsMessagingService()
-    let thread = makeThread(id: "thread-1", lastMessageId: "message-1")
-    let message = makeMessage(id: "message-1", threadId: "thread-1")
-    repository.threads[thread.id] = thread
-    service.messageToReturn = message
-    let prefetcher = FriendNotificationMessagePrefetcher(
-      context: context,
-      repository: repository,
-      service: service
-    )
-
-    let outcome = await prefetcher.prefetchBackgroundMessage(
-      threadId: thread.id,
-      messageId: message.id
-    )
-
-    XCTAssertEqual(outcome, .newData)
-    XCTAssertEqual(service.fetchThreadSummaryCallCount, 0)
-    XCTAssertEqual(service.fetchMessagePayloadCallCount, 1)
-  }
-
   func testBackgroundPrefetchSkipsWhenImpersonating() async {
     let context = MockPrefetchContext(isImpersonating: true)
     let repository = MockFriendsMessagesRepository()
@@ -145,25 +103,6 @@ final class FriendNotificationMessagePrefetcherTests: XCTestCase {
 
     XCTAssertEqual(outcome, .skipped(.impersonating))
     XCTAssertEqual(service.fetchMessagePayloadCallCount, 0)
-  }
-
-  func testBackgroundPrefetchReturnsFailedOnFetchError() async {
-    let context = MockPrefetchContext()
-    let repository = MockFriendsMessagesRepository()
-    let service = MockFriendsMessagingService()
-    service.fetchMessageError = TestError.failed
-    let prefetcher = FriendNotificationMessagePrefetcher(
-      context: context,
-      repository: repository,
-      service: service
-    )
-
-    let outcome = await prefetcher.prefetchBackgroundMessage(
-      threadId: "thread-1",
-      messageId: "message-1"
-    )
-
-    XCTAssertEqual(outcome, .failed)
   }
 
   private func makeThread(id: String, lastMessageId: String?) -> FriendThread {

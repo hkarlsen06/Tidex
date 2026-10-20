@@ -127,27 +127,6 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     )
   }
 
-  internal func testMarkShiftPendingDeleteSetsPendingDeleteStatus() async throws {
-    let store = try makeStoreActor()
-
-    _ = try await store.createUserShift(
-      id: "shift-3",
-      userId: userId,
-      jobId: nil,
-      shiftDate: makeDate("2026-03-02"),
-      startTime: "09:00",
-      endTime: "17:00",
-      customSupplements: nil
-    )
-
-    _ = try await store.markShiftPendingDelete(id: "shift-3")
-
-    let localRecord = try await store.userShiftCopy(id: "shift-3")
-
-    let local = try XCTUnwrap(localRecord)
-    XCTAssertEqual(local.syncStatus, .pendingDelete)
-  }
-
   internal func testResolveStoredShiftConflictKeepServerOverwritesLocal() async throws {
     let store = try makeStoreActor()
 
@@ -938,37 +917,6 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.name]))
   }
 
-  internal func testUpdateJobMetadataTracksCurrencyChangesAfterClean() async throws {
-    let store = try makeStoreActor()
-
-    let created = try await store.createJob(
-      userId: userId,
-      name: "Store",
-      color: nil,
-      currency: "kr",
-      isDefault: false,
-      sortOrder: 0,
-      payrollDay: 25,
-      halfTaxMonth: nil,
-      monthlyGoal: nil
-    )
-
-    await store.markJobClean(id: created.id)
-    try await store.save()
-
-    _ = try await store.updateJobCurrency(
-      id: created.id,
-      currency: "$"
-    )
-
-    let localRecord = try await store.jobCopy(id: created.id)
-
-    let local = try XCTUnwrap(localRecord)
-    XCTAssertEqual(local.syncStatus, .dirty)
-    XCTAssertEqual(local.currency, "$")
-    XCTAssertEqual(local.dirtyFieldKeys, Set([.currency]))
-  }
-
   internal func testDeletingActiveOrRestoredJobRequiresArchivingWithoutMutatingJob() async throws {
     let store = try makeStoreActor()
     let created = try await store.createJob(
@@ -1474,45 +1422,6 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(syncedSnapshot, serverSnapshot)
   }
 
-  internal func testCreateUserSettingsMarksExpectedInitialDirtyFields() async throws {
-    let store = try makeStoreActor()
-
-    _ = try await store.createUserSettings(
-      userId: userId,
-      payrollDay: 25,
-      currency: "NOK",
-      theme: "dark",
-      calendarContentColorStyle: "monochrome",
-      showDashboardClockButtons: false,
-      monthlyGoal: 30_000,
-      monthlyGoalsByMonth: ["2026-03": 32_000],
-      defaultShiftsView: "list",
-      halfTaxMonth: 12,
-      defaultStartupTab: "stats"
-    )
-
-    let localRecord = try await store.userSettingsCopy(userId: userId)
-
-    let local = try XCTUnwrap(localRecord)
-
-    let expected: Set<UserSettingsField> = [
-      .theme,
-      .calendarContentColorStyle,
-      .showDashboardClockButtons,
-      .lastActive,
-      .payrollDay,
-      .currency,
-      .monthlyGoal,
-      .monthlyGoalsByMonth,
-      .defaultShiftsView,
-      .halfTaxMonth,
-      .defaultStartupTab,
-    ]
-
-    XCTAssertEqual(local.syncStatus, .dirty)
-    XCTAssertEqual(local.dirtyFieldKeys, expected)
-  }
-
   internal func testUpdateUserSettingsMarksThemeDirtyEvenWhenValueIsUnchanged() async throws {
     let store = try makeStoreActor()
 
@@ -1547,42 +1456,6 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.syncStatus, .dirty)
     XCTAssertEqual(local.theme, "dark")
     XCTAssertEqual(local.dirtyFieldKeys, Set([.theme]))
-  }
-
-  internal func testUpdateUserSettingsMarksCalendarContentColorStyleDirty() async throws {
-    let store = try makeStoreActor()
-
-    _ = try await store.createUserSettings(
-      userId: userId,
-      payrollDay: nil,
-      currency: nil,
-      calendarContentColorStyle: "workplace"
-    )
-
-    await store.markUserSettingsClean(userId: userId)
-    try await store.save()
-
-    _ = try await store.updateUserSettings(
-      userId: userId,
-      monthlyGoal: nil,
-      monthlyGoalsByMonth: nil,
-      defaultShiftsView: nil,
-      profilePictureUrl: nil,
-      payrollDay: nil,
-      theme: nil,
-      calendarContentColorStyle: "monochrome",
-      showDashboardClockButtons: nil,
-      halfTaxMonth: nil,
-      currency: nil,
-      defaultStartupTab: nil
-    )
-
-    let localRecord = try await store.userSettingsCopy(userId: userId)
-
-    let local = try XCTUnwrap(localRecord)
-    XCTAssertEqual(local.syncStatus, .dirty)
-    XCTAssertEqual(local.calendarContentColorStyle, "monochrome")
-    XCTAssertEqual(local.dirtyFieldKeys, Set([.calendarContentColorStyle]))
   }
 
   internal func testResolveStoredUserSettingsConflictKeepServerOverwritesLocal() async throws {

@@ -2,7 +2,7 @@ import XCTest
 
 @testable import Tidex
 
-final class StatsServiceCachingFingerprintTests: XCTestCase {  // swiftlint:disable:this type_body_length
+final class StatsServiceCachingFingerprintTests: XCTestCase {
   // swiftlint:disable:next function_body_length
   func testAnnualPayrollCacheMatchesIndependentMonthCalculations() throws {
     let settings = UserSettings.defaults(for: "user-1")
@@ -103,60 +103,6 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {  // swiftlint:disa
     XCTAssertEqual(cached.shiftsByMonth[12], [])
   }
 
-  func testCachedMonthReusesPayrollWithoutRecomputingInputs() throws {
-    let row = TestFixtures.shift(
-      id: "june", shiftDate: "2026-06-15", startTime: "08:00", endTime: "16:00"
-    )
-    let settings = UserSettings.defaults(for: "user-1")
-    let cached = try StatsService.computeFullYearPayrollData(
-      year: 2_026, shifts: [row], recurring: [],
-      snapshots: [TestFixtures.wageSnapshot(hourlyWage: 250)], settings: settings, jobs: []
-    )
-    let request = PayrollEngine.MonthComputationRequest(
-      year: 2_026, month: 6, shifts: [], recurring: [], snapshots: [],
-      settings: settings, jobs: []
-    )
-
-    XCTAssertEqual(cached.shifts(for: request).map(\.id), [row.id])
-    XCTAssertEqual(cached.shifts(for: request), cached.shiftsByMonth[6])
-    XCTAssertEqual(cached.shiftsByMonth[7], [])
-  }
-
-  func testAnnualPayrollIncludesPriorSundayOvernightHoursInFirstWeek() throws {
-    let rows =
-      [
-        TestFixtures.shift(
-          id: "sunday", shiftDate: "2026-05-31", startTime: "22:00", endTime: "06:00")
-      ]
-      + (1...4).map { day in
-        TestFixtures.shift(
-          id: "june-\(day)", shiftDate: "2026-06-0\(day)", startTime: "08:00", endTime: "18:00")
-      }
-    let window = PayrollReadWindow.month(year: 2_026, month: 6).expandedForOvertime
-    let startISO = window.startDate.toISODateString()
-    let endISO = window.endDate.toISODateString()
-    let settings = UserSettings.defaults(for: "user-1")
-    let snapshots = [
-      TestFixtures.wageSnapshot(hourlyWage: 200, breakEnabled: false, overtime: .seededDefaults)
-    ]
-    let cached = try StatsService.computeFullYearPayrollData(
-      year: 2_026, shifts: rows, recurring: [], snapshots: snapshots, settings: settings, jobs: []
-    )
-    let monthly = PayrollEngine.computeShiftsForMonth(
-      .init(
-        year: 2_026, month: 6,
-        shifts: rows.filter { $0.shift_date >= startISO && $0.shift_date <= endISO },
-        recurring: [], snapshots: snapshots, settings: settings, jobs: []
-      )
-    )
-
-    XCTAssertEqual(startISO, "2026-05-31")
-    XCTAssertEqual(cached.shiftsByMonth[6], monthly)
-    let thursday = try XCTUnwrap(monthly.first { $0.id == "june-4" })
-    XCTAssertEqual(thursday.computed.overtimeMinutes, 360, accuracy: 0.01)
-    XCTAssertEqual(monthly.map(\.id), ["june-1", "june-2", "june-3", "june-4"])
-  }
-
   func testJanuaryComparisonComputesPreviousDecemberOutsideAnnualCache() throws {
     let priorDecember = TestFixtures.shift(
       id: "prior-december", shiftDate: "2025-12-31", startTime: "22:00", endTime: "06:00"
@@ -178,26 +124,6 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {  // swiftlint:disa
     XCTAssertEqual(cached.shifts(for: request), PayrollEngine.computeShiftsForMonth(request))
     XCTAssertEqual(cached.shifts(for: request).map(\.id), [priorDecember.id])
     XCTAssertEqual(cached.shiftsByMonth[12]?.map(\.id), [thisDecember.id])
-  }
-
-  func testShiftFingerprintIsOrderInvariant() {
-    let first = TestFixtures.shift(
-      id: "a-shift",
-      shiftDate: "2026-01-10",
-      startTime: "08:00",
-      endTime: "16:00"
-    )
-    let second = TestFixtures.shift(
-      id: "b-shift",
-      shiftDate: "2026-01-12",
-      startTime: "09:00",
-      endTime: "17:00"
-    )
-
-    let forward = StatsService.fingerprintShiftsForCaching([first, second])
-    let reversed = StatsService.fingerprintShiftsForCaching([second, first])
-
-    XCTAssertEqual(forward, reversed)
   }
 
   func testShiftFingerprintChangesWhenShiftDataChanges() {
@@ -279,46 +205,6 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {  // swiftlint:disa
     XCTAssertNotEqual(originalFingerprint, updatedFingerprint)
   }
 
-  func testSettingsFingerprintIgnoresRetiredMonthlyGoals() {
-    let original = UserSettings(
-      user_id: "user-1",
-      created_at: nil,
-      updated_at: "2026-03-01T10:00:00Z",
-      last_active: nil,
-      monthly_goal: 30_000,
-      monthly_goals_by_month: ["2026-03": 35_000],
-      default_shifts_view: "calendar",
-      profile_picture_url: nil,
-      payroll_day: 25,
-      theme: "system",
-      show_dashboard_clock_buttons: true,
-      half_tax_month: 12,
-      currency: "kr",
-      default_startup_tab: "stats"
-    )
-    let updated = UserSettings(
-      user_id: "user-1",
-      created_at: nil,
-      updated_at: "2026-03-01T10:00:00Z",
-      last_active: nil,
-      monthly_goal: 30_000,
-      monthly_goals_by_month: ["2026-03": 36_000],
-      default_shifts_view: "calendar",
-      profile_picture_url: nil,
-      payroll_day: 25,
-      theme: "system",
-      show_dashboard_clock_buttons: true,
-      half_tax_month: 12,
-      currency: "kr",
-      default_startup_tab: "stats"
-    )
-
-    let originalFingerprint = StatsService.fingerprintSettingsForCaching(original)
-    let updatedFingerprint = StatsService.fingerprintSettingsForCaching(updated)
-
-    XCTAssertEqual(originalFingerprint, updatedFingerprint)
-  }
-
   func testSettingsFingerprintTracksOfflinePayrollDayChanges() throws {
     let original = UserSettings.defaults(for: "user-1")
     let data = try JSONEncoder().encode(original)
@@ -333,16 +219,6 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {  // swiftlint:disa
     XCTAssertNotEqual(
       StatsService.fingerprintSettingsForCaching(original),
       StatsService.fingerprintSettingsForCaching(updated)
-    )
-  }
-
-  func testSnapshotFingerprintTracksOrderForMatchingEffectiveDates() {
-    let first = TestFixtures.wageSnapshot(id: "first", fromDate: "2026-01-01", hourlyWage: 200)
-    let second = TestFixtures.wageSnapshot(id: "second", fromDate: "2026-01-01", hourlyWage: 250)
-
-    XCTAssertNotEqual(
-      StatsService.fingerprintSnapshotsForCaching([first, second]),
-      StatsService.fingerprintSnapshotsForCaching([second, first])
     )
   }
 

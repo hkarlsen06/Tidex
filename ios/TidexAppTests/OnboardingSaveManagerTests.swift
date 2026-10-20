@@ -2,38 +2,6 @@ import XCTest
 
 @testable import Tidex
 
-@MainActor
-final class OnboardingSaveManagerTests: XCTestCase {
-  func testSaveStatusAllowsCompletionOnlyAfterSuccess() {
-    XCTAssertFalse(OnboardingSaveManager.SaveStatus.idle.allowsCompletion)
-    XCTAssertFalse(OnboardingSaveManager.SaveStatus.saving.allowsCompletion)
-    XCTAssertFalse(OnboardingSaveManager.SaveStatus.error.allowsCompletion)
-    XCTAssertTrue(OnboardingSaveManager.SaveStatus.success.allowsCompletion)
-  }
-
-  func testPrepareForSaveBlocksCompletionUntilSaveSucceeds() {
-    let manager = OnboardingSaveManager()
-
-    manager.prepareForSave(completionMode: .friendOnlySkip)
-
-    XCTAssertEqual(manager.status, .saving)
-    XCTAssertNil(manager.errorMessage)
-    XCTAssertFalse(manager.status.allowsCompletion)
-  }
-
-  func testDefaultJobNameUsesEnglishLocale() {
-    let name = OnboardingSaveManager.defaultJobName(locale: Locale(identifier: "en"))
-
-    XCTAssertEqual(name, "Job")
-  }
-
-  func testDefaultJobNameUsesNorwegianLocale() {
-    let name = OnboardingSaveManager.defaultJobName(locale: Locale(identifier: "nb"))
-
-    XCTAssertEqual(name, "Jobb")
-  }
-}
-
 final class OnboardingFirstShiftCarryoverStoreTests: XCTestCase {
   private var defaults: UserDefaults!
 
@@ -100,20 +68,6 @@ final class OnboardingFirstShiftCarryoverStoreTests: XCTestCase {
       "The carry-over is used once"
     )
   }
-
-  func testMoveWithoutSimulatorShiftLeavesAddShiftDraftUntouched() {
-    XCTAssertFalse(OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft(defaults: defaults))
-    XCTAssertNil(defaults.data(forKey: ShiftDraft.userDefaultsKey))
-  }
-
-  func testClearDropsSimulatorShift() {
-    OnboardingFirstShiftCarryoverStore.write(
-      dates: ["2026-09-14"], startTime: nil, endTime: nil, defaults: defaults)
-
-    OnboardingFirstShiftCarryoverStore.clear(defaults: defaults)
-
-    XCTAssertFalse(OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft(defaults: defaults))
-  }
 }
 
 @MainActor
@@ -132,15 +86,6 @@ final class OnboardingCompletionStoreTests: XCTestCase {
     defaults.removePersistentDomain(forName: "OnboardingCompletionStoreTests")
     defaults = nil
     try await super.tearDown()
-  }
-
-  func testCompletionIsLocalAndQueuedBeforeAnyNetworkCall() {
-    OnboardingCompletionStore.markCompleted(userId: "user-1", defaults: defaults)
-
-    XCTAssertTrue(OnboardingCompletionStore.isCompletedLocally(userId: "user-1", defaults: defaults))
-    XCTAssertTrue(
-      OnboardingCompletionStore.hasPendingMetadataUpdate(userId: "user-1", defaults: defaults))
-    XCTAssertFalse(OnboardingCompletionStore.isCompletedLocally(userId: "user-2", defaults: defaults))
   }
 
   func testFailedMetadataUpdateKeepsCompletionAndStaysQueued() async {

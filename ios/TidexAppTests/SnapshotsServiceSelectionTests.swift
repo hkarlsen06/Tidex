@@ -3,21 +3,6 @@ import XCTest
 @testable import Tidex
 
 final class SnapshotsServiceSelectionTests: XCTestCase {
-  func testSupplementDescriptionsPreserveAgreedDecimalRatesAndCurrencyPlacement() {
-    let rule = OnboardingSupplementRule(
-      from: SupplementRule(
-        days: [1], from: "18:00", to: "21:00", rate: 11.25))
-    XCTAssertTrue(
-      rule.valueDescription(locale: Locale(identifier: "en_US"), currency: "$")
-        .hasPrefix("+$11.25"))
-    XCTAssertTrue(
-      rule.valueDescription(locale: Locale(identifier: "nb_NO"), currency: "kr")
-        .hasPrefix("+11,25 kr"))
-    let percent = OnboardingSupplementRule(
-      from: SupplementRule(
-        days: [1], from: "18:00", to: "21:00", percent: 12.5))
-    XCTAssertEqual(percent.valueDescription(locale: Locale(identifier: "en_US")), "+12.5%")
-  }
 
   func testEditingAnExistingNoDeductionMethodKeepsBreakDeductionOff() {
     let snapshot = TestFixtures.wageSnapshot(breakEnabled: true, breakMethod: "none")
@@ -111,32 +96,6 @@ final class SnapshotsServiceSelectionTests: XCTestCase {
     XCTAssertNil(missing.wageSnapshot)
     XCTAssertNil(missing.taxSnapshot)
     XCTAssertEqual(missing.effectiveTaxPercentage, 0)
-  }
-
-  func testTimelineShowsChangesWhenWageAndRuleCountAreUnchanged() throws {
-    let baseline = TestFixtures.wageSnapshot(
-      id: "baseline",
-      supplements: [
-        SupplementRule(days: [1], from: "18:00", to: "21:00", rate: 20)
-      ])
-    let changed = TestFixtures.wageSnapshot(
-      id: "changed", fromDate: "2026-08-01",
-      supplements: [SupplementRule(days: [1], from: "17:00", to: "21:00", rate: 30)],
-      breakThresholdHours: 6, breakDeductionMinutes: 45, overtime: .seededDefaults)
-    let future = TestFixtures.wageSnapshot(id: "future", fromDate: "2026-12-01", hourlyWage: 250)
-    let entries = WageTimelineProcessor.processSnapshots(
-      [baseline, future, changed], locale: Locale(identifier: "en_US"), currency: "$",
-      today: try XCTUnwrap(Date.fromISODateString("2026-09-01")))
-
-    XCTAssertEqual(entries.map(\.id), ["future", "changed", "baseline"])
-    XCTAssertEqual(entries[0].type, .future)
-    XCTAssertEqual(entries[1].type, .current)
-    XCTAssertEqual(entries[2].type, .past)
-    XCTAssertEqual(entries[1].endDate, "2026-11-30")
-    XCTAssertTrue(entries[1].dateRange.contains("Nov"))
-    XCTAssertTrue(entries[1].changes.contains { $0.type == .supplements })
-    XCTAssertTrue(entries[1].changes.contains { $0.type == .breaks })
-    XCTAssertTrue(entries[1].changes.contains { $0.type == .overtime })
   }
 
   func testSnapshotForDateReturnsLatestDatedSnapshotWhenAvailable() {

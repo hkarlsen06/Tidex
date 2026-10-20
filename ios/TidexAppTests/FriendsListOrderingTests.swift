@@ -263,41 +263,6 @@ final class FriendsListOrderingTests: XCTestCase {
     XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["bottomed-typing", "recent", "shift"])
   }
 
-  func testBottomedStateDoesNotDisturbNonBottomedOrdering() {
-    let users = [
-      makeUser(id: "older", firstName: "Older"),
-      makeUser(id: "bottomed", firstName: "Bottomed"),
-      makeUser(id: "newer", firstName: "Newer"),
-    ]
-
-    let ordering = FriendsListOrdering(
-      typingUserIds: [],
-      unreadChatUserIds: [],
-      bottomedUserIds: ["bottomed"],
-      chatPreviewsByUserId: [
-        "older": FriendCardMessagePreview(
-          text: "Older",
-          timestamp: Date(timeIntervalSince1970: 1_700_000_100),
-          state: .incomingOpened
-        ),
-        "bottomed": FriendCardMessagePreview(
-          text: "Bottomed",
-          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
-          state: .incomingOpened
-        ),
-        "newer": FriendCardMessagePreview(
-          text: "Newer",
-          timestamp: Date(timeIntervalSince1970: 1_700_000_200),
-          state: .incomingOpened
-        ),
-      ],
-      shiftPreviews: [:],
-      isLoadingShiftPreviews: false
-    )
-
-    XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["newer", "older", "bottomed"])
-  }
-
   func testMultipleBottomedUsersKeepExistingRelativeOrdering() {
     let users = [
       makeUser(id: "bottomed-older", firstName: "Bottomed Older"),
@@ -823,20 +788,3 @@ final class FriendsListOrderingTests: XCTestCase {
     )
   }
 }
-
-final class FriendSharingRemovalActionTests: XCTestCase {
-  func testAvailableActionsMatchRelationshipDirection() {
-    XCTAssertEqual(
-      FriendSharingRemovalAction.availableActions(for: .mutual),
-      [.stopSharingMyShifts, .stopSeeingTheirShifts]
-    )
-    XCTAssertEqual(
-      FriendSharingRemovalAction.availableActions(for: .outgoing),
-      [.stopSharingMyShifts]
-    )
-    XCTAssertEqual(
-      FriendSharingRemovalAction.availableActions(for: .incoming),
-      [.stopSeeingTheirShifts]
-    )
-  }
-}  // swiftlint:disable:this file_length

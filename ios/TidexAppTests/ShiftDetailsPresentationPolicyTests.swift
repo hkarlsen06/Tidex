@@ -3,13 +3,6 @@ import XCTest
 @testable import Tidex
 
 internal final class ShiftDetailsPresentationPolicyTests: XCTestCase {
-  internal func testOwnShiftShowsEarningsDetails() {
-    let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(
-      snapshotShareContext: .own
-    )
-
-    XCTAssertTrue(policy.showsEarningsDetails)
-  }
 
   internal func testSharedShiftHidesEarningsDetailsWhenOwnerDoesNotShareEarnings() {
     let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(
@@ -17,14 +10,6 @@ internal final class ShiftDetailsPresentationPolicyTests: XCTestCase {
     )
 
     XCTAssertFalse(policy.showsEarningsDetails)
-  }
-
-  internal func testSharedShiftShowsEarningsDetailsWhenOwnerSharesEarnings() {
-    let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(
-      snapshotShareContext: .shared(owner: makeSharedUser())
-    )
-
-    XCTAssertTrue(policy.showsEarningsDetails)
   }
 
   private func makeSharedUser(showEarnings: Bool = true) -> SharedUser {

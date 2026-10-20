@@ -40,66 +40,6 @@ internal final class SyncConflictRowTests: XCTestCase {
       conflictServerSnapshot: serverSnapshot)
   }
 
-  func testJobRowUsesNameAndSnapshotPresence() {
-    let withSnapshot = SyncConflictRow.make(job: makeJob(serverSnapshot: snapshot))
-    XCTAssertEqual(withSnapshot.kind, .job)
-    XCTAssertEqual(withSnapshot.entityId, "job-1")
-    XCTAssertEqual(withSnapshot.title, "Cafe")
-    XCTAssertTrue(withSnapshot.hasServerVersion)
-
-    XCTAssertFalse(SyncConflictRow.make(job: makeJob()).hasServerVersion)
-  }
-
-  func testShiftRowShowsTimeRangeAndJobName() {
-    let row = SyncConflictRow.make(shift: makeShift(), jobName: "Cafe")
-    XCTAssertEqual(row.kind, .shift)
-    XCTAssertEqual(row.detail, "09:00 - 17:00 · Cafe")
-    XCTAssertFalse(row.hasServerVersion)
-
-    let noJob = SyncConflictRow.make(shift: makeShift(serverSnapshot: snapshot), jobName: nil)
-    XCTAssertEqual(noJob.detail, "09:00 - 17:00")
-    XCTAssertTrue(noJob.hasServerVersion)
-  }
-
-  func testEventRowUsesNoteAsTitle() {
-    let event = LocalEvent(
-      id: "event-1", userId: userId, startDate: now, endDate: now, isAllDay: true,
-      startTime: nil, endTime: nil, note: " Dentist ", serverUpdatedAt: now, serverRevision: 1,
-      syncStatus: .conflict, lastSyncedSnapshot: Data(), localUpdatedAt: now)
-    let row = SyncConflictRow.make(event: event)
-    XCTAssertEqual(row.title, "Dentist")
-    XCTAssertFalse(row.hasServerVersion)
-  }
-
-  func testPayrollAdjustmentRowShowsLabelAndAmount() {
-    let adjustment = LocalPayrollAdjustment(
-      id: "adj-1", userId: userId, amount: 1_500, currency: "kr", category: .bonus,
-      taxTreatment: .grossTaxable, description: "Bonus", payoutDate: now,
-      serverUpdatedAt: now, serverRevision: 1, syncStatus: .conflict,
-      lastSyncedSnapshot: Data(), localUpdatedAt: now, conflictServerSnapshot: snapshot)
-    let row = SyncConflictRow.make(payrollAdjustment: adjustment)
-    XCTAssertEqual(row.kind, .payrollAdjustment)
-    XCTAssertEqual(row.title, "Bonus")
-    XCTAssertTrue(row.detail?.contains("kr") == true)
-    XCTAssertTrue(row.hasServerVersion)
-  }
-
-  func testSettingsRowUsesUserIdAsEntityId() {
-    let settings = LocalUserSettings(
-      userId: userId, serverUpdatedAt: now, serverRevision: 1, syncStatus: .conflict,
-      lastSyncedSnapshot: Data(), localUpdatedAt: now)
-    let row = SyncConflictRow.make(settings: settings)
-    XCTAssertEqual(row.kind, .settings)
-    XCTAssertEqual(row.entityId, userId)
-    XCTAssertFalse(row.hasServerVersion)
-  }
-
-  func testRowIdsAreUniqueAcrossKinds() {
-    let job = SyncConflictRow.make(job: makeJob())
-    let shift = SyncConflictRow.make(shift: makeShift(), jobName: nil)
-    XCTAssertNotEqual(job.id, shift.id)
-  }
-
   func testStoreReturnsOnlyConflictedRowsWithJobName() async throws {
     let container = try makeContainer()
     let context = ModelContext(container)

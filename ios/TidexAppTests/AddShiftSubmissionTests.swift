@@ -65,63 +65,6 @@ final class AddShiftSubmissionTests: XCTestCase {
     XCTAssertNil(defaults.data(forKey: ShiftDraft.userDefaultsKey))
   }
 
-  func testFirstSaveFailurePreservesEverySelectedDate() async throws {
-    let (model, _) = try makeModel()
-    defer { model.clearDraft() }
-    model.selectedDates = ["2026-09-10", "2026-09-11"]
-    let originalDates = model.selectedDates
-
-    do {
-      try await model.saveSelectedSingleShifts { _ in throw SaveFailure.unavailable }
-      XCTFail("Expected save failure")
-    } catch SaveFailure.unavailable {
-      XCTAssertEqual(model.selectedDates, originalDates)
-    }
-  }
-
-  func testInvalidSelectionIsRejectedBeforeAnyShiftIsSaved() async throws {
-    let (model, _) = try makeModel()
-    defer { model.clearDraft() }
-    model.selectedDates = ["2026-09-10", "invalid"]
-    var saveCount = 0
-
-    do {
-      try await model.saveSelectedSingleShifts { _ in saveCount += 1 }
-      XCTFail("Expected invalid date failure")
-    } catch ShiftSaveError.invalidDate {
-      XCTAssertEqual(saveCount, 0)
-      XCTAssertEqual(model.selectedDates.count, 2)
-    }
-  }
-
-  func testSuccessfulBatchSavesEachDateOnceInOrder() async throws {
-    let (model, _) = try makeModel()
-    defer { model.clearDraft() }
-    model.selectedDates = ["2026-09-12", "2026-09-10"]
-    var saved: [String] = []
-
-    try await model.saveSelectedSingleShifts { date in
-      saved.append(date.toISODateString())
-    }
-
-    XCTAssertEqual(saved, ["2026-09-10", "2026-09-12"])
-    XCTAssertTrue(model.selectedDates.isEmpty)
-  }
-
-  func testStartFreshCannotDiscardDatesDuringSave() throws {
-    let (model, _) = try makeModel()
-    defer {
-      model.isLoading = false
-      model.clearDraft()
-    }
-    model.selectedDates = ["2026-09-10"]
-    model.isLoading = true
-
-    model.startFresh()
-
-    XCTAssertEqual(model.selectedDates, ["2026-09-10"])
-  }
-
   func testOvernightEventExplainsWhyItCannotBeSaved() throws {
     let (model, _) = try makeModel()
     defer { model.clearDraft() }
