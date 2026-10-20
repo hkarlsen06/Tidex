@@ -125,15 +125,6 @@ private struct RootContent: View {
                 .transition(.opacity)
             }
 
-          case .mfaRequired:
-            if let factor = coordinator.pendingMFAFactor {
-              MFAVerifyView(factor: factor, coordinator: coordinator)
-                .transition(.opacity)
-            } else {
-              // Fallback - shouldn't happen
-              AuthNavigationView()
-            }
-
           case .termsRequired:
             AcceptTermsView(isUpdate: coordinator.isTermsUpdate, coordinator: coordinator)
               .transition(.opacity)

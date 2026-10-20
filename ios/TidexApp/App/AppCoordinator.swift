@@ -1,5 +1,5 @@
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable closure_body_length conditional_returns_on_newline cyclomatic_complexity discouraged_none_name
+// swiftlint:disable conditional_returns_on_newline cyclomatic_complexity discouraged_none_name
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable discouraged_optional_collection enum_case_associated_values_count explicit_acl
 // swiftlint:disable:next blanket_disable_command
@@ -13,17 +13,17 @@
 import Combine
 import Foundation
 import Observation
-import Supabase
+import ClerkKit
 import UIKit
 import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 /// Central coordinator for app-wide authentication state and navigation
-/// Manages the flow: Splash -> Login -> MFA (if needed) -> Dashboard
+/// Manages the flow: Splash -> Login -> Terms (if needed) -> Dashboard
 ///
 /// This is the single source of truth for auth state in the app.
-/// It listens to Supabase auth events and handles all navigation transitions.
+/// It listens to Clerk auth events and handles all navigation transitions.
 /// Individual services (like `AuthService`) perform auth operations but don't
 /// duplicate state listening - they rely on this coordinator for state management.
 ///
@@ -40,17 +40,11 @@ final class AppCoordinator {
   enum AppState: Equatable {
     case loading  // Initial app load, checking session
     case unauthenticated  // No valid session, show login
-    case mfaRequired  // User logged in but needs MFA verification
     case termsRequired  // User needs to accept updated terms
     case authenticated  // Fully authenticated, show main app
   }
 
   private(set) var appState: AppState = .loading
-
-  // MARK: - MFA State
-
-  /// MFA factor to verify (when state is .mfaRequired)
-  private(set) var pendingMFAFactor: AuthService.MFAFactor?
 
   // MARK: - Deep Link Navigation State
 
@@ -164,11 +158,6 @@ final class AppCoordinator {
   /// Whether initial sync has completed after authentication
   private(set) var initialSyncComplete = false
 
-  // MARK: - MFA Completion State
-
-  /// Flag indicating MFA was just completed - consumed by DashboardView for haptic feedback
-  var didJustCompleteMFA = false
-
   // MARK: - Dependencies
 
   private let authService: AuthService
@@ -182,7 +171,6 @@ final class AppCoordinator {
   @ObservationIgnored private var appActiveObserver: AnyCancellable?
   @ObservationIgnored private var backgroundTasks: [UUID: Task<Void, Never>] = [:]
   @ObservationIgnored private var foregroundTask: Task<Void, Never>?
-  @ObservationIgnored private var isRetryingLaunchRouting = false
   @ObservationIgnored private var didReceiveInitialSession = false
   @ObservationIgnored private var isUpdatingAuthState = false
   @ObservationIgnored private var isUserInitiatedSignOutInProgress = false
@@ -261,7 +249,7 @@ final class AppCoordinator {
 
   // MARK: - Launch Timeouts
 
-  /// Timeout for MFA/terms network checks (in nanoseconds)
+  /// Timeout for the sign-in and terms network checks (in nanoseconds)
   /// If these checks hang (slow network, unresponsive server), fall back to .authenticated
   private static let authCheckTimeout: UInt64 = 10_000_000_000  // 10 seconds
 
@@ -286,9 +274,8 @@ final class AppCoordinator {
     }
   }
 
-  /// Runs outside the tracked tasks, like retryLaunchRouting. Routing can restore the admin session
-  /// after an invalid impersonation, which calls prepareForUserSwitch. That cancels tracked tasks,
-  /// and a cancelled restore signs the user out. Sign-out can still cancel the wait before this.
+  /// Runs outside the tracked tasks, so a sign-out that cancels them can't cut this short
+  /// halfway. Sign-out can still cancel the wait before this.
   private func leaveLoadingAfterTimeout() async {
     isUpdatingAuthState = false
 
@@ -297,7 +284,6 @@ final class AppCoordinator {
     guard appState == .loading else { return }
 
     if let session {
-      if await routeToMFAIfRequired(session) { return }
       launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       await enterAuthenticatedState(user: session.user)
@@ -324,123 +310,126 @@ final class AppCoordinator {
 
   private func setupAuthStateListener() {
     authStateTask = Task { [weak self] in
-      launchLog.info("[Launch] AppCoordinator authStateChanges loop entered")
-      for await (event, session) in supabase.auth.authStateChanges {
+      // Clerk restored the stored session in ClerkSetup.configure, so this needs no network
+      // unless a GoTrue session from version N is waiting to be exchanged.
+      await self?.handleInitialSession()
+      launchLog.info("[Launch] AppCoordinator Clerk auth events loop entered")
+      for await event in Clerk.shared.auth.events {
         guard let self else { return }
-        recordAuthStateEvent(event, session: session)
-        if let session {
-          AuthSessionManager.shared.publishSessionToSharedKeychain(session)
-        }
-
         switch event {
-        case .initialSession:
-          launchLog.info(
-            "[Launch] AppCoordinator received .initialSession, hasSession=\(session != nil)")
-          // The client sets emitLocalSessionAsInitialSession, so this event comes from local
-          // storage on every launch without waiting for the network.
-          didReceiveInitialSession = true
-
-          // On app launch, check if we have a valid session
-          if let session {
-            AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
-            resetLaunchSessionTimeoutCount()
-            // Check restored impersonation before asking for the session owner's MFA.
-            if await routeToMFAIfRequired(session) { break }
-            await checkTermsAndUpdateState(
-              initialSession: session,
-              allowProactiveRefresh: false
-            )
-          } else {
-            AuthDiagnosticsReporter.shared.record(
-              .initialSessionMissing,
-              severity: AuthDiagnosticsReporter.shared.hasRememberedAuthenticatedUserId
-                ? .warning : .info,
-              appState: String(describing: appState),
-              authEvent: String(describing: event)
-            )
-            appState = .unauthenticated
+        case .signInCompleted, .signUpCompleted:
+          recordAuthStateEvent("signed_in", hasSession: true)
+          // A manual sign-in replaces any GoTrue session the exchange could not use.
+          if LegacySessionExchange.hasLegacySession {
+            await LegacySessionExchange.discardLegacySession()
           }
-
-        case .signedIn:
-          // User just signed in, check MFA
           // Skip if already authenticated or in terms flow to prevent duplicate checks
-          guard appState != .authenticated, appState != .termsRequired else {
-            break
-          }
-          await checkMFAAndUpdateState()
+          guard appState != .authenticated, appState != .termsRequired else { break }
+          await checkSignInAndUpdateState()
 
-        case .signedOut:
-          let isExpectedSignOut =
-            isUserInitiatedSignOutInProgress || appState == .unauthenticated
-          AuthDiagnosticsReporter.shared.record(
-            .signedOutReceived,
-            severity: isExpectedSignOut ? .info : .warning,
-            userId: userId,
-            appState: String(describing: appState),
-            authEvent: String(describing: event),
-            metadata: [
-              "is_user_initiated_sign_out_in_progress": .bool(
-                isUserInitiatedSignOutInProgress),
-              "is_expected_sign_out": .bool(isExpectedSignOut),
-            ]
-          )
-          if !isExpectedSignOut {
-            // The SDK ended the session (for example a revoked refresh token). The
-            // server calls need a session, but the device-local cleanup still applies.
-            await clearSignedOutDeviceState()
-            // The local store stays, so mark whose it is. A different user signing in wipes it.
-            retainLocalData(for: userId)
-          }
-          applySignedOutState()
+        case .signedOut, .accountDeleted, .sessionChanged(_, .none):
+          handleSignedOutEvent()
 
         case .tokenRefreshed:
           // A launch without network can leave userId unset. Finish it now that the
           // refresh worked.
-          if userId == nil, appState == .authenticated, session != nil {
+          if userId == nil, appState == .authenticated {
             await updateUserProfile()
           }
 
-        case .mfaChallengeVerified:
-          // MFA verified, user is now fully authenticated
-          // Load onboarding state BEFORE setting authenticated to prevent flash
-          if let session {
-            loadOnboardingStateFromUser(session.user)
-          }
-          initialSyncComplete = false
-          appState = .authenticated
-          pendingMFAFactor = nil
-
-        case .passwordRecovery:
-          if let session {
-            userId = session.user.normalizedId
-          }
-          NotificationCenter.default.post(name: .tidexPasswordRecoveryRequested, object: nil)
-
-        case .userUpdated, .userDeleted:
-          // Handle other events as needed
+        default:
           break
         }
       }
     }
   }
 
-  // MARK: - MFA Check
+  /// Routes the app at launch. A GoTrue session left by version N is exchanged for a Clerk
+  /// session first, so updating keeps the user signed in.
+  private func handleInitialSession() async {
+    if Clerk.shared.session == nil, LegacySessionExchange.hasLegacySession {
+      let outcome = await LegacySessionExchange.run()
+      AuthDiagnosticsReporter.shared.record(
+        .authStateChanged,
+        severity: outcome == .failed ? .warning : .info,
+        appState: String(describing: appState),
+        authEvent: "legacy_session_exchange",
+        metadata: ["outcome": .string(String(describing: outcome))]
+      )
+    }
+    didReceiveInitialSession = true
+    recordAuthStateEvent("initial_session", hasSession: Clerk.shared.session != nil)
 
-  /// Check MFA status and update app state accordingly.
+    guard Clerk.shared.session != nil else {
+      AuthDiagnosticsReporter.shared.record(
+        .initialSessionMissing,
+        severity: AuthDiagnosticsReporter.shared.hasRememberedAuthenticatedUserId
+          ? .warning : .info,
+        appState: String(describing: appState),
+        authEvent: "initial_session"
+      )
+      appState = .unauthenticated
+      return
+    }
+    resetLaunchSessionTimeoutCount()
+    if let session = AuthSessionManager.shared.localSession() {
+      AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
+      await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
+    } else {
+      // Signed in to Clerk, but the Tidex user was never resolved on this device, as after
+      // the exchange. That needs the network.
+      await checkSignInAndUpdateState()
+    }
+  }
+
+  /// Clerk ended the session, by a sign-out here or because the server revoked it.
+  private func handleSignedOutEvent() {
+    let isExpectedSignOut = isUserInitiatedSignOutInProgress || appState == .unauthenticated
+    AuthDiagnosticsReporter.shared.record(
+      .signedOutReceived,
+      severity: isExpectedSignOut ? .info : .warning,
+      userId: userId,
+      appState: String(describing: appState),
+      authEvent: "signed_out",
+      metadata: [
+        "is_user_initiated_sign_out_in_progress": .bool(isUserInitiatedSignOutInProgress),
+        "is_expected_sign_out": .bool(isExpectedSignOut),
+      ]
+    )
+    guard !isExpectedSignOut else {
+      applySignedOutState()
+      return
+    }
+    let signedOutUserId = userId
+    runTrackedTask { [weak self] in
+      guard let self else { return }
+      // The server calls need a session, but the device-local cleanup still applies.
+      await clearSignedOutDeviceState()
+      // The local store stays, so mark whose it is. A different user signing in wipes it.
+      retainLocalData(for: signedOutUserId)
+      applySignedOutState()
+    }
+  }
+
+  // MARK: - Sign-In Check
+
+  /// Resolves the user after a sign-in and routes to terms or the main app.
   /// Uses isUpdatingAuthState flag to prevent concurrent state updates from race conditions.
   /// Wraps the actual check in a timeout to prevent hanging on slow/unresponsive networks.
-  private func checkMFAAndUpdateState() async {
+  private func checkSignInAndUpdateState() async {
     // Prevent concurrent state updates from timeout vs auth listener race
     guard !isUpdatingAuthState else { return }
     isUpdatingAuthState = true
     defer { isUpdatingAuthState = false }
 
+    // The first sign-in on this device resolves the Tidex user, which the wipe check needs.
+    _ = await AuthSessionManager.shared.getSessionOrLocal()
     await discardRetainedLocalDataIfUserChanged()
 
     let stateBeforeCheck = appState
     let didComplete = await withTaskGroup(of: Bool.self) { group in
       group.addTask {
-        await self.performMFAAndTermsCheck()
+        await self.checkTermsAndUpdateState()
         return true
       }
       group.addTask {
@@ -464,159 +453,7 @@ final class AppCoordinator {
     // authenticated rather than kicking the user to the login screen.
     launchLog.error("[Launch] Auth check timed out after 10s, proceeding to authenticated")
     let session = await AuthSessionManager.shared.getSessionOrLocal()
-    if let session, await routeToMFAIfRequired(session) { return }
     await enterAuthenticatedState(user: session?.user)
-  }
-
-  /// Performs the actual MFA status check and terms verification.
-  /// Extracted from checkMFAAndUpdateState so it can be wrapped in a timeout.
-  private func performMFAAndTermsCheck() async {
-    if ImpersonationManager.shared.isImpersonating,
-      let session = await AuthSessionManager.shared.getSessionOrLocal()
-    {
-      if await routeToMFAIfRequired(session) { return }
-      await checkTermsAndUpdateState(initialSession: session)
-      return
-    }
-    do {
-      let mfaStatus = try await authService.getMFAStatus()
-
-      if mfaStatus.requiresVerification {
-        // User needs to complete MFA
-        // Find the first verified TOTP factor
-        if let factor = mfaStatus.factors.first(where: { $0.status == "verified" }) {
-          self.pendingMFAFactor = factor
-          self.appState = .mfaRequired
-        } else {
-          // No verified factors, but MFA is required - shouldn't happen normally
-          // Fall back to checking terms (backend will handle MFA enforcement)
-          await checkTermsAndUpdateState()
-        }
-      } else {
-        // No MFA required, check terms acceptance
-        await checkTermsAndUpdateState()
-      }
-    } catch {
-      // Fall back to the stored session so a failed check can't skip MFA.
-      if let session = await AuthSessionManager.shared.getSessionOrLocal(
-        allowProactiveRefresh: false
-      ), await routeToMFAIfRequired(session) {
-        return
-      }
-      await checkTermsAndUpdateState()
-    }
-  }
-
-  enum MFARoute {
-    case notRequired
-    case resume(Session)
-    case verification(AuthService.MFAFactor)
-    case retry
-    case signedOut
-  }
-
-  /// Resolve impersonation before inspecting the target user's factors.
-  static func resolveMFARoute(
-    session: Session,
-    isImpersonating: () -> Bool,
-    validateImpersonation: () async -> Session?,
-    currentSession: () async -> Session?
-  ) async -> MFARoute {
-    let wasImpersonating = isImpersonating()
-    var resolvedSession = session
-    if wasImpersonating {
-      if let validated = await validateImpersonation() {
-        return .resume(validated)
-      }
-      // Validation leaves the stored impersonation intact on a transient failure.
-      guard !isImpersonating() else { return .retry }
-      guard let restored = await currentSession() else { return .signedOut }
-      resolvedSession = restored
-    }
-    if assuranceLevel(fromAccessToken: resolvedSession.accessToken) != "aal2",
-      let factor = resolvedSession.user.factors?.first(where: {
-        $0.factorType == "totp" && $0.status == .verified
-      })
-    {
-      return .verification(
-        AuthService.MFAFactor(
-          id: factor.id, type: factor.factorType,
-          friendlyName: factor.friendlyName, status: factor.status.rawValue))
-    }
-    return wasImpersonating ? .resume(resolvedSession) : .notRequired
-  }
-
-  /// Returns true when this method handled routing, including restoration of an admin session.
-  private func routeToMFAIfRequired(_ session: Session) async -> Bool {
-    let impersonation = ImpersonationManager.shared
-    let route = await Self.resolveMFARoute(
-      session: session,
-      isImpersonating: { impersonation.isImpersonating },
-      validateImpersonation: { await impersonation.validateSessionOnLaunch() },
-      currentSession: { await AuthSessionManager.shared.getSessionOrLocal() })
-    // A sign-out during impersonation validation has already routed the app. The .signedOut
-    // route still sets it, since its own sign-out event can be queued behind this handler.
-    let isSignedOutRoute = if case .signedOut = route { true } else { false }
-    if !isSignedOutRoute, AuthSessionManager.shared.localSession() == nil {
-      return true
-    }
-    switch route {
-    case .notRequired:
-      return false
-    case .resume(let resolvedSession):
-      await checkTermsAndUpdateState(initialSession: resolvedSession)
-    case .verification(let factor):
-      pendingMFAFactor = factor
-      appState = .mfaRequired
-    case .retry:
-      appState = .loading
-      retryLaunchRoutingWhileLoading()
-    case .signedOut:
-      appState = .unauthenticated
-    }
-    return true
-  }
-
-  /// Impersonation validation hit a transient error, such as no network, and left the app loading.
-  /// The loading watchdog fires only once, so try again until the route resolves.
-  private func retryLaunchRoutingWhileLoading() {
-    guard !isRetryingLaunchRouting else { return }
-    isRetryingLaunchRouting = true
-    runTrackedTask { [weak self] in
-      try? await Task.sleep(for: .seconds(5))
-      guard let self else { return }
-      isRetryingLaunchRouting = false
-      guard !Task.isCancelled, appState == .loading else { return }
-      // Not tracked, for the reason in leaveLoadingAfterTimeout.
-      Task { @MainActor [weak self] in await self?.retryLaunchRouting() }
-    }
-  }
-
-  private func retryLaunchRouting() async {
-    let session = await AuthSessionManager.shared.getSessionOrLocal(allowProactiveRefresh: false)
-    guard appState == .loading else { return }
-    guard let session else {
-      appState = .unauthenticated
-      return
-    }
-    if await routeToMFAIfRequired(session) { return }
-    await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
-  }
-
-  /// Decodes the `aal` claim from a JWT access token without verifying it.
-  nonisolated static func assuranceLevel(fromAccessToken token: String) -> String? {
-    let segments = token.split(separator: ".")
-    guard segments.count == 3 else { return nil }
-    var base64 = segments[1]
-      .replacingOccurrences(of: "-", with: "+")
-      .replacingOccurrences(of: "_", with: "/")
-    base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
-    guard let data = Data(base64Encoded: base64),
-      let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-    else {
-      return nil
-    }
-    return payload["aal"] as? String
   }
 
   // MARK: - Terms Acceptance Check
@@ -624,11 +461,11 @@ final class AppCoordinator {
   /// Check if user needs to accept updated terms
   /// Uses cached/fallback version for immediate check, then verifies in background
   private func checkTermsAndUpdateState(
-    initialSession: Session? = nil,
+    initialSession: AuthSession? = nil,
     allowProactiveRefresh: Bool = true
   ) async {
     do {
-      let session: Session
+      let session: AuthSession
       if let initialSession {
         session = initialSession
       } else {
@@ -641,8 +478,7 @@ final class AppCoordinator {
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       AuthSessionManager.shared.publishSessionToSharedKeychain(session)
 
-      // Get terms_accepted_at from user metadata
-      let termsAcceptedAt = user.userMetadata["terms_accepted_at"]?.value as? String
+      let termsAcceptedAt = user.termsAcceptedAt
 
       // Quick sync check with cached/fallback version - doesn't block on API
       var needsReAcceptanceImmediate = TermsVersion.needsTermsReAcceptance(termsAcceptedAt)
@@ -702,7 +538,7 @@ final class AppCoordinator {
   /// Shows the main app and loads the profile, which sets `userId` and starts the initial
   /// sync. Don't set `userId` by hand instead: the later recovery paths only load the
   /// profile while `userId` is nil, so the dashboard would wait for a sync that never starts.
-  private func enterAuthenticatedState(user: User?) async {
+  private func enterAuthenticatedState(user: AuthUser?) async {
     // Load onboarding state before the state change so post-auth onboarding doesn't flash.
     if let user {
       loadOnboardingStateFromUser(user)
@@ -740,9 +576,7 @@ final class AppCoordinator {
   private func recheckTermsIfPending() {
     guard isTermsRecheckPending, appState == .authenticated else { return }
     isTermsRecheckPending = false
-    let termsAcceptedAt =
-      AuthSessionManager.shared.localSession()?.user.userMetadata["terms_accepted_at"]?.value
-      as? String
+    let termsAcceptedAt = AuthSessionManager.shared.localSession()?.user.termsAcceptedAt
     checkTermsVersionInBackground(termsAcceptedAt: termsAcceptedAt)
   }
 
@@ -808,7 +642,7 @@ final class AppCoordinator {
   private func applyRecoverableAuthFailureFallback(previousState: AppState) {
     let fallbackState: AppState
     switch previousState {
-    case .authenticated, .termsRequired, .mfaRequired, .unauthenticated:
+    case .authenticated, .termsRequired, .unauthenticated:
       fallbackState = previousState
 
     case .loading:
@@ -823,11 +657,11 @@ final class AppCoordinator {
     }
   }
 
-  /// Load onboarding completion state from user metadata
+  /// Load onboarding completion state from the user row
   /// Called before setting appState to .authenticated to prevent PostAuthOnboarding flash
-  private func loadOnboardingStateFromUser(_ user: User) {
-    let finishedRemotely = (user.userMetadata["finishedOnboarding"]?.value as? Bool) ?? false
-    // Onboarding finished offline is recorded locally until the metadata update reaches the server.
+  private func loadOnboardingStateFromUser(_ user: AuthUser) {
+    let finishedRemotely = user.finishedOnboarding
+    // Onboarding finished offline is recorded locally until the update reaches the server.
     self.hasFinishedOnboardingRemotely =
       finishedRemotely || OnboardingCompletionStore.isCompletedLocally(userId: user.normalizedId)
   }
@@ -845,8 +679,7 @@ final class AppCoordinator {
       let currentUserId = user.normalizedId
       self.userId = currentUserId
 
-      // Check if onboarding was already completed (from raw_user_meta_data.finishedOnboarding)
-      // Note: loadOnboardingStateFromUser is called earlier, but we update again in case metadata changed
+      // loadOnboardingStateFromUser ran earlier, but the user row may have changed since
       loadOnboardingStateFromUser(user)
       Task { await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: currentUserId) }
 
@@ -873,18 +706,15 @@ final class AppCoordinator {
     }
   }
 
-  /// Display name from user metadata, falling back to the email name or phone number.
-  private static func displayName(for user: User) -> String {
-    if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
-      return fullName
-    }
-    if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
+  /// The user's name, falling back to the part of the email before the @.
+  private static func displayName(for user: AuthUser) -> String {
+    if let name = user.name, !name.isEmpty {
       return name
     }
     if let email = user.email {
       return email.components(separatedBy: "@").first ?? email
     }
-    return user.phone ?? "User"
+    return "User"
   }
 
   /// Applies the avatar, theme and startup tab from the locally stored settings.
@@ -900,7 +730,7 @@ final class AppCoordinator {
   /// Resolves the session for loading the profile. Offline with an expired access token,
   /// the refresh fails, so fall back to the stored session. The user, onboarding state and
   /// cached settings all come from local data, and the sync retries when the network is back.
-  private func sessionForProfileLoad() async throws -> Session {
+  private func sessionForProfileLoad() async throws -> AuthSession {
     do {
       // Use AuthSessionManager to prevent concurrent refresh race conditions
       return try await AuthSessionManager.shared.getSession()
@@ -1041,7 +871,8 @@ final class AppCoordinator {
         // The refresh token is gone, so unsynced changes can't push. Keep them for the same
         // user's next sign-in. Read this before the local sign-out removes the session.
         let unsyncedUserId = await userIdWithUnsyncedChanges()
-        try? await supabase.auth.signOut(scope: .local)
+        isUserInitiatedSignOutInProgress = true
+        try? await Clerk.shared.auth.signOut()
         // Run outside this task: clearAllCachedData() cancels foregroundTask.
         Task { @MainActor [weak self] in
           guard let self else { return }
@@ -1094,20 +925,7 @@ final class AppCoordinator {
   /// Called when login is successful
   /// The auth state listener will handle the transition
   func handleLoginSuccess() async {
-    await checkMFAAndUpdateState()
-  }
-
-  /// Called when MFA verification is successful
-  /// Note: We don't clear pendingMFAFactor here - the .mfaChallengeVerified auth event
-  /// will clear it after setting appState. Clearing it synchronously before the state
-  /// changes causes a flash where RootView shows AuthNavigationView as a fallback.
-  func handleMFASuccess() {
-    // Set flag for DashboardView to play release haptic when fully rendered
-    didJustCompleteMFA = true
-    runTrackedTask { [weak self] in
-      // After MFA, check if terms acceptance is needed
-      await self?.checkTermsAndUpdateState()
-    }
+    await checkSignInAndUpdateState()
   }
 
   /// Called when terms are accepted
@@ -1142,7 +960,7 @@ final class AppCoordinator {
   /// Pushes local changes before a user-initiated sign-out.
   /// - Returns: false when changes are still unsynced, so signing out would delete them.
   func syncPendingChangesBeforeSignOut() async -> Bool {
-    // Before the profile loads (MFA, terms) userId is nil, so use the stored session.
+    // Before the profile loads (terms) userId is nil, so use the stored session.
     // An unknown user is not safe to wipe.
     guard let userId = userIdForSignOutCheck() else { return false }
     guard await hasPendingChanges(userId: userId) else { return true }
@@ -1151,8 +969,8 @@ final class AppCoordinator {
     return !(await hasPendingChanges(userId: userId))
   }
 
-  /// Sign out from a screen that can't ask what to do with unsynced changes (MFA, terms
-  /// decline, password recovery). Tries to push changes first. If some remain, the session
+  /// Sign out from a screen that can't ask what to do with unsynced changes (terms decline,
+  /// password recovery). Tries to push changes first. If some remain, the session
   /// ends but the local store stays for that user. The same user's next sign-in pushes them,
   /// and a different user's sign-in wipes them.
   func signOutKeepingUnsyncedChanges() async {
@@ -1224,8 +1042,7 @@ final class AppCoordinator {
         try await authService.signOut()
       }
     } catch {
-      // Fallback: ensure local session is cleared even if primary sign-out call failed.
-      try? await supabase.auth.signOut(scope: .local)
+      launchLog.warning("[Auth] Clerk sign-out failed: \(error.localizedDescription)")
     }
 
     // Always transition immediately; auth listener can still emit signedOut afterward.
@@ -1322,8 +1139,9 @@ final class AppCoordinator {
     NativeWidgetStorage.clearWidgetStorage()
     NativeWidgetStorage.clearFriendWidgetStorage()
 
-    // Clear the access token shared with iPhone extensions.
+    // Clear the access token shared with iPhone extensions, and the cached user.
     AuthSessionManager.shared.clearSharedKeychain()
+    AuthSessionManager.shared.clearCachedUser()
   }
 
   private func resetPayrollCaches() {
@@ -1335,7 +1153,6 @@ final class AppCoordinator {
     resetLaunchSessionTimeoutCount()
     isUserInitiatedSignOutInProgress = false
     appState = .unauthenticated
-    pendingMFAFactor = nil
     pendingDeepLink = nil
     userId = nil
     userDisplayName = ""
@@ -1351,9 +1168,8 @@ final class AppCoordinator {
     appState = .loading
 
     do {
-      if let session = try await authService.getSession() {
+      if try await authService.getSession() != nil {
         resetLaunchSessionTimeoutCount()
-        if await routeToMFAIfRequired(session) { return }
         await checkTermsAndUpdateState()
       } else {
         appState = .unauthenticated
@@ -1405,40 +1221,15 @@ final class AppCoordinator {
     }
   }
 
-  private func recordAuthStateEvent(_ event: AuthChangeEvent, session: Session?) {
-    let eventName = String(describing: event)
-    if let session {
-      AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
-    }
-
-    var metadata: [String: AnyJSON] = ["has_session": .bool(session != nil)]
-    if let session {
-      metadata.merge(
-        AuthDiagnosticsReporter.shared.sessionMetadata(session, source: "auth_state_event")
-      ) { current, _ in current }
-    }
-
+  private func recordAuthStateEvent(_ event: String, hasSession: Bool) {
     AuthDiagnosticsReporter.shared.record(
-      event == .initialSession && session != nil ? .initialSessionReceived : .authStateChanged,
-      severity: authStateEventSeverity(event),
-      userId: session?.normalizedUserId ?? userId,
+      event == "initial_session" && hasSession ? .initialSessionReceived : .authStateChanged,
+      severity: .debug,
+      userId: userId,
       appState: String(describing: appState),
-      authEvent: eventName,
-      metadata: metadata
+      authEvent: event,
+      metadata: ["has_session": .bool(hasSession)]
     )
-  }
-
-  private func authStateEventSeverity(
-    _ event: AuthChangeEvent
-  ) -> AuthDiagnosticsReporter.Severity {
-    switch event {
-    case .signedOut:
-      return isUserInitiatedSignOutInProgress || appState == .unauthenticated
-        ? .info : .warning
-
-    default:
-      return .debug
-    }
   }
 
   private func currentLaunchSessionTimeoutCount() -> Int {
@@ -1503,18 +1294,19 @@ final class AppCoordinator {
 
   // MARK: - Impersonation Support
 
-  /// Prepare for user context switch (before setting new session)
+  /// Prepare for user context switch (before an impersonation starts or ends)
   /// Clears all cached data without signing out
-  /// Called by ImpersonationManager BEFORE setting the impersonated user's session
+  /// Called by ImpersonationManager before it changes the impersonation on the server
   func prepareForUserSwitch() async {
     await clearAllCachedData()
   }
 
-  /// Complete user context switch (after setting new session)
+  /// Complete user context switch (after the server switched the user)
   /// Reloads user profile and waits for sync to complete
-  /// Called by ImpersonationManager AFTER setting the new session
+  /// Called by ImpersonationManager after it changed the impersonation on the server
   func completeUserSwitch() async {
     do {
+      AuthSessionManager.shared.clearCachedUser()
       let session = try await sessionForProfileLoad()
       let user = session.user
       let currentUserId = user.normalizedId
@@ -1561,7 +1353,6 @@ final class AppCoordinator {
       self.initialSyncComplete = true
       self.appState = .authenticated
       self.pendingDeepLink = nil
-      self.pendingMFAFactor = nil
     }
   }
 #endif

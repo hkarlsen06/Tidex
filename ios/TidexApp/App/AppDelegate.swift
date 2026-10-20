@@ -181,6 +181,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // --- Synchronous (must complete before launch finishes) ---
 
+    // Before anything reads Clerk.shared. Restores the stored session synchronously.
+    ClerkSetup.configure()
+
     // Must be set before any notifications arrive
     UNUserNotificationCenter.current().delegate = self
     NotificationService.shared.registerNotificationCategories()

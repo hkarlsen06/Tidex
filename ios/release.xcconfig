@@ -2,3 +2,7 @@
 // Includes shared version settings
 
 #include "Version.xcconfig"
+
+// TestFlight and App Store builds use production Convex and Clerk.
+CONVEX_URL = https:/$()/convex.tidex.no
+CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsudGlkZXgubm8k

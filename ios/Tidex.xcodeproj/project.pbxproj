@@ -23,6 +23,8 @@
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		11CD7FA52F63CFC700A987E7 /* ExyteChat in Frameworks */ = {isa = PBXBuildFile; productRef = 11CD7FA42F63CFC700A987E7 /* ExyteChat */; };
+		C1E4C0032F80000000A1B2C3 /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = C1E4C0022F80000000A1B2C3 /* ClerkKit */; };
+		C1E4C0062F80000000A1B2C3 /* ConvexMobile in Frameworks */ = {isa = PBXBuildFile; productRef = C1E4C0052F80000000A1B2C3 /* ConvexMobile */; };
 		11DC87DD2F5D35990080D9F5 /* TidexNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11DC87D62F5D35990080D9F5 /* TidexNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		12B4A0013015000001000001 /* TidexShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12B4A0043015000001000001 /* TidexShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		12B4A0023015000001000001 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -298,9 +300,11 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"Calendar+Gregorian.swift",
+				ConvexAPI.swift,
 				FriendsAPIClient.swift,
 				ISO8601Timestamp.swift,
 				PayPeriod.swift,
+				SharedAuthToken.swift,
 				SharedKeychainStorage.swift,
 				StoredFriendShift.swift,
 				StoredMonthlyTotals.swift,
@@ -387,6 +391,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				11CD7FA52F63CFC700A987E7 /* ExyteChat in Frameworks */,
+				C1E4C0032F80000000A1B2C3 /* ClerkKit in Frameworks */,
+				C1E4C0062F80000000A1B2C3 /* ConvexMobile in Frameworks */,
 				11923C282F16BB090076AFD6 /* Supabase in Frameworks */,
 				11923C262F16BB090076AFD6 /* Realtime in Frameworks */,
 				11923C1F2F16B94B0076AFD6 /* Storage in Frameworks */,
@@ -685,6 +691,8 @@
 				11263D3B2F2FF22700233D63 /* CropViewController */,
 				11263D3F2F2FF3F700233D63 /* TOCropViewController */,
 				11CD7FA42F63CFC700A987E7 /* ExyteChat */,
+				C1E4C0022F80000000A1B2C3 /* ClerkKit */,
+				C1E4C0052F80000000A1B2C3 /* ConvexMobile */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* Tidex.app */;
@@ -817,6 +825,8 @@
 				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
 				11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */,
+				C1E4C0012F80000000A1B2C3 /* XCRemoteSwiftPackageReference "clerk-ios" */,
+				C1E4C0042F80000000A1B2C3 /* XCRemoteSwiftPackageReference "convex-swift" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -1753,6 +1763,22 @@
 				kind = branch;
 			};
 		};
+		C1E4C0012F80000000A1B2C3 /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/clerk/clerk-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.6.1;
+			};
+		};
+		C1E4C0042F80000000A1B2C3 /* XCRemoteSwiftPackageReference "convex-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/get-convex/convex-swift.git";
+			requirement = {
+				kind = revision;
+				revision = b82145572a70ac92b74353ff89a8d28dedcc9a84;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1810,6 +1836,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */;
 			productName = ExyteChat;
+		};
+		C1E4C0022F80000000A1B2C3 /* ClerkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1E4C0012F80000000A1B2C3 /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKit;
+		};
+		C1E4C0052F80000000A1B2C3 /* ConvexMobile */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1E4C0042F80000000A1B2C3 /* XCRemoteSwiftPackageReference "convex-swift" */;
+			productName = ConvexMobile;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
