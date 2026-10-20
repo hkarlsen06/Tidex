@@ -46,6 +46,19 @@ extension SyncTable {
 
 /// The sync contract of `backend/convex/sync.ts` and `backend/convex/lib/syncWrite.ts`.
 internal enum SyncConvex {
+  // Swift doesn't allow a type inside a generic function, so this lives here.
+  private struct NotificationPreferencesArgs: Encodable, Sendable {
+    let shiftRemindersEnabled: Bool
+    let shiftReminderMinutesArray: [Int]
+    let sharedShiftsEnabled: Bool
+
+    enum CodingKeys: String, CodingKey {
+      case shiftRemindersEnabled = "shift_reminders_enabled"
+      case shiftReminderMinutesArray = "shift_reminder_minutes_array"
+      case sharedShiftsEnabled = "shared_shifts_enabled"
+    }
+  }
+
   private struct PullArgs: Encodable, Sendable {
     let table: String
     let after: Int64
@@ -157,20 +170,9 @@ internal enum SyncConvex {
   static func upsertNotificationPreferences<Row: Decodable>(
     shiftRemindersEnabled: Bool, shiftReminderMinutesArray: [Int], sharedShiftsEnabled: Bool
   ) async throws -> Row {
-    struct Args: Encodable, Sendable {
-      let shiftRemindersEnabled: Bool
-      let shiftReminderMinutesArray: [Int]
-      let sharedShiftsEnabled: Bool
-
-      enum CodingKeys: String, CodingKey {
-        case shiftRemindersEnabled = "shift_reminders_enabled"
-        case shiftReminderMinutesArray = "shift_reminder_minutes_array"
-        case sharedShiftsEnabled = "shared_shifts_enabled"
-      }
-    }
-    return try await ConvexAPI.app.mutation(
+    try await ConvexAPI.app.mutation(
       "notificationPreferences:upsert",
-      Args(
+      NotificationPreferencesArgs(
         shiftRemindersEnabled: shiftRemindersEnabled,
         shiftReminderMinutesArray: shiftReminderMinutesArray,
         sharedShiftsEnabled: sharedShiftsEnabled))

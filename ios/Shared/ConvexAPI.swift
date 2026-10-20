@@ -102,7 +102,8 @@ struct ConvexAPI: Sendable {
         retried = true
         continue
       }
-      guard status == 200 else { throw Failure.badResponse(status: status) }
+      // Some Convex versions answer a function failure with 560 instead of 200.
+      guard status == 200 || status == 560 else { throw Failure.badResponse(status: status) }
       let reply = try JSONDecoder().decode(Reply<T>.self, from: data)
       if reply.status == "success", let value = reply.value { return value }
       let code = reply.errorData?.code
