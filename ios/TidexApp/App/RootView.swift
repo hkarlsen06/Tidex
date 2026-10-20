@@ -84,7 +84,6 @@ private struct RootContent: View {
   @State private var showStorageWarning = false
   @State private var activeChatToast: InAppChatToastPayload?
   @State private var chatToastDismissTask: Task<Void, Never>?
-  @State private var showPasswordRecovery = false
 
   enum AuthDestination {
     case login
@@ -180,16 +179,6 @@ private struct RootContent: View {
         }
       }
     }
-    .fullScreenCover(isPresented: $showPasswordRecovery) {
-      ResetPasswordView(
-        presentationMode: .recovery,
-        onNavigateToLogin: {
-          showPasswordRecovery = false
-          NotificationCenter.default.post(name: .tidexNavigateToLoginRequested, object: nil)
-        }
-      )
-      .interactiveDismissDisabled()
-    }
     .motionAnimation(
       .pageTransition, value: hasCompletedPreAuthOnboarding, reduceMotion: reduceMotion
     )
@@ -238,11 +227,6 @@ private struct RootContent: View {
       }
 
       showChatToast(payload)
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .tidexPasswordRecoveryRequested)) { _ in
-      authDestination = .login
-      showAuthAfterOnboarding = true
-      showPasswordRecovery = true
     }
     .onDisappear {
       chatToastDismissTask?.cancel()

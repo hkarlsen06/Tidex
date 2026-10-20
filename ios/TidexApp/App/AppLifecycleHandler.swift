@@ -13,7 +13,6 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "AppLifecycleH
 
 extension Notification.Name {
   static let tidexDidBecomeActive = Notification.Name("tidexDidBecomeActive")
-  static let tidexPasswordRecoveryRequested = Notification.Name("tidexPasswordRecoveryRequested")
   static let tidexNavigateToLoginRequested = Notification.Name("tidexNavigateToLoginRequested")
 }
 
