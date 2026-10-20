@@ -20,6 +20,7 @@ export const current = query({
       avatar_url: user.avatar_url ?? null,
       role: user.role ?? null,
       terms_accepted_at: user.terms_accepted_at ?? null,
+      finished_onboarding: user.finished_onboarding ?? false,
       is_impersonating: impersonationSessionId !== null,
       actor_id: actor.id,
     };
@@ -172,5 +173,17 @@ export const acceptTerms = mutation({
     const now = new Date().toISOString();
     await ctx.db.patch(actor._id, { terms_accepted_at: now, revision: await nextRevision(ctx) });
     return now;
+  },
+});
+
+/** Records that the signed-in user finished onboarding. */
+export const finishOnboarding = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { user } = await requireViewer(ctx);
+    if (user.finished_onboarding !== true) {
+      await ctx.db.patch(user._id, { finished_onboarding: true, revision: await nextRevision(ctx) });
+    }
+    return null;
   },
 });

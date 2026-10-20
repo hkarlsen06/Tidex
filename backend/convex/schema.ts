@@ -49,6 +49,8 @@ export default defineSchema({
     locale: optString,
     // raw_user_meta_data.terms_accepted_at in GoTrue. users.acceptTerms sets it.
     terms_accepted_at: optTs,
+    // raw_user_meta_data.finishedOnboarding in GoTrue. users.finishOnboarding sets it.
+    finished_onboarding: v.optional(v.boolean()),
     // raw_app_meta_data.role in GoTrue.
     role: v.optional(v.literal("admin")),
     // Sign-in methods, such as "apple", "google" and "email". GoTrue's
