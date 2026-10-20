@@ -467,6 +467,11 @@ export const blockUser = mutation({
     if (other_user_id === user.id) reject("invalid", "Cannot block yourself");
     const shares = [await shareBetween(ctx, user.id, other_user_id), await shareBetween(ctx, other_user_id, user.id)];
     if (shares.every((s) => s === null)) reject("not_found", "No sharing relationship exists for this user pair");
+    // One block per pair. Overwriting the other user's block would let the blocked user
+    // take it over and then unblock themselves.
+    if (shares.some((s) => s !== null && s.blocked_by_user_id !== undefined && s.blocked_by_user_id !== user.id)) {
+      reject("blocked_by_other", "The other user has blocked this pair");
+    }
     for (const share of shares) {
       if (share === null) continue;
       await ctx.db.patch(share._id, {
