@@ -1,7 +1,10 @@
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
+import { publicRow } from "./lib/syncWrite";
 import { literals } from "./lib/validators";
+import { settingsRow } from "./userSettings";
 
 const DEFAULT_PAGE = 500;
 const MAX_PAGE = 1000;
@@ -35,14 +38,9 @@ export const pull = query({
       .take(size);
 
     const page = await Promise.all(
-      rows.map(async ({ _id, _creationTime, ...row }) => {
-        // The app reads profile_picture_url, as it did from Postgres.
-        if ("profile_picture_storage_id" in row && row.profile_picture_storage_id) {
-          const { profile_picture_storage_id, ...rest } = row;
-          return { ...rest, profile_picture_url: await ctx.storage.getUrl(profile_picture_storage_id) };
-        }
-        return row;
-      }),
+      rows.map((row) =>
+        table === "user_settings" ? settingsRow(ctx, row as Doc<"user_settings">) : publicRow(row),
+      ),
     );
     return {
       rows: page,

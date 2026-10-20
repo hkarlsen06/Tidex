@@ -9,12 +9,21 @@
  */
 
 import type * as appActivity from "../appActivity.js";
+import type * as events from "../events.js";
+import type * as jobs from "../jobs.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_clerk from "../lib/clerk.js";
 import type * as lib_revision from "../lib/revision.js";
+import type * as lib_syncWrite from "../lib/syncWrite.js";
 import type * as lib_validators from "../lib/validators.js";
+import type * as notificationPreferences from "../notificationPreferences.js";
+import type * as payrollAdjustments from "../payrollAdjustments.js";
+import type * as recurringShifts from "../recurringShifts.js";
 import type * as sync from "../sync.js";
+import type * as userSettings from "../userSettings.js";
+import type * as userShifts from "../userShifts.js";
 import type * as users from "../users.js";
+import type * as wageSnapshots from "../wageSnapshots.js";
 
 import type {
   ApiFromModules,
@@ -24,12 +33,21 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   appActivity: typeof appActivity;
+  events: typeof events;
+  jobs: typeof jobs;
   "lib/auth": typeof lib_auth;
   "lib/clerk": typeof lib_clerk;
   "lib/revision": typeof lib_revision;
+  "lib/syncWrite": typeof lib_syncWrite;
   "lib/validators": typeof lib_validators;
+  notificationPreferences: typeof notificationPreferences;
+  payrollAdjustments: typeof payrollAdjustments;
+  recurringShifts: typeof recurringShifts;
   sync: typeof sync;
+  userSettings: typeof userSettings;
+  userShifts: typeof userShifts;
   users: typeof users;
+  wageSnapshots: typeof wageSnapshots;
 }>;
 
 /**
