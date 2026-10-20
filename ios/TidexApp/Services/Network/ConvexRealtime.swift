@@ -74,6 +74,8 @@ final class ConvexRealtime {
   /// in or the server refused the token. Safe to call again while signed in.
   func signIn() async -> Bool {
     if isSignedIn { return true }
+    // Unit tests run coordinators with fake services and have no Clerk session to sign in with.
+    if NSClassFromString("XCTestCase") != nil { return false }
     if let signInTask { return await signInTask.value }
 
     let task = Task { @MainActor [self] in
