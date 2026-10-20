@@ -92,7 +92,15 @@ final class SignupViewModel {
     self.emailAuth = emailAuth ?? AuthService.shared
     self.onAuthenticated =
       onAuthenticated ?? {
-        await Self.finishSignup()
+        // The person accepted the terms on this screen.
+        if await AuthService.shared.recordTermsAfterSignup(),
+          AppCoordinator.shared.appState == .termsRequired
+        {
+          // The coordinator checked the terms before they were saved.
+          AppCoordinator.shared.handleTermsAccepted()
+          return
+        }
+        await AppCoordinator.shared.handleLoginSuccess()
       }
     self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
   }
@@ -314,21 +322,6 @@ final class SignupViewModel {
 
   private func handleSuccessfulSignup() async {
     await onAuthenticated()
-  }
-
-  /// The signup is complete, so the person accepted the terms on this screen. Convex has a
-  /// user row only once the first session lookup has created it, so resolve it first.
-  /// If this fails, the terms screen asks again.
-  private static func finishSignup() async {
-    if (try? await AuthSessionManager.shared.getSession()) != nil,
-      (try? await AuthService.shared.recordTermsAcceptance()) != nil,
-      AppCoordinator.shared.appState == .termsRequired
-    {
-      // The coordinator checked the terms before this call saved them.
-      AppCoordinator.shared.handleTermsAccepted()
-      return
-    }
-    await AppCoordinator.shared.handleLoginSuccess()
   }
 
   private func startResendCooldown() {

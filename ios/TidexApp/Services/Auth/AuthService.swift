@@ -190,6 +190,14 @@ final class AuthService: EmailAuthProviding {
     pendingSignUp = try await signUp.sendEmailCode()
   }
 
+  /// Records the terms for a person who just signed up. The Convex user row exists only once
+  /// the first session lookup has created it, so resolve the session first.
+  /// - Returns: false when the lookup or the save failed. The terms screen then asks again.
+  func recordTermsAfterSignup() async -> Bool {
+    guard (try? await AuthSessionManager.shared.getSession()) != nil else { return false }
+    return (try? await recordTermsAcceptance()) != nil
+  }
+
   /// Record that the current authenticated user accepted the current terms.
   func recordTermsAcceptance() async throws {
     _ = try await ConvexAPI.app.mutation("users:acceptTerms", as: String?.self)
@@ -350,41 +358,33 @@ extension AuthService {
     (error as? ClerkAPIError)?.code == "form_identifier_not_found"
   }
 
+  private static let messages: [String: LocalizedStringResource] = [
+    "form_password_incorrect": .authErrorInvalidLoginCredentials,
+    "strategy_for_user_invalid": .authErrorInvalidLoginCredentials,
+    "form_identifier_not_found": .authErrorUserNotFound,
+    "form_identifier_exists": .authErrorUserAlreadyRegistered,
+    "external_account_exists": .authErrorUserAlreadyRegistered,
+    "form_password_length_too_short": .authErrorPasswordMin8,
+    "form_password_not_strong_enough": .authErrorPasswordMin8,
+    "form_password_validation_failed": .authErrorPasswordMin8,
+    "form_password_size_in_bytes_exceeded": .authErrorPasswordMin8,
+    "form_param_format_invalid": .authErrorInvalidEmailFormat,
+    "form_code_incorrect": .authErrorInvalidCode,
+    "verification_failed": .authErrorInvalidCode,
+    "verification_expired": .authErrorCodeExpired,
+    "too_many_requests": .authErrorRequestRateLimited,
+  ]
+
   /// The text to show for a failed auth call. Clerk's known codes get the app's own copy.
   @MainActor
   static func message(for error: Error) -> String {
     guard let clerkError = error as? ClerkAPIError else {
       return ErrorTranslations.translate(error)
     }
-    switch clerkError.code {
-    case "form_password_incorrect", "strategy_for_user_invalid":
-      return String(localized: .authErrorInvalidLoginCredentials)
-
-    case "form_identifier_not_found":
-      return String(localized: .authErrorUserNotFound)
-
-    case "form_identifier_exists", "external_account_exists":
-      return String(localized: .authErrorUserAlreadyRegistered)
-
-    case "form_password_length_too_short", "form_password_not_strong_enough",
-      "form_password_validation_failed", "form_password_size_in_bytes_exceeded":
-      return String(localized: .authErrorPasswordMin8)
-
-    case "form_param_format_invalid":
-      return String(localized: .authErrorInvalidEmailFormat)
-
-    case "form_code_incorrect", "verification_failed":
-      return String(localized: .authErrorInvalidCode)
-
-    case "verification_expired":
-      return String(localized: .authErrorCodeExpired)
-
-    case "too_many_requests":
-      return String(localized: .authErrorRequestRateLimited)
-
-    default:
-      return clerkError.errorDescription ?? ErrorTranslations.translate(error)
+    if let known = messages[clerkError.code] {
+      return String(localized: known)
     }
+    return clerkError.errorDescription ?? ErrorTranslations.translate(error)
   }
 }
 

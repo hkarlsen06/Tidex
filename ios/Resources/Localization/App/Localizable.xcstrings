@@ -274563,6 +274563,24 @@
         }
       }
     },
+    "security.password.currentPasswordLabel" : {
+      "comment" : "Placeholder of the field where the person types their current password before changing it",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current password"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nåværende passord"
+          }
+        }
+      }
+    },
     "security.password.errors.mismatch" : {
       "comment" : "Validation error when the new password and confirmation differ.",
       "extractionState" : "manual",
