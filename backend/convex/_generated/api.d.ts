@@ -8,8 +8,13 @@
  * @module
  */
 
+import type * as appActivity from "../appActivity.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_clerk from "../lib/clerk.js";
 import type * as lib_revision from "../lib/revision.js";
 import type * as lib_validators from "../lib/validators.js";
+import type * as sync from "../sync.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -18,8 +23,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  appActivity: typeof appActivity;
+  "lib/auth": typeof lib_auth;
+  "lib/clerk": typeof lib_clerk;
   "lib/revision": typeof lib_revision;
   "lib/validators": typeof lib_validators;
+  sync: typeof sync;
+  users: typeof users;
 }>;
 
 /**
