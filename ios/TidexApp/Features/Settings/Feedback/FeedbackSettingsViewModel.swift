@@ -215,6 +215,11 @@ internal final class FeedbackSettingsViewModel {
     await fetchFeedbackHistory()
   }
 
+  /// Reloads the history without the loading state, for live updates.
+  internal func refreshHistory() async {
+    await fetchFeedbackHistory()
+  }
+
   /// Fetch user's feedback history
   private func fetchFeedbackHistory() async {
     guard let userId else {

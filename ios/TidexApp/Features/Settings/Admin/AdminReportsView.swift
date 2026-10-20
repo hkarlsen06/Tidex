@@ -1,3 +1,4 @@
+import ConvexMobile
 import SwiftUI
 
 struct AdminReportsView: View {
@@ -63,8 +64,17 @@ struct AdminReportsView: View {
       AdminReportDetailView(report: report) { await load() }
     }
     .task(id: status) { await load() }
+    .reloadOnChange(of: "admin:reports", args: liveArgs, id: status) { await load() }
     .refreshable { await load() }
     .adminErrorAlert($errorMessage)
+  }
+
+  /// The arguments of `AdminAPI.reports`. Convex rejects null for an optional argument, so
+  /// no filter leaves the key out.
+  private var liveArgs: [String: ConvexEncodable?] {
+    var args: [String: ConvexEncodable?] = ["limit": 100.0]
+    if let status { args["status"] = status.rawValue }
+    return args
   }
 
   private func load() async {

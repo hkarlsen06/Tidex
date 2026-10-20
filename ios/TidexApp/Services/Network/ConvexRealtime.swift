@@ -149,6 +149,34 @@ final class ConvexRealtime {
       )
   }
 
+  /// Yields once each time the result of a query changes after its first result, for screens
+  /// that load over HTTP and only need to know when to load again. Finishes when the
+  /// subscription fails or nobody is signed in, and stops the subscription when the caller
+  /// stops listening.
+  func changes(of name: String, args: [String: ConvexEncodable?] = [:]) async -> AsyncStream<Void> {
+    guard await signIn() else { return AsyncStream { $0.finish() } }
+    return AsyncStream { continuation in
+      var isFirst = true
+      let subscription = subscribe(
+        to: name, args: args, as: ConvexAPI.Ignored.self,
+        onUpdate: { _ in
+          if isFirst {
+            isFirst = false
+          } else {
+            continuation.yield()
+          }
+        },
+        onFailure: { _ in continuation.finish() }
+      )
+      guard let subscription else {
+        continuation.finish()
+        return
+      }
+      nonisolated(unsafe) let held = subscription
+      continuation.onTermination = { _ in held.cancel() }
+    }
+  }
+
   private func makeClient() -> ConvexClientWithAuth<String> {
     if let client { return client }
     let created = ConvexClientWithAuth<String>(

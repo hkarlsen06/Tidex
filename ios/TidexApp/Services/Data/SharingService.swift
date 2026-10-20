@@ -138,13 +138,19 @@ final class SharingService {
 
   // MARK: - Sharer List
 
+  /// The shift preview window of the Friends tab: 30 days back and forward.
+  static func friendsPreviewRange(now: Date = Date()) -> (start: String, end: String) {
+    let calendar = Calendar.gregorianCurrent
+    return (
+      SharingComputeCore.isoDateString(calendar.date(byAdding: .day, value: -30, to: now) ?? now),
+      SharingComputeCore.isoDateString(calendar.date(byAdding: .day, value: 30, to: now) ?? now)
+    )
+  }
+
   /// Fetches the complete Friends tab bootstrap payload in one query.
   func fetchFriendsTabBootstrap() async throws -> FriendsTabBootstrapData {
     let now = Date()
-    let startDate = SharingComputeCore.isoDateString(
-      Calendar.gregorianCurrent.date(byAdding: .day, value: -30, to: now) ?? now)
-    let endDate = SharingComputeCore.isoDateString(
-      Calendar.gregorianCurrent.date(byAdding: .day, value: 30, to: now) ?? now)
+    let (startDate, endDate) = Self.friendsPreviewRange(now: now)
 
     do {
       return try await loadFriendsTabBootstrap(startDate: startDate, endDate: endDate, now: now)

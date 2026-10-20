@@ -126,6 +126,13 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       scheduleChatMetadataRefresh()
       await syncTypingSubscriptions()
     }
+    .reloadOnChange(
+      of: "sharing:friendsBootstrap",
+      args: [
+        "preview_start_date": SharingService.friendsPreviewRange().start,
+        "preview_end_date": SharingService.friendsPreviewRange().end,
+      ]
+    ) { await viewModel.loadSharers() }
     .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
       // Handle tab reselection - if sharing tab is tapped again while viewing a sharer,
       // navigate back to the sharer list
@@ -1138,6 +1145,15 @@ private struct SharedShiftsDetailView: View {
         .sharedCalendar(ownerId: sharer.id, ownerToken: visibleContextOwnerToken)
       )
     }
+    .reloadOnChange(
+      of: "sharing:sharedMonth",
+      args: [
+        "owner_id": sharer.id,
+        "year": Double(viewModel.committedYear),
+        "month": Double(viewModel.committedMonth),
+      ],
+      id: "\(sharer.id)-\(viewModel.committedYear)-\(viewModel.committedMonth)"
+    ) { await viewModel.loadShiftsForSelectedSharer() }
     .onDisappear {
       SensitiveContentPresentationState.shared.clearVisibleContextIfOwnedBySharedCalendar(
         visibleContextOwnerToken
