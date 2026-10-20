@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import os.log
-import Supabase
 
 private enum FeedbackSettingsConstants {
   static let logger: Logger = Logger(
@@ -35,19 +34,6 @@ internal struct FeedbackItem: Codable, Identifiable {
   internal let response: String?
   internal let respondedAt: String?
   internal let respondedBy: String?
-}
-
-/// Data for inserting new feedback
-internal struct FeedbackInsert: Encodable {
-  internal enum CodingKeys: String, CodingKey {
-    case message = "message"
-    case userEmail = "user_email"
-    case userId = "user_id"
-  }
-
-  internal let userId: String
-  internal let message: String
-  internal let userEmail: String
 }
 
 // MARK: - View Model
@@ -109,7 +95,6 @@ internal final class FeedbackSettingsViewModel {
   // MARK: - Private Properties
 
   private var userId: String?
-  private var userEmail: String?
 
   // MARK: - Initialization
 
@@ -131,9 +116,8 @@ internal final class FeedbackSettingsViewModel {
 
     do {
       // Get current user session
-      let session: Session = try await AuthSessionManager.shared.getSession()
+      let session: AuthSession = try await AuthSessionManager.shared.getSession()
       userId = session.normalizedUserId
-      userEmail = session.user.email ?? ""
 
       // Fetch feedback history
       await fetchFeedbackHistory()
@@ -146,7 +130,6 @@ internal final class FeedbackSettingsViewModel {
         let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
       {
         userId = offlineUserId
-        userEmail = ""
         feedbackHistory = []
         isOfflineUnavailable = true
       } else {
@@ -164,7 +147,7 @@ internal final class FeedbackSettingsViewModel {
       return
     }
 
-    guard let userId, let userEmail else {
+    guard userId != nil else {
       errorMessage = String(localized: .commonErrorNotAuthenticated)
       return
     }
@@ -183,11 +166,7 @@ internal final class FeedbackSettingsViewModel {
     errorMessage = nil
 
     do {
-      try await submitFeedback(
-        userId: userId,
-        userEmail: userEmail,
-        message: trimmedMessage
-      )
+      try await submitFeedback(message: trimmedMessage)
       await handleSuccessfulSubmission()
     } catch {
       FeedbackSettingsConstants.logger.error(
@@ -223,17 +202,10 @@ internal final class FeedbackSettingsViewModel {
 
   // MARK: - Private Methods
 
-  private func submitFeedback(userId: String, userEmail: String, message: String) async throws {
-    let feedback: FeedbackInsert = .init(
-      userId: userId,
-      message: message,
-      userEmail: userEmail
-    )
-
-    try await supabase
-      .from("feedback")
-      .insert(feedback)
-      .execute()
+  private func submitFeedback(message: String) async throws {
+    struct Args: Encodable, Sendable { let message: String }
+    _ = try await ConvexAPI.app.mutation(
+      "feedback:submit", Args(message: message), as: ConvexAPI.Ignored.self)
   }
 
   private func handleSuccessfulSubmission() async {
@@ -250,14 +222,7 @@ internal final class FeedbackSettingsViewModel {
     }
 
     do {
-      let items: [FeedbackItem] =
-        try await supabase
-        .from("feedback")
-        .select()
-        .eq("user_id", value: userId)
-        .order("created_at", ascending: false)
-        .execute()
-        .value
+      let items: [FeedbackItem] = try await ConvexAPI.app.query("feedback:mine")
 
       feedbackHistory = items
       FeedbackSettingsConstants.logger.info("Fetched \(items.count) feedback items")
