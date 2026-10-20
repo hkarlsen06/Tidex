@@ -81,7 +81,7 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
     XCTAssertNil(message.deletedAt)
     let attachment = try XCTUnwrap(message.attachments.first)
     XCTAssertEqual(attachment.storagePath, "https://actions.example/attachments/a-1")
-    XCTAssertEqual(attachment.byteSize, 2048)
+    XCTAssertEqual(attachment.byteSize, 2_048)
     XCTAssertEqual(attachment.width, 640)
     XCTAssertNil(attachment.height)
     XCTAssertEqual(attachment.reactions.map(\.viewerHasReacted), [true])
