@@ -217,6 +217,7 @@ final class AuthSessionManager {
     userTask = nil
     lastToken = nil
     UserDefaults.standard.removeObject(forKey: Self.cachedUserKey)
+    WidgetAppGroup.storeSignedInUserId(nil)
   }
 
   /// Clerk or Convex refused the session, so the user must sign in again.
@@ -335,6 +336,8 @@ final class AuthSessionManager {
     }
     cachedUser = user
     cachedUserClerkId = clerkUserId
+    // The notification service extension drops pushes meant for another account.
+    WidgetAppGroup.storeSignedInUserId(user.id)
     if let data = try? JSONEncoder().encode(StoredUser(clerkUserId: clerkUserId, user: user)) {
       UserDefaults.standard.set(data, forKey: Self.cachedUserKey)
     }
