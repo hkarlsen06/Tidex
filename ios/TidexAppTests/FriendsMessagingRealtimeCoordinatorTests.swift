@@ -1,31 +1,10 @@
 import Foundation
-import Supabase
 import XCTest
 
 @testable import Tidex
 
 @MainActor
 final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
-  func testExtractThreadIdPrefersThreadIdFieldForMessageActions() {
-    let record: JSONObject = [
-        "id": "message-1",
-        "thread_id": "thread-1",
-      ]
-
-    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractThreadId(fromRecord: record), "thread-1")
-    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractMessageId(fromRecord: record), "message-1")
-  }
-
-  func testExtractThreadIdFallsBackToPrimaryIdForThreadActions() {
-    let record: JSONObject = [
-        "id": "thread-22",
-        "kind": "direct",
-      ]
-
-    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractThreadId(fromRecord: record), "thread-22")
-    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractMessageId(fromRecord: record), "thread-22")
-  }
-
   @MainActor
   private final class RefreshRecorder {
     var startedCalls = 0
@@ -77,62 +56,83 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
     XCTAssertFalse(recorder.didOverlap)
   }
 
-  func testDecodeThreadUserStateParsesInsertedPayload() throws {
-    let updatedAt = Date(timeIntervalSince1970: 1_700_000_000)
-    let lastReadAt = Date(timeIntervalSince1970: 1_699_999_900)
+  // MARK: - Convex payloads
 
-    let record: JSONObject = [
-        "thread_id": "thread-1",
-        "user_id": "viewer-1",
-        "last_read_message_id": "message-9",
-        "last_read_at": .string(ISO8601DateFormatter().string(from: lastReadAt)),
-        "muted": true,
-        "updated_at": .string(ISO8601DateFormatter().string(from: updatedAt)),
-      ]
-
-    let state = FriendsMessagingRealtimeCoordinator.decodeThreadUserState(fromRecord: record)
-
-    XCTAssertEqual(state?.threadId, "thread-1")
-    XCTAssertEqual(state?.userId, "viewer-1")
-    XCTAssertEqual(state?.lastReadMessageId, "message-9")
-    XCTAssertEqual(state?.muted, true)
-    XCTAssertEqual(
-      try XCTUnwrap(state?.lastReadAt).timeIntervalSince1970, lastReadAt.timeIntervalSince1970,
-      accuracy: 1)
-    XCTAssertEqual(
-      try XCTUnwrap(state?.updatedAt).timeIntervalSince1970, updatedAt.timeIntervalSince1970,
-      accuracy: 1)
+  private func decode<T: Decodable>(_ json: String, as _: T.Type = T.self) throws -> T {
+    try JSONDecoder().decode(T.self, from: Data(json.utf8))
   }
 
-  func testDecodeTypingPayloadParsesRealtimeBroadcastEnvelope() throws {
-    let payload: JSONObject = [
-      "event": "typing_start",
-      "payload": [
-        "thread_id": "thread-1",
-        "user_id": "user-1",
-        "sent_at_ms": 1_775_000_000_000,
-      ],
-      "type": "broadcast",
-    ]
+  private static let liveMessageJSON = """
+    {"id":"m-1","thread_id":"t-1","sender_user_id":"u-1","message_type":"user","body":"Hei",
+     "client_id":"C-1","reply_to_message_id":null,"created_at":"2026-10-20T12:00:00.123Z",
+     "edited_at":null,"deleted_at":null,"metadata":{},"revision":41.0,
+     "attachments":[{"id":"a-1","attachment_index":0.0,"kind":"image",
+       "url":"https://actions.example/attachments/a-1","mime_type":"image/jpeg",
+       "byte_size":2048.0,"width":640.0,"height":null,"created_at":"2026-10-20T12:00:00.123Z",
+       "reactions":[{"emoji":"x","count":1.0,"viewer_has_reacted":true}]}],
+    "reactions":[]}
+    """
 
-    let typingPayload = try FriendsMessagingRealtimeCoordinator.decodeTypingPayload(from: payload)
+  func testMessagePayloadDecodesConvexShape() throws {
+    let message = try decode(Self.liveMessageJSON, as: MessagingMessageRow.self).toFriendMessage()
 
-    XCTAssertEqual(typingPayload.threadId, "thread-1")
-    XCTAssertEqual(typingPayload.userId, "user-1")
-    XCTAssertEqual(typingPayload.sentAtMs, 1_775_000_000_000)
+    XCTAssertEqual(message.clientId, "c-1")
+    XCTAssertEqual(message.createdAt.timeIntervalSince1970, 1_792_497_600.123, accuracy: 0.001)
+    XCTAssertNil(message.deletedAt)
+    let attachment = try XCTUnwrap(message.attachments.first)
+    XCTAssertEqual(attachment.storagePath, "https://actions.example/attachments/a-1")
+    XCTAssertEqual(attachment.byteSize, 2048)
+    XCTAssertEqual(attachment.width, 640)
+    XCTAssertNil(attachment.height)
+    XCTAssertEqual(attachment.reactions.map(\.viewerHasReacted), [true])
   }
 
-  func testDecodeTypingPayloadParsesRawBroadcastPayload() throws {
-    let payload: JSONObject = [
-      "thread_id": "thread-2",
-      "user_id": "user-2",
-      "sent_at_ms": 1_775_000_000_001,
-    ]
+  func testChangesPageTurnsDeletedMessagesIntoDeleteEvents() throws {
+    let deleted = Self.liveMessageJSON
+      .replacingOccurrences(of: "\"id\":\"m-1\"", with: "\"id\":\"m-2\"")
+      .replacingOccurrences(
+        of: "\"deleted_at\":null", with: "\"deleted_at\":\"2026-10-20T12:05:00.000Z\"")
+      .replacingOccurrences(of: "\"revision\":41.0", with: "\"revision\":42.0")
+    let page = try decode(
+      "{\"messages\":[\(Self.liveMessageJSON),\(deleted)],\"cursor\":42.0,\"done\":false}",
+      as: MessagingThreadChangesRow.self
+    ).toFriendThreadSyncEventsPage()
 
-    let typingPayload = try FriendsMessagingRealtimeCoordinator.decodeTypingPayload(from: payload)
+    XCTAssertEqual(page.events.map(\.eventType), [.messageUpserted, .messageDeleted])
+    XCTAssertEqual(page.events.map(\.version), [41, 42])
+    XCTAssertEqual(page.events.last?.deletedMessageId, "m-2")
+    XCTAssertEqual(page.latestVersion, 42)
+    XCTAssertTrue(page.hasMore)
+    XCTAssertFalse(page.requiresSnapshot)
+  }
 
-    XCTAssertEqual(typingPayload.threadId, "thread-2")
-    XCTAssertEqual(typingPayload.userId, "user-2")
-    XCTAssertEqual(typingPayload.sentAtMs, 1_775_000_000_001)
+  func testInboxPayloadKeepsViewerStateTimeAndUnreadCount() throws {
+    let json = """
+      {"threads":[{"thread_id":"t-1","kind":"direct","title":null,"avatar_url":null,"metadata":{},
+        "counterpart_user_id":"u-2","counterpart_display_name":"Kari",
+        "counterpart_profile_picture_url":null,"counterpart_oauth_avatar_url":null,
+        "last_message_id":"m-1","last_message_sender_id":"u-2","last_message_at":"2026-10-20T12:00:00.123Z",
+        "last_message_body":"Hei","last_message_preview_kind":"text","last_message_has_image":false,
+        "unread_count":2.0,"muted":false,"created_at":"2026-10-01T08:00:00.000Z",
+        "viewer_state_updated_at":"2026-10-20T12:00:00.200Z"}],
+       "unread_direct_message_count":2.0,"has_more":false,"next_cursor":null}
+      """
+    let snapshot = try decode(json, as: MessagingInboxRow.self).toFriendInboxSyncSnapshot()
+
+    XCTAssertEqual(snapshot.unreadDirectMessageCount, 2)
+    XCTAssertNil(snapshot.nextCursor)
+    let thread = try XCTUnwrap(snapshot.threads.first)
+    XCTAssertEqual(thread.unreadCount, 2)
+    XCTAssertEqual(thread.lastMessagePreviewKind, .text)
+    XCTAssertEqual(
+      try XCTUnwrap(thread.viewerStateUpdatedAt).timeIntervalSince1970, 1_792_497_600.2,
+      accuracy: 0.001)
+  }
+
+  func testCursorTimestampKeepsTheServersMillisecondFormat() throws {
+    let stamp = "2026-10-20T12:00:00.123Z"
+    let date = try XCTUnwrap(ISO8601Timestamp.date(from: stamp))
+
+    XCTAssertEqual(ConvexTimestamp.string(from: date), stamp)
   }
 }
