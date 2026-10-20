@@ -49,6 +49,9 @@ export default defineSchema({
     locale: optString,
     // raw_app_meta_data.role in GoTrue.
     role: v.optional(v.literal("admin")),
+    // Sign-in methods, such as "apple", "google" and "email". GoTrue's
+    // raw_app_meta_data.providers for migrated users, Clerk's accounts for new ones.
+    providers: v.optional(v.array(v.string())),
     banned_at: optTs,
     last_sign_in_at: optTs,
     created_at: ts,

@@ -411,6 +411,40 @@ export const edit = mutation({
   },
 });
 
+/**
+ * Soft-deletes a message the way delete_message and admin_delete_message_api did,
+ * including the unread-count trigger: members who hadn't read up to it lose one unread.
+ */
+export async function softDeleteMessage(ctx: MutationCtx, message: Doc<"messages">) {
+  const now = new Date().toISOString();
+  await ctx.db.patch(message._id, { deleted_at: now, revision: await nextRevision(ctx) });
+  const members = await ctx.db
+    .query("thread_memberships")
+    .withIndex("by_thread_user", (q) => q.eq("thread_id", message.thread_id))
+    .collect();
+  for (const m of members) {
+    if (m.status !== "active" || m.user_id === message.sender_user_id) continue;
+    const state = await ctx.db
+      .query("thread_user_state")
+      .withIndex("by_thread_user", (q) => q.eq("thread_id", message.thread_id).eq("user_id", m.user_id))
+      .unique();
+    if (state === null) continue;
+    const readMarker =
+      state.last_read_message_id === undefined ? null : await messageById(ctx, state.last_read_message_id);
+    const alreadyRead =
+      readMarker !== null &&
+      (message.created_at < readMarker.created_at ||
+        (message.created_at === readMarker.created_at && message.id <= readMarker.id));
+    if (alreadyRead) continue;
+    await ctx.db.patch(state._id, {
+      unread_count: Math.max(state.unread_count - 1, 0),
+      updated_at: now,
+      revision: await nextRevision(ctx),
+    });
+  }
+  await refreshThreadPreview(ctx, message.thread_id);
+}
+
 /** Port of delete_message. Returns the thread summary, with the preview moved back. */
 export const remove = mutation({
   args: { message_id: v.string() },
@@ -418,36 +452,7 @@ export const remove = mutation({
     const { user } = await requireViewer(ctx);
     const message = await ownUserMessage(ctx, message_id, user.id, "delete");
     if (message.deleted_at !== undefined) reject("invalid", "Message is already deleted");
-    const now = new Date().toISOString();
-    await ctx.db.patch(message._id, { deleted_at: now, revision: await nextRevision(ctx) });
-
-    // update_thread_unread_counts_on_message_soft_delete: members who had not read up
-    // to this message lose one unread.
-    const members = await ctx.db
-      .query("thread_memberships")
-      .withIndex("by_thread_user", (q) => q.eq("thread_id", message.thread_id))
-      .collect();
-    for (const m of members) {
-      if (m.status !== "active" || m.user_id === user.id) continue;
-      const state = await ctx.db
-        .query("thread_user_state")
-        .withIndex("by_thread_user", (q) => q.eq("thread_id", message.thread_id).eq("user_id", m.user_id))
-        .unique();
-      if (state === null) continue;
-      const readMarker =
-        state.last_read_message_id === undefined ? null : await messageById(ctx, state.last_read_message_id);
-      const alreadyRead =
-        readMarker !== null &&
-        (message.created_at < readMarker.created_at ||
-          (message.created_at === readMarker.created_at && message.id <= readMarker.id));
-      if (alreadyRead) continue;
-      await ctx.db.patch(state._id, {
-        unread_count: Math.max(state.unread_count - 1, 0),
-        updated_at: now,
-        revision: await nextRevision(ctx),
-      });
-    }
-    await refreshThreadPreview(ctx, message.thread_id);
+    await softDeleteMessage(ctx, message);
     return await threadSummary(ctx, (await threadById(ctx, message.thread_id))!, user.id);
   },
 });

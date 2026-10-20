@@ -113,9 +113,16 @@ export const linkOrCreate = internalMutation({
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     const revision = await nextRevision(ctx);
+    const providers = [
+      ...new Set([
+        ...args.accounts.map((a) => a.provider.replace(/^oauth_/, "")),
+        ...(args.accounts.length === 0 && args.email !== undefined ? ["email"] : []),
+      ]),
+    ];
     await ctx.db.insert("users", {
       id,
       clerk_user_id: args.clerk_user_id,
+      providers,
       email: args.email,
       name: args.name,
       avatar_url: args.avatar_url,

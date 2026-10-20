@@ -42,3 +42,16 @@ export async function clerkUsersWithVerifiedEmail(email: string): Promise<ClerkU
     ),
   );
 }
+
+/** POST /users/<id>/ban or /unban. Banning also revokes the user's sessions. */
+export async function setClerkBan(clerkUserId: string, banned: boolean): Promise<void> {
+  const key = process.env.CLERK_SECRET_KEY;
+  if (!key) throw new Error("CLERK_SECRET_KEY is not set");
+  const path = `/users/${encodeURIComponent(clerkUserId)}/${banned ? "ban" : "unban"}`;
+  const response = await fetch(`https://api.clerk.com/v1${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  // A Clerk user already deleted has nothing left to ban.
+  if (!response.ok && response.status !== 404) throw new Error(`Clerk POST ${path} failed with ${response.status}`);
+}
