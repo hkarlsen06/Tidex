@@ -41,12 +41,20 @@ elif [ "$HEARTBEAT_INTERVAL" -lt "$MIN_HEARTBEAT_INTERVAL" ]; then
   HEARTBEAT_INTERVAL="$MIN_HEARTBEAT_INTERVAL"
 fi
 
-cleanup() {
-  xa_stop_xcodebuild "${XCODEBUILD_PID:-}"
+# Shuts down a simulator this run booted before it releases the lock. Otherwise
+# the next run could take the lock, find the simulator booted, and lose it in
+# the middle of its tests.
+release_test_simulator_and_lock() {
   if [ "${SHUTDOWN_TEST_SIMULATOR:-0}" = "1" ]; then
     xcrun simctl shutdown "$TEST_SIMULATOR_UDID" >/dev/null 2>&1 || true
+    SHUTDOWN_TEST_SIMULATOR=0
   fi
   xa_release_lock
+}
+
+cleanup() {
+  xa_stop_xcodebuild "${XCODEBUILD_PID:-}"
+  release_test_simulator_and_lock
   if [ -n "${HEARTBEAT_PID:-}" ]; then
     kill "$HEARTBEAT_PID" 2>/dev/null || true
     wait "$HEARTBEAT_PID" 2>/dev/null || true
@@ -125,7 +133,10 @@ for devices in runtimes.values():
 
 if [ -n "${XCODE_TEST_AGENT_DESTINATION:-}" ]; then
   DESTINATION="$XCODE_TEST_AGENT_DESTINATION"
-  TEST_SIMULATOR_UDID="$(destination_simulator_udid "$DESTINATION")"
+  if ! TEST_SIMULATOR_UDID="$(destination_simulator_udid "$DESTINATION" 2>/dev/null)"; then
+    xa_log "could not list simulators; running on $DESTINATION without resetting it"
+    TEST_SIMULATOR_UDID=""
+  fi
 else
   TEST_SIMULATOR_UDID="$(destination_simulator_udid "platform=iOS Simulator,name=$TEST_SIMULATOR_NAME")"
   if [ -z "$TEST_SIMULATOR_UDID" ]; then
@@ -173,7 +184,7 @@ start_heartbeat
 wait "$XCODEBUILD_PID"
 EXIT_CODE=$?
 stop_heartbeat
-xa_release_lock
+release_test_simulator_and_lock
 set -e
 
 STATUS="SUCCESS"
