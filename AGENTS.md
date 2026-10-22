@@ -21,10 +21,12 @@ Agents in several repos share this Mac, and simulators created by agents once fi
 
 - Use a connected device first. `xcrun xctrace list devices` lists them. Pick an iPhone or iPad under `== Devices ==`, not the Mac and not one under `== Devices Offline ==`, and pass it as `platform=iOS,id=<UDID>`, for example `XCODE_TEST_AGENT_DESTINATION="platform=iOS,id=<UDID>" ./scripts/xcode-test-agent.sh`. If the device is locked, use the shared simulator and say so in the handoff.
 - If no device is connected, use the one shared simulator, `Shared iPhone`, as `platform=iOS Simulator,name=Shared iPhone`. Agents in every worktree and every repo on this Mac use that same simulator.
-- The only other simulator allowed is `Shared iPhone SE`, for checking layouts on a small screen. Use it only for that, and shut it down when you're done.
+- The only other simulator allowed is `Shared iPhone SE`, for checking layouts on a small screen. Use it only for that.
 - Always set `XCODE_TEST_AGENT_DESTINATION`. Without it, the test wrapper creates and uses its own `Tidex Tests` simulator.
-- Setting it skips the wrapper's uninstall of Tidex before the run. If a run then fails with "test runner hung before establishing connection" or "failed to launch no.tidex.app", run `xcrun simctl uninstall "Shared iPhone" no.tidex.app` and retry. On a physical device, ask the user before uninstalling, because that deletes the app's data there.
-- Do not create, clone or erase simulators, and do not boot any simulator other than these two. To clear the app's data, uninstall it instead of erasing the simulator.
+- Before every run on a simulator, the wrapper uninstalls Tidex there inside the machine-wide xcodebuild lock. After the run, it shuts down the simulator if it booted it. If a run fails with "test runner hung before establishing connection" or "failed to launch no.tidex.app", run it again through the wrapper.
+- Do not run `xcrun simctl` against `Shared iPhone` or `Shared iPhone SE` yourself. Another agent's run may be using the simulator, and only the wrapper waits for the lock.
+- On a physical device, the wrapper uninstalls nothing. If a run there fails that way, ask the user before uninstalling, because that deletes the app's data on the device.
+- Do not create, clone or erase simulators, and do not boot any simulator other than these two. The wrapper already clears the app's data on a simulator before each run.
 - Do not download simulator runtimes or platforms, through `xcodebuild -downloadPlatform`, `xcrun simctl runtime add` or Xcode's Components settings. If a shared simulator is missing or no runtime is installed, report that in the handoff and finish the rest of the task.
 - `./scripts/xcode-build-agent.sh` builds for the generic simulator destination. That needs no simulator or runtime, so these rules don't change it.
 
