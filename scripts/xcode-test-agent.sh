@@ -89,30 +89,45 @@ stop_heartbeat() {
   fi
 }
 
-# Tests run on their own simulator, apart from the one used for manual runs. An
-# ongoing shift there leaves a Live Activity, and after xcodebuild reinstalls the
-# app, liveactivitiesd relaunches Tidex in the background. xcodebuild then attaches
-# to that launch, which has no XCTest injection, and fails with "test runner hung
-# before establishing connection" or "failed to launch no.tidex.app".
+# An ongoing shift leaves a Live Activity on the simulator, and after xcodebuild
+# reinstalls the app, liveactivitiesd relaunches Tidex in the background.
+# xcodebuild then attaches to that launch, which has no XCTest injection, and
+# fails with "test runner hung before establishing connection" or "failed to
+# launch no.tidex.app". So every run on a simulator first uninstalls Tidex there.
+# The reset runs under the xcodebuild lock because the simulator may be shared
+# with other agents' runs.
 TEST_SIMULATOR_NAME="Tidex Tests"
 TEST_SIMULATOR_UDID=""
 SHUTDOWN_TEST_SIMULATOR=0
 
-test_simulator_udid() {
+# Prints the UDID of the available simulator that an xcodebuild destination
+# names by id or name. Prints nothing for a physical device, where uninstalling
+# would delete the user's data.
+destination_simulator_udid() {
   xcrun simctl list devices available -j | python3 -c '
 import json, sys
-for devices in json.load(sys.stdin)["devices"].values():
+# Read all of stdin before any exit, or simctl dies of SIGPIPE and pipefail
+# stops the wrapper.
+runtimes = json.load(sys.stdin)["devices"]
+spec = {}
+for part in sys.argv[1].split(","):
+    key, _, value = part.partition("=")
+    spec[key.strip()] = value.strip()
+if spec.get("platform") != "iOS Simulator":
+    sys.exit()
+for devices in runtimes.values():
     for device in devices:
-        if device["name"] == sys.argv[1]:
+        if device["udid"] == spec.get("id") or device["name"] == spec.get("name"):
             print(device["udid"])
             sys.exit()
-' "$TEST_SIMULATOR_NAME"
+' "$1"
 }
 
 if [ -n "${XCODE_TEST_AGENT_DESTINATION:-}" ]; then
   DESTINATION="$XCODE_TEST_AGENT_DESTINATION"
+  TEST_SIMULATOR_UDID="$(destination_simulator_udid "$DESTINATION")"
 else
-  TEST_SIMULATOR_UDID="$(test_simulator_udid)"
+  TEST_SIMULATOR_UDID="$(destination_simulator_udid "platform=iOS Simulator,name=$TEST_SIMULATOR_NAME")"
   if [ -z "$TEST_SIMULATOR_UDID" ]; then
     TEST_SIMULATOR_UDID="$(xcrun simctl create "$TEST_SIMULATOR_NAME" "iPhone 18 Pro")"
   fi
@@ -123,9 +138,13 @@ fi
 # earlier runs.
 reset_test_simulator() {
   [ -n "$TEST_SIMULATOR_UDID" ] || return 0
-  if ! xcrun simctl list devices booted | grep -q "$TEST_SIMULATOR_UDID"; then
-    SHUTDOWN_TEST_SIMULATOR=1
-  fi
+  # Captured rather than piped to grep -q, which under pipefail can fail the
+  # pipeline with SIGPIPE and shut down a simulator that was already booted.
+  case "$(xcrun simctl list devices booted)" in
+    *"$TEST_SIMULATOR_UDID"*) ;;
+    *) SHUTDOWN_TEST_SIMULATOR=1 ;;
+  esac
+  xa_log "resetting simulator $TEST_SIMULATOR_UDID: uninstalling no.tidex.app"
   xcrun simctl bootstatus "$TEST_SIMULATOR_UDID" -b >/dev/null
   xcrun simctl uninstall "$TEST_SIMULATOR_UDID" no.tidex.app >/dev/null 2>&1 || true
 }
