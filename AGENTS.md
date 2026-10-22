@@ -2,46 +2,30 @@
 
 This file provides guidance to coding agents when working with code in this repository.
 
-## Builds and tests: the user runs them (read this first)
+## Builds and tests (read this first)
 
-Hjalmar builds, runs and tests the app himself in Xcode. What he wants from you is fast iterations: make the change, check it by reading the code, hand it back, and let him run it.
+Every agent, subagents included, builds and runs the app and its tests itself to prove its change works. Reading the code is not proof. Never hand the user a check you could run yourself.
 
-- **Do not build, test or launch anything with Xcode tools unless the user asks for it in this conversation.** No `./scripts/xcode-build-agent.sh`, no `./scripts/xcode-test-agent.sh`, no `xcodebuild`, no simulators. That includes a quick build to check that it compiles, running tests you just wrote, and a final check before handoff. The exception at the end of this section says when you may do these anyway.
-- **A task is not a request to build or test.** "Fix X", "add Y" or "refactor Z" means edit the code and hand back. Only "build it", "run the tests" or similar counts.
-- **Allowed without asking:** fast static checks that finish in seconds, such as `swiftlint --quiet` and `rg`.
-- Write a test only when [Tests](#tests) calls for one, and leave running it to the user.
-- **Handoff:** one or two lines on what you did not verify and what the user should run or check, for example "run `FooTests`" or "check the settings screen in dark mode".
-
-When the user does ask for a build or test:
-
-- Use the wrappers only, never raw `xcodebuild`. They share one machine-wide lock across Tidex, Paeonia, Kvil and Notex. If a run prints `waiting for another agent's xcodebuild`, wait. Do not kill the other run or set `XCODE_AGENT_NO_LOCK=1`.
-- Run only what was asked for, filtered with `-only-testing:<Target>/<Class>` where possible. The test wrapper builds the app itself, so do not run the build wrapper first.
-- Do not run UI tests (`TidexAppUITests`) unless the user asks for UI tests. Unfiltered runs skip them; do not set `XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1` on your own.
+- Use the wrappers only, never raw `xcodebuild`. They share one machine-wide lock, `/tmp/xcode-agent.lock`, across Tidex, Paeonia, Kvil and Notex, so parallel agents queue instead of colliding. If a run prints `waiting for another agent's xcodebuild`, wait. Do not kill the other run or set `XCODE_AGENT_NO_LOCK=1`.
+- Run the smallest set of tests that proves the change, filtered with `-only-testing:<Target>/<Class>` where possible. The test wrapper builds the app itself, so do not run the build wrapper first.
+- Run UI tests (`TidexAppUITests`) when the change alters a journey they walk. Unfiltered runs skip them, so name the class with `-only-testing:TidexAppUITests/<Class>`.
 - Run on a connected device, or on the shared simulator when none is connected. [Devices and simulators](#devices-and-simulators) below says how. Do not open Simulator.app.
+- The lock does not see the Xcode app. If a run fails with `build.db: database is locked`, Hjalmar is probably building in Xcode. Wait a minute and retry.
 - `XCODE_AGENT_NICE` and `XCODE_AGENT_JOBS` are for the user to set, not you.
-
-### Exception: when no other agent needs the Mac
-
-The rules above exist because parallel agents used to build, test and start or stop simulators on their own at the same time. That slowed the Mac down and caused build database locks. They are not meant to stop useful work when nothing can conflict.
-
-You may build, run tests, and boot, shut down, restart or reinstall apps on the device or shared simulator described below without asking when both of these hold:
-
-- Nothing else is building, testing or using a simulator. Check right before you act. `pgrep -lf "xcodebuild|xcode-test-agent|xcode-build-agent|simctl"` must print nothing, `/tmp/xcode-agent.lock` must not exist, and `xcrun simctl list devices booted` must not show a simulator in use by someone else. These checks don't see the Xcode app. If a run fails with `build.db: database is locked`, the user is probably building in Xcode, so stop and hand off without retrying.
-- The action helps the task, and you don't need a decision from the user to take it. Examples are confirming a fix compiles, running the tests you wrote, and restarting a simulator that fails with "Simulator device failed to launch no.tidex.app" and 0 tests run.
-
-While you do it, keep using the wrappers and their lock, run the smallest set of tests that answers your question, and shut down any simulator you booted when you're done. If another agent starts during your work, go back to the rules above.
+- Write a test only when [Tests](#tests) calls for one, and run it.
+- **Handoff.** Name the builds and tests you ran and their results. List only the checks you could not run, such as a feature the simulator lacks, and say why.
 
 ### Devices and simulators
 
 Agents in several repos share this Mac, and simulators created by agents once filled its disk. Whenever the app or tests run:
 
-- Use a connected device first. `xcrun xctrace list devices` lists them. Pick an iPhone or iPad under `== Devices ==`, not the Mac and not one under `== Devices Offline ==`, and pass it as `platform=iOS,id=<UDID>`, for example `XCODE_TEST_AGENT_DESTINATION="platform=iOS,id=<UDID>" ./scripts/xcode-test-agent.sh`. If the device is locked, ask the user to unlock it.
+- Use a connected device first. `xcrun xctrace list devices` lists them. Pick an iPhone or iPad under `== Devices ==`, not the Mac and not one under `== Devices Offline ==`, and pass it as `platform=iOS,id=<UDID>`, for example `XCODE_TEST_AGENT_DESTINATION="platform=iOS,id=<UDID>" ./scripts/xcode-test-agent.sh`. If the device is locked, use the shared simulator and say so in the handoff.
 - If no device is connected, use the one shared simulator, `Shared iPhone`, as `platform=iOS Simulator,name=Shared iPhone`. Agents in every worktree and every repo on this Mac use that same simulator.
 - The only other simulator allowed is `Shared iPhone SE`, for checking layouts on a small screen. Use it only for that, and shut it down when you're done.
 - Always set `XCODE_TEST_AGENT_DESTINATION`. Without it, the test wrapper creates and uses its own `Tidex Tests` simulator.
 - Setting it skips the wrapper's uninstall of Tidex before the run. If a run then fails with "test runner hung before establishing connection" or "failed to launch no.tidex.app", run `xcrun simctl uninstall "Shared iPhone" no.tidex.app` and retry. On a physical device, ask the user before uninstalling, because that deletes the app's data there.
 - Do not create, clone or erase simulators, and do not boot any simulator other than these two. To clear the app's data, uninstall it instead of erasing the simulator.
-- Do not download simulator runtimes or platforms, through `xcodebuild -downloadPlatform`, `xcrun simctl runtime add` or Xcode's Components settings. If a shared simulator is missing or no runtime is installed, stop and ask the user.
+- Do not download simulator runtimes or platforms, through `xcodebuild -downloadPlatform`, `xcrun simctl runtime add` or Xcode's Components settings. If a shared simulator is missing or no runtime is installed, report that in the handoff and finish the rest of the task.
 - `./scripts/xcode-build-agent.sh` builds for the generic simulator destination. That needs no simulator or runtime, so these rules don't change it.
 
 ## Tests
@@ -305,7 +289,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 - The developer often runs multiple agents in parallel in the same worktree.
 - If you see unrelated changes, do not touch, revert, reformat, or "clean up" them.
 - Treat unrelated diffs as owned by the user or another agent, even if they appeared after your work began.
-- Only modify files and hunks required for your task; if unrelated changes block you, stop and ask before proceeding.
+- Only modify files and hunks required for your task. If unrelated changes block you, start a fresh worktree off `origin/main` and do the task there.
 - Never run `git stash`, `git reset`, `git checkout -- <path>` or `git clean` in the shared worktree. Other agents stage whole files, so check your own hunks with `git diff -- <file>` and `git diff --cached -- <file>`.
 - A warning or compile error the user pastes may come from another agent's edit. Check `git diff` for the file before you fix it.
 
@@ -316,12 +300,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 - Tools are BSD: `sed -i ''`, no `cat -A`. `fd`, PIL and ImageMagick are not installed.
 - On `one-s`, add `</dev/null` or `-T` when `docker compose exec` should not read your stdin, and don't `pkill -f` a pattern that also matches your own ssh command.
 
-**Do NOT create unnecessary files:**
-
-- NO summary documents, audit reports, or markdown files unless explicitly requested
-- Focus on code changes only - communicate findings in chat
-
-**NEVER push to git automatically** - commit when requested, but wait for user approval before pushing.
+**Commits and PRs.** Commit on your own branch in your own worktree off `origin/main`. When you change files, end by pushing the branch and opening a ready PR with `gh pr create`. Merging and deploys wait until Hjalmar asks for them.
 
 **Commits must always be signed** - never disable commit signing. If signing fails, stop and report the signing failure instead of creating an unsigned commit.
 
@@ -393,12 +372,3 @@ Cut AI tells from all prose you write or edit, including docs, comments, release
 31. **Prefer the plain word.** "utilize" becomes "use", "leverage" becomes "use", "facilitate" becomes "help", "numerous" becomes "many", "in the event that" becomes "if". The fancier synonym is rarely clearer.
 32. **Mannered prose.** Metaphor or flourish where a literal phrase exists: aphorisms ("wire it or delete it"), rhetorical fragments for effect, personified code ("the plan holds it"), figurative verbs ("rides along", "stands on"), stock framing phrases. "A dial worth turning" becomes "a parameter worth varying". Say what you mean. Rule 26 covers the metaphor nouns.
 33. **Over-compression.** Dropped articles, verbless fragments, symbol-speak, and abbreviations that make the reader decode instead of read. "Parser rejects bad date → exit 2, no write" becomes "The parser rejects a bad date, exits with code 2, and writes nothing." Write whole sentences with their articles and verbs, and spell out arrows and abbreviations.
-
-# Bro keep going
-
-Before you stop, ask yourself "is there a next step that the user would want me to do?" if so, keep going jobs not finished.
-
-## Keep going without input
-
-When a step doesn't need my input, keep going. Put status notes in the same message as your next action.
-Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository.
