@@ -299,6 +299,42 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     XCTAssertFalse(hasPending)
   }
 
+  // MARK: - Switching users
+
+  // Starting or ending an impersonation clears the local store, so it must first push the
+  // changes and refuse while some are still only on this device.
+
+  internal func testUnpushedShiftIsNotSafeToClear() async throws {
+    let store = LocalStoreActor(modelContainer: try makeContainer())
+    _ = try await makeShift(id: "shift-1", in: store)
+
+    // Offline: the push sends nothing.
+    let canClear = await AppCoordinator.pushPendingChanges(userId: userId, store: store) { _ in }
+
+    XCTAssertFalse(canClear)
+    let stored = try await storedShift(id: "shift-1", in: store)
+    XCTAssertEqual(stored.syncStatus, .dirty)
+  }
+
+  internal func testPushedShiftIsSafeToClear() async throws {
+    let store = LocalStoreActor(modelContainer: try makeContainer())
+    _ = try await makeShift(id: "shift-1", in: store)
+
+    let canClear = await AppCoordinator.pushPendingChanges(userId: userId, store: store) { _ in
+      await store.markShiftClean(id: "shift-1")
+    }
+
+    XCTAssertTrue(canClear)
+  }
+
+  internal func testUnknownUserIsNeverSafeToClear() async throws {
+    let store = LocalStoreActor(modelContainer: try makeContainer())
+
+    let canClear = await AppCoordinator.pushPendingChanges(userId: nil, store: store) { _ in }
+
+    XCTAssertFalse(canClear)
+  }
+
   // MARK: - Never pushed delete
 
   internal func testRetiredNeverPushedShiftIsNoLongerDirty() async throws {

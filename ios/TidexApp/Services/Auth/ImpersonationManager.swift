@@ -89,6 +89,11 @@ final class ImpersonationManager {
     let admin = try await AuthSessionManager.shared.getSession()
     logger.info("Starting impersonation: admin=\(admin.user.id), target=\(targetUserId)")
 
+    // The switch clears the local store, so push the admin's changes while the server still
+    // acts as the admin. Changes it can't push stay, and the impersonation doesn't start.
+    guard await AppCoordinator.shared.syncPendingChangesBeforeSignOut() else {
+      throw ImpersonationError.unsyncedChanges
+    }
     // Clear all cached data BEFORE the server switches users, so no stale admin data shows.
     await AppCoordinator.shared.prepareForUserSwitch()
 
@@ -137,6 +142,10 @@ final class ImpersonationManager {
 
     logger.info("Stopping impersonation")
 
+    // Push the changes made as the target while the server still acts as the target.
+    guard await AppCoordinator.shared.syncPendingChangesBeforeSignOut() else {
+      throw ImpersonationError.unsyncedChanges
+    }
     // Clear all cached data BEFORE the server switches back, so no stale target data shows.
     await AppCoordinator.shared.prepareForUserSwitch()
 

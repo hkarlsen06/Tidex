@@ -52,6 +52,8 @@ enum ImpersonationError: Error, LocalizedError {
   case noActiveSession
   case serverError(String)
   case reasonTooShort
+  /// Local changes couldn't reach the server, and switching users would delete them.
+  case unsyncedChanges
 
   /// Uses the server's message for a Convex error, such as a rate limit or a missing admin role.
   init(_ error: Error) {
@@ -80,6 +82,9 @@ enum ImpersonationError: Error, LocalizedError {
 
     case .reasonTooShort:
       return "Reason must be at least 5 characters"
+
+    case .unsyncedChanges:
+      return String(localized: .impersonationUnsyncedChangesMessage)
     }
   }
 }

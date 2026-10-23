@@ -159367,6 +159367,288 @@
         }
       }
     },
+    "impersonation.unsyncedChanges.message" : {
+      "comment" : "Admin-only error when starting or ending an impersonation of another user. Unsynced local changes would be deleted by the account switch, so the switch is refused.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لم تُحفظ بعض التغييرات على هذا الجهاز في Tidex بعد. إذا بدّلت الحساب الآن، فسيتم حذفها. اتصل بالإنترنت وحاول مرة أخرى."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Някои промени на това устройство все още не са запазени в Tidex. Ако смените акаунта сега, те ще бъдат изтрити. Свържете се с интернет и опитайте отново."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "এই ডিভাইসের কিছু পরিবর্তন এখনও Tidex-এ সংরক্ষিত হয়নি। এখন অ্যাকাউন্ট পরিবর্তন করলে সেগুলো মুছে যাবে। ইন্টারনেটে সংযোগ করে আবার চেষ্টা করুন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alguns canvis d'aquest dispositiu encara no s'han desat a Tidex. Si canvies de compte ara, se suprimiran. Connecta't a Internet i torna-ho a provar."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Některé změny v tomto zařízení ještě nebyly uloženy do Tidexu. Pokud nyní přepnete účet, budou smazány. Připojte se k internetu a zkuste to znovu."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nogle ændringer på denne enhed er endnu ikke gemt i Tidex. Hvis du skifter konto nu, bliver de slettet. Opret forbindelse til internettet, og prøv igen."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Änderungen auf diesem Gerät wurden noch nicht in Tidex gespeichert. Wenn du jetzt das Konto wechselst, werden sie gelöscht. Verbinde dich mit dem Internet und versuche es erneut."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ορισμένες αλλαγές σε αυτή τη συσκευή δεν έχουν αποθηκευτεί ακόμη στο Tidex. Αν αλλάξετε λογαριασμό τώρα, θα διαγραφούν. Συνδεθείτε στο διαδίκτυο και δοκιμάστε ξανά."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some changes on this device haven't been saved to Tidex yet. If you switch accounts now, they will be deleted. Connect to the internet and try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Algunos cambios de este dispositivo aún no se han guardado en Tidex. Si cambias de cuenta ahora, se eliminarán. Conéctate a internet e inténtalo de nuevo."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mõned selle seadme muudatused pole veel Tidexisse salvestatud. Kui vahetad nüüd kontot, kustutatakse need. Loo internetiühendus ja proovi uuesti."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برخی تغییرات این دستگاه هنوز در Tidex ذخیره نشده‌اند. اگر اکنون حساب را عوض کنید، حذف خواهند شد. به اینترنت وصل شوید و دوباره تلاش کنید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Joitakin tämän laitteen muutoksia ei ole vielä tallennettu Tidexiin. Jos vaihdat tiliä nyt, ne poistetaan. Yhdistä internetiin ja yritä uudelleen."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "May ilang pagbabago sa device na ito na hindi pa nase-save sa Tidex. Kung magpapalit ka ng account ngayon, mabubura ang mga ito. Kumonekta sa internet at subukan muli."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certaines modifications effectuées sur cet appareil n'ont pas encore été enregistrées dans Tidex. Si vous changez de compte maintenant, elles seront supprimées. Connectez-vous à Internet et réessayez."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חלק מהשינויים במכשיר הזה עדיין לא נשמרו ב-Tidex. אם תחליף חשבון עכשיו, הם יימחקו. התחבר לאינטרנט ונסה שוב."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस डिवाइस पर किए गए कुछ बदलाव अभी तक Tidex में सेव नहीं हुए हैं। अगर आप अभी खाता बदलते हैं, तो वे हटा दिए जाएँगे। इंटरनेट से कनेक्ट करें और फिर कोशिश करें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neke promjene na ovom uređaju još nisu spremljene u Tidex. Ako sada promijenite račun, bit će izbrisane. Povežite se s internetom i pokušajte ponovno."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az eszközön végzett néhány módosítás még nincs mentve a Tidexbe. Ha most fiókot váltasz, törlődni fognak. Csatlakozz az internethez, és próbáld újra."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa perubahan di perangkat ini belum disimpan ke Tidex. Jika Anda beralih akun sekarang, perubahan tersebut akan dihapus. Hubungkan ke internet dan coba lagi."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sumar breytingar á þessu tæki hafa ekki enn verið vistaðar í Tidex. Ef þú skiptir um aðgang núna verður þeim eytt. Tengstu internetinu og reyndu aftur."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alcune modifiche su questo dispositivo non sono ancora state salvate su Tidex. Se cambi account ora, verranno eliminate. Connettiti a Internet e riprova."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイス上の一部の変更は、まだTidexに保存されていません。今アカウントを切り替えると、それらは削除されます。インターネットに接続して、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기의 일부 변경 사항이 아직 Tidex에 저장되지 않았습니다. 지금 계정을 전환하면 삭제됩니다. 인터넷에 연결하고 다시 시도해 주세요."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kai kurie šiame įrenginyje atlikti pakeitimai dar neišsaugoti Tidex. Jei dabar perjungsite paskyrą, jie bus ištrinti. Prisijunkite prie interneto ir bandykite dar kartą."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dažas šajā ierīcē veiktās izmaiņas vēl nav saglabātas Tidex. Ja tagad pārslēgsiet kontu, tās tiks dzēstas. Izveidojiet savienojumu ar internetu un mēģiniet vēlreiz."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noen endringer på denne enheten er ikke lagret i Tidex ennå. Hvis du bytter konto nå, blir de slettet. Koble til internett og prøv igjen."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sommige wijzigingen op dit apparaat zijn nog niet opgeslagen in Tidex. Als je nu van account wisselt, worden ze verwijderd. Maak verbinding met internet en probeer het opnieuw."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nokre endringar på denne eininga er ikkje lagra i Tidex enno. Viss du byter konto no, blir dei sletta. Kople til internett og prøv igjen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niektóre zmiany na tym urządzeniu nie zostały jeszcze zapisane w Tidex. Jeśli przełączysz teraz konto, zostaną usunięte. Połącz się z internetem i spróbuj ponownie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Algumas alterações neste dispositivo ainda não foram salvas no Tidex. Se você trocar de conta agora, elas serão excluídas. Conecte-se à internet e tente novamente."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unele modificări de pe acest dispozitiv nu au fost încă salvate în Tidex. Dacă schimbi contul acum, vor fi șterse. Conectează-te la internet și încearcă din nou."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Некоторые изменения на этом устройстве ещё не сохранены в Tidex. Если вы сейчас смените аккаунт, они будут удалены. Подключитесь к интернету и повторите попытку."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niektoré zmeny v tomto zariadení ešte neboli uložené v Tidexe. Ak teraz prepnete účet, budú vymazané. Pripojte sa k internetu a skúste to znova."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nekatere spremembe na tej napravi še niso bile shranjene v Tidex. Če zdaj zamenjate račun, bodo izbrisane. Povežite se z internetom in poskusite znova."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neke promene na ovom uređaju još nisu sačuvane u Tidex-u. Ako sada promenite nalog, biće izbrisane. Povežite se na internet i pokušajte ponovo."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vissa ändringar på den här enheten har ännu inte sparats i Tidex. Om du byter konto nu raderas de. Anslut till internet och försök igen."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baadhi ya mabadiliko kwenye kifaa hiki bado hayajahifadhiwa kwenye Tidex. Ukibadilisha akaunti sasa, yatafutwa. Unganisha intaneti na ujaribu tena."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இந்தச் சாதனத்தில் செய்யப்பட்ட சில மாற்றங்கள் இன்னும் Tidex-ல் சேமிக்கப்படவில்லை. இப்போது கணக்கை மாற்றினால், அவை நீக்கப்படும். இணையத்துடன் இணைத்து மீண்டும் முயற்சிக்கவும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเปลี่ยนแปลงบางอย่างในอุปกรณ์นี้ยังไม่ได้บันทึกไปยัง Tidex หากคุณสลับบัญชีตอนนี้ การเปลี่ยนแปลงเหล่านั้นจะถูกลบ เชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu cihazdaki bazı değişiklikler henüz Tidex'e kaydedilmedi. Şimdi hesap değiştirirseniz silinecekler. İnternete bağlanıp tekrar deneyin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Деякі зміни на цьому пристрої ще не збережено в Tidex. Якщо ви зараз зміните обліковий запис, їх буде видалено. Підключіться до інтернету та спробуйте ще раз."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس ڈیوائس پر کچھ تبدیلیاں ابھی تک Tidex میں محفوظ نہیں ہوئی ہیں۔ اگر آپ ابھی اکاؤنٹ تبدیل کرتے ہیں تو وہ حذف ہو جائیں گی۔ انٹرنیٹ سے منسلک ہو کر دوبارہ کوشش کریں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Một số thay đổi trên thiết bị này vẫn chưa được lưu vào Tidex. Nếu chuyển tài khoản bây giờ, chúng sẽ bị xóa. Hãy kết nối Internet và thử lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此设备上的一些更改尚未保存到 Tidex。如果您现在切换账户，这些更改将被删除。请连接互联网后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此裝置上的部分變更尚未儲存至 Tidex。若您現在切換帳戶，這些變更將會遭到刪除。請連線至網際網路後再試一次。"
+          }
+        }
+      }
+    },
     "It disappears for both users. It stays visible here, dimmed." : {
       "shouldTranslate" : false
     },

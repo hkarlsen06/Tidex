@@ -60,6 +60,7 @@ struct MainTabView: View {
 
   // Screenshot share prompt state (presented as overlay to keep content visible)
   @State private var showScreenshotPrompt = false
+  @State private var stopImpersonationError: String?
 
   @State private var unreadFriendsCount = 0
   @State private var unreadRefreshTask: Task<Void, Never>?
@@ -125,8 +126,10 @@ struct MainTabView: View {
             targetName: impersonationManager.impersonatedUserName ?? "Unknown",
             expiresAt: impersonationManager.expiresAt,
             onStop: {
-              Task {
-                try? await impersonationManager.stopImpersonation()
+              do {
+                try await impersonationManager.stopImpersonation()
+              } catch {
+                stopImpersonationError = error.localizedDescription
               }
             }
           )
@@ -279,6 +282,17 @@ struct MainTabView: View {
           initialReportId: adminSheetInitialReportId
         )
       }
+    }
+    .alert(
+      String(localized: .commonError),
+      isPresented: Binding(
+        get: { stopImpersonationError != nil },
+        set: { if !$0 { stopImpersonationError = nil } }
+      )
+    ) {
+      Button(String(localized: .commonOk), role: .cancel) {}
+    } message: {
+      Text(stopImpersonationError ?? "")
     }
   }
 
@@ -538,7 +552,8 @@ private struct MonthPickerControls: View {
     .frame(maxWidth: .infinity)
     .padding(
       .horizontal,
-      isIPad ? MonthPickerLayout.horizontalPadding : MonthPickerLayout.tabBarAlignedHorizontalPadding
+      isIPad
+        ? MonthPickerLayout.horizontalPadding : MonthPickerLayout.tabBarAlignedHorizontalPadding
     )
     .padding(.bottom, MonthPickerLayout.bottomPadding)
   }
@@ -572,7 +587,9 @@ private struct MonthPickerControls: View {
     .accessibilityLabel(
       showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList)
     )
-    .accessibilityValue(monthContext.hasConflictsInMonth ? Text(.shiftsAccessibilityConflict) : Text(verbatim: ""))
+    .accessibilityValue(
+      monthContext.hasConflictsInMonth ? Text(.shiftsAccessibilityConflict) : Text(verbatim: "")
+    )
     .sensoryFeedback(.selection, trigger: showListView)
   }
 

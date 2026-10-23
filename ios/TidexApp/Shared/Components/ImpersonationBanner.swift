@@ -15,7 +15,7 @@ import SwiftUI
 struct ImpersonationBanner: View {
   let targetName: String
   let expiresAt: Date?
-  let onStop: () -> Void
+  let onStop: () async -> Void
 
   @State private var isLoading = false
   @ScaledMetric(relativeTo: .title2) private var iconSize: CGFloat = 24
@@ -52,7 +52,11 @@ struct ImpersonationBanner: View {
       // Stop button
       Button {
         isLoading = true
-        onStop()
+        Task {
+          await onStop()
+          // The banner stays when stopping fails, so the button works again.
+          isLoading = false
+        }
       } label: {
         if isLoading {
           ProgressView()

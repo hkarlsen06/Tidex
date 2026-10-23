@@ -1,3 +1,4 @@
+import ClerkKit
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable conditional_returns_on_newline cyclomatic_complexity discouraged_none_name
 // swiftlint:disable:next blanket_disable_command
@@ -13,7 +14,6 @@
 import Combine
 import Foundation
 import Observation
-import ClerkKit
 import UIKit
 import os
 
@@ -1014,16 +1014,30 @@ final class AppCoordinator {
     await performSignOut(global: true)
   }
 
-  /// Pushes local changes before a user-initiated sign-out.
-  /// - Returns: false when changes are still unsynced, so signing out would delete them.
+  /// Pushes local changes before a user-initiated sign-out or an impersonation switch.
+  /// - Returns: false when changes are still unsynced, so clearing the local store would
+  ///   delete them.
   func syncPendingChangesBeforeSignOut() async -> Bool {
     // Before the profile loads (terms) userId is nil, so use the stored session.
-    // An unknown user is not safe to wipe.
-    guard let userId = userIdForSignOutCheck() else { return false }
-    guard await hasPendingChanges(userId: userId) else { return true }
-    _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
-    await FriendsMessageOutbox.shared.drain(userId: userId)
-    return !(await hasPendingChanges(userId: userId))
+    await Self.pushPendingChanges(
+      userId: userIdForSignOutCheck(), store: LocalStore.shared.storeActor
+    ) { userId in
+      _ = await self.syncCoordinator.sync(reason: .manualRefresh, userId: userId)
+      await FriendsMessageOutbox.shared.drain(userId: userId)
+    }
+  }
+
+  /// Runs `push` when `userId` has unsynced changes in `store`.
+  /// - Returns: whether the store is safe to clear afterwards. An unknown user never is.
+  static func pushPendingChanges(
+    userId: String?,
+    store: LocalStoreActor,
+    push: (String) async -> Void
+  ) async -> Bool {
+    guard let userId else { return false }
+    guard await hasPendingChanges(userId: userId, in: store) else { return true }
+    await push(userId)
+    return !(await hasPendingChanges(userId: userId, in: store))
   }
 
   /// Sign out from a screen that can't ask what to do with unsynced changes (terms decline,
@@ -1058,8 +1072,12 @@ final class AppCoordinator {
   }
 
   private func hasPendingChanges(userId: String) async -> Bool {
+    await Self.hasPendingChanges(userId: userId, in: LocalStore.shared.storeActor)
+  }
+
+  private static func hasPendingChanges(userId: String, in store: LocalStoreActor) async -> Bool {
     // A failed read counts as pending so it never wipes by mistake.
-    (try? await LocalStore.shared.storeActor.hasPendingChanges(userId: userId)) ?? true
+    (try? await store.hasPendingChanges(userId: userId)) ?? true
   }
 
   /// The signed-in user's id when they have unsynced changes, otherwise nil.
@@ -1356,7 +1374,8 @@ final class AppCoordinator {
   // MARK: - Impersonation Support
 
   /// Prepare for user context switch (before an impersonation starts or ends)
-  /// Clears all cached data without signing out
+  /// Clears all cached data without signing out, unsynced changes included. Call
+  /// `syncPendingChangesBeforeSignOut()` first while the server still acts as the current user.
   /// Called by ImpersonationManager before it changes the impersonation on the server
   func prepareForUserSwitch() async {
     await clearAllCachedData()
