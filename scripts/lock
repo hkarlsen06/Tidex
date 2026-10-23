@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# Shared locks for agents working in parallel, such as the simulator lock. A
+# lock belongs to the worktree that took it, and only that worktree can release
+# it.
+#
+#   scripts/lock run <name> -- <command...>   wait for the lock, run, release
+#   scripts/lock acquire <name>               take it for a session of several commands
+#   scripts/lock release <name>               give back a lock this worktree took
+#   scripts/lock status                       list held locks
+#
+# The simulator lock is machine-wide, in /tmp/agent-locks (AGENT_SIMULATOR_LOCK_ROOT
+# overrides it), because agents from every repo on this Mac share the simulators.
+# Tidex and Paeonia each have a copy of this script, so keep the copies
+# compatible: the same lock path, owner line and stale rules. Every other lock
+# lives in this repo's git common dir, so all its worktrees see the same ones.
+#
+# `run` waits while another `run` holds the lock, even one in this worktree,
+# because several agents can share a worktree. A worktree's `acquire` session
+# lets its later commands in.
+#
+# A lock taken by `run` is stale once its process has exited. A lock taken by
+# `acquire` is stale after TIDEX_LOCK_TTL_MINUTES (default 45). A stale lock is
+# taken over with a message. Waiting gives up after TIDEX_LOCK_WAIT_MINUTES
+# (default 90).
+set -euo pipefail
+
+REPO_LOCK_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)/tidex-locks"
+SIMULATOR_LOCK_ROOT="${AGENT_SIMULATOR_LOCK_ROOT:-/tmp/agent-locks}"
+OWNER="$(git rev-parse --show-toplevel)"
+TTL_SECONDS=$(( ${TIDEX_LOCK_TTL_MINUTES:-45} * 60 ))
+WAIT_SECONDS=$(( ${TIDEX_LOCK_WAIT_MINUTES:-90} * 60 ))
+
+mkdir -p "$REPO_LOCK_ROOT" "$SIMULATOR_LOCK_ROOT"
+
+lock_dir() {
+  if [ "$1" = simulator ]; then
+    echo "$SIMULATOR_LOCK_ROOT/simulator"
+  else
+    echo "$REPO_LOCK_ROOT/$1"
+  fi
+}
+
+usage() {
+  sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//' >&2
+  exit 2
+}
+
+# Prints "owner|pid|started" for a held lock.
+read_lock() {
+  cat "$(lock_dir "$1")/owner" 2>/dev/null || echo "unknown||0"
+}
+
+describe() {
+  local owner pid started
+  IFS='|' read -r owner pid started <<<"$(read_lock "$1")"
+  local age=$(( ($(date +%s) - ${started:-0}) / 60 ))
+  if [ -n "$pid" ]; then
+    echo "$1: held by $owner (process $pid) for ${age} min"
+  else
+    echo "$1: held by $owner (session) for ${age} min"
+  fi
+}
+
+is_stale() {
+  # The taker writes the owner file right after mkdir. Until then, it is not stale.
+  [ -f "$(lock_dir "$1")/owner" ] || return 1
+  local owner pid started
+  IFS='|' read -r owner pid started <<<"$(read_lock "$1")"
+  if [ -n "$pid" ]; then
+    ! kill -0 "$pid" 2>/dev/null
+  else
+    [ $(( $(date +%s) - ${started:-0} )) -gt "$TTL_SECONDS" ]
+  fi
+}
+
+held_by_me() {
+  local owner
+  IFS='|' read -r owner _ _ <<<"$(read_lock "$1")"
+  [ "$owner" = "$OWNER" ]
+}
+
+# Several agents can share one worktree, so a lock that another `run` in this
+# worktree holds is not ours to enter. Only an `acquire` session is.
+session_held_by_me() {
+  local owner pid
+  IFS='|' read -r owner pid _ <<<"$(read_lock "$1")"
+  [ "$owner" = "$OWNER" ] && [ -z "$pid" ]
+}
+
+# take <name> <pid or empty>. Returns 0 when it took the lock, 3 when this
+# worktree already holds it through `acquire`.
+take() {
+  local name="$1" pid="$2" waited=0 dir
+  dir="$(lock_dir "$1")"
+  while true; do
+    if mkdir "$dir" 2>/dev/null; then
+      echo "$OWNER|$pid|$(date +%s)" >"$dir/owner"
+      return 0
+    fi
+    if session_held_by_me "$name"; then
+      return 3
+    fi
+    if is_stale "$name"; then
+      echo "[lock] taking over a stale lock. $(describe "$name")" >&2
+      rm -rf "$dir"
+      continue
+    fi
+    if [ "$waited" -ge "$WAIT_SECONDS" ]; then
+      echo "[lock] gave up waiting. $(describe "$name")" >&2
+      exit 1
+    fi
+    if [ $(( waited % 60 )) -eq 0 ]; then
+      echo "[lock] waiting. $(describe "$name")" >&2
+    fi
+    sleep 5
+    waited=$(( waited + 5 ))
+  done
+}
+
+release() {
+  local name="$1" dir
+  dir="$(lock_dir "$1")"
+  [ -d "$dir" ] || return 0
+  if held_by_me "$name"; then
+    rm -rf "$dir"
+  else
+    echo "[lock] not releasing a lock this worktree does not hold. $(describe "$name")" >&2
+    return 1
+  fi
+}
+
+case "${1:-}" in
+  run)
+    [ $# -ge 4 ] && [ "$3" = "--" ] || usage
+    name="$2"
+    shift 3
+    status=0
+    take "$name" "$$" || status=$?
+    if [ "$status" -eq 0 ]; then
+      trap 'release "$name"' EXIT
+    elif [ "$status" -ne 3 ]; then
+      exit "$status"
+    fi
+    "$@"
+    ;;
+  acquire)
+    [ $# -eq 2 ] || usage
+    status=0
+    take "$2" "" || status=$?
+    [ "$status" -eq 0 ] || [ "$status" -eq 3 ] || exit "$status"
+    echo "[lock] $2 is held by this worktree. Release it with: scripts/lock release $2" >&2
+    ;;
+  release)
+    [ $# -eq 2 ] || usage
+    release "$2"
+    ;;
+  status)
+    found=0
+    # A simulator lock in the repo's own lock dir is left from before the
+    # simulator lock became machine-wide, so it is not listed.
+    for dir in "$REPO_LOCK_ROOT"/*/ "$SIMULATOR_LOCK_ROOT"/simulator/; do
+      [ -d "$dir" ] || continue
+      name="$(basename "$dir")"
+      [ "$dir" != "$REPO_LOCK_ROOT/simulator/" ] || continue
+      found=1
+      if is_stale "$name"; then
+        echo "$(describe "$name") (stale)"
+      else
+        describe "$name"
+      fi
+    done
+    [ "$found" -eq 1 ] || echo "no locks held"
+    ;;
+  *)
+    usage
+    ;;
+esac

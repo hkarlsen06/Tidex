@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Agents in every worktree and repo on this Mac share the simulators, so a run on
+# a simulator holds the machine-wide simulator lock (scripts/lock) from start to
+# end. It takes that lock before the xcodebuild lock. A worktree that took it
+# with `scripts/lock acquire simulator` runs straight away. A run on a physical
+# device (platform=iOS) skips the lock. Without XCODE_TEST_AGENT_DESTINATION the
+# run uses the Tidex Tests simulator, so it takes the lock.
+if [ -z "${TIDEX_SIMULATOR_LOCK_HELD:-}" ]; then
+  destination_spec=",${XCODE_TEST_AGENT_DESTINATION:-},"
+  case "${destination_spec//, /,}" in
+    *",platform=iOS,"*) ;;
+    *) TIDEX_SIMULATOR_LOCK_HELD=1 exec "$(dirname "$0")/lock" run simulator -- "$0" "$@" ;;
+  esac
+fi
+
 MODE="text"
 EXTRA_ARGS=()
 
@@ -102,8 +116,8 @@ stop_heartbeat() {
 # xcodebuild then attaches to that launch, which has no XCTest injection, and
 # fails with "test runner hung before establishing connection" or "failed to
 # launch no.tidex.app". So every run on a simulator first uninstalls Tidex there.
-# The reset runs under the xcodebuild lock because the simulator may be shared
-# with other agents' runs.
+# The reset runs under the simulator lock, which every agent on this Mac takes
+# before it drives a simulator.
 TEST_SIMULATOR_NAME="Tidex Tests"
 TEST_SIMULATOR_UDID=""
 SHUTDOWN_TEST_SIMULATOR=0
