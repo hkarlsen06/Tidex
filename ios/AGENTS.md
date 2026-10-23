@@ -10,7 +10,7 @@ Run commands from the repository root unless explicitly stated otherwise.
 
 When running verification or diagnostic commands, prefer flags that reduce non-actionable output and preserve useful diagnostics. Examples: use `swiftlint --quiet` for fast Swift checks, use `--json` on repository build/test wrappers when you need structured diagnostics, and use focused test filters where possible. Avoid verbose command modes unless the extra output is needed to debug the issue.
 
-Do not build or run tests unless the user asks or the root AGENTS.md exception applies; the user runs them in Xcode. When asked, use [the verification guide](docs/AGENT_VERIFICATION.md). Use the existing wrappers, investigate failures within scope, and do not bypass a hung wrapper with raw xcodebuild; report a concrete blocker if it cannot be resolved.
+Build and run tests yourself to prove each change, as [the verification guide](docs/AGENT_VERIFICATION.md) describes. Use the existing wrappers, investigate failures within scope, and do not bypass a hung wrapper with raw xcodebuild; report a concrete blocker if it cannot be resolved.
 
 ## Where things live
 
@@ -52,7 +52,7 @@ The current service layer uses `.rpc(...)` and `supabase.functions.invoke(...)`;
 - `TidexAppUITests` holds the end-to-end journeys. Launch with `-ui-testing` and `TIDEX_UI_TEST_SCENARIO=app-store-screenshots` to get the real `MainTabView` on an in-memory store that `AppStoreScreenshotFixture` seeds, with Supabase pointed at an unreachable address. `design-review` opens single screens (`TIDEX_DESIGN_SCREEN`), and `friends-chat` opens a thread with the real repository and a fake service. The fixture seeds shifts in the current month, so derive dates from today. A month name written into a test breaks the next month.
 - `TidexAppTests` holds the integration tests and the unit layer. `TestSupport/TestFixtures.swift` builds wage snapshots, shifts, jobs and computed shifts.
 
-Handoff: name any test you added and the rule that called for it, confirm new test files have `project.pbxproj` entries (see "Project file"), run `swiftlint --quiet`, and list in one or two lines what the user should run or check.
+Handoff: name any test you added and the rule that called for it, confirm new test files have `project.pbxproj` entries (see "Project file"), run `swiftlint --quiet` and the tests that cover the change, and report what you ran and the result.
 
 ## Localization
 
