@@ -80,7 +80,7 @@ const asSnapshot = (w: Doc<"wage_snapshots">): Snapshot => ({
   created_at: w.created_at,
   tax_enabled: w.tax_enabled ?? false,
   tax_percentage: numberValue(w.tax_percentage),
-  break_enabled: w.break_enabled ?? false,
+  break_enabled: w.break_enabled ?? true,
   break_method: w.break_method ?? "proportional",
   break_threshold_hours: numberValue(w.break_threshold_hours, 5.5),
   break_deduction_minutes: numberValue(w.break_deduction_minutes, 30),
