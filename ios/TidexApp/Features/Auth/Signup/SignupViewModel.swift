@@ -242,6 +242,8 @@ final class SignupViewModel {
 
   /// Sign up with Apple
   func signUpWithApple() async {
+    // Before Apple's sheet, so the GoTrue exchange can't sign in the old account meanwhile.
+    LegacySessionExchange.manualSignInDidStart()
     clearMessages()
     fieldErrors.clear()
 
