@@ -4,7 +4,8 @@
 # it.
 #
 #   scripts/lock run <name> -- <command...>   wait for the lock, run, release
-#   scripts/lock acquire <name>               take it for a session of several commands
+#   scripts/lock acquire <name>               take it for a session of several commands,
+#                                              or renew a session this worktree holds
 #   scripts/lock release <name>               give back a lock this worktree took
 #   scripts/lock status                       list held locks
 #
@@ -41,7 +42,7 @@ lock_dir() {
 }
 
 usage() {
-  sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -148,6 +149,8 @@ case "${1:-}" in
     status=0
     take "$2" "" || status=$?
     [ "$status" -eq 0 ] || [ "$status" -eq 3 ] || exit "$status"
+    # Taking it again renews the session, so a long session can stay ahead of the TTL.
+    [ "$status" -eq 3 ] && echo "$OWNER||$(date +%s)" >"$(lock_dir "$2")/owner"
     echo "[lock] $2 is held by this worktree. Release it with: scripts/lock release $2" >&2
     ;;
   release)
