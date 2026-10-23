@@ -198,6 +198,12 @@ internal final class SyncPushMergeTests: XCTestCase {
       SyncCoordinator.isRowRejection(ConvexAPI.Failure.server(code: nil, message: "Server Error")))
     XCTAssertFalse(SyncCoordinator.isRowRejection(URLError(.timedOut)))
     XCTAssertFalse(SyncCoordinator.isRowRejection(CancellationError()))
+    // A sync that outlived an account switch sends the old user's row with the new user's
+    // token, and the server refuses it with `wrong_user`. The row belongs to the old user and
+    // must stay queued for them, not become a conflict that can end with the row dropped.
+    let wrongUser = ConvexAPI.Failure.server(code: "wrong_user", message: "Wrong user")
+    XCTAssertFalse(SyncCoordinator.isRowRejection(wrongUser))
+    XCTAssertTrue(SyncCoordinator.isWrongUser(wrongUser))
   }
 
   // MARK: - C: merging a newer server row into a dirty row

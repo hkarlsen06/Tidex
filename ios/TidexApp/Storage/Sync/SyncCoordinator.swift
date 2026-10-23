@@ -136,11 +136,18 @@ final class SyncCoordinator: @unchecked Sendable {
   private let localeSendLock = NSLock()
   @ObservationIgnored private var isSendingLocale = false
 
+  /// The work of the running sync. `resetForUserChange` cancels it, so a sync for the user who
+  /// signed out stops at its next request instead of sending their rows with the next user's
+  /// token. Guarded by `runningWorkLock`.
+  private let runningWorkLock = NSLock()
+  @ObservationIgnored private var runningWork: Task<SyncResult, Never>?
+
   private init() {}
 
   /// Reset sync state when user changes (e.g., sign out)
   /// Clears the interval guard so the next user's initial sync isn't blocked
   func resetForUserChange() async {
+    runningWorkLock.withLock { runningWork }?.cancel()
     await stateStore.reset()
     await MainActor.run {
       isSyncing = false
@@ -370,13 +377,26 @@ final class SyncCoordinator: @unchecked Sendable {
     // swiftlint:disable:next closure_body_length
     let result: SyncResult = await withTaskGroup(of: SyncResult?.self) { group in
       group.addTask {
-        await self.performSyncWork(
-          reason: reason,
-          userId: userId,
-          startTime: startTime,
-          tables: uniqueTables,
-          updateWidgetStorage: updateWidgetStorage
-        )
+        let work = Task {
+          await self.performSyncWork(
+            reason: reason,
+            userId: userId,
+            startTime: startTime,
+            tables: uniqueTables,
+            updateWidgetStorage: updateWidgetStorage
+          )
+        }
+        self.runningWorkLock.withLock { self.runningWork = work }
+        defer {
+          self.runningWorkLock.withLock {
+            if self.runningWork == work { self.runningWork = nil }
+          }
+        }
+        return await withTaskCancellationHandler {
+          await work.value
+        } onCancel: {
+          work.cancel()
+        }
       }
       group.addTask {
         try? await Task.sleep(nanoseconds: Self.syncTimeout)
@@ -551,7 +571,7 @@ final class SyncCoordinator: @unchecked Sendable {
   /// which are network errors and cancellation. For any other error the row is skipped and stays
   /// dirty, so the next sync retries it.
   private func skipRowUnlessFatal(_ error: Error, table: SyncTable, id: String) async throws {
-    if Self.isCancellation(error) { throw error }
+    if Self.isCancellation(error) || Self.isWrongUser(error) { throw error }
     if await Self.isNetworkError(error) { throw error }
     logger.error(
       "Skipping push of \(table.displayName) row \(id.prefix(8)): \(error.localizedDescription)")
@@ -626,6 +646,7 @@ final class SyncCoordinator: @unchecked Sendable {
             if Self.isCancellation(error) { throw error }
             logger.error("Push of \(table.displayName) failed: \(error.localizedDescription)")
             if pushError == nil { pushError = error }
+            if Self.isWrongUser(error) { break }
             if await Self.isNetworkError(error) { break }
           }
           await Task.yield()
@@ -1988,7 +2009,7 @@ final class SyncCoordinator: @unchecked Sendable {
     let baseline = SyncPushBaseline(adjustment)
     let insertData = payrollAdjustmentPayload(adjustment, includeIdentity: true, userId: userId)
     let outcome: SyncInsertOutcome<SyncPayrollAdjustmentRow> = try await SyncConvex.insert(
-      .payrollAdjustments, row: insertData)
+      .payrollAdjustments, owner: adjustment.userId, row: insertData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -2772,7 +2793,7 @@ final class SyncCoordinator: @unchecked Sendable {
     insertData.merge(optionalColumns.compactMapValues { $0 }) { _, new in new }
 
     let outcome: SyncInsertOutcome<SyncJobRow> = try await SyncConvex.insert(
-      .jobs, row: insertData)
+      .jobs, owner: job.userId, row: insertData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -3181,7 +3202,7 @@ final class SyncCoordinator: @unchecked Sendable {
     }
 
     let outcome: SyncInsertOutcome<SyncShiftRow> = try await SyncConvex.insert(
-      .userShifts, row: insertData)
+      .userShifts, owner: shift.userId, row: insertData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -3573,7 +3594,7 @@ final class SyncCoordinator: @unchecked Sendable {
     }
 
     let outcome: SyncInsertOutcome<SyncEventRow> = try await SyncConvex.insert(
-      .events, row: insertData)
+      .events, owner: event.userId, row: insertData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -4021,7 +4042,7 @@ final class SyncCoordinator: @unchecked Sendable {
     }
 
     let outcome: SyncInsertOutcome<SyncRecurringShiftRow> = try await SyncConvex.insert(
-      .recurringShifts, row: insertData)
+      .recurringShifts, owner: shift.userId, row: insertData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -4429,7 +4450,7 @@ final class SyncCoordinator: @unchecked Sendable {
     }
 
     let outcome: SyncInsertOutcome<SyncWageSnapshotRow> = try await SyncConvex.insert(
-      .wageSnapshots, row: insertData)
+      .wageSnapshots, owner: snapshot.userId, row: insertData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -4717,7 +4738,7 @@ final class SyncCoordinator: @unchecked Sendable {
     }
 
     let outcome: SyncInsertOutcome<SyncUserSettingsRow> = try await SyncConvex.insert(
-      .userSettings, row: insertData)
+      .userSettings, owner: settings.userId, row: insertData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -5297,7 +5318,14 @@ final class SyncCoordinator: @unchecked Sendable {
     guard let failure = error as? ConvexAPI.Failure, case .server(let code, _) = failure else {
       return false
     }
-    return code != nil
+    return code != nil && !isWrongUser(error)
+  }
+
+  /// Whether the server refused a row because it belongs to another user than the one signed in,
+  /// as when this sync started before an account switch. The row is fine and stays queued for
+  /// its owner, so the sync stops without touching it.
+  static func isWrongUser(_ error: Error) -> Bool {
+    (error as? ConvexAPI.Failure)?.code == "wrong_user"
   }
 
   private enum ApplyResult {

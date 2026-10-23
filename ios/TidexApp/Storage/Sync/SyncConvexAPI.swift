@@ -66,7 +66,13 @@ internal enum SyncConvex {
   }
 
   private struct InsertArgs: Encodable, Sendable {
+    let expectedUserId: String
     let row: [String: AnyJSON]
+
+    enum CodingKeys: String, CodingKey {
+      case row
+      case expectedUserId = "expected_user_id"
+    }
   }
 
   /// `id` is nil for `user_settings`, which is keyed by the user.
@@ -128,12 +134,15 @@ internal enum SyncConvex {
   }
 
   /// Convex rejects `null` for an optional field, so a nil value leaves its key out.
+  /// `owner` is the user id of the local row. The server refuses the insert with `wrong_user`
+  /// when someone else is signed in, so a row queued by one account never lands in another's.
   static func insert<Row: Decodable>(
-    _ table: SyncTable, row: [String: AnyJSON]
+    _ table: SyncTable, owner: String, row: [String: AnyJSON]
   ) async throws -> SyncInsertOutcome<Row> {
     let sent = row.filter { isSent($0.key) && $0.value != .null }
     let reply: WriteReply<Row> = try await ConvexAPI.app.mutation(
-      "\(table.convexModule):insert", InsertArgs(row: sent))
+      "\(table.convexModule):insert",
+      InsertArgs(expectedUserId: owner.lowercased(), row: sent))
     switch (reply.status, reply.row) {
     case ("ok", .some(let saved)): return .ok(saved)
     case ("exists", .some(let existing)): return .exists(existing)
