@@ -123,28 +123,29 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     let store = SyncStateStore()
 
     let first = await store.beginSync(reason: .foreground, userId: userId, minimumSyncInterval: 60)
-    XCTAssertEqual(first, .started)
-    _ = await store.endSync(success: false)
+    XCTAssertEqual(first, .started(generation: 0))
+    _ = await store.endSync(success: false, generation: 0)
 
     let second = await store.beginSync(
       reason: .foreground, userId: userId, minimumSyncInterval: 60)
-    XCTAssertEqual(second, .started, "A failed sync must not suppress the next foreground sync")
+    XCTAssertEqual(
+      second, .started(generation: 0), "A failed sync must not suppress the next foreground sync")
   }
 
   internal func testSuccessfulSyncKeepsIntervalGuard() async {
     let store = SyncStateStore()
 
     _ = await store.beginSync(reason: .foreground, userId: userId, minimumSyncInterval: 60)
-    _ = await store.endSync(success: true)
+    _ = await store.endSync(success: true, generation: 0)
 
     let foreground = await store.beginSync(
       reason: .foreground, userId: userId, minimumSyncInterval: 60)
     XCTAssertEqual(foreground, .skippedInterval)
-    _ = await store.endSync(success: true)
+    _ = await store.endSync(success: true, generation: 0)
 
     let manual = await store.beginSync(
       reason: .manualRefresh, userId: userId, minimumSyncInterval: 60)
-    XCTAssertEqual(manual, .started, "A manual refresh ignores the interval guard")
+    XCTAssertEqual(manual, .started(generation: 0), "A manual refresh ignores the interval guard")
   }
 
   internal func testSecondSyncCannotStartWhileOneRuns() async {
@@ -154,10 +155,33 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     let second = await store.beginSync(
       reason: .localChange, userId: userId, minimumSyncInterval: 60)
 
-    XCTAssertEqual(first, .started)
+    XCTAssertEqual(first, .started(generation: 0))
     XCTAssertEqual(second, .alreadySyncing)
-    let followUp = await store.endSync(success: true)
-    XCTAssertTrue(followUp, "A local change during a sync queues a follow-up sync")
+    let followUp = await store.endSync(success: true, generation: 0)
+    XCTAssertEqual(followUp, true, "A local change during a sync queues a follow-up sync")
+  }
+
+  /// An account switch resets the store while the old user's sync is still winding down. When
+  /// that sync ends, the new user's sync must keep running, so a second one can't start beside it.
+  internal func testSyncFromBeforeResetDoesNotEndTheNextUsersSync() async {
+    let store = SyncStateStore()
+
+    let oldUserSync = await store.beginSync(
+      reason: .foreground, userId: userId, minimumSyncInterval: 60)
+    await store.reset()
+    let newUserSync = await store.beginSync(
+      reason: .appLaunch, userId: "other-user", minimumSyncInterval: 60)
+    XCTAssertEqual(oldUserSync, .started(generation: 0))
+    XCTAssertEqual(newUserSync, .started(generation: 1))
+
+    let staleEnd = await store.endSync(success: false, generation: 0)
+    XCTAssertNil(staleEnd)
+    let overlapping = await store.beginSync(
+      reason: .foreground, userId: "other-user", minimumSyncInterval: 60)
+    XCTAssertEqual(overlapping, .alreadySyncing, "The new user's sync is still running")
+
+    let end = await store.endSync(success: true, generation: 1)
+    XCTAssertNotNil(end, "The new user's own sync ends normally")
   }
 
   // MARK: - Sign-out guard

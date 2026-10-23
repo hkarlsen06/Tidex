@@ -17,8 +17,9 @@ internal enum SyncState {
   case syncing(userId: String, startedAt: Date)
 }
 
-internal enum SyncStartDecision {
-  case started
+internal enum SyncStartDecision: Equatable {
+  /// The sync may run. It passes `generation` back to `endSync`.
+  case started(generation: Int)
   case alreadySyncing
   case skippedInterval
 }
@@ -27,6 +28,9 @@ internal actor SyncStateStore {
   private var syncState: SyncState = .idle
   private var lastAutoSyncAt: Date?
   private var needsFollowUpSync = false
+  /// Goes up on every reset. A sync that started before the last reset ran for the previous
+  /// user, and its `endSync` must not end the sync of the user signed in now.
+  private var generation = 0
 
   internal func beginSync(reason: SyncReason, userId: String, minimumSyncInterval: TimeInterval)
     -> SyncStartDecision
@@ -54,12 +58,14 @@ internal actor SyncStateStore {
     // The interval guard starts when a sync succeeds (see endSync). The syncing state above
     // already stops two syncs from starting at once.
     syncState = .syncing(userId: userId, startedAt: Date())
-    return .started
+    return .started(generation: generation)
   }
 
   /// Ends the running sync and returns whether a coalesced follow-up sync is due.
   /// A failed sync clears the interval guard so the next foreground sync can retry at once.
-  internal func endSync(success: Bool) -> Bool {
+  /// Returns nil and changes nothing when `generation` is from before the last reset.
+  internal func endSync(success: Bool, generation: Int) -> Bool? {
+    guard generation == self.generation else { return nil }
     syncState = .idle
     lastAutoSyncAt = success ? Date() : nil
     let shouldRunFollowUp = needsFollowUpSync
@@ -68,6 +74,7 @@ internal actor SyncStateStore {
   }
 
   internal func reset() {
+    generation += 1
     syncState = .idle
     lastAutoSyncAt = nil
     needsFollowUpSync = false
@@ -314,6 +321,7 @@ final class SyncCoordinator: @unchecked Sendable {
       break syncStartLoop
     }
 
+    let generation: Int
     switch decision {
     case .alreadySyncing:
       logger.info("Sync already in progress, skipping \(reason.rawValue)")
@@ -350,8 +358,8 @@ final class SyncCoordinator: @unchecked Sendable {
         error: nil
       )
 
-    case .started:
-      break
+    case .started(let started):
+      generation = started
     }
 
     let startTime = Date()
@@ -431,6 +439,13 @@ final class SyncCoordinator: @unchecked Sendable {
         )
     }
 
+    // resetForUserChange ran during this sync, so it belongs to the previous user. The state and
+    // the status shown now are the next user's.
+    guard
+      let needsFollowUpSync = await stateStore.endSync(
+        success: result.success, generation: generation)
+    else { return result }
+
     if result.error == "Sync timed out" {
       logger.error("Sync timed out after 30s, cancelling")
       await MainActor.run {
@@ -439,7 +454,6 @@ final class SyncCoordinator: @unchecked Sendable {
       }
     }
 
-    let needsFollowUpSync = await stateStore.endSync(success: result.success)
     await MainActor.run {
       isSyncing = false
     }
