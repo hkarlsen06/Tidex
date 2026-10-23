@@ -237,6 +237,33 @@ final class FriendsMessageOutboxTests: XCTestCase {
         FriendsMessagingServiceError.httpError(statusCode: 500, message: nil)))
   }
 
+  // MARK: - Inbox refresh
+
+  func testInboxRefreshKeepsThreadWithQueuedMessage() async throws {
+    let repository = try makeRepository()
+    await repository.saveThreads(
+      [makeThread(id: "thread-a"), makeThread(id: "thread-b")], for: viewerId, isWholeInbox: true)
+    await queue(makeMessage(id: "local-b1", threadId: "thread-b", second: 1), in: repository)
+
+    // The server's inbox doesn't list thread-b, for example because it was hidden on another
+    // device. The message queued in it offline must survive until it is sent.
+    await repository.saveThreads([makeThread(id: "thread-a")], for: viewerId, isWholeInbox: true)
+
+    XCTAssertNotNil(repository.getThread(id: "thread-b", viewerUserId: viewerId))
+    XCTAssertEqual(repository.getQueuedMessages(viewerUserId: viewerId).map(\.id), ["local-b1"])
+  }
+
+  func testPartialInboxPageKeepsOlderThreads() async throws {
+    let repository = try makeRepository()
+    await repository.saveThreads(
+      [makeThread(id: "thread-a"), makeThread(id: "thread-old")], for: viewerId, isWholeInbox: true)
+
+    // A first page of a long inbox leaves out the older threads. They are still there.
+    await repository.saveThreads([makeThread(id: "thread-a")], for: viewerId, isWholeInbox: false)
+
+    XCTAssertNotNil(repository.getThread(id: "thread-old", viewerUserId: viewerId))
+  }
+
   // MARK: - Helpers
 
   private func makeOutbox(
@@ -265,6 +292,28 @@ final class FriendsMessageOutboxTests: XCTestCase {
       realtimeCoordinator: FriendsMessagingRealtimeCoordinator(
         service: service, repository: repository),
       outbox: outbox
+    )
+  }
+
+  private func makeThread(id: String) -> FriendThread {
+    FriendThread(
+      id: id,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: "friend-\(id)",
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: nil,
+      lastMessageSenderId: nil,
+      lastMessageAt: nil,
+      lastMessageBody: nil,
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
     )
   }
 

@@ -10,7 +10,7 @@ protocol FriendsMessagesRepositoryProviding: AnyObject {
   func getMessage(id: String, viewerUserId: String) -> FriendMessage?
   func getMessagingSyncState(viewerUserId: String, scope: FriendMessagingSyncScope) async
     -> FriendMessagingSyncState?
-  func saveThreads(_ threads: [FriendThread], for viewerUserId: String) async
+  func saveThreads(_ threads: [FriendThread], for viewerUserId: String, isWholeInbox: Bool) async
   func saveThread(_ thread: FriendThread, for viewerUserId: String) async
   func saveThread(from snapshot: FriendThreadSyncSnapshot, for viewerUserId: String) async
   func saveMessages(_ messages: [FriendMessage], in threadId: String, for viewerUserId: String)
@@ -270,9 +270,12 @@ final class FriendsMessagesRepository {
 // MARK: - Writes
 
 extension FriendsMessagesRepository {
-  func saveThreads(_ threads: [FriendThread], for viewerUserId: String) async {
+  /// `isWholeInbox` is true when `threads` is every thread the viewer has. Only then are stored
+  /// threads missing from it deleted.
+  func saveThreads(_ threads: [FriendThread], for viewerUserId: String, isWholeInbox: Bool) async {
     do {
-      try await storeActor.saveThreadSummaries(threads, for: viewerUserId)
+      try await storeActor.saveThreadSummaries(
+        threads, for: viewerUserId, isWholeInbox: isWholeInbox)
       logger.info("Saved \(threads.count) threads for viewer")
     } catch {
       logger.error("Failed to save threads: \(error.localizedDescription)")

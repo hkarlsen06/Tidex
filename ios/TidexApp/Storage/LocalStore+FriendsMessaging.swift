@@ -204,8 +204,13 @@ extension LocalStoreActor {
     try modelContext.save()
   }
 
-  func saveThreadSummaries(_ threads: [FriendThread], for viewerUserId: String) throws {
-    try reconcileMissingThreads(keeping: threads.map(\.id), for: viewerUserId)
+  func saveThreadSummaries(
+    _ threads: [FriendThread], for viewerUserId: String, isWholeInbox: Bool
+  ) throws {
+    // A page of the inbox doesn't name the older threads, so they stay.
+    if isWholeInbox {
+      try reconcileMissingThreads(keeping: threads.map(\.id), for: viewerUserId)
+    }
     for thread in threads {
       try saveThreadSummary(thread, for: viewerUserId)
     }
@@ -1085,7 +1090,15 @@ extension LocalStoreActor {
     let descriptor = FetchDescriptor<LocalThread>(
       predicate: #Predicate { $0.viewerUserId == viewerUserId }
     )
-    let idsToKeep = Set(threadIds)
+    // Deleting a thread deletes its messages. A message that is still queued or failed exists only
+    // on this device, so its thread stays until the message is sent or the user deletes it.
+    let unsentDescriptor = FetchDescriptor<LocalMessage>(
+      predicate: #Predicate { message in
+        message.viewerUserId == viewerUserId
+          && (message.sendStateRaw == "sending" || message.sendStateRaw == "failed")
+      }
+    )
+    let idsToKeep = Set(threadIds).union(try modelContext.fetch(unsentDescriptor).map(\.threadId))
 
     for existingThread in try modelContext.fetch(descriptor)
     where !idsToKeep.contains(existingThread.id) {

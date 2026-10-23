@@ -436,7 +436,8 @@ final class FriendsMessagingRealtimeCoordinator {
 
     // Don't write the previous user's inbox back after sign-out or a user switch.
     guard authenticatedViewerUserId == viewerUserId else { return }
-    await repository.saveThreads(snapshot.threads, for: viewerUserId)
+    await repository.saveThreads(
+      snapshot.threads, for: viewerUserId, isWholeInbox: !snapshot.hasMore)
     NotificationCenter.default.post(name: .friendsThreadDidUpdate, object: nil)
   }
 
