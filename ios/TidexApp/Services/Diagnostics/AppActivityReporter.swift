@@ -10,7 +10,8 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "AppActivityRe
 /// device and settings sent here, and the admin home charts count the opens.
 @MainActor
 enum AppActivityReporter {
-  static func record() async {
+  /// `signedIn` also sets the admin "Last sign-in" time. Pass it right after a sign-in.
+  static func record(signedIn: Bool = false) async {
     let info = Bundle.main.infoDictionary
     let notificationStatus = await UNUserNotificationCenter.current().notificationSettings()
       .authorizationStatus
@@ -30,6 +31,9 @@ enum AppActivityReporter {
       "text_size": .string(textSizeCode(UIApplication.shared.preferredContentSizeCategory)),
       "reduce_motion": .bool(UIAccessibility.isReduceMotionEnabled),
     ]
+    if signedIn {
+      params["signed_in"] = .bool(true)
+    }
     if let version = info?["CFBundleShortVersionString"] as? String {
       params["app_version"] = .string(version)
     }

@@ -334,6 +334,10 @@ final class AppCoordinator {
           // Skip if already authenticated or in terms flow to prevent duplicate checks
           guard appState != .authenticated, appState != .termsRequired else { break }
           await checkSignInAndUpdateState()
+          // The foreground before the sign-in found nobody to record.
+          if appState == .authenticated || appState == .termsRequired {
+            Task { await AppActivityReporter.record(signedIn: true) }
+          }
 
         case .signedOut, .accountDeleted, .sessionChanged(_, .none):
           handleSignedOutEvent()

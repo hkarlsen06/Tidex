@@ -6,7 +6,10 @@ const osloDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Oslo" });
 
 const cut = (value: string | undefined, max: number) => value?.slice(0, max);
 
-/** Port of record_app_activity. The app calls it each time it comes to the foreground. */
+/**
+ * Port of record_app_activity. The app calls it each time it comes to the foreground, and
+ * right after a sign-in with `signed_in`, which GoTrue's last_sign_in_at used to cover.
+ */
 export const record = mutation({
   args: {
     app_version: v.optional(v.string()),
@@ -22,6 +25,7 @@ export const record = mutation({
     appearance: v.optional(v.string()),
     text_size: v.optional(v.string()),
     reduce_motion: v.optional(v.boolean()),
+    signed_in: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { user, impersonationSessionId } = await requireViewer(ctx);
@@ -30,6 +34,8 @@ export const record = mutation({
 
     const now = new Date();
     const nowIso = now.toISOString();
+    // Only admin screens read it, so the app needs no new revision.
+    if (args.signed_in === true) await ctx.db.patch(user._id, { last_sign_in_at: nowIso });
     const hour = new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000).toISOString();
     const seenThisHour = await ctx.db
       .query("app_activity_hours")
