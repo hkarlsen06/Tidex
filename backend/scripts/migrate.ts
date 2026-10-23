@@ -11,7 +11,12 @@
 // .env.production is convex.tidex.no). It reads Postgres and Storage over `ssh one-s`
 // and never writes to them. It replaces every Convex table and file, so run it only
 // before cutover or during it. Reruns are safe: Clerk users are found by external_id
-// and updated instead of created again.
+// and updated instead of created again, and their addresses are set to the proven ones.
+//
+// Without --clerk-only, a rerun also deletes the Clerk users whose external_id names a
+// Supabase user that no longer exists. It stops before deleting anything when more than
+// 20 would go, unless --allow-clerk-deletes <n> allows that many. Clerk users without an
+// external_id signed up on N+1, and the script never touches them.
 
 import { readFileSync } from "node:fs";
 import schema from "../convex/schema";
@@ -25,6 +30,10 @@ const ENV_FILE = flag("--env-file") ?? ".env.local";
 const CLERK_ENV = flag("--clerk-env");
 const SKIP_CLERK = args.includes("--skip-clerk");
 const CLERK_ONLY = flag("--clerk-only")?.split(",");
+const ALLOW_CLERK_DELETES = Number(flag("--allow-clerk-deletes") ?? 20);
+if (!Number.isInteger(ALLOW_CLERK_DELETES) || ALLOW_CLERK_DELETES < 0) {
+  throw new Error("--allow-clerk-deletes takes a whole number");
+}
 const WORK = `/tmp/tidex-migration-${Date.now()}`;
 
 const log = (...m: unknown[]) => console.log(new Date().toISOString().slice(11, 19), ...m);
@@ -146,8 +155,63 @@ async function clerk(method: string, path: string, body?: object): Promise<any> 
     return clerk(method, path, body);
   }
   const data = await res.json();
-  if (!res.ok) throw new Error(`Clerk ${method} ${path}: ${res.status} ${JSON.stringify(data).slice(0, 300)}`);
+  if (!res.ok) {
+    const error = new Error(`Clerk ${method} ${path}: ${res.status} ${JSON.stringify(data).slice(0, 300)}`);
+    throw Object.assign(error, { status: res.status });
+  }
   return data;
+}
+
+/** True when Clerk answered with a 4xx, such as an address another Clerk user still holds. */
+const clerkRefused = (error: unknown) => {
+  const status = (error as { status?: number }).status;
+  return status !== undefined && status >= 400 && status < 500;
+};
+
+type ClerkEmail = {
+  id: string;
+  email_address: string;
+  verification: { status: string } | null;
+  /** The Google or Apple sign-ins (type oauth_<provider>) that use this address. */
+  linked_to: { type: string; id: string }[];
+};
+type ClerkUser = {
+  id: string;
+  external_id: string | null;
+  primary_email_address_id: string | null;
+  email_addresses: ClerkEmail[];
+};
+
+/** Every Clerk user, oldest first. */
+async function allClerkUsers(): Promise<ClerkUser[]> {
+  const users: ClerkUser[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const page = (await clerk("GET", `/users?limit=500&offset=${offset}&order_by=%2Bcreated_at`)) as ClerkUser[];
+    users.push(...page);
+    if (page.length < 500) return users;
+  }
+}
+
+/**
+ * Deletes the Clerk users of Supabase accounts deleted since an earlier run. Their
+ * addresses would block a new owner, and their data would outlive the account deletion.
+ * Runs before any address is added, so a freed address can go to its new owner.
+ */
+async function deleteStaleClerkUsers(supabaseIds: ReadonlySet<string>) {
+  const stale = (await allClerkUsers()).filter((c) => c.external_id !== null && !supabaseIds.has(c.external_id));
+  const describe = (c: ClerkUser) =>
+    `${c.id} (external_id ${c.external_id}, ${c.email_addresses.map((e) => e.email_address).join(", ") || "no email"})`;
+  if (stale.length > ALLOW_CLERK_DELETES) {
+    for (const c of stale) log(`Would delete Clerk user ${describe(c)}`);
+    throw new Error(
+      `${stale.length} Clerk users have no Supabase account, more than the ${ALLOW_CLERK_DELETES} allowed. ` +
+        `Nothing was deleted. Pass --allow-clerk-deletes ${stale.length} if that is right.`,
+    );
+  }
+  for (const c of stale) {
+    await clerk("DELETE", `/users/${c.id}`);
+    log(`Deleted Clerk user ${describe(c)}`);
+  }
 }
 
 type AuthUser = {
@@ -167,14 +231,21 @@ type AuthUser = {
   proven_emails: string[] | null;
 };
 
-/** Creates or updates the user's Clerk user and returns its id, or null without an email. */
+/**
+ * Creates or updates the user's Clerk user and returns its id, or null without an email.
+ * An existing Clerk user ends up with exactly the proven addresses, all verified, and the
+ * account's own address as primary. Addresses Clerk links to a Google or Apple sign-in stay.
+ */
 async function syncClerkUser(u: AuthUser): Promise<string | null> {
   const emails = u.proven_emails ?? [];
-  if (emails.length === 0) return null;
+  const existing = (await clerk("GET", `/users?external_id=${encodeURIComponent(u.id)}`)) as ClerkUser[];
+  if (emails.length === 0) {
+    if (existing.length > 0) log(`Clerk user ${existing[0]!.id} of ${u.id} has no proven email left. Left as it is.`);
+    return null;
+  }
   // The account's own address first, so it becomes the primary one.
   const ordered = [...new Set([u.email, ...emails].filter((e): e is string => e !== null && emails.includes(e)))];
   const password = u.password_hash?.startsWith("$2") ? { password_digest: u.password_hash, password_hasher: "bcrypt" } : {};
-  const existing = (await clerk("GET", `/users?external_id=${encodeURIComponent(u.id)}`)) as any[];
   if (existing.length === 0) {
     const created = await clerk("POST", "/users", {
       external_id: u.id,
@@ -186,10 +257,29 @@ async function syncClerkUser(u: AuthUser): Promise<string | null> {
     });
     return created.id;
   }
-  const user = existing[0];
-  const have = new Set((user.email_addresses as { email_address: string }[]).map((e) => e.email_address.toLowerCase()));
+  const user = existing[0]!;
+  const have = new Map(user.email_addresses.map((e) => [e.email_address.toLowerCase(), e]));
   for (const email of ordered) {
-    if (!have.has(email)) await clerk("POST", "/email_addresses", { user_id: user.id, email_address: email, verified: true });
+    const e = have.get(email);
+    if (e === undefined) {
+      have.set(email, await clerk("POST", "/email_addresses", { user_id: user.id, email_address: email, verified: true }));
+    } else if (e.verification?.status !== "verified") {
+      await clerk("PATCH", `/email_addresses/${e.id}`, { verified: true });
+    }
+  }
+  // Clerk wants a verified address of the user as primary, and the old primary can only go after.
+  const primaryId = have.get(ordered[0]!)!.id;
+  if (user.primary_email_address_id !== primaryId) {
+    await clerk("PATCH", `/users/${user.id}`, { primary_email_address_id: primaryId });
+  }
+  for (const e of user.email_addresses) {
+    if (emails.includes(e.email_address.toLowerCase()) || e.id === primaryId) continue;
+    if (e.linked_to.length > 0) {
+      log(`Clerk user ${user.id} keeps ${e.email_address}, which ${e.linked_to.map((l) => l.type).join(", ")} uses`);
+      continue;
+    }
+    await clerk("DELETE", `/email_addresses/${e.id}`);
+    log(`Removed ${e.email_address} from Clerk user ${user.id}`);
   }
   if (password.password_digest !== undefined) {
     await clerk("PATCH", `/users/${user.id}`, { ...password, skip_password_checks: true });
@@ -244,11 +334,26 @@ async function main() {
     from auth.users u order by u.created_at`)) as AuthUser[];
   const clerkIds = new Map<string, string>();
   if (!SKIP_CLERK) {
+    if (CLERK_ONLY === undefined) await deleteStaleClerkUsers(new Set(authUsers.map((u) => u.id)));
+    else log("Clerk: --clerk-only, so Clerk users of deleted accounts stay");
+    // An address can move between two accounts, and Clerk refuses it while the other
+    // Clerk user still holds it. Those users go again once every other one is done.
+    const retry: AuthUser[] = [];
     for (const [i, u] of authUsers.entries()) {
       if (CLERK_ONLY !== undefined && !CLERK_ONLY.includes(u.id)) continue;
+      try {
+        const id = await syncClerkUser(u);
+        if (id !== null) clerkIds.set(u.id, id);
+      } catch (error) {
+        if (!clerkRefused(error)) throw error;
+        log(`Clerk refused a change for ${u.id}, trying again at the end: ${(error as Error).message}`);
+        retry.push(u);
+      }
+      if ((i + 1) % 25 === 0) log(`Clerk: ${i + 1} of ${authUsers.length}`);
+    }
+    for (const u of retry) {
       const id = await syncClerkUser(u);
       if (id !== null) clerkIds.set(u.id, id);
-      if ((i + 1) % 25 === 0) log(`Clerk: ${i + 1} of ${authUsers.length}`);
     }
     log(`Clerk: ${clerkIds.size} users${CLERK_ONLY === undefined ? `, ${authUsers.length - clerkIds.size} without a proven email` : ""}`);
   }
