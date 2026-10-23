@@ -138,7 +138,6 @@ export const linkOrCreate = internalMutation({
     await queueNewSignup(ctx, (await userByUuid(ctx, id))!);
     await ctx.db.insert("profiles", {
       id,
-      before_paywall: true,
       created_at: now,
       updated_at: now,
       revision: await nextRevision(ctx),

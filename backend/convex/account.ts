@@ -158,7 +158,6 @@ const steps: Step[] = [
     }
     return devices.length;
   },
-  byUser("app_account_tokens"),
   async (ctx, user, budget) =>
     remove(
       ctx,
@@ -214,7 +213,6 @@ const steps: Step[] = [
       budget,
     ),
   byUser("feedback"),
-  byUser("subscriptions"),
   byUser("calendar_subscription_tokens"),
   async (ctx, user, budget) =>
     remove(

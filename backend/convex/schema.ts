@@ -92,7 +92,6 @@ export default defineSchema({
   // `id` is the user's uuid.
   profiles: defineTable({
     id: uuid,
-    before_paywall: v.boolean(),
     username: optString,
     last_synced_at: optTs,
     created_at: ts,
@@ -462,53 +461,6 @@ export default defineSchema({
 
   // ---- Account ----
 
-  // One row per user. Stripe fields stay for the old rows.
-  subscriptions: defineTable({
-    id: uuid,
-    user_id: uuid,
-    provider: literals("stripe", "apple", "admin_trial"),
-    provider_subscription_id: optString,
-    status: literals(
-      "active",
-      "trialing",
-      "past_due",
-      "incomplete",
-      "paused",
-      "canceled",
-      "incomplete_expired",
-      "unpaid",
-      "grace",
-      "expired",
-      "refunded",
-    ),
-    product_id: optString,
-    price_id: optString,
-    price_display: optString,
-    current_period_start: optTs,
-    current_period_end: optTs,
-    cancel_at_period_end: v.optional(v.boolean()),
-    cancel_at: optTs,
-    canceled_at: optTs,
-    cancellation_reason: optString,
-    cancellation_feedback: optString,
-    cancellation_comment: optString,
-    stripe_customer_id: optString,
-    stripe_subscription_id: optString,
-    apple_original_transaction_id: optString,
-    apple_last_transaction_id: optString,
-    apple_environment: v.optional(literals("Production", "Sandbox")),
-    app_account_token: optUuid,
-    raw_provider_payload: optJson,
-    created_at: optTs,
-    updated_at: ts,
-    revision: v.number(),
-  })
-    .index("by_uuid", ["id"])
-    .index("by_user", ["user_id"])
-    .index("by_apple_original_transaction_id", ["apple_original_transaction_id"])
-    .index("by_provider_subscription_id", ["provider", "provider_subscription_id"])
-    .index("by_current_period_end", ["current_period_end"]),
-
   feedback: defineTable({
     id: uuid,
     user_id: uuid,
@@ -572,16 +524,6 @@ export default defineSchema({
     .index("by_uuid", ["id"])
     .index("by_created_at", ["created_at"]),
 
-  // The appAccountToken the app passes to StoreKit. Apple notifications carry it.
-  app_account_tokens: defineTable({
-    user_id: uuid,
-    token: uuid,
-    created_at: ts,
-    updated_at: ts,
-  })
-    .index("by_user", ["user_id"])
-    .index("by_token", ["token"]),
-
   // One row per user per hour the app was open. Purged after 32 days.
   app_activity_hours: defineTable({
     hour: ts,
@@ -614,36 +556,6 @@ export default defineSchema({
   })
     .index("by_user", ["user_id"])
     .index("by_last_active_at", ["last_active_at"]),
-
-  // `id` is Apple's notificationUUID.
-  apple_notifications: defineTable({
-    id: v.string(),
-    notification_type: v.string(),
-    subtype: optString,
-    original_transaction_id: optString,
-    transaction_id: optString,
-    received_at: ts,
-    processed_at: optTs,
-    attempts: v.number(),
-    last_error: optString,
-    raw_payload: optJson,
-  }).index("by_uuid", ["id"]),
-
-  // Apple notifications that matched no user yet.
-  apple_orphan_notifications: defineTable({
-    id: v.string(),
-    notification_type: v.string(),
-    subtype: optString,
-    original_transaction_id: optString,
-    app_account_token: optUuid,
-    received_at: ts,
-    raw_payload: json,
-    reconciled_at: optTs,
-    reconciled_user_id: optUuid,
-  })
-    .index("by_uuid", ["id"])
-    .index("by_original_transaction_id", ["original_transaction_id"])
-    .index("by_app_account_token", ["app_account_token"]),
 
   auth_diagnostic_events: defineTable({
     id: uuid,
@@ -808,15 +720,6 @@ export default defineSchema({
   })
     .index("by_install_step", ["install_id", "step"])
     .index("by_recorded_at", ["recorded_at"]),
-
-  // One document.
-  paywall_config: defineTable({
-    free_trial_enabled: v.boolean(),
-    free_trial_duration_days: v.number(),
-    free_trial_reminder_days_before_end: v.number(),
-    created_at: ts,
-    updated_at: ts,
-  }),
 
   // `id` is a slug such as "hk_retail".
   tariff_types: defineTable({

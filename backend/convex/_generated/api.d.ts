@@ -11,8 +11,6 @@
 import type * as account from "../account.js";
 import type * as admin from "../admin.js";
 import type * as appActivity from "../appActivity.js";
-import type * as appleNotifications from "../appleNotifications.js";
-import type * as appleVerify from "../appleVerify.js";
 import type * as calendarFeed from "../calendarFeed.js";
 import type * as calendarSubscriptions from "../calendarSubscriptions.js";
 import type * as crons from "../crons.js";
@@ -80,8 +78,6 @@ declare const fullApi: ApiFromModules<{
   account: typeof account;
   admin: typeof admin;
   appActivity: typeof appActivity;
-  appleNotifications: typeof appleNotifications;
-  appleVerify: typeof appleVerify;
   calendarFeed: typeof calendarFeed;
   calendarSubscriptions: typeof calendarSubscriptions;
   crons: typeof crons;

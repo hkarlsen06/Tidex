@@ -108,35 +108,6 @@ http.route({
 });
 
 /**
- * App Store Server Notifications V2. App Store Connect points here from cutover night.
- * Apple retries anything but a 200, which is what a failed write needs.
- */
-http.route({
-  path: "/apple-server-notifications",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    let signedPayload: unknown;
-    try {
-      signedPayload = (await request.json())?.signedPayload;
-    } catch {
-      signedPayload = undefined;
-    }
-    if (typeof signedPayload !== "string" || signedPayload === "") {
-      return new Response("Missing signedPayload", { status: 400 });
-    }
-    const verified = await ctx.runAction(internal.appleVerify.verify, { signed_payload: signedPayload });
-    if (verified === null) return new Response("Invalid notification", { status: 400 });
-    try {
-      const { status, body } = await ctx.runMutation(internal.appleNotifications.apply, verified);
-      return Response.json(body, { status });
-    } catch (error) {
-      console.error("[apple-notifications] Exception:", error);
-      return Response.json({ received: true, error: "Processing error" }, { status: 500 });
-    }
-  }),
-});
-
-/**
  * The calendar feed, ported from the calendar-feed Edge Function. The token is the last
  * path segment, with or without ".ics". Unknown and revoked tokens get an empty 404.
  */

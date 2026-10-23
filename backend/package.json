@@ -8,7 +8,6 @@
     "typecheck": "tsc --noEmit -p convex"
   },
   "dependencies": {
-    "@apple/app-store-server-library": "^3.0.0",
     "convex": "^1.46.0"
   },
   "devDependencies": {

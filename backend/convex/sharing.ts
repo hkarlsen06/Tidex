@@ -391,7 +391,6 @@ export const setMyUsername = mutation({
     if (profile === null) {
       await ctx.db.insert("profiles", {
         id: user.id,
-        before_paywall: true,
         username: value === "" ? undefined : value,
         created_at: now,
         updated_at: now,
@@ -423,7 +422,6 @@ export const setLastSyncedAt = mutation({
     if (profile === null) {
       await ctx.db.insert("profiles", {
         id: user.id,
-        before_paywall: true,
         last_synced_at: lastSyncedAt,
         created_at: now,
         updated_at: now,
