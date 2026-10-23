@@ -20,15 +20,19 @@
 # lets its later commands in.
 #
 # A lock taken by `run` is stale once its process has exited. A lock taken by
-# `acquire` is stale after TIDEX_LOCK_TTL_MINUTES (default 45). A stale lock is
-# taken over with a message. Waiting gives up after TIDEX_LOCK_WAIT_MINUTES
+# `acquire` is stale once nobody has used it for TIDEX_LOCK_TTL_MINUTES
+# (default 10). Every `acquire`, and every `run` that enters this worktree's
+# session, counts as a use, so start each simulator command with
+# `scripts/lock acquire simulator &&`. A session an agent forgot to release
+# then frees itself 10 minutes after its last command. A stale lock is taken
+# over with a message. Waiting gives up after TIDEX_LOCK_WAIT_MINUTES
 # (default 90).
 set -euo pipefail
 
 REPO_LOCK_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)/tidex-locks"
 SIMULATOR_LOCK_ROOT="${AGENT_SIMULATOR_LOCK_ROOT:-/tmp/agent-locks}"
 OWNER="$(git rev-parse --show-toplevel)"
-TTL_SECONDS=$(( ${TIDEX_LOCK_TTL_MINUTES:-45} * 60 ))
+TTL_SECONDS=$(( ${TIDEX_LOCK_TTL_MINUTES:-10} * 60 ))
 WAIT_SECONDS=$(( ${TIDEX_LOCK_WAIT_MINUTES:-90} * 60 ))
 
 mkdir -p "$REPO_LOCK_ROOT" "$SIMULATOR_LOCK_ROOT"
@@ -58,7 +62,7 @@ describe() {
   if [ -n "$pid" ]; then
     echo "$1: held by $owner (process $pid) for ${age} min"
   else
-    echo "$1: held by $owner (session) for ${age} min"
+    echo "$1: held by $owner (session, last used ${age} min ago)"
   fi
 }
 
@@ -118,6 +122,20 @@ take() {
   done
 }
 
+# Marks this worktree's session as used now, so it stays ahead of the TTL.
+renew() {
+  echo "$OWNER||$(date +%s)" >"$(lock_dir "$1")/owner"
+}
+
+# A `run` inside the session hands the lock back when its command ends, but only
+# while the lock still names this process. Another worktree may have taken it
+# meanwhile, or a second `run` of this worktree may hold it now.
+restore_session() {
+  local pid
+  IFS='|' read -r _ pid _ <<<"$(read_lock "$1")"
+  [ "$pid" = "$$" ] && renew "$1"
+}
+
 release() {
   local name="$1" dir
   dir="$(lock_dir "$1")"
@@ -139,7 +157,13 @@ case "${1:-}" in
     take "$name" "$$" || status=$?
     if [ "$status" -eq 0 ]; then
       trap 'release "$name"' EXIT
-    elif [ "$status" -ne 3 ]; then
+    elif [ "$status" -eq 3 ]; then
+      # This process holds the session's lock while the command runs, so a
+      # command longer than the TTL keeps it. Afterwards it is the session's
+      # again, used now.
+      echo "$OWNER|$$|$(date +%s)" >"$(lock_dir "$name")/owner"
+      trap 'restore_session "$name"' EXIT
+    else
       exit "$status"
     fi
     "$@"
@@ -149,8 +173,7 @@ case "${1:-}" in
     status=0
     take "$2" "" || status=$?
     [ "$status" -eq 0 ] || [ "$status" -eq 3 ] || exit "$status"
-    # Taking it again renews the session, so a long session can stay ahead of the TTL.
-    [ "$status" -eq 3 ] && echo "$OWNER||$(date +%s)" >"$(lock_dir "$2")/owner"
+    [ "$status" -eq 3 ] && renew "$2"
     echo "[lock] $2 is held by this worktree. Release it with: scripts/lock release $2" >&2
     ;;
   release)
