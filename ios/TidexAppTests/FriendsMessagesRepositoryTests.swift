@@ -72,7 +72,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
           createdAt: Date(timeIntervalSince1970: 1_699_999_500)
         ),
       ],
-      for: viewerUserId
+      for: viewerUserId,
+      isWholeInbox: true
     )
 
     let threads = repository.getThreads(for: viewerUserId)
@@ -950,7 +951,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
           viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_010)
         )
       ],
-      for: viewerUserId
+      for: viewerUserId,
+      isWholeInbox: true
     )
 
     let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
@@ -982,7 +984,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
           viewerStateUpdatedAt: stateUpdatedAt
         )
       ],
-      for: viewerUserId
+      for: viewerUserId,
+      isWholeInbox: true
     )
 
     let thread = repository.getThread(id: "thread-1", viewerUserId: viewerUserId)
@@ -999,7 +1002,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
           viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_030)
         )
       ],
-      for: viewerUserId
+      for: viewerUserId,
+      isWholeInbox: true
     )
 
     // A thread snapshot that started before the inbox load and finished after it.
@@ -1072,7 +1076,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
           viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_030)
         )
       ],
-      for: viewerUserId
+      for: viewerUserId,
+      isWholeInbox: true
     )
 
     // A mark-read response that finished after the newer inbox load.
@@ -1104,7 +1109,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
           viewerStateUpdatedAt: Date(timeIntervalSince1970: 1_700_000_030)
         )
       ],
-      for: viewerUserId
+      for: viewerUserId,
+      isWholeInbox: true
     )
     // A snapshot from before m2 arrives late and sets the preview back to m1.
     await repository.saveThread(
@@ -1516,7 +1522,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
           createdAt: Date(timeIntervalSince1970: 1_699_999_950)
         ),
       ],
-      for: viewerUserId
+      for: viewerUserId,
+      isWholeInbox: true
     )
 
     await repository.saveThreads(
@@ -1541,7 +1548,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
           createdAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
       ],
-      for: viewerUserId
+      for: viewerUserId,
+      isWholeInbox: true
     )
 
     XCTAssertEqual(repository.getThreads(for: viewerUserId).map(\.id), ["thread-keep"])

@@ -52,6 +52,8 @@ final class AppleAuthProvider: NSObject {
     let provider = ASAuthorizationAppleIDProvider()
     let request = provider.createRequest()
     request.requestedScopes = [.email, .fullName]
+    // Clerk's own Apple helper always sends a nonce, so this matches what Clerk expects.
+    request.nonce = UUID().uuidString + UUID().uuidString
     let requestID = UUID()
 
     return try await withTaskCancellationHandler {

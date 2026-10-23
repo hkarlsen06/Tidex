@@ -4,24 +4,12 @@ import SwiftUI
 struct OAuthButtonsView: View {
   let onGoogleTap: () -> Void
   let onAppleTap: () -> Void
-  var onPasskeyTap: (() -> Void)?
   var isLoading: Bool = false
 
   @ScaledMetric(relativeTo: .body) private var iconFontSize: CGFloat = 19
 
   var body: some View {
     VStack(spacing: Spacing.sm) {
-      if let onPasskeyTap {
-        OAuthProviderButton(
-          title: String(localized: .loginPasskeyContinue),
-          action: onPasskeyTap,
-          isLoading: isLoading
-        ) {
-          Image(systemName: "person.badge.key.fill")
-            .font(.system(size: iconFontSize, weight: .medium))
-        }
-      }
-
       OAuthProviderButton(
         title: String(localized: .oauthContinueWithApple),
         action: onAppleTap,

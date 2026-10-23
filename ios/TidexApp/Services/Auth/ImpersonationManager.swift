@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import os.log
-import Supabase
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ImpersonationManager")
 private let kMinimumImpersonationReasonLength: Int = 5
@@ -9,7 +8,8 @@ private let kMinimumImpersonationReasonLength: Int = 5
 /// Manages admin impersonation sessions
 ///
 /// Allows admins to temporarily assume the identity of another user for debugging/support.
-/// The admin's original session is stored in Keychain and restored when impersonation ends.
+/// The session lives on the server. While it is open, `users:current` returns the target
+/// user and every Convex call acts as that user, so the app keeps the admin's Clerk session.
 @MainActor
 @Observable
 final class ImpersonationManager {
@@ -17,123 +17,63 @@ final class ImpersonationManager {
 
   // MARK: - Observed State
 
-  /// Whether we are currently impersonating another user
-  private(set) var isImpersonating: Bool = false
+  /// Whether we are currently impersonating another user. It comes from the current user,
+  /// which `users:current` returns as the target during a session.
+  var isImpersonating: Bool {
+    _ = changeCount
+    return AuthSessionManager.shared.localSession()?.user.isImpersonating ?? false
+  }
 
   /// The target user's display name (when impersonating)
-  private(set) var impersonatedUserName: String?
+  var impersonatedUserName: String? {
+    _ = changeCount
+    guard let user = AuthSessionManager.shared.localSession()?.user, user.isImpersonating else {
+      return nil
+    }
+    return user.name ?? user.email
+  }
 
-  /// When the impersonation session expires
+  /// When the impersonation session expires. Known after `refresh()` or a start.
   private(set) var expiresAt: Date?
 
-  /// The impersonation session ID
+  /// The impersonation session ID. Known after `refresh()` or a start.
   private(set) var sessionId: String?
 
-  // MARK: - Private Constants
-
-  /// Keychain service for impersonation data
-  private let keychainService = "no.tidex.impersonation"
-
-  /// Key for storing admin session
-  private let adminSessionKey = "admin_session"
-
-  /// Key for storing impersonation session ID
-  private let impersonationSessionIdKey = "session_id"
-
-  /// Key for storing target user name
-  private let targetUserNameKey = "target_user_name"
-
-  /// Key for storing expiration date
-  private let expiresAtKey = "expires_at"
-
-  // MARK: - Initialization
+  /// Changes whenever the state may have changed, so views that read the computed
+  /// properties above update.
+  private var changeCount = 0
+  @ObservationIgnored private var expiryTask: Task<Void, Never>?
 
   private init() {
-    // Check if we have an active impersonation session on startup
-    // Note: Full validation happens asynchronously via validateSessionOnLaunch()
-    restoreStateFromKeychain()
-  }
-
-  /// Validate the impersonation session on app launch
-  /// An MFA exemption requires the server to confirm the bound auth session.
-  /// Invalid or expired sessions restore the admin. Network failures leave them available to retry.
-  func validateSessionOnLaunch() async -> Session? {
-    guard isImpersonating else {
-      return nil
+    // A launch during an impersonation needs the expiry for the banner and the timer.
+    if isImpersonating {
+      Task { await refresh() }
     }
-
-    // 1. Check local expiration first (fast path)
-    if let expiresAt, expiresAt < Date() {
-      logger.info("Impersonation session expired locally, stopping")
-      await handleInvalidSession()
-      return nil
-    }
-
-    // 2. Validate the session is still active server-side.
-    // Transient session resolution failures should not end impersonation.
-    do {
-      let session = try await AuthSessionManager.shared.getSession()
-      let isValid: Bool = try await supabase.rpc("is_impersonation_session").execute().value
-      guard supabase.auth.currentSession?.accessToken == session.accessToken else {
-        return nil
-      }
-      guard isValid else {
-        await handleInvalidSession()
-        return nil
-      }
-      logger.info("Impersonation session validated successfully")
-      return session
-    } catch {
-      if AuthSessionManager.shared.isTransientSessionResolutionError(error) {
-        logger.warning(
-          "Impersonation session validation hit transient error; keeping session: \(error.localizedDescription)"
-        )
-        return nil
-      }
-
-      logger.warning("Impersonation session validation failed: \(error.localizedDescription)")
-      await handleInvalidSession()
-      return nil
-    }
-  }
-
-  /// Handle an invalid/expired impersonation session
-  /// Restores admin session and clears impersonation state
-  private func handleInvalidSession() async {
-    logger.info("Handling invalid impersonation session")
-
-    // Try to restore admin session
-    if let adminSession = loadAdminSession() {
-      do {
-        // Clear cached data before switching
-        await AppCoordinator.shared.prepareForUserSwitch()
-
-        // Restore admin session
-        try await supabase.auth.setSession(
-          accessToken: adminSession.accessToken,
-          refreshToken: adminSession.refreshToken
-        )
-
-        logger.info("Admin session restored after invalid impersonation")
-
-        // Complete the switch
-        await AppCoordinator.shared.completeUserSwitch()
-      } catch {
-        logger.error("Failed to restore admin session: \(error.localizedDescription)")
-        // Sign out locally as fallback; do not invalidate other sessions.
-        try? await supabase.auth.signOut(scope: .local)
-      }
-    }
-
-    // Clear all impersonation state
-    clearKeychain()
-    isImpersonating = false
-    impersonatedUserName = nil
-    expiresAt = nil
-    sessionId = nil
   }
 
   // MARK: - Public API
+
+  /// Loads the open session for the banner and ends the impersonation in the app when it
+  /// expires. The manager calls it once at launch. Call it again when the app comes to the
+  /// foreground if the session may have ended meanwhile.
+  func refresh() async {
+    guard let session = try? await AuthSessionManager.shared.getSession() else { return }
+    guard session.user.isImpersonating else {
+      clearSession()
+      return
+    }
+    do {
+      let active: ImpersonationSessionInfo? = try await ConvexAPI.app.query("impersonation:active")
+      guard let active else {
+        // The session ended on the server, so the user row no longer shows the target.
+        await switchUser()
+        return
+      }
+      setSession(active)
+    } catch {
+      logger.warning("Could not load the impersonation session: \(error.localizedDescription)")
+    }
+  }
 
   /// Start impersonating a target user
   /// - Parameters:
@@ -146,75 +86,50 @@ final class ImpersonationManager {
       throw ImpersonationError.reasonTooShort
     }
 
-    // 1. Get current admin session
-    let currentSession = try await AuthSessionManager.shared.getSession()
-    logger.info("Starting impersonation: admin=\(currentSession.user.id), target=\(targetUserId)")
+    let admin = try await AuthSessionManager.shared.getSession()
+    logger.info("Starting impersonation: admin=\(admin.user.id), target=\(targetUserId)")
 
-    // 2. Store admin session in Keychain for restoration
-    let adminSession = AdminSession(
-      accessToken: currentSession.accessToken,
-      refreshToken: currentSession.refreshToken,
-      userId: currentSession.user.id.uuidString
-    )
-    try storeAdminSession(adminSession)
-
-    // 3. Call the Edge Function
-    // Note: Using body-based action routing since Swift SDK may not handle path-based routing
-    let response: ImpersonationStartResponse = try await supabase.functions.invoke(
-      "impersonation",
-      options: FunctionInvokeOptions(
-        body: [
-          "action": "start",
-          "targetUserId": targetUserId,
-          "reason": reason,
-        ]
-      )
-    )
-
-    guard response.ok, let impersonated = response.impersonated else {
-      // Clean up stored admin session on failure
-      clearKeychain()
-      throw ImpersonationError.serverError(response.error ?? "Unknown error")
-    }
-
-    // 4. Store session metadata
-    if let session = response.session {
-      try storeSessionMetadata(
-        sessionId: session.id,
-        targetUserName: impersonated.user.displayName,
-        expiresAt: session.expiresAtDate
-      )
-    }
-
-    // 5. Clear all cached data BEFORE swapping sessions
-    // This ensures we don't show stale data from the admin user
+    // Clear all cached data BEFORE the server switches users, so no stale admin data shows.
     await AppCoordinator.shared.prepareForUserSwitch()
 
-    // 6. Swap to impersonated user's session
-    try await supabase.auth.setSession(
-      accessToken: impersonated.accessToken,
-      refreshToken: impersonated.refreshToken
-    )
+    let response: ImpersonationStartResponse
+    do {
+      struct Args: Encodable, Sendable {
+        let targetUserId: String
+        let reason: String
+        enum CodingKeys: String, CodingKey {
+          case targetUserId = "target_user_id"
+          case reason
+        }
+      }
+      response = try await ConvexAPI.app.mutation(
+        "impersonation:start", Args(targetUserId: targetUserId, reason: reason))
+    } catch {
+      // Nothing changed on the server, so load the admin's own data again.
+      await AppCoordinator.shared.completeUserSwitch()
+      throw ImpersonationError(error)
+    }
+    guard response.ok, let info = response.session else {
+      await AppCoordinator.shared.completeUserSwitch()
+      throw ImpersonationError.serverError("Unknown error")
+    }
 
-    // 7. Update published state
-    isImpersonating = true
-    impersonatedUserName = impersonated.user.displayName
-    expiresAt = response.session?.expiresAtDate
-    sessionId = response.session?.id
-
-    // 8. Complete the user switch - reload profile and trigger sync
+    // The user row now shows the target.
+    let target = try? await AuthSessionManager.shared.forceRefresh()
+    setSession(info)
     await AppCoordinator.shared.completeUserSwitch()
 
-    logger.info("Impersonation started: target=\(impersonated.user.displayName)")
+    let targetName = impersonatedUserName ?? targetUserId
+    logger.info("Impersonation started: target=\(targetName)")
 
     return ImpersonationResult(
-      sessionId: response.session?.id ?? "",
-      targetUser: impersonated.user,
-      expiresAt: response.session?.expiresAtDate
+      sessionId: info.id,
+      targetName: target?.user.name ?? target?.user.email ?? targetName,
+      expiresAt: info.expiresAtDate
     )
   }
 
-  /// Stop the current impersonation and restore admin session
+  /// Stop the current impersonation and go back to the admin's own data
   func stopImpersonation() async throws {
     guard isImpersonating else {
       throw ImpersonationError.noActiveSession
@@ -222,166 +137,74 @@ final class ImpersonationManager {
 
     logger.info("Stopping impersonation")
 
-    // 1. Try to call Edge Function to end session (optional, for audit)
-    // Note: Using body-based action routing since Swift SDK may not handle path-based routing
-    if let currentSessionId = sessionId {
-      do {
-        let _: ImpersonationStopResponse = try await supabase.functions.invoke(
-          "impersonation",
-          options: FunctionInvokeOptions(
-            body: [
-              "action": "stop",
-              "sessionId": currentSessionId,
-            ]
-          )
-        )
-      } catch {
-        logger.warning("Failed to call stop endpoint: \(error.localizedDescription)")
-        // Continue anyway - the important thing is restoring admin session
-      }
-    }
-
-    // 2. Restore admin session from Keychain
-    guard let adminSession = loadAdminSession() else {
-      clearKeychain()
-      throw ImpersonationError.adminSessionNotFound
-    }
-
-    // 3. Clear all cached data BEFORE swapping back to admin session
-    // This ensures we don't show stale data from the impersonated user
+    // Clear all cached data BEFORE the server switches back, so no stale target data shows.
     await AppCoordinator.shared.prepareForUserSwitch()
 
-    // 4. Swap back to admin session
-    try await supabase.auth.setSession(
-      accessToken: adminSession.accessToken,
-      refreshToken: adminSession.refreshToken
-    )
+    do {
+      if let sessionId = try await openSessionId() {
+        struct Args: Encodable, Sendable {
+          let sessionId: String
+          enum CodingKeys: String, CodingKey { case sessionId = "session_id" }
+        }
+        _ = try await ConvexAPI.app.mutation(
+          "impersonation:stop", Args(sessionId: sessionId), as: ConvexAPI.Ignored.self)
+      }
+    } catch ConvexAPI.Failure.server(_, let message) {
+      // The session is gone already, for example because it expired.
+      logger.info("Impersonation already ended: \(message)")
+    } catch {
+      // Offline or similar. The impersonation continues, so reload the target's data.
+      await AppCoordinator.shared.completeUserSwitch()
+      throw ImpersonationError(error)
+    }
 
-    // 5. Clean up impersonation state
-    clearKeychain()
-    isImpersonating = false
-    impersonatedUserName = nil
-    expiresAt = nil
-    sessionId = nil
+    await switchUser(prepared: true)
+    logger.info("Impersonation stopped")
+  }
 
-    // 6. Complete the user switch - reload admin profile and trigger sync
+  // MARK: - Private
+
+  private func openSessionId() async throws -> String? {
+    if let sessionId { return sessionId }
+    let active: ImpersonationSessionInfo? = try await ConvexAPI.app.query("impersonation:active")
+    return active?.id
+  }
+
+  /// Reads the user row again and reloads the app's data for whoever it shows now.
+  private func switchUser(prepared: Bool = false) async {
+    if !prepared { await AppCoordinator.shared.prepareForUserSwitch() }
+    clearSession()
+    _ = try? await AuthSessionManager.shared.forceRefresh()
     await AppCoordinator.shared.completeUserSwitch()
-
-    logger.info("Impersonation stopped, admin session restored")
+    changeCount += 1
   }
 
-  // MARK: - Private Keychain Operations
+  private func setSession(_ info: ImpersonationSessionInfo) {
+    sessionId = info.id
+    expiresAt = info.expiresAtDate
+    changeCount += 1
+    watchExpiry()
+  }
 
-  private func restoreStateFromKeychain() {
-    // Check if we have stored impersonation state
-    guard let sessionId = getString(forKey: impersonationSessionIdKey),
-      !sessionId.isEmpty
-    else {
-      return
+  private func clearSession() {
+    expiryTask?.cancel()
+    expiryTask = nil
+    sessionId = nil
+    expiresAt = nil
+    changeCount += 1
+  }
+
+  /// The server ends the session at `expiresAt`. This switches the app back at that time.
+  private func watchExpiry() {
+    expiryTask?.cancel()
+    guard let expiresAt else { return }
+    expiryTask = Task { [weak self] in
+      try? await Task.sleep(for: .seconds(max(expiresAt.timeIntervalSinceNow, 0) + 1))
+      guard !Task.isCancelled, let self else { return }
+      logger.info("Impersonation session expired")
+      // switchUser cancels expiryTask, which is this task, so let it go first.
+      expiryTask = nil
+      await switchUser()
     }
-
-    self.sessionId = sessionId
-    self.impersonatedUserName = getString(forKey: targetUserNameKey)
-    self.isImpersonating = true
-
-    if let expiresAtString = getString(forKey: expiresAtKey),
-      let expiresAtDouble = Double(expiresAtString)
-    {
-      self.expiresAt = Date(timeIntervalSince1970: expiresAtDouble)
-    }
-
-    logger.info("Restored impersonation state from Keychain")
-  }
-
-  private func storeAdminSession(_ session: AdminSession) throws {
-    let data = try JSONEncoder().encode(session)
-    try storeData(data, forKey: adminSessionKey)
-  }
-
-  private func loadAdminSession() -> AdminSession? {
-    guard let data = getData(forKey: adminSessionKey) else {
-      return nil
-    }
-    return try? JSONDecoder().decode(AdminSession.self, from: data)
-  }
-
-  private func storeSessionMetadata(sessionId: String, targetUserName: String, expiresAt: Date?)
-    throws
-  {
-    try storeString(sessionId, forKey: impersonationSessionIdKey)
-    try storeString(targetUserName, forKey: targetUserNameKey)
-    if let expiresAt {
-      try storeString(String(expiresAt.timeIntervalSince1970), forKey: expiresAtKey)
-    }
-  }
-
-  private func clearKeychain() {
-    deleteItem(forKey: adminSessionKey)
-    deleteItem(forKey: impersonationSessionIdKey)
-    deleteItem(forKey: targetUserNameKey)
-    deleteItem(forKey: expiresAtKey)
-  }
-
-  // MARK: - Low-Level Keychain Helpers
-
-  private func storeData(_ data: Data, forKey key: String) throws {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: keychainService,
-      kSecAttrAccount as String: key,
-    ]
-
-    // Delete existing
-    SecItemDelete(query as CFDictionary)
-
-    var newItem = query
-    newItem[kSecValueData as String] = data
-    newItem[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-
-    let status = SecItemAdd(newItem as CFDictionary, nil)
-    guard status == errSecSuccess else {
-      throw ImpersonationError.serverError("Keychain store failed: \(status)")
-    }
-  }
-
-  private func storeString(_ value: String, forKey key: String) throws {
-    guard let data = value.data(using: .utf8) else {
-      return
-    }
-    try storeData(data, forKey: key)
-  }
-
-  private func getData(forKey key: String) -> Data? {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: keychainService,
-      kSecAttrAccount as String: key,
-      kSecReturnData as String: true,
-      kSecMatchLimit as String: kSecMatchLimitOne,
-    ]
-
-    var result: AnyObject?
-    let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-    guard status == errSecSuccess else {
-      return nil
-    }
-    return result as? Data
-  }
-
-  private func getString(forKey key: String) -> String? {
-    guard let data = getData(forKey: key) else {
-      return nil
-    }
-    return String(data: data, encoding: .utf8)
-  }
-
-  private func deleteItem(forKey key: String) {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: keychainService,
-      kSecAttrAccount as String: key,
-    ]
-    SecItemDelete(query as CFDictionary)
   }
 }

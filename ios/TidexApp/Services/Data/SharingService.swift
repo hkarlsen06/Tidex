@@ -1,6 +1,4 @@
-import Auth
 import Foundation
-import Supabase
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharingService")
@@ -74,16 +72,6 @@ private struct CachedPreview {
   let cachedAt: Date
 }
 
-private struct IncomingBlockedShareRow: Decodable {
-  let owner_id: String
-  let blocked_by_user_id: String?
-}
-
-private struct OutgoingBlockedShareRow: Decodable {
-  let viewer_id: String
-  let blocked_by_user_id: String?
-}
-
 struct FriendsTabBootstrapData {
   let sharers: [SharedUser]
   let friends: [Friend]
@@ -113,7 +101,7 @@ struct FriendsTabBootstrapRPCResponse: Decodable {
 // MARK: - Sharing Service
 
 /// Service for fetching shared shifts and sharers.
-/// Sharing management now uses authenticated Supabase RPCs end-to-end.
+/// Every call goes to the Convex `sharing` functions.
 @MainActor
 // swiftlint:disable:next type_body_length
 final class SharingService {
@@ -148,30 +136,26 @@ final class SharingService {
     previewCache.removeAll()
   }
 
-  // MARK: - Sharer List (via Supabase RPC)
+  // MARK: - Sharer List
 
-  /// Fetches the complete Friends tab bootstrap payload in one RPC for new clients.
-  /// Older individual RPCs remain available for old app versions.
+  /// The shift preview window of the Friends tab: 30 days back and forward.
+  static func friendsPreviewRange(now: Date = Date()) -> (start: String, end: String) {
+    let calendar = Calendar.gregorianCurrent
+    return (
+      SharingComputeCore.isoDateString(calendar.date(byAdding: .day, value: -30, to: now) ?? now),
+      SharingComputeCore.isoDateString(calendar.date(byAdding: .day, value: 30, to: now) ?? now)
+    )
+  }
+
+  /// Fetches the complete Friends tab bootstrap payload in one query.
   func fetchFriendsTabBootstrap() async throws -> FriendsTabBootstrapData {
     let now = Date()
-    let startDate = SharingComputeCore.isoDateString(
-      Calendar.gregorianCurrent.date(byAdding: .day, value: -30, to: now) ?? now)
-    let endDate = SharingComputeCore.isoDateString(
-      Calendar.gregorianCurrent.date(byAdding: .day, value: 30, to: now) ?? now)
+    let (startDate, endDate) = Self.friendsPreviewRange(now: now)
 
     do {
-      _ = try await AuthSessionManager.shared.getSession()
       return try await loadFriendsTabBootstrap(startDate: startDate, endDate: endDate, now: now)
-    } catch let error as SharingServiceError {
-      throw error
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw SharingServiceError.decodingError(underlying: error)
     } catch {
-      throw SharingServiceError.networkError(underlying: error)
+      throw mapRPCError(error)
     }
   }
 
@@ -181,16 +165,12 @@ final class SharingService {
     now: Date
   ) async throws -> FriendsTabBootstrapData {
     let params: [String: AnyJSON] = [
-      "p_preview_start_date": .string(startDate),
-      "p_preview_end_date": .string(endDate),
+      "preview_start_date": .string(startDate),
+      "preview_end_date": .string(endDate),
     ]
 
-    let response: FriendsTabBootstrapRPCResponse =
-      try await supabase
-      .rpc("get_friends_tab_bootstrap", params: params)
-      .single()
-      .execute()
-      .value
+    let response: FriendsTabBootstrapRPCResponse = try await ConvexAPI.app.query(
+      "sharing:friendsBootstrap", params)
 
     let payloadBySharerId = Dictionary(
       response.previewPayloads.map { ($0.sharerId, $0) },
@@ -236,17 +216,6 @@ final class SharingService {
         logger.info("Loaded \(bootstrap.sharers.count) sharers for user")
         return bootstrap.sharers
 
-      } catch let error as SharingServiceError {
-        self.error = error
-        throw error
-      } catch let error as PostgrestError {
-        let mapped = mapRPCError(error)
-        self.error = mapped
-        throw mapped
-      } catch let error as AuthError {
-        let mapped = mapRPCError(error)
-        self.error = mapped
-        throw mapped
       } catch is CancellationError {
         logger.info("Sharers fetch was cancelled")
         throw CancellationError()
@@ -260,9 +229,9 @@ final class SharingService {
     }
   }
 
-  // MARK: - Shared Shifts (via Supabase RPC)
+  // MARK: - Shared Shifts
 
-  /// Fetch shared shifts month payload from Supabase RPC and compute client-side.
+  /// Fetch the shared shifts month payload and compute client-side.
   func fetchSharedShifts(
     ownerId: String,
     year: Int,
@@ -277,31 +246,20 @@ final class SharingService {
         // Check for cancellation before making network request
         try Task.checkCancellation()
 
-        // Ensure we have a valid authenticated Supabase session.
-        _ = try await AuthSessionManager.shared.getSession()
-
         let params: [String: AnyJSON] = [
-          "p_owner_id": .string(ownerId),
-          "p_year": .integer(year),
-          "p_month": .integer(month),
+          "owner_id": .string(ownerId),
+          "year": .integer(year),
+          "month": .integer(month),
         ]
 
-        logger.info("Fetching shared month payload via RPC for owner \(ownerId, privacy: .private)")
+        logger.info("Fetching shared month payload for owner \(ownerId, privacy: .private)")
 
-        let payloadRow: SharingRPCMonthPayloadRow
-        do {
-          payloadRow =
-            try await supabase
-            .rpc("get_shared_month_payload", params: params)
-            .single()
-            .execute()
-            .value
-        } catch let postgrestError as PostgrestError where postgrestError.code == "PGRST116" {
-          // No row means no share access or the share is hidden from the viewer.
-          throw SharingServiceError.noShareAccess
-        }
+        // Null means no share access or the share is hidden from the viewer.
+        let result: SharingRPCMonthPayloadRow? = try await ConvexAPI.app.query(
+          "sharing:sharedMonth", params)
+        guard let payloadRow = result else { throw SharingServiceError.noShareAccess }
 
-        // Check for cancellation after RPC
+        // Check for cancellation after the query
         try Task.checkCancellation()
 
         let response = await Self.computeSharedShiftsResponseOffMain(
@@ -313,17 +271,6 @@ final class SharingService {
         logger.info("Loaded \(response.shifts.count) shared shifts for month \(year)-\(month)")
         return response
 
-      } catch let error as SharingServiceError {
-        self.error = error
-        throw error
-      } catch let error as PostgrestError {
-        let mapped = mapRPCError(error)
-        self.error = mapped
-        throw mapped
-      } catch let error as AuthError {
-        let mapped = mapRPCError(error)
-        self.error = mapped
-        throw mapped
       } catch is CancellationError {
         logger.info("Shared shifts fetch was cancelled")
         throw CancellationError()
@@ -337,7 +284,7 @@ final class SharingService {
     }
   }
 
-  // MARK: - Shift Previews (via Supabase RPC)
+  // MARK: - Shift Previews
 
   /// Fetch shift previews for all sharers
   /// Returns the most relevant shift (active > upcoming > past) for each sharer
@@ -371,7 +318,7 @@ final class SharingService {
 
     do {
       logger.info(
-        "Fetching consolidated shift previews via RPC (needed: \(uncachedIds.count), cached: \(cachedPreviews.count))"
+        "Fetching consolidated shift previews (needed: \(uncachedIds.count), cached: \(cachedPreviews.count))"
       )
 
       let uncachedIdSet = Set(uncachedIds)
@@ -385,55 +332,34 @@ final class SharingService {
         "Loaded \(freshPreviews.count) fresh + \(cachedPreviews.count) cached shift previews")
       return allPreviews
 
-    } catch let error as SharingServiceError {
-      // If we have cached data, return it even on error
-      if !cachedPreviews.isEmpty {
-        logger.warning("API error, returning \(cachedPreviews.count) cached previews")
-        return cachedPreviews
-      }
-      throw error
-    } catch let error as PostgrestError {
-      if !cachedPreviews.isEmpty {
-        logger.warning("RPC error, returning \(cachedPreviews.count) cached previews")
-        return cachedPreviews
-      }
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      if !cachedPreviews.isEmpty {
-        logger.warning("Auth error, returning \(cachedPreviews.count) cached previews")
-        return cachedPreviews
-      }
-      throw mapRPCError(error)
     } catch {
       // If we have cached data, return it even on error
       if !cachedPreviews.isEmpty {
-        logger.warning("Network error, returning \(cachedPreviews.count) cached previews")
+        logger.warning("Error, returning \(cachedPreviews.count) cached previews")
         return cachedPreviews
       }
       throw mapRPCError(error)
     }
   }
 
-  // MARK: - RPC Helpers
+  // MARK: - Error Mapping
 
   private func mapRPCError(_ error: Error) -> SharingServiceError {
-    if error is AuthError {
-      return .notAuthenticated
+    if let serviceError = error as? SharingServiceError {
+      return serviceError
     }
 
-    if let postgrestError = error as? PostgrestError {
-      let message = postgrestError.message
-      let lowercasedMessage = message.lowercased()
-      let code = (postgrestError.code ?? "").uppercased()
-
-      if code == "PGRST301"
-        || lowercasedMessage.contains("jwt")
-        || lowercasedMessage.contains("unauthorized")
-      {
+    if let failure = error as? ConvexAPI.Failure {
+      switch failure {
+      case .notSignedIn:
         return .notAuthenticated
-      }
 
-      return .httpError(statusCode: 400, message: message)
+      case .server(_, let message):
+        return .httpError(statusCode: 400, message: message)
+
+      case .badResponse(let status):
+        return .httpError(statusCode: status, message: nil)
+      }
     }
 
     if let decodingError = error as? DecodingError {
@@ -441,46 +367,6 @@ final class SharingService {
     }
 
     return .networkError(underlying: error)
-  }
-
-  private func fetchBlockedUserSets(for userId: String) async throws -> (
-    allBlockedPairIds: Set<String>,
-    blockedByCurrentUserIds: Set<String>
-  ) {
-    let incomingShares: [IncomingBlockedShareRow] =
-      try await supabase
-      .from("shift_shares")
-      .select("owner_id, blocked_by_user_id")
-      .eq("viewer_id", value: userId)
-      .execute()
-      .value
-
-    let outgoingShares: [OutgoingBlockedShareRow] =
-      try await supabase
-      .from("shift_shares")
-      .select("viewer_id, blocked_by_user_id")
-      .eq("owner_id", value: userId)
-      .execute()
-      .value
-
-    var allBlockedPairIds = Set<String>()
-    var blockedByCurrentUserIds = Set<String>()
-
-    for share in incomingShares where share.blocked_by_user_id != nil {
-      allBlockedPairIds.insert(share.owner_id)
-      if share.blocked_by_user_id == userId {
-        blockedByCurrentUserIds.insert(share.owner_id)
-      }
-    }
-
-    for share in outgoingShares where share.blocked_by_user_id != nil {
-      allBlockedPairIds.insert(share.viewer_id)
-      if share.blocked_by_user_id == userId {
-        blockedByCurrentUserIds.insert(share.viewer_id)
-      }
-    }
-
-    return (allBlockedPairIds, blockedByCurrentUserIds)
   }
 
   private nonisolated static func mapComputedShiftToSharedShiftData(
@@ -670,7 +556,7 @@ final class SharingService {
     }.value
   }
 
-  // MARK: - Friends Management (via Supabase RPC)
+  // MARK: - Friends Management
 
   // Fetch all friends (bidirectional relationships) and blocked friends.
   // Used by the sharing management modal.
@@ -692,10 +578,6 @@ final class SharingService {
           """
         )
         return (bootstrap.friends, bootstrap.blockedFriends)
-      } catch let error as PostgrestError {
-        throw mapRPCError(error)
-      } catch let error as AuthError {
-        throw mapRPCError(error)
       } catch let decodingError as DecodingError {
         // Log detailed decoding error info
         switch decodingError {
@@ -748,258 +630,120 @@ final class SharingService {
 
   // MARK: - Share Management Actions
 
-  /// Action types for the manage endpoint
-  enum ManageAction: String, Encodable {
-    case createShare
-    case removeShare
-    case removeSharer
-    case toggleEarnings
-    case blockSharer
-    case unblockSharer
-    case shareBack
-    case toggleMuted
-  }
-
-  /// Generic method to call the manage_sharing_action RPC.
-  private func performManageAction(
-    action: ManageAction,
-    identifier: String? = nil,
-    recipientId: String? = nil,
-    ownerId: String? = nil,
-    showEarnings: Bool? = nil,
-    muted: Bool? = nil
-  ) async throws {
-    _ = try await AuthSessionManager.shared.getSession()
-
-    var params: [String: AnyJSON] = [
-      "p_action": .string(action.rawValue)
-    ]
-    if let identifier {
-      params["p_identifier"] = .string(identifier)
-    }
-    if let recipientId {
-      params["p_recipient_id"] = .string(recipientId)
-    }
-    if let showEarnings {
-      params["p_show_earnings"] = .bool(showEarnings)
-    }
-    _ = ownerId
-    _ = muted
-
-    logger.info("Performing manage action: \(action.rawValue)")
-    let result: ManageActionResponse =
-      try await supabase
-      .rpc("manage_sharing_action", params: params)
-      .single()
-      .execute()
-      .value
-
-    if !result.success {
-      let errorMessage = result.error ?? "Unknown error"
-      logger.error("Manage action failed: \(errorMessage)")
-      throw SharingServiceError.httpError(statusCode: 400, message: errorMessage)
-    }
-
-    logger.info("Manage action \(action.rawValue) succeeded")
-  }
-
-  /// Create a new share by email, phone, or username
-  /// Requires API for user lookup and notifications
+  /// Create a new share by email or username. The server looks up the user and notifies them.
   func createShare(identifier: String, showEarnings: Bool = false) async throws {
-    try await performManageAction(
-      action: .createShare,
-      identifier: identifier,
-      showEarnings: showEarnings
-    )
+    logger.info("Creating share")
+    let params: [String: AnyJSON] = [
+      "identifier": .string(identifier),
+      "show_earnings": .bool(showEarnings),
+    ]
+    do {
+      let result: ManageActionResponse = try await ConvexAPI.app.action(
+        "sharing:createShare", params)
+      try throwIfFailed(result)
+    } catch {
+      throw mapRPCError(error)
+    }
+    logger.info("Created share")
   }
 
   /// Remove a share (revoke recipient's access to my shifts)
-  /// Owner can delete directly via Supabase (RLS allows this)
   func removeShare(recipientId: String) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
-    let userId = session.normalizedUserId
-
     logger.info("Removing share for recipient \(recipientId)")
-
-    try await supabase
-      .from("shift_shares")
-      .delete()
-      .eq("owner_id", value: userId)
-      .eq("viewer_id", value: recipientId)
-      .execute()
-
+    try await mutate("sharing:removeShare", ["viewer_id": .string(recipientId)])
     logger.info("Successfully removed share")
   }
 
   /// Remove a sharer from my friends list (as the viewer)
-  /// Viewer can delete directly via Supabase (RLS allows this)
   func removeSharer(ownerId: String) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
-    let userId = session.normalizedUserId
-
     logger.info("Removing sharer \(ownerId) from friends list")
-
-    try await supabase
-      .from("shift_shares")
-      .delete()
-      .eq("owner_id", value: ownerId)
-      .eq("viewer_id", value: userId)
-      .execute()
-
+    try await mutate("sharing:removeSharer", ["owner_id": .string(ownerId)])
     logger.info("Successfully removed sharer")
   }
 
   /// Toggle earnings visibility for a share recipient
-  /// Owner can update show_earnings directly via Supabase (RLS allows this)
   func toggleShareEarnings(recipientId: String, showEarnings: Bool) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
-    let userId = session.normalizedUserId
-
     logger.info("Toggling earnings visibility for recipient \(recipientId) to \(showEarnings)")
-
-    try await supabase
-      .from("shift_shares")
-      .update(["show_earnings": showEarnings])
-      .eq("owner_id", value: userId)
-      .eq("viewer_id", value: recipientId)
-      .execute()
-
+    try await mutate(
+      "sharing:updateMyShare",
+      ["viewer_id": .string(recipientId), "show_earnings": .bool(showEarnings)]
+    )
     logger.info("Successfully toggled earnings visibility")
   }
 
   /// Hide a sharer from the main list.
   func hideSharer(ownerId: String) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
-    let userId = session.normalizedUserId
-
     logger.info("Hiding sharer \(ownerId)")
-
-    try await supabase
-      .from("shift_shares")
-      .update(["hidden": true])
-      .eq("owner_id", value: ownerId)
-      .eq("viewer_id", value: userId)
-      .execute()
-
+    try await mutate("sharing:updateSharer", ["owner_id": .string(ownerId), "hidden": .bool(true)])
     logger.info("Successfully hid sharer")
   }
 
   /// Show a previously hidden sharer in the main list.
   func showSharer(ownerId: String) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
-    let userId = session.normalizedUserId
-
     logger.info("Showing sharer \(ownerId)")
-
-    try await supabase
-      .from("shift_shares")
-      .update(["hidden": false])
-      .eq("owner_id", value: ownerId)
-      .eq("viewer_id", value: userId)
-      .execute()
-
+    try await mutate("sharing:updateSharer", ["owner_id": .string(ownerId), "hidden": .bool(false)])
     logger.info("Successfully showed sharer")
   }
 
   /// Share back with someone who has shared with me
-  /// Requires API for notifications
   func shareBack(recipientId: String) async throws {
-    try await performManageAction(
-      action: .shareBack,
-      recipientId: recipientId
-    )
+    do {
+      let result: ManageActionResponse = try await ConvexAPI.app.mutation(
+        "sharing:shareBack", ["recipient_id": AnyJSON.string(recipientId)])
+      try throwIfFailed(result)
+    } catch {
+      throw mapRPCError(error)
+    }
   }
 
   /// Creates an abuse block for a user pair.
   func blockFriend(userId: String) async throws {
-    let params: [String: AnyJSON] = [
-      "p_other_user_id": .string(userId)
-    ]
-
     logger.info("Blocking user pair \(userId, privacy: .private)")
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      _ =
-        try await supabase
-        .rpc("block_user_pair", params: params)
-        .execute()
-
-      logger.info("Successfully blocked user pair")
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw SharingServiceError.decodingError(underlying: error)
-    } catch {
-      throw SharingServiceError.networkError(underlying: error)
-    }
+    try await mutate("sharing:blockUser", ["other_user_id": .string(userId)])
+    logger.info("Successfully blocked user pair")
   }
 
   /// Clears an abuse block for a user pair.
   func unblockFriend(userId: String) async throws {
-    let params: [String: AnyJSON] = [
-      "p_other_user_id": .string(userId)
-    ]
-
     logger.info("Unblocking user pair \(userId, privacy: .private)")
-
-    do {
-      _ = try await AuthSessionManager.shared.getSession()
-
-      _ =
-        try await supabase
-        .rpc("unblock_user_pair", params: params)
-        .execute()
-
-      logger.info("Successfully unblocked user pair")
-    } catch let error as PostgrestError {
-      throw mapRPCError(error)
-    } catch let error as AuthError {
-      throw mapRPCError(error)
-    } catch let error as DecodingError {
-      throw SharingServiceError.decodingError(underlying: error)
-    } catch {
-      throw SharingServiceError.networkError(underlying: error)
-    }
+    try await mutate("sharing:unblockUser", ["other_user_id": .string(userId)])
+    logger.info("Successfully unblocked user pair")
   }
 
   /// Toggle muted status for a specific sharer
-  /// Viewer can update muted directly via Supabase (RLS allows this)
   func toggleSharerMuted(ownerId: String, muted: Bool) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
-    let userId = session.normalizedUserId
-
     logger.info("Toggling muted status for sharer \(ownerId) to \(muted)")
-
-    try await supabase
-      .from("shift_shares")
-      .update(["muted": muted])
-      .eq("owner_id", value: ownerId)
-      .eq("viewer_id", value: userId)
-      .execute()
-
+    try await mutate("sharing:updateSharer", ["owner_id": .string(ownerId), "muted": .bool(muted)])
     logger.info("Successfully toggled muted status")
   }
 
   /// Toggle owner_muted status for a specific viewer
-  /// Owner can update owner_muted directly via Supabase (RLS allows this)
   func toggleOwnerMuted(viewerId: String, ownerMuted: Bool) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
-    let userId = session.normalizedUserId
-
     logger.info("Toggling owner_muted for viewer \(viewerId) to \(ownerMuted)")
-
-    try await supabase
-      .from("shift_shares")
-      .update(["owner_muted": ownerMuted])
-      .eq("owner_id", value: userId)
-      .eq("viewer_id", value: viewerId)
-      .execute()
-
+    try await mutate(
+      "sharing:updateMyShare",
+      ["viewer_id": .string(viewerId), "owner_muted": .bool(ownerMuted)]
+    )
     logger.info("Successfully toggled owner_muted status")
+  }
+
+  // MARK: - Mutation Helpers
+
+  /// Runs a mutation whose result the caller ignores and maps failures to `SharingServiceError`.
+  private func mutate(_ path: String, _ params: [String: AnyJSON]) async throws {
+    do {
+      let _: ConvexAPI.Ignored = try await ConvexAPI.app.mutation(path, params)
+    } catch {
+      throw mapRPCError(error)
+    }
+  }
+
+  private func throwIfFailed(_ result: ManageActionResponse) throws {
+    guard result.success else {
+      let errorMessage = result.error ?? "Unknown error"
+      logger.error("Share action failed: \(errorMessage)")
+      throw SharingServiceError.httpError(statusCode: 400, message: errorMessage)
+    }
   }
   // swiftlint:disable:next file_length
 }

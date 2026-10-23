@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 import Observation
-import Supabase
 import UIKit
 import os.log  // swiftlint:disable:this sorted_imports
 
@@ -3054,7 +3053,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
 
   /// Get current authenticated user ID and update user profile data
   private func getCurrentUserId() async throws -> String? {  // swiftlint:disable:this type_contents_order
-    let session: Session
+    let session: AuthSession
     do {
       // Use AuthSessionManager to prevent concurrent refresh race conditions
       session = try await AuthSessionManager.shared.getSession()
@@ -3076,17 +3075,13 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     }
     let user = session.user  // swiftlint:disable:this explicit_type_interface
 
-    // Extract display name from user metadata or fall back to email
+    // Use the profile name, or fall back to the email
     let displayName: String
-    if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
-      displayName = fullName
-    } else if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
+    if let name = user.name, !name.isEmpty {
       displayName = name
     } else if let email = user.email {
       // Use the part before @ for email
       displayName = email.components(separatedBy: "@").first ?? email
-    } else if let phone = user.phone {
-      displayName = phone
     } else {
       displayName = "User"
     }

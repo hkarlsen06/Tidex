@@ -1,6 +1,6 @@
 import Foundation
 
-/// Numbers for the Stats screen from `admin_get_stats_api`. The server picks the sections and
+/// Numbers for the Stats screen from `admin:stats`. The server picks the sections and
 /// their items, and the app draws each item by its kind.
 struct AdminStats: Decodable, Sendable {
   let sections: [Section]
@@ -81,7 +81,7 @@ struct AdminStats: Decodable, Sendable {
   }
 
   struct Point: Decodable, Identifiable, Sendable {
-    /// The Monday that starts the week, a Postgres date.
+    /// The Monday that starts the week, a date such as "2026-09-28".
     let date: String
     let value: Int
 

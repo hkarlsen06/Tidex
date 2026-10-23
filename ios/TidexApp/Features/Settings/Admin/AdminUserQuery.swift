@@ -1,7 +1,6 @@
 import Foundation
-import Supabase
 
-/// Matches `p_account` in `admin_list_users_api`.
+/// Matches `account` in `admin:listUsers`.
 enum AdminUserAccount: String, CaseIterable, Identifiable, Sendable {
   case any
   case admins
@@ -22,7 +21,7 @@ enum AdminUserAccount: String, CaseIterable, Identifiable, Sendable {
   }
 }
 
-/// Sign-in methods, matching the names in `auth.users.raw_app_meta_data.providers`.
+/// Sign-in methods, matching the provider names on the users row.
 enum AdminUserProvider: String, CaseIterable, Identifiable, Sendable {
   case apple
   case google
@@ -63,7 +62,7 @@ enum AdminUserActivity: Hashable, Identifiable, Sendable {
   }
 }
 
-/// Matches `p_shifts`, `p_messages` and `p_friends` in `admin_list_users_api`.
+/// Matches `shifts`, `messages` and `friends` in `admin:listUsers`.
 enum AdminUserUsage: String, CaseIterable, Identifiable, Sendable {
   case any
   case with
@@ -93,27 +92,25 @@ struct AdminUserQuery: Hashable, Sendable {
   var withoutFilters: Self { Self(sort: sort, reversed: reversed) }
   var hasFilters: Bool { self != withoutFilters }
 
-  var rpcParams: [String: AnyJSON] {
-    var activeDays: AnyJSON = .null
-    var inactiveDays: AnyJSON = .null
+  /// Arguments for `admin:listUsers`. Convex rejects null, so unset filters are left out.
+  var convexArgs: [String: AnyJSON] {
+    var args: [String: AnyJSON] = [
+      "sort": .string(sort.rawValue),
+      "reverse": .bool(reversed),
+      "account": .string(account.rawValue),
+      "shifts": .string(shifts.rawValue),
+      "messages": .string(messages.rawValue),
+      "friends": .string(friends.rawValue),
+    ]
+    if let language { args["language"] = .string(language.rawValue) }
+    if let provider { args["provider"] = .string(provider.rawValue) }
+    if let signedUpWithin { args["signed_up_days"] = .integer(signedUpWithin.rawValue) }
+    if let appVersion { args["app_version"] = .string(appVersion) }
     switch activity {
-    case .activeWithin(let period): activeDays = .integer(period.rawValue)
-    case .inactiveFor(let period): inactiveDays = .integer(period.rawValue)
+    case .activeWithin(let period): args["active_days"] = .integer(period.rawValue)
+    case .inactiveFor(let period): args["inactive_days"] = .integer(period.rawValue)
     case nil: break
     }
-    return [
-      "p_sort": .string(sort.rawValue),
-      "p_reverse": .bool(reversed),
-      "p_account": .string(account.rawValue),
-      "p_language": language.map { AnyJSON.string($0.rawValue) } ?? .null,
-      "p_provider": provider.map { AnyJSON.string($0.rawValue) } ?? .null,
-      "p_signed_up_days": signedUpWithin.map { AnyJSON.integer($0.rawValue) } ?? .null,
-      "p_active_days": activeDays,
-      "p_inactive_days": inactiveDays,
-      "p_shifts": .string(shifts.rawValue),
-      "p_messages": .string(messages.rawValue),
-      "p_friends": .string(friends.rawValue),
-      "p_app_version": appVersion.map(AnyJSON.string) ?? .null,
-    ]
+    return args
   }
 }

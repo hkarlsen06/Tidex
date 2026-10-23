@@ -177,14 +177,22 @@ if xcresult_ok:
     except Exception:
         pass
 
-if not warnings and not errors:
+# Some failures, such as package resolution, never reach the result bundle, so read the log
+# whenever the bundle named no error. Warnings come from the log only when the bundle had none.
+if not errors:
     text = Path(log_path).read_text(encoding="utf-8", errors="replace")
+    scan_warnings = not warnings
 
     for line in text.splitlines():
         if " warning: " in line:
-            add_unique(warnings, line)
+            if scan_warnings:
+                add_unique(warnings, line)
         elif re.search(r"(^|\s)error:", line):
             add_unique(errors, line)
+
+    if status != "SUCCESS" and not errors:
+        # Nothing looks like an error, so show the end of the log instead of nothing.
+        errors.extend(line for line in text.splitlines()[-30:] if line.strip())
 
 payload = {
     "status": status,

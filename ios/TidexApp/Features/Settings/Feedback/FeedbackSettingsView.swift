@@ -34,6 +34,7 @@ struct FeedbackSettingsView: View {
     .task {
       await viewModel.loadData()
     }
+    .reloadOnChange(of: "feedback:mine") { await viewModel.refreshHistory() }
   }
 
   // MARK: - Success

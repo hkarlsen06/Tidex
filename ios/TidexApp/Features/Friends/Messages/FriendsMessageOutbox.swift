@@ -124,8 +124,9 @@ final class FriendsMessageOutbox {
         await confirm(sentMessage, replacing: message, userId: userId)
       } catch {
         let disposition = await recordFailure(error, for: message, userId: userId)
-        if Self.isConnectivityError(error) {
-          // Offline, so the remaining messages would fail the same way.
+        // Offline, or another account is signed in now and the messages left are not theirs.
+        // Either way the remaining messages would fail the same way.
+        if Self.isConnectivityError(error) || Self.isWrongUser(error) {
           notifyThreadUpdated(message.threadId)
           return
         }
@@ -157,6 +158,7 @@ final class FriendsMessageOutbox {
   func send(_ message: FriendMessage) async throws -> FriendMessage {
     let outgoingAttachments = try await makeOutgoingAttachments(for: message)
     return try await service.sendMessage(
+      senderUserId: message.senderUserId,
       threadId: message.threadId,
       clientId: message.clientId,
       body: message.body,
@@ -206,11 +208,13 @@ final class FriendsMessageOutbox {
     return .queue
   }
 
-  /// Stores the queued or failed state for a message whose send threw.
+  /// Stores the queued or failed state for a message whose send threw. A send refused because
+  /// another account is signed in leaves the message as it was, queued for its sender.
   @discardableResult
   func recordFailure(_ error: Error, for message: FriendMessage, userId: String) async
     -> Disposition
   {
+    if Self.isWrongUser(error) { return .queue }
     let outcome = disposition(for: error, messageId: message.id)
     await repository.updateMessageSendState(
       messageId: message.id,
@@ -312,7 +316,11 @@ final class FriendsMessageOutbox {
           threadId: message.threadId,
           image: pendingImage
         )
-        Self.cacheImage(pendingImage, for: uploadedAttachment.storagePath)
+        // The sent message names its image with this path, so it shows without a download.
+        Self.cacheImage(
+          pendingImage,
+          for: FriendsMessagingService.attachmentPath(attachmentId: uploadedAttachment.attachmentId)
+        )
         outgoingAttachments.append(uploadedAttachment)
         continue
       }
@@ -360,7 +368,7 @@ final class FriendsMessageOutbox {
       case .networkError(let underlying):
         return isConnectivityError(underlying)
 
-      case .notAuthenticated, .decodingError, .httpError:
+      case .notAuthenticated, .decodingError, .httpError, .wrongUser:
         return false
       }
     }
@@ -376,11 +384,17 @@ final class FriendsMessageOutbox {
     return false
   }
 
+  /// True when the server refused the send because another account is signed in now.
+  static func isWrongUser(_ error: Error) -> Bool {
+    if case .wrongUser = error as? FriendsMessagingServiceError { return true }
+    return false
+  }
+
   /// Errors where a retry cannot help.
   private static func isDefinitiveFailure(_ error: Error) -> Bool {
     if let serviceError = error as? FriendsMessagingServiceError {
       switch serviceError {
-      case .networkError:
+      case .networkError, .wrongUser:
         return false
 
       case .notAuthenticated, .decodingError, .httpError:

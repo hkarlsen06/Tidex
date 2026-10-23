@@ -9,8 +9,8 @@ import Security
 /// Uses a shared access group to allow cross-target access to auth tokens
 ///
 /// ## Usage
-/// The main app writes the JWT token after successful authentication.
-/// Extensions read this token to make authenticated API calls directly.
+/// The main app writes each Clerk session token it gets, and the Clerk session ID.
+/// Extensions read the token through `SharedAuthToken`, which renews it when it expired.
 enum SharedKeychainStorage {
   // MARK: - Configuration
 
@@ -22,6 +22,14 @@ enum SharedKeychainStorage {
 
   /// Key for storing the token expiry timestamp
   private static let tokenExpiryKey = "token_expiry"
+
+  /// Key for the Clerk session ID that `SharedAuthToken` renews tokens for
+  private static let clerkSessionIdKey = "clerk_session_id"
+
+  /// Clerk's own keychain item for this device, shared with the extensions through
+  /// `Clerk.Options.KeychainConfig` in `ClerkSetup`.
+  static let clerkKeychainService = "no.tidex.clerk"
+  private static let clerkDeviceTokenAccount = "clerkDeviceToken"
 
   // MARK: - Errors
 
@@ -71,6 +79,49 @@ enum SharedKeychainStorage {
   static func clearAccessToken() throws {
     try deleteItem(forKey: accessTokenKey)
     try deleteItem(forKey: tokenExpiryKey)
+    try deleteItem(forKey: clerkSessionIdKey)
+  }
+
+  static func storeClerkSessionId(_ sessionId: String) throws {
+    guard (try? getString(forKey: clerkSessionIdKey)) != sessionId else { return }
+    try storeString(sessionId, forKey: clerkSessionIdKey)
+  }
+
+  static var clerkSessionId: String? {
+    try? getString(forKey: clerkSessionIdKey)
+  }
+
+  /// The last stored token, even if it expired. Clerk's session minter wants it back.
+  static var lastAccessToken: String? {
+    try? getString(forKey: accessTokenKey)
+  }
+
+  /// The device token Clerk's SDK keeps for this install. Clerk can rotate it in a response.
+  static var clerkDeviceToken: String? {
+    get {
+      var query = clerkDeviceTokenQuery()
+      query[kSecReturnData as String] = true
+      query[kSecMatchLimit as String] = kSecMatchLimitOne
+      var result: AnyObject?
+      guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+        let data = result as? Data
+      else { return nil }
+      return String(data: data, encoding: .utf8)
+    }
+    set {
+      guard let newValue else { return }
+      SecItemUpdate(
+        clerkDeviceTokenQuery() as CFDictionary,
+        [kSecValueData as String: Data(newValue.utf8)] as CFDictionary)
+    }
+  }
+
+  private static func clerkDeviceTokenQuery() -> [String: Any] {
+    [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: clerkKeychainService,
+      kSecAttrAccount as String: clerkDeviceTokenAccount,
+    ]
   }
 
   // MARK: - Token Retrieval
@@ -86,9 +137,9 @@ enum SharedKeychainStorage {
       return nil
     }
 
-    // Check if token is expired (with 60 second buffer)
+    // Clerk tokens last 60 seconds, so keep the buffer short.
     let now = Int(Date().timeIntervalSince1970)
-    let buffer = 60  // 1 minute buffer
+    let buffer = 5
 
     guard expiresAt > (now + buffer) else {
       return nil  // Token expired or about to expire

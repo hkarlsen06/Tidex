@@ -3,7 +3,6 @@
 // swiftlint:disable:previous blanket_disable_command
 import Foundation
 import Observation
-import Supabase
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SyncCoordinator")
@@ -18,14 +17,9 @@ internal enum SyncState {
   case syncing(userId: String, startedAt: Date)
 }
 
-/// Where a table's pull starts, copied out of `LocalSyncState` before the pull task runs.
-private struct PullStartCursor: Sendable {
-  let updatedAt: SyncCursor
-  let revision: Int64
-}
-
-internal enum SyncStartDecision {
-  case started
+internal enum SyncStartDecision: Equatable {
+  /// The sync may run. It passes `generation` back to `endSync`.
+  case started(generation: Int)
   case alreadySyncing
   case skippedInterval
 }
@@ -34,6 +28,9 @@ internal actor SyncStateStore {
   private var syncState: SyncState = .idle
   private var lastAutoSyncAt: Date?
   private var needsFollowUpSync = false
+  /// Goes up on every reset. A sync that started before the last reset ran for the previous
+  /// user, and its `endSync` must not end the sync of the user signed in now.
+  private var generation = 0
 
   internal func beginSync(reason: SyncReason, userId: String, minimumSyncInterval: TimeInterval)
     -> SyncStartDecision
@@ -50,7 +47,7 @@ internal actor SyncStateStore {
     }
 
     let requiresIntervalCheck =
-      reason != .manualRefresh && reason != .localChange
+      reason != .manualRefresh && reason != .localChange && reason != .remoteChange
     if requiresIntervalCheck,
       let lastAuto = lastAutoSyncAt,
       Date().timeIntervalSince(lastAuto) < minimumSyncInterval
@@ -61,12 +58,14 @@ internal actor SyncStateStore {
     // The interval guard starts when a sync succeeds (see endSync). The syncing state above
     // already stops two syncs from starting at once.
     syncState = .syncing(userId: userId, startedAt: Date())
-    return .started
+    return .started(generation: generation)
   }
 
   /// Ends the running sync and returns whether a coalesced follow-up sync is due.
   /// A failed sync clears the interval guard so the next foreground sync can retry at once.
-  internal func endSync(success: Bool) -> Bool {
+  /// Returns nil and changes nothing when `generation` is from before the last reset.
+  internal func endSync(success: Bool, generation: Int) -> Bool? {
+    guard generation == self.generation else { return nil }
     syncState = .idle
     lastAutoSyncAt = success ? Date() : nil
     let shouldRunFollowUp = needsFollowUpSync
@@ -75,6 +74,7 @@ internal actor SyncStateStore {
   }
 
   internal func reset() {
+    generation += 1
     syncState = .idle
     lastAutoSyncAt = nil
     needsFollowUpSync = false
@@ -84,7 +84,7 @@ internal actor SyncStateStore {
 extension SyncReason {
   fileprivate var shouldQueueFollowUp: Bool {
     switch self {
-    case .localChange, .manualRefresh:
+    case .localChange, .manualRefresh, .remoteChange:
       return true
 
     case .appLaunch, .foreground:
@@ -95,7 +95,7 @@ extension SyncReason {
 
 // MARK: - Sync Coordinator
 
-/// Coordinates bidirectional sync between local SwiftData storage and Supabase
+/// Coordinates bidirectional sync between local SwiftData storage and Convex
 /// Implements incremental sync via revision cursors with field-level conflict detection
 /// `@unchecked` is safe because the observable state is only written inside `MainActor.run`,
 /// and the sync state lives in the `SyncStateStore` actor.
@@ -139,11 +139,22 @@ final class SyncCoordinator: @unchecked Sendable {
   /// Sync state for atomic check-and-set operations
   private let stateStore = SyncStateStore()
 
+  /// Guards `isSendingLocale`, which keeps two syncs from sending the app locale at once.
+  private let localeSendLock = NSLock()
+  @ObservationIgnored private var isSendingLocale = false
+
+  /// The work of the running sync. `resetForUserChange` cancels it, so a sync for the user who
+  /// signed out stops at its next request instead of sending their rows with the next user's
+  /// token. Guarded by `runningWorkLock`.
+  private let runningWorkLock = NSLock()
+  @ObservationIgnored private var runningWork: Task<SyncResult, Never>?
+
   private init() {}
 
   /// Reset sync state when user changes (e.g., sign out)
   /// Clears the interval guard so the next user's initial sync isn't blocked
   func resetForUserChange() async {
+    runningWorkLock.withLock { runningWork }?.cancel()
     await stateStore.reset()
     await MainActor.run {
       isSyncing = false
@@ -158,35 +169,47 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - App Locale Update
 
-  /// Keeps `raw_user_meta_data.locale` aligned with the active iPhone/app language.
-  /// Stores the app localization identifier (e.g. `nb`, `pt-br`, `zh-hans`) for server-side localization.
-  private func updateAppLocaleMetadataIfNeeded() async {
+  /// Tells the server the active iPhone/app language, for push text. Sends the app localization
+  /// identifier (e.g. `nb`, `pt-br`, `zh-hans`). The last value the server accepted is kept per
+  /// user in UserDefaults, so a sync only calls the server when the language changed.
+  private func updateAppLocaleIfNeeded(userId: String) async {
     guard let appLocaleCode = currentAppLocaleMetadataCode() else {
-      logger.debug("Skipping locale metadata sync: app locale code is empty")
+      logger.debug("Skipping locale update: app locale code is empty")
       return
     }
+    let defaultsKey = "sync.sentAppLocale.\(userId)"
+    guard UserDefaults.standard.string(forKey: defaultsKey) != appLocaleCode else { return }
 
+    // Concurrent syncs would each send the same value before the first reply arrives.
+    guard beginLocaleSend() else { return }
+    defer { endLocaleSend() }
+
+    struct Args: Encodable, Sendable {
+      let locale: String
+    }
     do {
-      // Route session access through AuthSessionManager to avoid refresh races
-      // with other launch/foreground tasks.
-      let session = try await AuthSessionManager.shared.getSession()
-      let currentMetadataLocale = session.user.userMetadata["locale"]?.value as? String
-      let normalizedCurrentLocale = currentMetadataLocale?.lowercased()
-
-      guard normalizedCurrentLocale != appLocaleCode else {
-        return
-      }
-
-      _ = try await supabase.auth.update(
-        user: UserAttributes(data: ["locale": .string(appLocaleCode)])
-      )
-      logger.debug(
-        "Updated user locale metadata from \(normalizedCurrentLocale ?? "nil") to \(appLocaleCode)"
-      )
+      let _: ConvexAPI.Ignored = try await ConvexAPI.app.mutation(
+        "users:setLocale", Args(locale: appLocaleCode))
+      UserDefaults.standard.set(appLocaleCode, forKey: defaultsKey)
+      logger.debug("Sent app locale \(appLocaleCode)")
     } catch {
       // Non-fatal - log but don't fail sync/foreground flow.
-      logger.warning("Failed to update app locale metadata: \(error.localizedDescription)")
+      logger.warning("Failed to send app locale: \(error.localizedDescription)")
     }
+  }
+
+  private func beginLocaleSend() -> Bool {
+    localeSendLock.lock()
+    defer { localeSendLock.unlock() }
+    if isSendingLocale { return false }
+    isSendingLocale = true
+    return true
+  }
+
+  private func endLocaleSend() {
+    localeSendLock.lock()
+    isSendingLocale = false
+    localeSendLock.unlock()
   }
 
   private func currentAppLocaleMetadataCode() -> String? {
@@ -298,6 +321,7 @@ final class SyncCoordinator: @unchecked Sendable {
       break syncStartLoop
     }
 
+    let generation: Int
     switch decision {
     case .alreadySyncing:
       logger.info("Sync already in progress, skipping \(reason.rawValue)")
@@ -314,9 +338,9 @@ final class SyncCoordinator: @unchecked Sendable {
       )
 
     case .skippedInterval:
-      // Keep locale metadata in sync even when full sync is interval-skipped.
-      // Fire and forget so a slow auth request cannot delay the foreground path.
-      Task { await self.updateAppLocaleMetadataIfNeeded() }
+      // Keep the server's copy of the app locale current even when full sync is interval-skipped.
+      // Fire and forget so a slow request cannot delay the foreground path.
+      Task { await self.updateAppLocaleIfNeeded(userId: userId) }
       // Keep foreground Live Activity state fresh without running full widget
       // storage recomputation on the main thread when sync is interval-skipped.
       await MainActor.run {
@@ -334,8 +358,8 @@ final class SyncCoordinator: @unchecked Sendable {
         error: nil
       )
 
-    case .started:
-      break
+    case .started(let started):
+      generation = started
     }
 
     let startTime = Date()
@@ -345,7 +369,7 @@ final class SyncCoordinator: @unchecked Sendable {
       lastError = nil
       lastSyncAttemptedAt = startTime
     }
-    // Fire and forget. The RPC can take up to the request timeout, and the sync must not hold
+    // Fire and forget. The call can take up to the request timeout, and the sync must not hold
     // the syncing lock for that long.
     Task { await self.updateRemoteLastSyncedAt(userId: userId, syncedAt: startTime) }
 
@@ -361,13 +385,26 @@ final class SyncCoordinator: @unchecked Sendable {
     // swiftlint:disable:next closure_body_length
     let result: SyncResult = await withTaskGroup(of: SyncResult?.self) { group in
       group.addTask {
-        await self.performSyncWork(
-          reason: reason,
-          userId: userId,
-          startTime: startTime,
-          tables: uniqueTables,
-          updateWidgetStorage: updateWidgetStorage
-        )
+        let work = Task {
+          await self.performSyncWork(
+            reason: reason,
+            userId: userId,
+            startTime: startTime,
+            tables: uniqueTables,
+            updateWidgetStorage: updateWidgetStorage
+          )
+        }
+        self.runningWorkLock.withLock { self.runningWork = work }
+        defer {
+          self.runningWorkLock.withLock {
+            if self.runningWork == work { self.runningWork = nil }
+          }
+        }
+        return await withTaskCancellationHandler {
+          await work.value
+        } onCancel: {
+          work.cancel()
+        }
       }
       group.addTask {
         try? await Task.sleep(nanoseconds: Self.syncTimeout)
@@ -402,6 +439,13 @@ final class SyncCoordinator: @unchecked Sendable {
         )
     }
 
+    // resetForUserChange ran during this sync, so it belongs to the previous user. The state and
+    // the status shown now are the next user's.
+    guard
+      let needsFollowUpSync = await stateStore.endSync(
+        success: result.success, generation: generation)
+    else { return result }
+
     if result.error == "Sync timed out" {
       logger.error("Sync timed out after 30s, cancelling")
       await MainActor.run {
@@ -410,7 +454,6 @@ final class SyncCoordinator: @unchecked Sendable {
       }
     }
 
-    let needsFollowUpSync = await stateStore.endSync(success: result.success)
     await MainActor.run {
       isSyncing = false
     }
@@ -462,14 +505,14 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // swiftlint:disable:next type_contents_order
   private func updateRemoteLastSyncedAt(userId: String, syncedAt: Date) async {
-    let params: [String: AnyJSON] = [
-      "p_last_synced_at": .string(formatSupabaseTimestamp(syncedAt))
-    ]
+    struct Args: Encodable, Sendable {
+      let lastSyncedAt: String
+      enum CodingKeys: String, CodingKey { case lastSyncedAt = "last_synced_at" }
+    }
 
     do {
-      try await supabase
-        .rpc("update_my_profile_last_synced_at", params: params)
-        .execute()
+      let _: ConvexAPI.Ignored = try await ConvexAPI.app.mutation(
+        "sharing:setLastSyncedAt", Args(lastSyncedAt: formatTimestamp(syncedAt)))
       logger.debug("Updated remote last_synced_at for \(userId.prefix(8))")
     } catch {
       logger.warning("Failed to update remote last_synced_at: \(error.localizedDescription)")
@@ -521,13 +564,13 @@ final class SyncCoordinator: @unchecked Sendable {
     into phase: PullPhase,
     tables: [SyncTable],
     userId: String,
-    startCursors: [SyncTable: PullStartCursor]
+    startCursors: [SyncTable: Int64]
   ) async {
     for table in tables {
       if Task.isCancelled { return }
       guard let start = startCursors[table] else { continue }
       do {
-        phase.tableResults.append(try await pullTable(table, userId: userId, start: start))
+        phase.tableResults.append(try await pullTable(table, userId: userId, after: start))
       } catch {
         logger.error("Pull of \(table.displayName) failed: \(error.localizedDescription)")
         if phase.error == nil { phase.error = error }
@@ -542,7 +585,7 @@ final class SyncCoordinator: @unchecked Sendable {
   /// which are network errors and cancellation. For any other error the row is skipped and stays
   /// dirty, so the next sync retries it.
   private func skipRowUnlessFatal(_ error: Error, table: SyncTable, id: String) async throws {
-    if Self.isCancellation(error) { throw error }
+    if Self.isCancellation(error) || Self.isWrongUser(error) { throw error }
     if await Self.isNetworkError(error) { throw error }
     logger.error(
       "Skipping push of \(table.displayName) row \(id.prefix(8)): \(error.localizedDescription)")
@@ -558,32 +601,34 @@ final class SyncCoordinator: @unchecked Sendable {
     tables: [SyncTable],
     updateWidgetStorage: Bool
   ) async -> SyncResult {
-    // Keep locale metadata aligned with the app locale. The sync does not depend on it.
-    Task { await self.updateAppLocaleMetadataIfNeeded() }
+    // Keep the server's copy of the app locale current. The sync does not depend on it.
+    Task { await self.updateAppLocaleIfNeeded(userId: userId) }
 
     // Get or create sync state
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     do {
       try Task.checkCancellation()
 
-      let syncState = try await storeActor.syncStateCopyCreatingIfNeeded(userId: userId)
+      var syncState = try await storeActor.syncStateCopyCreatingIfNeeded(userId: userId)
+      if syncState.convexCursorsResetAt == nil {
+        // The cursors come from Postgres. Start over once, so the pull returns every row and
+        // the merge moves unsent local edits onto the Convex revisions before they push.
+        await storeActor.updateSyncState(userId: userId) { state in
+          state.resetCursorsForConvex()
+        }
+        syncState = try await storeActor.syncStateCopyCreatingIfNeeded(userId: userId)
+        logger.info("Reset the pull cursors for Convex")
+      }
       // Read the cursors here so the pull task does not capture the SwiftData model.
       let startCursors = Dictionary(
-        uniqueKeysWithValues: tables.map { table in
-          (
-            table,
-            PullStartCursor(
-              updatedAt: syncState.updatedAtCursor(for: table),
-              revision: syncState.cursor(for: table))
-          )
-        })
+        uniqueKeysWithValues: tables.map { ($0, syncState.cursor(for: $0)) })
       await storeActor.updateSyncState(userId: userId) { state in
         state.markSyncStarted(at: startTime)
       }
 
       // Phase 1: Pull all tables (get latest server state).
       // A failed pull does not skip the push phase, so local edits still reach the server.
-      // Push handles a stale revision by fetching the server row and rebasing onto it.
+      // Push handles a stale revision by rebasing onto the server row the conflict reply returns.
       let pullPhase = PullPhase()
       let pullFinished: Void? = await Self.withTimeout(nanoseconds: Self.pullTimeout) {
         await self.pullAllTables(
@@ -615,6 +660,7 @@ final class SyncCoordinator: @unchecked Sendable {
             if Self.isCancellation(error) { throw error }
             logger.error("Push of \(table.displayName) failed: \(error.localizedDescription)")
             if pushError == nil { pushError = error }
+            if Self.isWrongUser(error) { break }
             if await Self.isNetworkError(error) { break }
           }
           await Task.yield()
@@ -780,22 +826,20 @@ final class SyncCoordinator: @unchecked Sendable {
   // MARK: - Pull Implementation
 
   /// Pull changes for a single table
-  /// Uses updated_at timestamp cursor with tie-breaker for incremental sync
+  /// Pages through `sync:pull` by revision, oldest first, until the server says it is done
   private func pullTable(
     _ table: SyncTable,
     userId: String,
-    start: PullStartCursor
+    after start: Int64
   ) async throws -> TablePullResult {
-    var cursor = start.updatedAt
+    var cursor = start
     var totalRows = 0
     var newConflicts = 0
     var autoMerged = 0
     var affectedMonths: Set<ShiftChangeAffectedMonth> = []
-    var maxRevision: Int64 = start.revision  // Legacy, for debugging
 
-    logger.debug("Pulling \(table.displayName) from \(cursor.description)")
+    logger.debug("Pulling \(table.displayName) after revision \(cursor)")
 
-    // Page through all changes using updated_at cursor
     while true {
       let result: PagePullResult
 
@@ -830,95 +874,43 @@ final class SyncCoordinator: @unchecked Sendable {
       autoMerged += result.autoMerged
       affectedMonths.formUnion(result.affectedMonths)
 
-      // Track legacy max revision for debugging
-      if result.maxRevision > maxRevision {
-        maxRevision = result.maxRevision
-      }
-
-      // Update cursor if we processed rows
-      if let lastUpdatedAt = result.lastUpdatedAt {
-        cursor = SyncCursor(updatedAt: lastUpdatedAt, tieId: result.lastTieId)
-
-        // Persist cursor to sync state
+      // The cursor only moves after the page is applied and saved, so a failed page pulls again.
+      let advanced = result.cursor > cursor
+      if advanced {
+        cursor = result.cursor
         let storeActor = await MainActor.run { LocalStore.shared.storeActor }
         await storeActor.updateSyncState(userId: userId) { state in
-          state.updateUpdatedAtCursor(for: table, updatedAt: lastUpdatedAt, tieId: result.lastTieId)
-          // Also update legacy cursor for debugging
-          state.updateCursor(for: table, to: result.maxRevision)
+          state.updateCursor(for: table, to: result.cursor)
         }
       }
 
-      // No more pages
-      if !result.hasMore {
+      // A page that does not advance the cursor would repeat for ever.
+      if !result.hasMore || !advanced {
         break
       }
 
       await Task.yield()
     }
 
-    if table == .payrollAdjustments {
-      let reconciliation = try await reconcilePayrollAdjustmentHardDeletes(userId: userId)
-      totalRows += reconciliation.count
-      affectedMonths.formUnion(reconciliation.affectedMonths)
-    }
-
-    let finalCursor = cursor.updatedAt.map { formatSupabaseTimestamp($0) } ?? "initial"
-    logger.debug("Pulled \(table.displayName): \(totalRows) rows, cursor now at \(finalCursor)")
+    logger.debug("Pulled \(table.displayName): \(totalRows) rows, cursor now at \(cursor)")
 
     return TablePullResult(
       table: table,
       rowsProcessed: totalRows,
-      lastUpdatedAt: cursor.updatedAt,
-      lastUpdatedAtTieId: cursor.tieId,
-      maxRevision: maxRevision,
+      lastUpdatedAt: nil,
+      lastUpdatedAtTieId: nil,
+      maxRevision: cursor,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
       affectedMonths: affectedMonths
     )
   }
 
-  private func reconcilePayrollAdjustmentHardDeletes(userId: String) async throws
-    -> (count: Int, affectedMonths: Set<ShiftChangeAffectedMonth>)
-  {
-    // Page by id. The server caps a response at its max-rows setting, and a truncated list would
-    // make real rows look deleted. Any failed page throws before local rows are touched.
-    var serverIds = Set<String>()
-    var lastId: String?
-    while true {
-      var query = supabase
-        .from("payroll_adjustments")
-        .select("id")
-        .eq("user_id", value: userId)
-      if let lastId {
-        query = query.gt("id", value: lastId)
-      }
-      let page: [SyncRowId] =
-        try await query
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-      serverIds.formUnion(page.map(\.id))
-      guard page.count == pageSize, let pageLastId = page.last?.id else { break }
-      lastId = pageLastId
-    }
-
-    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
-    return try await storeActor.markMissingCleanPayrollAdjustmentsDeleted(
-      userId: userId,
-      serverIds: serverIds
-    )
-  }
-
   /// Result of pulling a single page
   private struct PagePullResult {
     let rowsProcessed: Int
-    /// Last updated_at timestamp in this page (for cursor)
-    let lastUpdatedAt: Date?
-    /// ID of the last row at lastUpdatedAt (tie-breaker)
-    let lastTieId: String
-    /// Legacy max revision in this page (for debugging)
-    let maxRevision: Int64
+    /// Revision of the last row in this page, where the next page starts
+    let cursor: Int64
     let newConflicts: Int
     let autoMerged: Int
     let hasMore: Bool
@@ -926,18 +918,14 @@ final class SyncCoordinator: @unchecked Sendable {
 
     init(
       rowsProcessed: Int,
-      lastUpdatedAt: Date?,
-      lastTieId: String,
-      maxRevision: Int64,
+      cursor: Int64,
       newConflicts: Int,
       autoMerged: Int,
       hasMore: Bool,
       affectedMonths: Set<ShiftChangeAffectedMonth> = []
     ) {
       self.rowsProcessed = rowsProcessed
-      self.lastUpdatedAt = lastUpdatedAt
-      self.lastTieId = lastTieId
-      self.maxRevision = maxRevision
+      self.cursor = cursor
       self.newConflicts = newConflicts
       self.autoMerged = autoMerged
       self.hasMore = hasMore
@@ -972,45 +960,15 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - Jobs Pull
 
-  private func pullJobsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
-    let rows: [SyncJobRow]
-
-    if let cursorUpdatedAt = cursor.updatedAt {
-      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
-      let cursorTieId = cursor.tieId
-
-      rows =
-        try await supabase
-        .from("jobs")
-        .select()
-        .eq("user_id", value: userId)
-        .or(
-          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))"
-        )
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    } else {
-      rows =
-        try await supabase
-        .from("jobs")
-        .select()
-        .eq("user_id", value: userId)
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    }
+  private func pullJobsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
+    let page: SyncPullPage<SyncJobRow> = try await SyncConvex.pull(
+      .jobs, after: cursor, limit: pageSize)
+    let rows = page.rows
 
     if rows.isEmpty {
       return PagePullResult(
         rowsProcessed: 0,
-        lastUpdatedAt: cursor.updatedAt,
-        lastTieId: cursor.tieId,
-        maxRevision: 0,
+        cursor: page.cursor,
         newConflicts: 0,
         autoMerged: 0,
         hasMore: false
@@ -1020,7 +978,6 @@ final class SyncCoordinator: @unchecked Sendable {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     var newConflicts = 0
     var autoMerged = 0
-    var maxRevision: Int64 = 0
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
@@ -1029,10 +986,6 @@ final class SyncCoordinator: @unchecked Sendable {
       }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
-
-      if row.revision > maxRevision {
-        maxRevision = row.revision
-      }
 
       let rowNumber = index + 1
       if rowNumber.isMultiple(of: pullSaveBatchSize) {
@@ -1046,19 +999,12 @@ final class SyncCoordinator: @unchecked Sendable {
     let duration = Date().timeIntervalSince(pageStartTime)
     logger.info("jobs: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    let cursorPosition = Self.lastParseableCursorPosition(
-      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
-      table: .jobs
-    )
-
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
-      lastTieId: cursorPosition?.id ?? cursor.tieId,
-      maxRevision: maxRevision,
+      cursor: page.cursor,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: cursorPosition != nil && rows.count == pageSize
+      hasMore: !page.done
     )
   }
 
@@ -1144,52 +1090,16 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - User Shifts Pull
 
-  private func pullUserShiftsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult
+  private func pullUserShiftsPage(userId: String, cursor: Int64) async throws -> PagePullResult
   {
-    // Query server for changes since cursor using updated_at + id tie-breaker
-    // Condition: (updated_at > cursor.updatedAt) OR (updated_at == cursor.updatedAt AND id > cursor.tieId)
-    let rows: [SyncShiftRow]
-
-    if let cursorUpdatedAt = cursor.updatedAt {
-      // Incremental sync: fetch rows after cursor
-      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
-      let cursorTieId = cursor.tieId
-
-      // Use Supabase's or() filter for the compound condition
-      // (updated_at > cursor) OR (updated_at = cursor AND id > tieId)
-      rows =
-        try await supabase
-        .from("user_shifts")
-        .select()
-        .eq("user_id", value: userId)
-        .or(
-          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))"
-        )
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    } else {
-      // Initial sync: fetch all rows
-      rows =
-        try await supabase
-        .from("user_shifts")
-        .select()
-        .eq("user_id", value: userId)
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    }
+    let page: SyncPullPage<SyncShiftRow> = try await SyncConvex.pull(
+      .userShifts, after: cursor, limit: pageSize)
+    let rows = page.rows
 
     if rows.isEmpty {
       return PagePullResult(
         rowsProcessed: 0,
-        lastUpdatedAt: cursor.updatedAt,
-        lastTieId: cursor.tieId,
-        maxRevision: 0,
+        cursor: page.cursor,
         newConflicts: 0,
         autoMerged: 0,
         hasMore: false
@@ -1199,7 +1109,6 @@ final class SyncCoordinator: @unchecked Sendable {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     var newConflicts = 0
     var autoMerged = 0
-    var maxRevision: Int64 = 0
     var affectedMonths = Self.affectedMonths(forShiftRows: rows)
     let pageStartTime = Date()
 
@@ -1213,9 +1122,6 @@ final class SyncCoordinator: @unchecked Sendable {
       }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
-      if row.revision > maxRevision {
-        maxRevision = row.revision
-      }
 
       // Batch save for durability: persist partial progress every N rows
       // Cursor is NOT advanced here - only after full page success
@@ -1233,19 +1139,12 @@ final class SyncCoordinator: @unchecked Sendable {
     logger.info(
       "user_shifts: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    let cursorPosition = Self.lastParseableCursorPosition(
-      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
-      table: .userShifts
-    )
-
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
-      lastTieId: cursorPosition?.id ?? cursor.tieId,
-      maxRevision: maxRevision,
+      cursor: page.cursor,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: cursorPosition != nil && rows.count == pageSize,
+      hasMore: !page.done,
       affectedMonths: affectedMonths
     )
   }
@@ -1406,45 +1305,15 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - Events Pull
 
-  private func pullEventsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
-    let rows: [SyncEventRow]
-
-    if let cursorUpdatedAt = cursor.updatedAt {
-      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
-      let cursorTieId = cursor.tieId
-
-      rows =
-        try await supabase
-        .from("events")
-        .select()
-        .eq("user_id", value: userId)
-        .or(
-          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))"
-        )
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    } else {
-      rows =
-        try await supabase
-        .from("events")
-        .select()
-        .eq("user_id", value: userId)
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    }
+  private func pullEventsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
+    let page: SyncPullPage<SyncEventRow> = try await SyncConvex.pull(
+      .events, after: cursor, limit: pageSize)
+    let rows = page.rows
 
     if rows.isEmpty {
       return PagePullResult(
         rowsProcessed: 0,
-        lastUpdatedAt: cursor.updatedAt,
-        lastTieId: cursor.tieId,
-        maxRevision: 0,
+        cursor: page.cursor,
         newConflicts: 0,
         autoMerged: 0,
         hasMore: false
@@ -1454,7 +1323,6 @@ final class SyncCoordinator: @unchecked Sendable {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     var newConflicts = 0
     var autoMerged = 0
-    var maxRevision: Int64 = 0
     var affectedMonths = Self.affectedMonths(forEventRows: rows)
     let pageStartTime = Date()
 
@@ -1473,9 +1341,6 @@ final class SyncCoordinator: @unchecked Sendable {
       }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
-      if row.revision > maxRevision {
-        maxRevision = row.revision
-      }
 
       let rowNumber = index + 1
       if rowNumber.isMultiple(of: pullSaveBatchSize) {
@@ -1490,19 +1355,12 @@ final class SyncCoordinator: @unchecked Sendable {
     logger.info(
       "events: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    let cursorPosition = Self.lastParseableCursorPosition(
-      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
-      table: .events
-    )
-
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
-      lastTieId: cursorPosition?.id ?? cursor.tieId,
-      maxRevision: maxRevision,
+      cursor: page.cursor,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: cursorPosition != nil && rows.count == pageSize,
+      hasMore: !page.done,
       affectedMonths: affectedMonths
     )
   }
@@ -1641,48 +1499,17 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - Recurring Shifts Pull
 
-  private func pullRecurringShiftsPage(userId: String, cursor: SyncCursor) async throws
+  private func pullRecurringShiftsPage(userId: String, cursor: Int64) async throws
     -> PagePullResult
   {
-    // Query using updated_at + id tie-breaker
-    let rows: [SyncRecurringShiftRow]
-
-    if let cursorUpdatedAt = cursor.updatedAt {
-      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
-      let cursorTieId = cursor.tieId
-
-      rows =
-        try await supabase
-        .from("recurring_shifts")
-        .select()
-        .eq("user_id", value: userId)
-        .or(
-          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))"
-        )
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    } else {
-      rows =
-        try await supabase
-        .from("recurring_shifts")
-        .select()
-        .eq("user_id", value: userId)
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    }
+    let page: SyncPullPage<SyncRecurringShiftRow> = try await SyncConvex.pull(
+      .recurringShifts, after: cursor, limit: pageSize)
+    let rows = page.rows
 
     if rows.isEmpty {
       return PagePullResult(
         rowsProcessed: 0,
-        lastUpdatedAt: cursor.updatedAt,
-        lastTieId: cursor.tieId,
-        maxRevision: 0,
+        cursor: page.cursor,
         newConflicts: 0,
         autoMerged: 0,
         hasMore: false
@@ -1692,7 +1519,6 @@ final class SyncCoordinator: @unchecked Sendable {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     var newConflicts = 0
     var autoMerged = 0
-    var maxRevision: Int64 = 0
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
@@ -1701,9 +1527,6 @@ final class SyncCoordinator: @unchecked Sendable {
       }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
-      if row.revision > maxRevision {
-        maxRevision = row.revision
-      }
 
       // Batch save for durability
       let rowNumber = index + 1
@@ -1721,19 +1544,12 @@ final class SyncCoordinator: @unchecked Sendable {
       "recurring_shifts: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s"
     )
 
-    let cursorPosition = Self.lastParseableCursorPosition(
-      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
-      table: .recurringShifts
-    )
-
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
-      lastTieId: cursorPosition?.id ?? cursor.tieId,
-      maxRevision: maxRevision,
+      cursor: page.cursor,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: cursorPosition != nil && rows.count == pageSize
+      hasMore: !page.done
     )
   }
 
@@ -1868,48 +1684,17 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - Wage Snapshots Pull
 
-  private func pullWageSnapshotsPage(userId: String, cursor: SyncCursor) async throws
+  private func pullWageSnapshotsPage(userId: String, cursor: Int64) async throws
     -> PagePullResult
   {
-    // Query using updated_at + id tie-breaker
-    let rows: [SyncWageSnapshotRow]
-
-    if let cursorUpdatedAt = cursor.updatedAt {
-      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
-      let cursorTieId = cursor.tieId
-
-      rows =
-        try await supabase
-        .from("wage_snapshots")
-        .select()
-        .eq("user_id", value: userId)
-        .or(
-          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))"
-        )
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    } else {
-      rows =
-        try await supabase
-        .from("wage_snapshots")
-        .select()
-        .eq("user_id", value: userId)
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    }
+    let page: SyncPullPage<SyncWageSnapshotRow> = try await SyncConvex.pull(
+      .wageSnapshots, after: cursor, limit: pageSize)
+    let rows = page.rows
 
     if rows.isEmpty {
       return PagePullResult(
         rowsProcessed: 0,
-        lastUpdatedAt: cursor.updatedAt,
-        lastTieId: cursor.tieId,
-        maxRevision: 0,
+        cursor: page.cursor,
         newConflicts: 0,
         autoMerged: 0,
         hasMore: false
@@ -1919,7 +1704,6 @@ final class SyncCoordinator: @unchecked Sendable {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     var newConflicts = 0
     var autoMerged = 0
-    var maxRevision: Int64 = 0
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
@@ -1928,9 +1712,6 @@ final class SyncCoordinator: @unchecked Sendable {
       }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
-      if row.revision > maxRevision {
-        maxRevision = row.revision
-      }
 
       // Batch save for durability
       let rowNumber = index + 1
@@ -1947,19 +1728,12 @@ final class SyncCoordinator: @unchecked Sendable {
     logger.info(
       "wage_snapshots: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    let cursorPosition = Self.lastParseableCursorPosition(
-      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
-      table: .wageSnapshots
-    )
-
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
-      lastTieId: cursorPosition?.id ?? cursor.tieId,
-      maxRevision: maxRevision,
+      cursor: page.cursor,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: cursorPosition != nil && rows.count == pageSize
+      hasMore: !page.done
     )
   }
 
@@ -2188,25 +1962,19 @@ final class SyncCoordinator: @unchecked Sendable {
       .filter { dirtyColumns.contains($0.key) }
     try requireNonEmptyUpdate(updateData, table: .payrollAdjustments, id: adjustment.id)
 
-    let returnedRows: [SyncPayrollAdjustmentRow] =
-      try await supabase
-      .from("payroll_adjustments")
-      .update(updateData)
-      .eq("id", value: adjustment.id)
-      .eq("user_id", value: userId)
-      .eq("revision", value: Int(adjustment.serverRevision))
-      .is("deleted_at", value: nil)
-      .select()
-      .execute()
-      .value
+    let outcome: SyncWriteOutcome<SyncPayrollAdjustmentRow> = try await SyncConvex.update(
+      .payrollAdjustments, owner: adjustment.userId, id: adjustment.id,
+      expectedRevision: adjustment.serverRevision,
+      data: updateData)
 
-    guard let returnedRow = returnedRows.first else {
+    switch outcome {
+    case .ok(let returnedRow):
+      try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor, baseline: baseline)
+      return .success
+    case .conflict(let serverRow):
       return try await handlePayrollAdjustmentPushConflict(
-        adjustment, userId: userId, storeActor: storeActor, isRetry: isRetry)
+        adjustment, serverRow: serverRow, userId: userId, storeActor: storeActor, isRetry: isRetry)
     }
-
-    try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor, baseline: baseline)
-    return .success
   }
 
   /// Handles an update that matched no row. A moved revision is merged the way a pull merges it,
@@ -2214,18 +1982,12 @@ final class SyncCoordinator: @unchecked Sendable {
   /// that carries the server row when there is one.
   private func handlePayrollAdjustmentPushConflict(
     _ adjustment: LocalPayrollAdjustment,
+    serverRow: SyncPayrollAdjustmentRow?,
     userId: String,
     storeActor: LocalStoreActor,
     isRetry: Bool
   ) async throws -> PushResult {
-    let serverRows: [SyncPayrollAdjustmentRow] =
-      try await supabase
-      .from("payroll_adjustments")
-      .select()
-      .eq("id", value: adjustment.id)
-      .execute()
-      .value
-    guard let serverRow = serverRows.first else {
+    guard let serverRow else {
       await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
       return .conflict
     }
@@ -2261,26 +2023,16 @@ final class SyncCoordinator: @unchecked Sendable {
   ) async throws -> PushResult {
     let baseline = SyncPushBaseline(adjustment)
     let insertData = payrollAdjustmentPayload(adjustment, includeIdentity: true, userId: userId)
-    let returnedRows: [SyncPayrollAdjustmentRow]
-    do {
-      returnedRows =
-        try await supabase
-        .from("payroll_adjustments")
-        .insert(insertData)
-        .select()
-        .execute()
-        .value
-    } catch let error as PostgrestError where error.code == "23505" {
+    let outcome: SyncInsertOutcome<SyncPayrollAdjustmentRow> = try await SyncConvex.insert(
+      .payrollAdjustments, owner: adjustment.userId, row: insertData)
+
+    switch outcome {
+    case .ok(let returnedRow):
+      try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor, baseline: baseline)
+      return .success
+    case .exists(let serverRow):
       // The row exists, usually because an earlier insert committed after the request timed
       // out locally. Adopt the server row instead of failing on every sync.
-      let serverRows: [SyncPayrollAdjustmentRow] =
-        try await supabase
-        .from("payroll_adjustments")
-        .select()
-        .eq("id", value: adjustment.id)
-        .execute()
-        .value
-      guard let serverRow = serverRows.first else { throw error }
       let serverUpdatedAt = try requireISO8601(
         serverRow.updated_at, table: .payrollAdjustments, id: serverRow.id)
       let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
@@ -2297,14 +2049,6 @@ final class SyncCoordinator: @unchecked Sendable {
       )
       return .rebased
     }
-
-    guard let returnedRow = returnedRows.first else {
-      await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
-      return .conflict
-    }
-
-    try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor, baseline: baseline)
-    return .success
   }
 
   private func pushPayrollAdjustmentDelete(
@@ -2314,30 +2058,20 @@ final class SyncCoordinator: @unchecked Sendable {
     retryRevision: Int64? = nil
   ) async throws -> PushResult {
     // A row that was never acknowledged can still exist on the server, when an insert committed
-    // but its response was lost. No server row has revision 0, so the update below misses and
-    // the lookup after it decides whether the row is gone, already deleted or still live.
-    let returnedRows: [SyncPayrollAdjustmentRow] =
-      try await supabase
-      .from("payroll_adjustments")
-      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
-      .eq("id", value: adjustment.id)
-      .eq("user_id", value: userId)
-      .eq("revision", value: Int(retryRevision ?? adjustment.serverRevision))
-      .is("deleted_at", value: nil)
-      .select()
-      .execute()
-      .value
+    // but its response was lost. No server row has revision 0, so the remove below reports a
+    // conflict, and the row it returns decides whether the row is gone, already deleted or live.
+    let outcome: SyncWriteOutcome<SyncPayrollAdjustmentRow> = try await SyncConvex.remove(
+      .payrollAdjustments, owner: adjustment.userId, id: adjustment.id,
+      expectedRevision: retryRevision ?? adjustment.serverRevision)
 
-    guard let returnedRow = returnedRows.first else {
-      let serverRows: [SyncPayrollAdjustmentRow] =
-        try await supabase
-        .from("payroll_adjustments")
-        .select()
-        .eq("id", value: adjustment.id)
-        .execute()
-        .value
-      // The server hard deleted the row, which is what the delete wanted. Retire the local row.
-      guard let serverRow = serverRows.first else {
+    let returnedRow: SyncPayrollAdjustmentRow
+    switch outcome {
+    case .ok(let row):
+      returnedRow = row
+
+    case .conflict(let serverRow):
+      // The server has no row, which is what the delete wanted. Retire the local row.
+      guard let serverRow else {
         let deletedAt = Date()
         await storeActor.markPayrollAdjustmentDeleted(
           id: adjustment.id,
@@ -2440,46 +2174,17 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - Payroll Adjustments Pull
 
-  private func pullPayrollAdjustmentsPage(userId: String, cursor: SyncCursor) async throws
+  private func pullPayrollAdjustmentsPage(userId: String, cursor: Int64) async throws
     -> PagePullResult
   {
-    let rows: [SyncPayrollAdjustmentRow]
-
-    if let cursorUpdatedAt = cursor.updatedAt {
-      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
-      let cursorTieId = cursor.tieId
-      rows =
-        try await supabase
-        .from("payroll_adjustments")
-        .select()
-        .eq("user_id", value: userId)
-        .or(
-          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))"
-        )
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    } else {
-      rows =
-        try await supabase
-        .from("payroll_adjustments")
-        .select()
-        .eq("user_id", value: userId)
-        .order("updated_at", ascending: true)
-        .order("id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    }
+    let page: SyncPullPage<SyncPayrollAdjustmentRow> = try await SyncConvex.pull(
+      .payrollAdjustments, after: cursor, limit: pageSize)
+    let rows = page.rows
 
     if rows.isEmpty {
       return PagePullResult(
         rowsProcessed: 0,
-        lastUpdatedAt: cursor.updatedAt,
-        lastTieId: cursor.tieId,
-        maxRevision: 0,
+        cursor: page.cursor,
         newConflicts: 0,
         autoMerged: 0,
         hasMore: false
@@ -2488,7 +2193,6 @@ final class SyncCoordinator: @unchecked Sendable {
 
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     var newConflicts = 0
-    var maxRevision: Int64 = 0
     var affectedMonths = Self.affectedMonths(forPayrollAdjustmentRows: rows)
 
     for row in rows {
@@ -2500,24 +2204,16 @@ final class SyncCoordinator: @unchecked Sendable {
         try await self.applyPayrollAdjustmentRow(row, storeActor: storeActor)
       }
       if result == .conflict { newConflicts += 1 }
-      if row.revision > maxRevision { maxRevision = row.revision }
     }
 
     try await storeActor.save()
 
-    let cursorPosition = Self.lastParseableCursorPosition(
-      rows.map { (updatedAt: $0.updated_at, id: $0.id) },
-      table: .payrollAdjustments
-    )
-
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
-      lastTieId: cursorPosition?.id ?? cursor.tieId,
-      maxRevision: maxRevision,
+      cursor: page.cursor,
       newConflicts: newConflicts,
       autoMerged: 0,
-      hasMore: cursorPosition != nil && rows.count == pageSize,
+      hasMore: !page.done,
       affectedMonths: affectedMonths
     )
   }
@@ -2609,48 +2305,17 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - User Settings Pull
 
-  private func pullUserSettingsPage(userId: String, cursor: SyncCursor) async throws
+  private func pullUserSettingsPage(userId: String, cursor: Int64) async throws
     -> PagePullResult
   {
-    // Query using updated_at + user_id tie-breaker (user_settings uses user_id as primary key)
-    let rows: [SyncUserSettingsRow]
-
-    if let cursorUpdatedAt = cursor.updatedAt {
-      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
-      let cursorTieId = cursor.tieId
-
-      rows =
-        try await supabase
-        .from("user_settings")
-        .select()
-        .eq("user_id", value: userId)
-        .or(
-          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),user_id.gt.\(cursorTieId))"
-        )
-        .order("updated_at", ascending: true)
-        .order("user_id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    } else {
-      rows =
-        try await supabase
-        .from("user_settings")
-        .select()
-        .eq("user_id", value: userId)
-        .order("updated_at", ascending: true)
-        .order("user_id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    }
+    let page: SyncPullPage<SyncUserSettingsRow> = try await SyncConvex.pull(
+      .userSettings, after: cursor, limit: pageSize)
+    let rows = page.rows
 
     if rows.isEmpty {
       return PagePullResult(
         rowsProcessed: 0,
-        lastUpdatedAt: cursor.updatedAt,
-        lastTieId: cursor.tieId,
-        maxRevision: 0,
+        cursor: page.cursor,
         newConflicts: 0,
         autoMerged: 0,
         hasMore: false
@@ -2660,7 +2325,6 @@ final class SyncCoordinator: @unchecked Sendable {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     var newConflicts = 0
     var autoMerged = 0
-    var maxRevision: Int64 = 0
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
@@ -2669,9 +2333,6 @@ final class SyncCoordinator: @unchecked Sendable {
       }
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
-      if row.revision > maxRevision {
-        maxRevision = row.revision
-      }
 
       // Batch save for durability
       let rowNumber = index + 1
@@ -2688,19 +2349,12 @@ final class SyncCoordinator: @unchecked Sendable {
     logger.info(
       "user_settings: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
-    let cursorPosition = Self.lastParseableCursorPosition(
-      rows.map { (updatedAt: $0.updated_at, id: $0.user_id) },
-      table: .userSettings
-    )
-
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
-      lastTieId: cursorPosition?.id ?? cursor.tieId,
-      maxRevision: maxRevision,
+      cursor: page.cursor,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: cursorPosition != nil && rows.count == pageSize
+      hasMore: !page.done
     )
   }
 
@@ -2768,6 +2422,8 @@ final class SyncCoordinator: @unchecked Sendable {
         return .noChange
       }
 
+      // Take the server's profile picture instead of keeping a stale local edit of it.
+      await storeActor.dropServerOwnedSettingsFields(userId: serverRow.user_id)
       await storeActor.autoMergeUserSettings(
         userId: serverRow.user_id,
         serverRow: serverRow,
@@ -2962,10 +2618,10 @@ final class SyncCoordinator: @unchecked Sendable {
     update.set(.monthlyGoal, "monthly_goal", job.monthlyGoal.jsonOrNull { .integer($0) })
     update.set(
       .archivedAt, "archived_at",
-      job.archivedAt.jsonOrNull { .string(formatSupabaseTimestamp($0)) })
+      job.archivedAt.jsonOrNull { .string(formatTimestamp($0)) })
     update.set(
       .deletedAt, "deleted_at",
-      job.deletedAt.jsonOrNull { .string(formatSupabaseTimestamp($0)) })
+      job.deletedAt.jsonOrNull { .string(formatTimestamp($0)) })
     return update.data
   }
 
@@ -2996,71 +2652,60 @@ final class SyncCoordinator: @unchecked Sendable {
 
     try requireNonEmptyUpdate(updateData, table: .jobs, id: jobId)
 
-    let serverRevision = Int(job.serverRevision)
-
+    let outcome: SyncWriteOutcome<SyncJobRow>
     do {
-      let returnedRows: [SyncJobRow] =
-        try await supabase
-        .from("jobs")
-        .update(updateData)
-        .eq("id", value: jobId)
-        .eq("user_id", value: userId)
-        .eq("revision", value: serverRevision)
-        .is("deleted_at", value: nil)
-        .select()
-        .execute()
-        .value
-
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .jobs, id: jobId)
-        let serverArchivedAt = returnedRow.archived_at.flatMap { parseISO8601($0) }
-        let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
-        let serverSnapshot = JobServerSnapshot.from(row: returnedRow, updatedAt: serverUpdatedAt)
-
-        await storeActor.markJobPushed(
-          id: jobId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          archivedAt: serverArchivedAt,
-          deletedAt: serverDeletedAt,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
-
-        logger.debug("Pushed job \(jobId.prefix(8))")
-        return .success
-      }
-
+      outcome = try await SyncConvex.update(
+        .jobs, owner: job.userId, id: jobId, expectedRevision: job.serverRevision, data: updateData)
+    } catch let failure as ConvexAPI.Failure where failure.code == Self.defaultJobExistsCode {
+      // Another job is the default. Resolve it like a moved revision: rebase onto the server
+      // row and retry once, then mark the conflict with the server row.
+      logger.warning(
+        "Job \(jobId.prefix(8)) hit the one default job rule on UPDATE, resolving via conflict flow"
+      )
+      let serverRow: SyncJobRow? = try await SyncConvex.currentRow(
+        .jobs, owner: job.userId, id: jobId)
       return try await handleJobPushConflict(
         job: job,
+        serverRow: serverRow,
         userId: userId,
         storeActor: storeActor,
         isRetry: isRetry
       )
-    } catch {
-      let errorString = String(describing: error)
-      if errorString.contains("duplicate") || errorString.contains("23505") {
-        logger.warning(
-          "Job \(jobId.prefix(8)) hit unique constraint on UPDATE, resolving via conflict flow"
-        )
-        return try await handleJobPushConflict(
-          job: job,
-          userId: userId,
-          storeActor: storeActor,
-          isRetry: isRetry
-        )
-      }
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "Job \(jobId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
-        await storeActor.markJobConflict(id: jobId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Push job failed: \(error.localizedDescription)")
-      throw error
+    }
+
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .jobs, id: jobId)
+      let serverArchivedAt = returnedRow.archived_at.flatMap { parseISO8601($0) }
+      let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+      let serverSnapshot = JobServerSnapshot.from(row: returnedRow, updatedAt: serverUpdatedAt)
+
+      await storeActor.markJobPushed(
+        id: jobId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        archivedAt: serverArchivedAt,
+        deletedAt: serverDeletedAt,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
+
+      logger.debug("Pushed job \(jobId.prefix(8))")
+      return .success
+    case .conflict(let serverRow):
+      return try await handleJobPushConflict(
+        job: job,
+        serverRow: serverRow,
+        userId: userId,
+        storeActor: storeActor,
+        isRetry: isRetry
+      )
     }
   }
+
+  /// `ConvexError` code of a second live default job (`idx_jobs_default` in Postgres).
+  private static let defaultJobExistsCode = "default_job_exists"
 
   private func pushJobDelete(
     _ job: LocalJob,
@@ -3071,26 +2716,14 @@ final class SyncCoordinator: @unchecked Sendable {
     let jobId = job.id
 
     // A row that was never acknowledged can still exist on the server, when an insert committed
-    // but its response was lost. No server row has revision 0, so the update below misses and
-    // the lookup after it decides whether the row is gone, already deleted or still live.
-    let serverRevision = Int(retryRevision ?? job.serverRevision)
+    // but its response was lost. No server row has revision 0, so the remove below reports a
+    // conflict, and the row it returns decides whether the row is gone, already deleted or live.
+    let outcome: SyncWriteOutcome<SyncJobRow> = try await SyncConvex.remove(
+      .jobs, owner: job.userId, id: jobId, expectedRevision: retryRevision ?? job.serverRevision)
 
-    let returnedRows: [SyncJobRow] =
-      try await supabase
-      .from("jobs")
-      .update([
-        "deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date())),
-        "is_default": AnyJSON.bool(false),
-      ])
-      .eq("id", value: jobId)
-      .eq("user_id", value: userId)
-      .eq("revision", value: serverRevision)
-      .is("deleted_at", value: nil)
-      .select()
-      .execute()
-      .value
-
-    if let returnedRow = returnedRows.first {
+    let serverRow: SyncJobRow?
+    switch outcome {
+    case .ok(let returnedRow):
       let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .jobs, id: jobId)
       let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
       await storeActor.markJobDeleted(
@@ -3101,17 +2734,11 @@ final class SyncCoordinator: @unchecked Sendable {
       )
       logger.debug("Deleted job \(jobId.prefix(8))")
       return .deleted
+    case .conflict(let current):
+      serverRow = current
     }
 
-    let serverRows: [SyncJobRow] =
-      try await supabase
-      .from("jobs")
-      .select()
-      .eq("id", value: jobId)
-      .execute()
-      .value
-
-    if let serverRow = serverRows.first {
+    if let serverRow {
       let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .jobs, id: jobId)
       let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
@@ -3140,7 +2767,7 @@ final class SyncCoordinator: @unchecked Sendable {
     // The server has no row at all, for example after it purged old soft deleted rows. The row
     // is gone there, which is what the delete wanted. Retire the local row instead of retrying
     // on every sync.
-    if serverRows.isEmpty {
+    if serverRow == nil {
       let deletedAt = Date()
       await storeActor.markJobDeleted(
         id: jobId,
@@ -3177,95 +2804,52 @@ final class SyncCoordinator: @unchecked Sendable {
         try requireAnyJSON($0, table: .jobs, id: jobId, field: "pay_period")
       },
       "monthly_goal": job.monthlyGoal.map { AnyJSON.integer($0) },
-      "archived_at": job.archivedAt.map { AnyJSON.string(formatSupabaseTimestamp($0)) },
+      "archived_at": job.archivedAt.map { AnyJSON.string(formatTimestamp($0)) },
     ]
     insertData.merge(optionalColumns.compactMapValues { $0 }) { _, new in new }
 
-    do {
-      let returnedRows: [SyncJobRow] =
-        try await supabase
-        .from("jobs")
-        .insert(insertData)
-        .select()
-        .execute()
-        .value
+    let outcome: SyncInsertOutcome<SyncJobRow> = try await SyncConvex.insert(
+      .jobs, owner: job.userId, row: insertData)
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .jobs, id: jobId)
-        let serverArchivedAt = returnedRow.archived_at.flatMap { parseISO8601($0) }
-        let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
-        let serverSnapshot = JobServerSnapshot.from(row: returnedRow, updatedAt: serverUpdatedAt)
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .jobs, id: jobId)
+      let serverArchivedAt = returnedRow.archived_at.flatMap { parseISO8601($0) }
+      let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+      let serverSnapshot = JobServerSnapshot.from(row: returnedRow, updatedAt: serverUpdatedAt)
 
-        await storeActor.markJobPushed(
-          id: jobId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          archivedAt: serverArchivedAt,
-          deletedAt: serverDeletedAt,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
+      await storeActor.markJobPushed(
+        id: jobId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        archivedAt: serverArchivedAt,
+        deletedAt: serverDeletedAt,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        logger.debug("Inserted new job \(jobId.prefix(8))")
-        return .success
-      }
-
-      logger.error("Insert job returned no rows for \(jobId.prefix(8))")
-      await storeActor.markJobConflict(id: jobId, serverSnapshot: nil)
-      return .conflict
-    } catch {
-      let errorString = String(describing: error)
-      if errorString.contains("duplicate") || errorString.contains("23505") {
-        logger.warning("Job \(jobId.prefix(8)) already exists on server, fetching and merging")
-        let serverRows: [SyncJobRow] =
-          try await supabase
-          .from("jobs")
-          .select()
-          .eq("id", value: jobId)
-          .execute()
-          .value
-
-        // The row exists, usually because an earlier insert committed after the request timed
-        // out locally. Merge onto it. A missing row means another unique constraint failed.
-        if !serverRows.isEmpty {
-          return try await handleJobPushConflict(
-            job: job, userId: userId, storeActor: storeActor, isRetry: false)
-        }
-        // No row with this id exists, so another unique constraint failed. Mark the row as a
-        // conflict so it does not retry on every sync.
-        await storeActor.markJobConflict(id: jobId, serverSnapshot: nil)
-        return .conflict
-      }
-
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning("Job \(jobId.prefix(8)) blocked by RLS policy, marking as conflict")
-        await storeActor.markJobConflict(id: jobId, serverSnapshot: nil)
-        return .conflict
-      }
-
-      logger.error("Insert job failed: \(error.localizedDescription)")
-      throw error
+      logger.debug("Inserted new job \(jobId.prefix(8))")
+      return .success
+    case .exists(let serverRow):
+      // The row exists, usually because an earlier insert committed after the request timed
+      // out locally. Merge onto it.
+      logger.warning("Job \(jobId.prefix(8)) already exists on server, merging")
+      return try await handleJobPushConflict(
+        job: job, serverRow: serverRow, userId: userId, storeActor: storeActor, isRetry: false)
     }
   }
 
   private func handleJobPushConflict(
     job: LocalJob,
+    serverRow: SyncJobRow?,
     userId: String,
     storeActor: LocalStoreActor,
     isRetry: Bool
   ) async throws -> PushResult {
     let jobId = job.id
 
-    let serverRows: [SyncJobRow] =
-      try await supabase
-      .from("jobs")
-      .select()
-      .eq("id", value: jobId)
-      .execute()
-      .value
-
-    guard let serverRow = serverRows.first else {
+    guard let serverRow else {
       if job.serverRevision == 0 {
         logger.debug("Job \(jobId.prefix(8)) is new (serverRevision=0), attempting INSERT")
         return try await insertJob(job, userId: userId, storeActor: storeActor)
@@ -3459,72 +3043,48 @@ final class SyncCoordinator: @unchecked Sendable {
 
     try requireNonEmptyUpdate(updateData, table: .userShifts, id: shiftId)
 
-    // Optimistic concurrency: filter by revision
-    // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(shift.serverRevision)
+    let outcome: SyncWriteOutcome<SyncShiftRow> = try await SyncConvex.update(
+      .userShifts, owner: shift.userId, id: shiftId,
+      expectedRevision: shift.serverRevision, data: updateData)
 
-    do {
-      // UPDATE with revision filter, returning the updated row
-      let returnedRows: [SyncShiftRow] =
-        try await supabase
-        .from("user_shifts")
-        .update(updateData)
-        .eq("id", value: shiftId)
-        .eq("user_id", value: userId)
-        .eq("revision", value: serverRevision)
-        .is("deleted_at", value: nil)
-        .select()
-        .execute()
-        .value
+    switch outcome {
+    case .ok(let returnedRow):
+      // Success - update local with canonical server values
+      let serverUpdatedAt = parseUpdatedAt(
+        returnedRow.updated_at, table: .userShifts, id: shiftId)
+      let serverSnapshot = UserShiftServerSnapshot.from(
+        jobId: returnedRow.job_id,
+        shiftDate: returnedRow.shift_date,
+        startTime: returnedRow.start_time,
+        endTime: returnedRow.end_time,
+        note: returnedRow.note,
+        customPauseWindows: returnedRow.custom_pause_windows,
+        customSupplements: returnedRow.custom_supplements,
+        updatedAt: serverUpdatedAt,
+        revision: returnedRow.revision,
+        deletedAt: nil
+      )
 
-      if let returnedRow = returnedRows.first {
-        // Success - update local with canonical server values
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .userShifts, id: shiftId)
-        let serverSnapshot = UserShiftServerSnapshot.from(
-          jobId: returnedRow.job_id,
-          shiftDate: returnedRow.shift_date,
-          startTime: returnedRow.start_time,
-          endTime: returnedRow.end_time,
-          note: returnedRow.note,
-          customPauseWindows: returnedRow.custom_pause_windows,
-          customSupplements: returnedRow.custom_supplements,
-          updatedAt: serverUpdatedAt,
-          revision: returnedRow.revision,
-          deletedAt: nil
-        )
+      await storeActor.markShiftPushed(
+        id: shiftId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        await storeActor.markShiftPushed(
-          id: shiftId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
+      logger.debug("Pushed shift \(shiftId.prefix(8))")
 
-        logger.debug("Pushed shift \(shiftId.prefix(8))")
-
-        return .success
-      }
-      // Row wasn't updated - revision mismatch
+      return .success
+    case .conflict(let serverRow):
       return try await handleShiftPushConflict(
         shift: shift,
+        serverRow: serverRow,
         userId: userId,
         storeActor: storeActor,
         isRetry: isRetry
       )
-    } catch {
-      // Check if it's an RLS policy violation - mark as conflict, don't abort sync
-      let errorString = String(describing: error)
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "Shift \(shiftId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
-        await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Push shift failed: \(error.localizedDescription)")
-      throw error
     }
   }
 
@@ -3536,26 +3096,13 @@ final class SyncCoordinator: @unchecked Sendable {
   ) async throws -> PushResult {
     let shiftId = shift.id
 
-    // A row that was never acknowledged can still exist on the server, when an insert committed
-    // but its response was lost. No server row has revision 0, so the update below misses and
-    // the lookup after it decides whether the row is gone, already deleted or still live.
-    // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(retryRevision ?? shift.serverRevision)
+    let outcome: SyncWriteOutcome<SyncShiftRow> = try await SyncConvex.remove(
+      .userShifts, owner: shift.userId, id: shiftId,
+      expectedRevision: retryRevision ?? shift.serverRevision)
 
-    // UPDATE deleted_at = now() with revision filter
-    let returnedRows: [SyncShiftRow] =
-      try await supabase
-      .from("user_shifts")
-      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
-      .eq("id", value: shiftId)
-      .eq("user_id", value: userId)
-      .eq("revision", value: serverRevision)
-      .is("deleted_at", value: nil)
-      .select()
-      .execute()
-      .value
-
-    if let returnedRow = returnedRows.first {
+    let serverRow: SyncShiftRow?
+    switch outcome {
+    case .ok(let returnedRow):
       // Success - mark as deleted locally
       let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .userShifts, id: shiftId)
       let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
@@ -3570,17 +3117,11 @@ final class SyncCoordinator: @unchecked Sendable {
       logger.debug("Deleted shift \(shiftId.prefix(8))")
 
       return .deleted
+    case .conflict(let current):
+      serverRow = current
     }
-    // Conflict - fetch current server state
-    let serverRows: [SyncShiftRow] =
-      try await supabase
-      .from("user_shifts")
-      .select()
-      .eq("id", value: shiftId)
-      .execute()
-      .value
 
-    if let serverRow = serverRows.first {
+    if let serverRow {
       let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userShifts, id: shiftId)
       let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
@@ -3621,7 +3162,7 @@ final class SyncCoordinator: @unchecked Sendable {
     // The server has no row at all, for example after it purged old soft deleted rows. The row
     // is gone there, which is what the delete wanted. Retire the local row instead of retrying
     // on every sync.
-    if serverRows.isEmpty {
+    if serverRow == nil {
       let deletedAt = Date()
       await storeActor.markShiftDeleted(
         id: shiftId,
@@ -3678,100 +3219,58 @@ final class SyncCoordinator: @unchecked Sendable {
       insertData["note"] = .string(note)
     }
 
-    do {
-      let returnedRows: [SyncShiftRow] =
-        try await supabase
-        .from("user_shifts")
-        .insert(insertData)
-        .select()
-        .execute()
-        .value
+    let outcome: SyncInsertOutcome<SyncShiftRow> = try await SyncConvex.insert(
+      .userShifts, owner: shift.userId, row: insertData)
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .userShifts, id: shiftId)
-        let serverSnapshot = UserShiftServerSnapshot.from(
-          jobId: returnedRow.job_id,
-          shiftDate: returnedRow.shift_date,
-          startTime: returnedRow.start_time,
-          endTime: returnedRow.end_time,
-          note: returnedRow.note,
-          customPauseWindows: returnedRow.custom_pause_windows,
-          customSupplements: returnedRow.custom_supplements,
-          updatedAt: serverUpdatedAt,
-          revision: returnedRow.revision,
-          deletedAt: nil
-        )
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(
+        returnedRow.updated_at, table: .userShifts, id: shiftId)
+      let serverSnapshot = UserShiftServerSnapshot.from(
+        jobId: returnedRow.job_id,
+        shiftDate: returnedRow.shift_date,
+        startTime: returnedRow.start_time,
+        endTime: returnedRow.end_time,
+        note: returnedRow.note,
+        customPauseWindows: returnedRow.custom_pause_windows,
+        customSupplements: returnedRow.custom_supplements,
+        updatedAt: serverUpdatedAt,
+        revision: returnedRow.revision,
+        deletedAt: nil
+      )
 
-        await storeActor.markShiftPushed(
-          id: shiftId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
+      await storeActor.markShiftPushed(
+        id: shiftId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        logger.debug("Inserted new shift \(shiftId.prefix(8))")
+      logger.debug("Inserted new shift \(shiftId.prefix(8))")
 
-        return .success
-      }
-      logger.error("Insert shift returned no rows for \(shiftId.prefix(8))")
-      await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
-      return .conflict
-    } catch {
-      let errorString = String(describing: error)
-      // Check if it's a duplicate key error (row already exists on server)
-      if errorString.contains("duplicate") || errorString.contains("23505") {
-        logger.warning("Shift \(shiftId.prefix(8)) already exists on server, fetching and merging")
-        let serverRows: [SyncShiftRow] =
-          try await supabase
-          .from("user_shifts")
-          .select()
-          .eq("id", value: shiftId)
-          .execute()
-          .value
-
-        // The row exists, usually because an earlier insert committed after the request timed
-        // out locally. Merge onto it. A missing row means another unique constraint failed.
-        if !serverRows.isEmpty {
-          return try await handleShiftPushConflict(
-            shift: shift, userId: userId, storeActor: storeActor, isRetry: false)
-        }
-        // No row with this id exists, so another unique constraint failed. Mark the row as a
-        // conflict so it does not retry on every sync.
-        await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
-        return .conflict
-      }
-      // Check if it's an RLS policy violation - mark as conflict, don't abort sync
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning("Shift \(shiftId.prefix(8)) blocked by RLS policy, marking as conflict")
-        await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Insert shift failed: \(error.localizedDescription)")
-      throw error
+      return .success
+    case .exists(let serverRow):
+      // The row exists, usually because an earlier insert committed after the request timed
+      // out locally. Merge onto it.
+      logger.warning("Shift \(shift.id.prefix(8)) already exists on server, merging")
+      return try await handleShiftPushConflict(
+        shift: shift, serverRow: serverRow, userId: userId, storeActor: storeActor,
+        isRetry: false)
     }
   }
 
   private func handleShiftPushConflict(
     shift: LocalUserShift,
+    serverRow: SyncShiftRow?,
     userId: String,
     storeActor: LocalStoreActor,
     isRetry: Bool
   ) async throws -> PushResult {
     let shiftId = shift.id
 
-    // Fetch current server state
-    let serverRows: [SyncShiftRow] =
-      try await supabase
-      .from("user_shifts")
-      .select()
-      .eq("id", value: shiftId)
-      .execute()
-      .value
-
-    guard let serverRow = serverRows.first else {
+    guard let serverRow else {
       // Server row doesn't exist - check if this is a new local record that needs INSERT
       if shift.serverRevision == 0 {
         logger.debug("Shift \(shiftId.prefix(8)) is new (serverRevision=0), attempting INSERT")
@@ -3968,58 +3467,39 @@ final class SyncCoordinator: @unchecked Sendable {
 
     try requireNonEmptyUpdate(updateData, table: .events, id: eventId)
 
-    let serverRevision = Int(event.serverRevision)
+    let outcome: SyncWriteOutcome<SyncEventRow> = try await SyncConvex.update(
+      .events, owner: event.userId, id: eventId,
+      expectedRevision: event.serverRevision, data: updateData)
 
-    do {
-      let returnedRows: [SyncEventRow] =
-        try await supabase
-        .from("events")
-        .update(updateData)
-        .eq("id", value: eventId)
-        .eq("user_id", value: userId)
-        .eq("revision", value: serverRevision)
-        .is("deleted_at", value: nil)
-        .select()
-        .execute()
-        .value
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .events, id: eventId)
+      let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+      let serverSnapshot = EventServerSnapshot.from(
+        serverRow: returnedRow,
+        updatedAt: serverUpdatedAt,
+        deletedAt: serverDeletedAt
+      )
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .events, id: eventId)
-        let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
-        let serverSnapshot = EventServerSnapshot.from(
-          serverRow: returnedRow,
-          updatedAt: serverUpdatedAt,
-          deletedAt: serverDeletedAt
-        )
+      await storeActor.markEventPushed(
+        id: eventId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        await storeActor.markEventPushed(
-          id: eventId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
-
-        logger.debug("Pushed event \(eventId.prefix(8))")
-        return .success
-      }
+      logger.debug("Pushed event \(eventId.prefix(8))")
+      return .success
+    case .conflict(let serverRow):
       return try await handleEventPushConflict(
         event: event,
+        serverRow: serverRow,
         userId: userId,
         storeActor: storeActor,
         isRetry: isRetry
       )
-    } catch {
-      let errorString = String(describing: error)
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "Event \(eventId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
-        await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Push event failed: \(error.localizedDescription)")
-      throw error
     }
   }
 
@@ -4032,23 +3512,15 @@ final class SyncCoordinator: @unchecked Sendable {
     let eventId = event.id
 
     // A row that was never acknowledged can still exist on the server, when an insert committed
-    // but its response was lost. No server row has revision 0, so the update below misses and
-    // the lookup after it decides whether the row is gone, already deleted or still live.
-    let serverRevision = Int(retryRevision ?? event.serverRevision)
+    // but its response was lost. No server row has revision 0, so the remove below reports a
+    // conflict, and the row it returns decides whether the row is gone, already deleted or live.
+    let outcome: SyncWriteOutcome<SyncEventRow> = try await SyncConvex.remove(
+      .events, owner: event.userId, id: eventId,
+      expectedRevision: retryRevision ?? event.serverRevision)
 
-    let returnedRows: [SyncEventRow] =
-      try await supabase
-      .from("events")
-      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
-      .eq("id", value: eventId)
-      .eq("user_id", value: userId)
-      .eq("revision", value: serverRevision)
-      .is("deleted_at", value: nil)
-      .select()
-      .execute()
-      .value
-
-    if let returnedRow = returnedRows.first {
+    let serverRow: SyncEventRow?
+    switch outcome {
+    case .ok(let returnedRow):
       let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .events, id: eventId)
       let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
 
@@ -4061,16 +3533,11 @@ final class SyncCoordinator: @unchecked Sendable {
 
       logger.debug("Deleted event \(eventId.prefix(8))")
       return .deleted
+    case .conflict(let current):
+      serverRow = current
     }
-    let serverRows: [SyncEventRow] =
-      try await supabase
-      .from("events")
-      .select()
-      .eq("id", value: eventId)
-      .execute()
-      .value
 
-    if let serverRow = serverRows.first {
+    if let serverRow {
       let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .events, id: eventId)
       let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
@@ -4102,7 +3569,7 @@ final class SyncCoordinator: @unchecked Sendable {
     // The server has no row at all, for example after it purged old soft deleted rows. The row
     // is gone there, which is what the delete wanted. Retire the local row instead of retrying
     // on every sync.
-    if serverRows.isEmpty {
+    if serverRow == nil {
       let deletedAt = Date()
       await storeActor.markEventDeleted(
         id: eventId,
@@ -4146,89 +3613,50 @@ final class SyncCoordinator: @unchecked Sendable {
       insertData["notification_anchor_time"] = .string(notificationAnchorTime)
     }
 
-    do {
-      let returnedRows: [SyncEventRow] =
-        try await supabase
-        .from("events")
-        .insert(insertData)
-        .select()
-        .execute()
-        .value
+    let outcome: SyncInsertOutcome<SyncEventRow> = try await SyncConvex.insert(
+      .events, owner: event.userId, row: insertData)
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .events, id: eventId)
-        let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
-        let serverSnapshot = EventServerSnapshot.from(
-          serverRow: returnedRow,
-          updatedAt: serverUpdatedAt,
-          deletedAt: serverDeletedAt
-        )
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(returnedRow.updated_at, table: .events, id: eventId)
+      let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+      let serverSnapshot = EventServerSnapshot.from(
+        serverRow: returnedRow,
+        updatedAt: serverUpdatedAt,
+        deletedAt: serverDeletedAt
+      )
 
-        await storeActor.markEventPushed(
-          id: eventId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
+      await storeActor.markEventPushed(
+        id: eventId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        logger.debug("Inserted new event \(eventId.prefix(8))")
-        return .success
-      }
-      logger.error("Insert event returned no rows for \(eventId.prefix(8))")
-      await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
-      return .conflict
-    } catch {
-      let errorString = String(describing: error)
-      if errorString.contains("duplicate") || errorString.contains("23505") {
-        logger.warning("Event \(eventId.prefix(8)) already exists on server, fetching and merging")
-        let serverRows: [SyncEventRow] =
-          try await supabase
-          .from("events")
-          .select()
-          .eq("id", value: eventId)
-          .execute()
-          .value
-
-        // The row exists, usually because an earlier insert committed after the request timed
-        // out locally. Merge onto it. A missing row means another unique constraint failed.
-        if !serverRows.isEmpty {
-          return try await handleEventPushConflict(
-            event: event, userId: userId, storeActor: storeActor, isRetry: false)
-        }
-        // No row with this id exists, so another unique constraint failed. Mark the row as a
-        // conflict so it does not retry on every sync.
-        await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
-        return .conflict
-      }
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning("Event \(eventId.prefix(8)) blocked by RLS policy, marking as conflict")
-        await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Insert event failed: \(error.localizedDescription)")
-      throw error
+      logger.debug("Inserted new event \(eventId.prefix(8))")
+      return .success
+    case .exists(let serverRow):
+      // The row exists, usually because an earlier insert committed after the request timed
+      // out locally. Merge onto it.
+      logger.warning("Event \(event.id.prefix(8)) already exists on server, merging")
+      return try await handleEventPushConflict(
+        event: event, serverRow: serverRow, userId: userId, storeActor: storeActor,
+        isRetry: false)
     }
   }
 
   private func handleEventPushConflict(
     event: LocalEvent,
+    serverRow: SyncEventRow?,
     userId: String,
     storeActor: LocalStoreActor,
     isRetry: Bool
   ) async throws -> PushResult {
     let eventId = event.id
 
-    let serverRows: [SyncEventRow] =
-      try await supabase
-      .from("events")
-      .select()
-      .eq("id", value: eventId)
-      .execute()
-      .value
-
-    guard let serverRow = serverRows.first else {
+    guard let serverRow else {
       if event.serverRevision == 0 {
         logger.debug("Event \(eventId.prefix(8)) is new (serverRevision=0), attempting INSERT")
         return try await insertEvent(event, userId: userId, storeActor: storeActor)
@@ -4457,62 +3885,40 @@ final class SyncCoordinator: @unchecked Sendable {
 
     try requireNonEmptyUpdate(updateData, table: .recurringShifts, id: shiftId)
 
-    // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(shift.serverRevision)
+    let outcome: SyncWriteOutcome<SyncRecurringShiftRow> = try await SyncConvex.update(
+      .recurringShifts, owner: shift.userId, id: shiftId,
+      expectedRevision: shift.serverRevision, data: updateData)
 
-    do {
-      let returnedRows: [SyncRecurringShiftRow] =
-        try await supabase
-        .from("recurring_shifts")
-        .update(updateData)
-        .eq("id", value: shiftId)
-        .eq("user_id", value: userId)
-        .eq("revision", value: serverRevision)
-        .is("deleted_at", value: nil)
-        .select()
-        .execute()
-        .value
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(
+        returnedRow.updated_at, table: .recurringShifts, id: shiftId)
+      let serverSnapshot = RecurringShiftServerSnapshot.from(
+        row: returnedRow.toRecurringShiftRow(),
+        updatedAt: serverUpdatedAt,
+        revision: returnedRow.revision,
+        deletedAt: nil
+      )
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .recurringShifts, id: shiftId)
-        let serverSnapshot = RecurringShiftServerSnapshot.from(
-          row: returnedRow.toRecurringShiftRow(),
-          updatedAt: serverUpdatedAt,
-          revision: returnedRow.revision,
-          deletedAt: nil
-        )
+      await storeActor.markRecurringShiftPushed(
+        id: shiftId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        await storeActor.markRecurringShiftPushed(
-          id: shiftId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
-
-        logger.debug("Pushed recurring shift \(shiftId.prefix(8))")
-        return .success
-      }
+      logger.debug("Pushed recurring shift \(shiftId.prefix(8))")
+      return .success
+    case .conflict(let serverRow):
       return try await handleRecurringShiftPushConflict(
         shift: shift,
+        serverRow: serverRow,
         userId: userId,
         storeActor: storeActor,
         isRetry: isRetry
       )
-    } catch {
-      // Check if it's an RLS policy violation - mark as conflict, don't abort sync
-      let errorString = String(describing: error)
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "Recurring shift \(shiftId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict"
-        )
-        await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Push recurring shift failed: \(error.localizedDescription)")
-      throw error
     }
   }
 
@@ -4525,24 +3931,15 @@ final class SyncCoordinator: @unchecked Sendable {
     let shiftId = shift.id
 
     // A row that was never acknowledged can still exist on the server, when an insert committed
-    // but its response was lost. No server row has revision 0, so the update below misses and
-    // the lookup after it decides whether the row is gone, already deleted or still live.
-    // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(retryRevision ?? shift.serverRevision)
+    // but its response was lost. No server row has revision 0, so the remove below reports a
+    // conflict, and the row it returns decides whether the row is gone, already deleted or live.
+    let outcome: SyncWriteOutcome<SyncRecurringShiftRow> = try await SyncConvex.remove(
+      .recurringShifts, owner: shift.userId, id: shiftId,
+      expectedRevision: retryRevision ?? shift.serverRevision)
 
-    let returnedRows: [SyncRecurringShiftRow] =
-      try await supabase
-      .from("recurring_shifts")
-      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
-      .eq("id", value: shiftId)
-      .eq("user_id", value: userId)
-      .eq("revision", value: serverRevision)
-      .is("deleted_at", value: nil)
-      .select()
-      .execute()
-      .value
-
-    if let returnedRow = returnedRows.first {
+    let serverRow: SyncRecurringShiftRow?
+    switch outcome {
+    case .ok(let returnedRow):
       let serverUpdatedAt = parseUpdatedAt(
         returnedRow.updated_at, table: .recurringShifts, id: shiftId)
       let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
@@ -4556,17 +3953,11 @@ final class SyncCoordinator: @unchecked Sendable {
 
       logger.debug("Deleted recurring shift \(shiftId.prefix(8))")
       return .deleted
+    case .conflict(let current):
+      serverRow = current
     }
-    // Fetch and check server state
-    let serverRows: [SyncRecurringShiftRow] =
-      try await supabase
-      .from("recurring_shifts")
-      .select()
-      .eq("id", value: shiftId)
-      .execute()
-      .value
 
-    if let serverRow = serverRows.first {
+    if let serverRow {
       let serverUpdatedAt = parseUpdatedAt(
         serverRow.updated_at, table: .recurringShifts, id: shiftId)
       let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
@@ -4600,7 +3991,7 @@ final class SyncCoordinator: @unchecked Sendable {
     // The server has no row at all, for example after it purged old soft deleted rows. The row
     // is gone there, which is what the delete wanted. Retire the local row instead of retrying
     // on every sync.
-    if serverRows.isEmpty {
+    if serverRow == nil {
       let deletedAt = Date()
       await storeActor.markRecurringShiftDeleted(
         id: shiftId,
@@ -4672,94 +4063,51 @@ final class SyncCoordinator: @unchecked Sendable {
       insertData["date_specific_notes"] = decoded
     }
 
-    do {
-      let returnedRows: [SyncRecurringShiftRow] =
-        try await supabase
-        .from("recurring_shifts")
-        .insert(insertData)
-        .select()
-        .execute()
-        .value
+    let outcome: SyncInsertOutcome<SyncRecurringShiftRow> = try await SyncConvex.insert(
+      .recurringShifts, owner: shift.userId, row: insertData)
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .recurringShifts, id: shiftId)
-        let serverSnapshot = RecurringShiftServerSnapshot.from(
-          row: returnedRow.toRecurringShiftRow(),
-          updatedAt: serverUpdatedAt,
-          revision: returnedRow.revision,
-          deletedAt: nil
-        )
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(
+        returnedRow.updated_at, table: .recurringShifts, id: shiftId)
+      let serverSnapshot = RecurringShiftServerSnapshot.from(
+        row: returnedRow.toRecurringShiftRow(),
+        updatedAt: serverUpdatedAt,
+        revision: returnedRow.revision,
+        deletedAt: nil
+      )
 
-        await storeActor.markRecurringShiftPushed(
-          id: shiftId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
+      await storeActor.markRecurringShiftPushed(
+        id: shiftId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        logger.debug("Inserted new recurring shift \(shiftId.prefix(8))")
-        return .success
-      }
-      logger.error("Insert recurring shift returned no rows for \(shiftId.prefix(8))")
-      await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
-      return .conflict
-    } catch {
-      let errorString = String(describing: error)
-      // Check if it's a duplicate key error
-      if errorString.contains("duplicate") || errorString.contains("23505") {
-        logger.warning(
-          "Recurring shift \(shiftId.prefix(8)) already exists on server, fetching and merging")
-        let serverRows: [SyncRecurringShiftRow] =
-          try await supabase
-          .from("recurring_shifts")
-          .select()
-          .eq("id", value: shiftId)
-          .execute()
-          .value
-
-        // The row exists, usually because an earlier insert committed after the request timed
-        // out locally. Merge onto it. A missing row means another unique constraint failed.
-        if !serverRows.isEmpty {
-          return try await handleRecurringShiftPushConflict(
-            shift: shift, userId: userId, storeActor: storeActor, isRetry: false)
-        }
-        // No row with this id exists, so another unique constraint failed. Mark the row as a
-        // conflict so it does not retry on every sync.
-        await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
-        return .conflict
-      }
-      // Check if it's an RLS policy violation - mark as conflict, don't abort sync
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "Recurring shift \(shiftId.prefix(8)) blocked by RLS policy, marking as conflict")
-        await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Insert recurring shift failed: \(error.localizedDescription)")
-      throw error
+      logger.debug("Inserted new recurring shift \(shiftId.prefix(8))")
+      return .success
+    case .exists(let serverRow):
+      // The row exists, usually because an earlier insert committed after the request timed
+      // out locally. Merge onto it.
+      logger.warning("Recurring shift \(shift.id.prefix(8)) already exists on server, merging")
+      return try await handleRecurringShiftPushConflict(
+        shift: shift, serverRow: serverRow, userId: userId, storeActor: storeActor,
+        isRetry: false)
     }
   }
 
   private func handleRecurringShiftPushConflict(
     shift: LocalRecurringShift,
+    serverRow: SyncRecurringShiftRow?,
     userId: String,
     storeActor: LocalStoreActor,
     isRetry: Bool
   ) async throws -> PushResult {
     let shiftId = shift.id
 
-    let serverRows: [SyncRecurringShiftRow] =
-      try await supabase
-      .from("recurring_shifts")
-      .select()
-      .eq("id", value: shiftId)
-      .execute()
-      .value
-
-    guard let serverRow = serverRows.first else {
+    guard let serverRow else {
       // Server row doesn't exist - check if this is a new local record that needs INSERT
       if shift.serverRevision == 0 {
         logger.debug(
@@ -4937,62 +4285,40 @@ final class SyncCoordinator: @unchecked Sendable {
 
     try requireNonEmptyUpdate(updateData, table: .wageSnapshots, id: snapshotId)
 
-    // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(snapshot.serverRevision)
+    let outcome: SyncWriteOutcome<SyncWageSnapshotRow> = try await SyncConvex.update(
+      .wageSnapshots, owner: snapshot.userId, id: snapshotId,
+      expectedRevision: snapshot.serverRevision, data: updateData)
 
-    do {
-      let returnedRows: [SyncWageSnapshotRow] =
-        try await supabase
-        .from("wage_snapshots")
-        .update(updateData)
-        .eq("id", value: snapshotId)
-        .eq("user_id", value: userId)
-        .eq("revision", value: serverRevision)
-        .is("deleted_at", value: nil)
-        .select()
-        .execute()
-        .value
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(
+        returnedRow.updated_at, table: .wageSnapshots, id: snapshotId)
+      let serverSnapshot = WageSnapshotServerSnapshot.from(
+        row: returnedRow.toWageSnapshot(),
+        updatedAt: serverUpdatedAt,
+        revision: returnedRow.revision,
+        deletedAt: nil
+      )
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .wageSnapshots, id: snapshotId)
-        let serverSnapshot = WageSnapshotServerSnapshot.from(
-          row: returnedRow.toWageSnapshot(),
-          updatedAt: serverUpdatedAt,
-          revision: returnedRow.revision,
-          deletedAt: nil
-        )
+      await storeActor.markWageSnapshotPushed(
+        id: snapshotId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        await storeActor.markWageSnapshotPushed(
-          id: snapshotId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
-
-        logger.debug("Pushed wage snapshot \(snapshotId.prefix(8))")
-        return .success
-      }
+      logger.debug("Pushed wage snapshot \(snapshotId.prefix(8))")
+      return .success
+    case .conflict(let serverRow):
       return try await handleWageSnapshotPushConflict(
         snapshot: snapshot,
+        serverRow: serverRow,
         userId: userId,
         storeActor: storeActor,
         isRetry: isRetry
       )
-    } catch {
-      // Check if it's an RLS policy violation - mark as conflict, don't abort sync
-      let errorString = String(describing: error)
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "Wage snapshot \(snapshotId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict"
-        )
-        await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Push wage snapshot failed: \(error.localizedDescription)")
-      throw error
     }
   }
 
@@ -5005,24 +4331,15 @@ final class SyncCoordinator: @unchecked Sendable {
     let snapshotId = snapshot.id
 
     // A row that was never acknowledged can still exist on the server, when an insert committed
-    // but its response was lost. No server row has revision 0, so the update below misses and
-    // the lookup after it decides whether the row is gone, already deleted or still live.
-    // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(retryRevision ?? snapshot.serverRevision)
+    // but its response was lost. No server row has revision 0, so the remove below reports a
+    // conflict, and the row it returns decides whether the row is gone, already deleted or live.
+    let outcome: SyncWriteOutcome<SyncWageSnapshotRow> = try await SyncConvex.remove(
+      .wageSnapshots, owner: snapshot.userId, id: snapshotId,
+      expectedRevision: retryRevision ?? snapshot.serverRevision)
 
-    let returnedRows: [SyncWageSnapshotRow] =
-      try await supabase
-      .from("wage_snapshots")
-      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
-      .eq("id", value: snapshotId)
-      .eq("user_id", value: userId)
-      .eq("revision", value: serverRevision)
-      .is("deleted_at", value: nil)
-      .select()
-      .execute()
-      .value
-
-    if let returnedRow = returnedRows.first {
+    let serverRow: SyncWageSnapshotRow?
+    switch outcome {
+    case .ok(let returnedRow):
       let serverUpdatedAt = parseUpdatedAt(
         returnedRow.updated_at, table: .wageSnapshots, id: snapshotId)
       let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
@@ -5036,16 +4353,11 @@ final class SyncCoordinator: @unchecked Sendable {
 
       logger.debug("Deleted wage snapshot \(snapshotId.prefix(8))")
       return .deleted
+    case .conflict(let current):
+      serverRow = current
     }
-    let serverRows: [SyncWageSnapshotRow] =
-      try await supabase
-      .from("wage_snapshots")
-      .select()
-      .eq("id", value: snapshotId)
-      .execute()
-      .value
 
-    if let serverRow = serverRows.first {
+    if let serverRow {
       let serverUpdatedAt = parseUpdatedAt(
         serverRow.updated_at, table: .wageSnapshots, id: snapshotId)
       let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
@@ -5079,7 +4391,7 @@ final class SyncCoordinator: @unchecked Sendable {
     // The server has no row at all, for example after it purged old soft deleted rows. The row
     // is gone there, which is what the delete wanted. Retire the local row instead of retrying
     // on every sync.
-    if serverRows.isEmpty {
+    if serverRow == nil {
       let deletedAt = Date()
       await storeActor.markWageSnapshotDeleted(
         id: snapshotId,
@@ -5161,94 +4473,51 @@ final class SyncCoordinator: @unchecked Sendable {
       insertData["break_deduction_minutes"] = .integer(minutes)
     }
 
-    do {
-      let returnedRows: [SyncWageSnapshotRow] =
-        try await supabase
-        .from("wage_snapshots")
-        .insert(insertData)
-        .select()
-        .execute()
-        .value
+    let outcome: SyncInsertOutcome<SyncWageSnapshotRow> = try await SyncConvex.insert(
+      .wageSnapshots, owner: snapshot.userId, row: insertData)
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .wageSnapshots, id: snapshotId)
-        let serverSnapshot = WageSnapshotServerSnapshot.from(
-          row: returnedRow.toWageSnapshot(),
-          updatedAt: serverUpdatedAt,
-          revision: returnedRow.revision,
-          deletedAt: nil
-        )
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(
+        returnedRow.updated_at, table: .wageSnapshots, id: snapshotId)
+      let serverSnapshot = WageSnapshotServerSnapshot.from(
+        row: returnedRow.toWageSnapshot(),
+        updatedAt: serverUpdatedAt,
+        revision: returnedRow.revision,
+        deletedAt: nil
+      )
 
-        await storeActor.markWageSnapshotPushed(
-          id: snapshotId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
+      await storeActor.markWageSnapshotPushed(
+        id: snapshotId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        logger.debug("Inserted new wage snapshot \(snapshotId.prefix(8))")
-        return .success
-      }
-      logger.error("Insert wage snapshot returned no rows for \(snapshotId.prefix(8))")
-      await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
-      return .conflict
-    } catch {
-      let errorString = String(describing: error)
-      // Check if it's a duplicate key error
-      if errorString.contains("duplicate") || errorString.contains("23505") {
-        logger.warning(
-          "Wage snapshot \(snapshotId.prefix(8)) already exists on server, fetching and merging")
-        let serverRows: [SyncWageSnapshotRow] =
-          try await supabase
-          .from("wage_snapshots")
-          .select()
-          .eq("id", value: snapshotId)
-          .execute()
-          .value
-
-        // The row exists, usually because an earlier insert committed after the request timed
-        // out locally. Merge onto it. A missing row means another unique constraint failed.
-        if !serverRows.isEmpty {
-          return try await handleWageSnapshotPushConflict(
-            snapshot: snapshot, userId: userId, storeActor: storeActor, isRetry: false)
-        }
-        // No row with this id exists, so another unique constraint failed. Mark the row as a
-        // conflict so it does not retry on every sync.
-        await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
-        return .conflict
-      }
-      // Check if it's an RLS policy violation - mark as conflict, don't abort sync
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "Wage snapshot \(snapshotId.prefix(8)) blocked by RLS policy, marking as conflict")
-        await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Insert wage snapshot failed: \(error.localizedDescription)")
-      throw error
+      logger.debug("Inserted new wage snapshot \(snapshotId.prefix(8))")
+      return .success
+    case .exists(let serverRow):
+      // The row exists, usually because an earlier insert committed after the request timed
+      // out locally. Merge onto it.
+      logger.warning("Wage snapshot \(snapshot.id.prefix(8)) already exists on server, merging")
+      return try await handleWageSnapshotPushConflict(
+        snapshot: snapshot, serverRow: serverRow, userId: userId, storeActor: storeActor,
+        isRetry: false)
     }
   }
 
   private func handleWageSnapshotPushConflict(
     snapshot: LocalWageSnapshot,
+    serverRow: SyncWageSnapshotRow?,
     userId: String,
     storeActor: LocalStoreActor,
     isRetry: Bool
   ) async throws -> PushResult {
     let snapshotId = snapshot.id
 
-    let serverRows: [SyncWageSnapshotRow] =
-      try await supabase
-      .from("wage_snapshots")
-      .select()
-      .eq("id", value: snapshotId)
-      .execute()
-      .value
-
-    guard let serverRow = serverRows.first else {
+    guard let serverRow else {
       // Server row doesn't exist - check if this is a new local record that needs INSERT
       if snapshot.serverRevision == 0 {
         logger.debug(
@@ -5310,6 +4579,8 @@ final class SyncCoordinator: @unchecked Sendable {
 
   private func pushUserSettings(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    // The profile picture is server owned, so it never counts as a local edit.
+    await storeActor.dropServerOwnedSettingsFields(userId: userId)
     guard let settings = try await storeActor.dirtyUserSettingsCopy(userId: userId) else {
       return TablePushResult(table: .userSettings, rowsPushed: 0, newConflicts: 0, rebased: 0)
     }
@@ -5368,9 +4639,6 @@ final class SyncCoordinator: @unchecked Sendable {
     update.set(
       .defaultShiftsView, "default_shifts_view",
       settings.defaultShiftsView.jsonOrNull { .string($0) })
-    update.set(
-      .profilePictureUrl, "profile_picture_url",
-      settings.profilePictureUrl.jsonOrNull { .string($0) })
     update.set(.payrollDay, "payroll_day", settings.payrollDay.jsonOrNull { .integer($0) })
     update.set(.theme, "theme", .string(settings.theme))
     update.set(
@@ -5385,7 +4653,7 @@ final class SyncCoordinator: @unchecked Sendable {
       .defaultStartupTab, "default_startup_tab", .string(settings.effectiveDefaultStartupTab))
     update.set(
       .lastActive, "last_active",
-      settings.lastActive.jsonOrNull { .string(formatSupabaseTimestamp($0)) })
+      settings.lastActive.jsonOrNull { .string(formatTimestamp($0)) })
     return update.data
   }
 
@@ -5410,59 +4678,39 @@ final class SyncCoordinator: @unchecked Sendable {
     let updateData = try userSettingsUpdatePayload(
       for: settings, userId: userId, dirtyFields: dirtyFields)
 
-    // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(settings.serverRevision)
+    let outcome: SyncWriteOutcome<SyncUserSettingsRow> = try await SyncConvex.update(
+      .userSettings, owner: settings.userId, id: nil,
+      expectedRevision: settings.serverRevision, data: updateData)
 
-    do {
-      let returnedRows: [SyncUserSettingsRow] =
-        try await supabase
-        .from("user_settings")
-        .update(updateData)
-        .eq("user_id", value: userId)
-        .eq("revision", value: serverRevision)
-        .select()
-        .execute()
-        .value
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(
+        returnedRow.updated_at, table: .userSettings, id: userId)
+      let serverSnapshot = UserSettingsServerSnapshot.from(
+        row: returnedRow.toUserSettings(),
+        updatedAt: serverUpdatedAt,
+        revision: returnedRow.revision
+      )
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .userSettings, id: userId)
-        let serverSnapshot = UserSettingsServerSnapshot.from(
-          row: returnedRow.toUserSettings(),
-          updatedAt: serverUpdatedAt,
-          revision: returnedRow.revision
-        )
+      await storeActor.markUserSettingsPushed(
+        userId: userId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        await storeActor.markUserSettingsPushed(
-          userId: userId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
-
-        logger.debug("Pushed user settings for \(userId.prefix(8))")
-        return .success
-      }
+      logger.debug("Pushed user settings for \(userId.prefix(8))")
+      return .success
+    case .conflict(let serverRow):
       return try await handleUserSettingsPushConflict(
         settings: settings,
+        serverRow: serverRow,
         userId: userId,
         storeActor: storeActor,
         isRetry: isRetry
       )
-    } catch {
-      // Check if it's an RLS policy violation - mark as conflict, don't abort sync
-      let errorString = String(describing: error)
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "User settings for \(userId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict"
-        )
-        await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Push user settings failed: \(error.localizedDescription)")
-      throw error
     }
   }
 
@@ -5500,9 +4748,6 @@ final class SyncCoordinator: @unchecked Sendable {
     if let view = settings.defaultShiftsView {
       insertData["default_shifts_view"] = .string(view)
     }
-    if let url = settings.profilePictureUrl {
-      insertData["profile_picture_url"] = .string(url)
-    }
     if let day = settings.payrollDay {
       insertData["payroll_day"] = .integer(day)
     }
@@ -5514,94 +4759,51 @@ final class SyncCoordinator: @unchecked Sendable {
     }
     insertData["default_startup_tab"] = .string(settings.effectiveDefaultStartupTab)
     if let lastActive = settings.lastActive {
-      insertData["last_active"] = .string(formatSupabaseTimestamp(lastActive))
+      insertData["last_active"] = .string(formatTimestamp(lastActive))
     }
 
-    do {
-      let returnedRows: [SyncUserSettingsRow] =
-        try await supabase
-        .from("user_settings")
-        .insert(insertData)
-        .select()
-        .execute()
-        .value
+    let outcome: SyncInsertOutcome<SyncUserSettingsRow> = try await SyncConvex.insert(
+      .userSettings, owner: settings.userId, row: insertData)
 
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .userSettings, id: userId)
-        let serverSnapshot = UserSettingsServerSnapshot.from(
-          row: returnedRow.toUserSettings(),
-          updatedAt: serverUpdatedAt,
-          revision: returnedRow.revision
-        )
+    switch outcome {
+    case .ok(let returnedRow):
+      let serverUpdatedAt = parseUpdatedAt(
+        returnedRow.updated_at, table: .userSettings, id: userId)
+      let serverSnapshot = UserSettingsServerSnapshot.from(
+        row: returnedRow.toUserSettings(),
+        updatedAt: serverUpdatedAt,
+        revision: returnedRow.revision
+      )
 
-        await storeActor.markUserSettingsPushed(
-          userId: userId,
-          serverRow: returnedRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot,
-          baseline: baseline
-        )
+      await storeActor.markUserSettingsPushed(
+        userId: userId,
+        serverRow: returnedRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: returnedRow.revision,
+        snapshot: serverSnapshot,
+        baseline: baseline
+      )
 
-        logger.debug("Inserted new user settings for \(userId.prefix(8))")
-        return .success
-      }
-      logger.error("Insert user settings returned no rows for \(userId.prefix(8))")
-      await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
-      return .conflict
-    } catch {
-      let errorString = String(describing: error)
-      // Check if it's a duplicate key error
-      if errorString.contains("duplicate") || errorString.contains("23505") {
-        logger.warning(
-          "User settings for \(userId.prefix(8)) already exists on server, fetching and merging")
-        let serverRows: [SyncUserSettingsRow] =
-          try await supabase
-          .from("user_settings")
-          .select()
-          .eq("user_id", value: userId)
-          .execute()
-          .value
-
-        // The row exists, usually because an earlier insert committed after the request timed
-        // out locally or the server created it. Merge onto it.
-        if !serverRows.isEmpty {
-          return try await handleUserSettingsPushConflict(
-            settings: settings, userId: userId, storeActor: storeActor, isRetry: false)
-        }
-        // No row with this id exists, so another unique constraint failed. Mark the row as a
-        // conflict so it does not retry on every sync.
-        await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
-        return .conflict
-      }
-      // Check if it's an RLS policy violation - mark as conflict, don't abort sync
-      if errorString.contains("row-level security") || errorString.contains("42501") {
-        logger.warning(
-          "User settings for \(userId.prefix(8)) blocked by RLS policy, marking as conflict")
-        await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
-        return .conflict
-      }
-      logger.error("Insert user settings failed: \(error.localizedDescription)")
-      throw error
+      logger.debug("Inserted new user settings for \(userId.prefix(8))")
+      return .success
+    case .exists(let serverRow):
+      // The row exists, usually because an earlier insert committed after the request timed
+      // out locally or the server created it. Merge onto it.
+      logger.warning("User settings for \(userId.prefix(8)) already exist on server, merging")
+      return try await handleUserSettingsPushConflict(
+        settings: settings, serverRow: serverRow, userId: userId, storeActor: storeActor,
+        isRetry: false)
     }
   }
 
   private func handleUserSettingsPushConflict(
     settings: LocalUserSettings,
+    serverRow: SyncUserSettingsRow?,
     userId: String,
     storeActor: LocalStoreActor,
     isRetry: Bool
   ) async throws -> PushResult {
-    let serverRows: [SyncUserSettingsRow] =
-      try await supabase
-      .from("user_settings")
-      .select()
-      .eq("user_id", value: userId)
-      .execute()
-      .value
-
-    guard let serverRow = serverRows.first else {
+    guard let serverRow else {
       // Server row doesn't exist - check if this is a new local record that needs INSERT
       if settings.serverRevision == 0 {
         logger.debug(
@@ -5646,27 +4848,20 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - Conflict Resolution API
 
-  /// Whether the server has a row with this key, deleted or not.
-  private func serverRowExists(table: SyncTable, keyColumn: String = "id", key: String) async throws
-    -> Bool
-  {
-    let rows: [AnyJSON] =
-      try await supabase
-      .from(table.tableName)
-      .select(keyColumn)
-      .eq(keyColumn, value: key)
-      .limit(1)
-      .execute()
-      .value
-    return !rows.isEmpty
+  /// Whether the server has a row with this key, deleted or not. `key` is the user id for
+  /// `user_settings`, and the row id for the other tables. `owner` is the user id of the local
+  /// row.
+  private func serverRowExists(table: SyncTable, owner: String, key: String) async throws -> Bool {
+    let row: AnyJSON? = try await SyncConvex.currentRow(
+      table, owner: owner, id: table == .userSettings ? nil : key)
+    return row != nil
   }
 
   // Applies a conflict resolution to one row. The typed wrappers below supply the row type
   // specific store calls.
   //
   // A conflict has a server snapshot when the server row changed. It has none when the server
-  // rejected the write (22, 23, P0 and 42501 errors), when an insert failed on another unique
-  // key, or when the row is gone from the server.
+  // rejected the write (a `ConvexError` with a code), or when the row is gone from the server.
   // - keepServer without a snapshot drops the local row when the server has no row to keep. If
   //   the server has the row, the local row returns to its last synced state.
   // - keepLocal without a snapshot inserts the row again when the server has no row, and
@@ -5763,7 +4958,9 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { JobServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .jobs, key: jobId) },
+      serverRowExists: {
+        try await self.serverRowExists(table: .jobs, owner: job.userId, key: jobId)
+      },
       applyServer: { await storeActor.resolveJobConflictKeepServer(id: jobId, serverSnapshot: $0) },
       discard: {
         let now = Date()
@@ -5802,7 +4999,9 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { UserShiftServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .userShifts, key: shiftId) },
+      serverRowExists: {
+        try await self.serverRowExists(table: .userShifts, owner: shift.userId, key: shiftId)
+      },
       applyServer: {
         await storeActor.resolveShiftConflictKeepServer(id: shiftId, serverSnapshot: $0)
       },
@@ -5843,7 +5042,9 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { EventServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .events, key: eventId) },
+      serverRowExists: {
+        try await self.serverRowExists(table: .events, owner: event.userId, key: eventId)
+      },
       applyServer: {
         await storeActor.resolveEventConflictKeepServer(id: eventId, serverSnapshot: $0)
       },
@@ -5884,7 +5085,9 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { RecurringShiftServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .recurringShifts, key: shiftId) },
+      serverRowExists: {
+        try await self.serverRowExists(table: .recurringShifts, owner: shift.userId, key: shiftId)
+      },
       applyServer: {
         await storeActor.resolveRecurringShiftConflictKeepServer(id: shiftId, serverSnapshot: $0)
       },
@@ -5927,7 +5130,10 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { WageSnapshotServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .wageSnapshots, key: snapshotId) },
+      serverRowExists: {
+        try await self.serverRowExists(
+          table: .wageSnapshots, owner: snapshot.userId, key: snapshotId)
+      },
       applyServer: {
         await storeActor.resolveWageSnapshotConflictKeepServer(id: snapshotId, serverSnapshot: $0)
       },
@@ -5973,7 +5179,8 @@ final class SyncCoordinator: @unchecked Sendable {
       decode: { PayrollAdjustmentServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
       serverRowExists: {
-        try await self.serverRowExists(table: .payrollAdjustments, key: adjustmentId)
+        try await self.serverRowExists(
+          table: .payrollAdjustments, owner: adjustment.userId, key: adjustmentId)
       },
       applyServer: {
         await storeActor.resolvePayrollAdjustmentConflictKeepServer(
@@ -6020,7 +5227,7 @@ final class SyncCoordinator: @unchecked Sendable {
       decode: { UserSettingsServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
       serverRowExists: {
-        try await self.serverRowExists(table: .userSettings, keyColumn: "user_id", key: userId)
+        try await self.serverRowExists(table: .userSettings, owner: settings.userId, key: userId)
       },
       applyServer: {
         await storeActor.resolveUserSettingsConflictKeepServer(userId: userId, serverSnapshot: $0)
@@ -6041,49 +5248,17 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // MARK: - Notification Preferences Pull
 
-  private func pullNotificationPreferencesPage(userId: String, cursor: SyncCursor) async throws
+  private func pullNotificationPreferencesPage(userId: String, cursor: Int64) async throws
     -> PagePullResult
   {
-    // Query using updated_at + user_id tie-breaker (notification_preferences uses user_id as primary key)
-    // Note: This table has no revision column - iOS is source of truth
-    let rows: [SyncNotificationPreferencesRow]
-
-    if let cursorUpdatedAt = cursor.updatedAt {
-      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
-      let cursorTieId = cursor.tieId
-
-      rows =
-        try await supabase
-        .from("notification_preferences")
-        .select()
-        .eq("user_id", value: userId)
-        .or(
-          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),user_id.gt.\(cursorTieId))"
-        )
-        .order("updated_at", ascending: true)
-        .order("user_id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    } else {
-      rows =
-        try await supabase
-        .from("notification_preferences")
-        .select()
-        .eq("user_id", value: userId)
-        .order("updated_at", ascending: true)
-        .order("user_id", ascending: true)
-        .limit(pageSize)
-        .execute()
-        .value
-    }
+    let page: SyncPullPage<SyncNotificationPreferencesRow> = try await SyncConvex.pull(
+      .notificationPreferences, after: cursor, limit: pageSize)
+    let rows = page.rows
 
     if rows.isEmpty {
       return PagePullResult(
         rowsProcessed: 0,
-        lastUpdatedAt: cursor.updatedAt,
-        lastTieId: cursor.tieId,
-        maxRevision: 0,
+        cursor: page.cursor,
         newConflicts: 0,
         autoMerged: 0,
         hasMore: false
@@ -6107,19 +5282,12 @@ final class SyncCoordinator: @unchecked Sendable {
       "notification_preferences: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s"
     )
 
-    let cursorPosition = Self.lastParseableCursorPosition(
-      rows.map { (updatedAt: $0.updated_at, id: $0.user_id) },
-      table: .notificationPreferences
-    )
-
     return PagePullResult(
       rowsProcessed: rows.count,
-      lastUpdatedAt: cursorPosition?.updatedAt ?? cursor.updatedAt,
-      lastTieId: cursorPosition?.id ?? cursor.tieId,
-      maxRevision: 0,
+      cursor: page.cursor,
       newConflicts: 0,
       autoMerged: 0,
-      hasMore: cursorPosition != nil && rows.count == pageSize
+      hasMore: !page.done
     )
   }
 
@@ -6152,48 +5320,26 @@ final class SyncCoordinator: @unchecked Sendable {
         table: .notificationPreferences, rowsPushed: 0, newConflicts: 0, rebased: 0)
     }
 
-    // Build upsert payload - iOS is source of truth, so we always push all fields
-    let updateData: [String: AnyJSON] = [
-      "user_id": AnyJSON.string(userId),
-      "shift_reminders_enabled": AnyJSON.bool(preferences.shiftRemindersEnabled),
-      "shift_reminder_minutes_array": AnyJSON.array(
-        preferences.shiftReminderMinutesArray.map { AnyJSON.integer($0) }
-      ),
-      "shared_shifts_enabled": AnyJSON.bool(preferences.sharedShiftsEnabled),
-    ]
+    // iOS is the source of truth, so every push sends all fields.
+    let returnedRow: SyncNotificationPreferencesRow = try await SyncConvex.upsertNotificationPreferences(
+      owner: userId,
+      shiftRemindersEnabled: preferences.shiftRemindersEnabled,
+      shiftReminderMinutesArray: preferences.shiftReminderMinutesArray,
+      sharedShiftsEnabled: preferences.sharedShiftsEnabled)
 
-    do {
-      // Upsert to server (insert or update based on user_id)
-      let returnedRows: [SyncNotificationPreferencesRow] =
-        try await supabase
-        .from("notification_preferences")
-        .upsert(updateData, onConflict: "user_id")
-        .select()
-        .execute()
-        .value
-
-      if let returnedRow = returnedRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          returnedRow.updated_at, table: .notificationPreferences, id: userId)
-        await MainActor.run {
-          // Keeps the preferences dirty when the user edited them during the push.
-          NotificationPreferencesRepository.shared.markClean(
-            for: userId,
-            serverUpdatedAt: serverUpdatedAt,
-            pushedLocalUpdatedAt: preferences.localUpdatedAt
-          )
-        }
-        logger.debug("Pushed notification preferences for user \(userId.prefix(8))")
-        return TablePushResult(
-          table: .notificationPreferences, rowsPushed: 1, newConflicts: 0, rebased: 0)
-      }
-      logger.warning("No rows returned after notification preferences upsert")
-      return TablePushResult(
-        table: .notificationPreferences, rowsPushed: 0, newConflicts: 0, rebased: 0)
-    } catch {
-      logger.error("Push notification preferences failed: \(error.localizedDescription)")
-      throw error
+    let serverUpdatedAt = parseUpdatedAt(
+      returnedRow.updated_at, table: .notificationPreferences, id: userId)
+    await MainActor.run {
+      // Keeps the preferences dirty when the user edited them during the push.
+      NotificationPreferencesRepository.shared.markClean(
+        for: userId,
+        serverUpdatedAt: serverUpdatedAt,
+        pushedLocalUpdatedAt: preferences.localUpdatedAt
+      )
     }
+    logger.debug("Pushed notification preferences for user \(userId.prefix(8))")
+    return TablePushResult(
+      table: .notificationPreferences, rowsPushed: 1, newConflicts: 0, rebased: 0)
   }
 
   // MARK: - Helpers
@@ -6205,13 +5351,20 @@ final class SyncCoordinator: @unchecked Sendable {
     if error is SyncEncodingError {
       return true
     }
-    guard let code = (error as? PostgrestError)?.code else {
+    // The sync functions throw a `ConvexError` with a code when a row breaks a rule, such as
+    // `invalid_row` or `job_has_active_dependents`. A missing sign-in is `.notSignedIn`, a
+    // network failure is a `URLError`, and an unexpected server error has no code.
+    guard let failure = error as? ConvexAPI.Failure, case .server(let code, _) = failure else {
       return false
     }
-    // SQLSTATE class 22 is a data exception, 23 an integrity constraint violation, and P0 an
-    // error raised by a trigger or function. 42501 is a row-level security denial.
-    return code.hasPrefix("22") || code.hasPrefix("23") || code.hasPrefix("P0")
-      || code == "42501"
+    return code != nil && !isWrongUser(error)
+  }
+
+  /// Whether the server refused a row because it belongs to another user than the one signed in,
+  /// as when this sync started before an account switch. The row is fine and stays queued for
+  /// its owner, so the sync stops without touching it.
+  static func isWrongUser(_ error: Error) -> Bool {
+    (error as? ConvexAPI.Failure)?.code == "wrong_user"
   }
 
   private enum ApplyResult {
@@ -6249,23 +5402,6 @@ final class SyncCoordinator: @unchecked Sendable {
       )
       return nil
     }
-  }
-
-  /// Cursor position of the last row whose `updated_at` parses. A row with a bad timestamp is
-  /// skipped, so it cannot keep the cursor from moving past the rows before it. Returns nil when
-  /// no row parses, and the caller then keeps the old cursor and stops paging.
-  static func lastParseableCursorPosition(
-    _ rows: [(updatedAt: String, id: String)],
-    table: SyncTable
-  ) -> (updatedAt: Date, id: String)? {
-    for row in rows.reversed() {
-      if let date = ISO8601Timestamp.date(from: row.updatedAt) {
-        return (date, row.id)
-      }
-      logger.error(
-        "Unparseable updated_at for \(table.displayName) id=\(row.id): '\(row.updatedAt)'")
-    }
-    return nil
   }
 
   /// Parse ISO8601 date string to Date
@@ -6335,18 +5471,11 @@ final class SyncCoordinator: @unchecked Sendable {
     }
   }
 
-  /// Formats a pull cursor for the `updated_at` filter, with the microseconds Postgres stores.
-  private func formatISO8601(_ date: Date) -> String {
-    ISO8601Timestamp.microsecondString(from: date)
-  }
-
-  private func formatSupabaseTimestamp(_ date: Date) -> String {
+  /// Formats a date for the server, with milliseconds.
+  private func formatTimestamp(_ date: Date) -> String {
     ISO8601Timestamp.string(from: date)
   }
 
-  // MARK: - Shift Notification Helper
-
-  /// Notify shared users about a shift change via RPC
 }
 
 // MARK: - Partial update payloads

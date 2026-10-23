@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Add Friend Sheet
 
-/// Adds a friend by email, phone, or username.
+/// Adds a friend by email or username.
 /// Hidden and blocked people sit one tap further in, behind a row that names nobody,
 /// so opening the sheet never shows someone the people they blocked.
 /// Everything else about a friend lives in `FriendProfileView`.
@@ -101,7 +101,7 @@ struct AddFriendSheet: View {
   private var addFriendSection: some View {
     Section {
       TextField(
-        String(localized: .sharingEmailOrPhoneOrUsername),
+        String(localized: .sharingEmailOrUsername),
         text: $viewModel.addIdentifier
       )
       .textInputAutocapitalization(.never)

@@ -1,11 +1,10 @@
 import SwiftUI
 
 /// Reset password screen with native iOS styling
-/// Step 1: Enter email/phone -> Step 2: OTP verification (phone only) -> Step 3: New password
+/// Step 1: Enter email -> Step 2: Code from the reset email -> Step 3: New password
 internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_length
   @State private var viewModel: ResetPasswordViewModel
   @ScaledMetric(relativeTo: .title) private var iconSize: CGFloat = 36
-  @ScaledMetric(relativeTo: .title) private var successIconSize: CGFloat = 48
   var onNavigateToLogin: (() -> Void)?
 
   init(
@@ -55,9 +54,6 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
 
             case .newPassword:
               newPasswordStepContent
-
-            case .success:
-              successStepContent
             }
           }
           .padding(.horizontal, Spacing.lg)
@@ -120,18 +116,18 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
           .multilineTextAlignment(.center)
           .accessibilityAddTraits(.isHeader)
 
-        Text(.resetPasswordSubtitle)
+        Text(.resetPasswordEmailSubtitle)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
 
       VStack(spacing: Spacing.md) {
-        // Email/Phone field in grouped style
+        // Email field in grouped style
         VStack(spacing: 0) {
           NativeTextField(
-            placeholder: String(localized: .resetPasswordEmailOrPhonePlaceholder),
-            text: $viewModel.emailOrPhone,
+            placeholder: String(localized: .signupEmailPlaceholder),
+            text: $viewModel.email,
             keyboardType: .emailAddress,
             textContentType: .emailAddress
           )
@@ -140,7 +136,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
         // Error message
-        if let emailError = viewModel.fieldErrors.emailOrPhone {
+        if let emailError = viewModel.fieldErrors.email {
           Text(emailError)
             .font(.tidexFootnote)
             .foregroundColor(.tidexError)
@@ -150,7 +146,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         }
 
         // Hint text
-        Text(.resetPasswordHint)
+        Text(.resetPasswordCodeHint)
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -305,53 +301,6 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
     }
   }
 
-  // MARK: - Success Step
-
-  private var successStepContent: some View {
-    VStack(spacing: Spacing.lg) {
-      // Success icon
-      ZStack {
-        Circle()
-          .fill(Color.tidexSuccess.opacity(0.1))
-          .frame(width: iconSize * 2.2, height: iconSize * 2.2)
-
-        Image(systemName: "checkmark.circle.fill")
-          .font(.system(size: successIconSize))
-          .foregroundColor(.tidexSuccess)
-          .accessibilityHidden(true)
-      }
-
-      // Instructions
-      VStack(spacing: Spacing.xs) {
-        Text(.resetPasswordSuccessTitle)
-          .font(.tidexTitle)
-          .foregroundColor(.tidexTextPrimary)
-          .multilineTextAlignment(.center)
-          .accessibilityAddTraits(.isHeader)
-
-        Text(successMessage)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-          .multilineTextAlignment(.center)
-      }
-
-      // Back to login button
-      PrimaryButton(
-        title: String(localized: .resetPasswordBackToLogin),
-        action: {
-          Task { await viewModel.handleSuccessAction() }
-        }
-      )
-    }
-  }
-
-  private var successMessage: String {
-    if viewModel.inputType == .email {
-      return String(localized: .resetPasswordSuccessEmailInstructions)
-    }
-    return String(localized: .resetPasswordSuccessPasswordUpdatedInstructions)
-  }
-
   // MARK: - Back Button
 
   private var backButton: some View {
@@ -393,11 +342,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
   }
 
   private var otpSubtitle: String {
-    if viewModel.inputType == .email {
-      return viewModel.successMessage ?? String(localized: .resetPasswordSuccessEmailSent)
-    }
-
-    return String(localized: .otpSubtitle(viewModel.normalizedPhone))
+    String(localized: .otpSubtitle(viewModel.email))
   }
 }
 

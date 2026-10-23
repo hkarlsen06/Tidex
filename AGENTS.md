@@ -115,8 +115,7 @@ Convex publishes its images under `ghcr.io/convex/`. The old
 `ghcr.io/get-convex/` path refuses pulls.
 
 The HTTP routes are in `backend/convex/http.ts`: message images
-(`/attachments`), App Store notifications (`/apple-server-notifications`) and
-the calendar feed (`/calendar-feed/<token>.ics`). The push and Live Activity
+(`/attachments`) and the calendar feed (`/calendar-feed/<token>.ics`). The push and Live Activity
 senders in `push.ts` and `liveActivities.ts` must stay in Convex's default
 runtime, because APNs needs HTTP/2 and fetch in the Node runtime (`"use node"`)
 can't speak it. Each deployment's environment holds `CLERK_JWT_ISSUER_DOMAIN`,

@@ -202,9 +202,15 @@ final class NotificationService {
     let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !threadId.isEmpty, !trimmedBody.isEmpty else { return }
 
+    guard let senderUserId = AppCoordinator.shared.getCurrentUserId() else {
+      await scheduleQuickReplyFailedNotification(threadId: threadId, body: trimmedBody)
+      return
+    }
+
     // Send first so a failed mark-read can't drop the reply.
     do {
       _ = try await FriendsMessagingService.shared.sendMessage(
+        senderUserId: senderUserId,
         threadId: threadId,
         clientId: UUID().uuidString.lowercased(),
         body: trimmedBody,

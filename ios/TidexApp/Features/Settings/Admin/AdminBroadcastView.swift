@@ -1,4 +1,3 @@
-import Supabase
 import SwiftUI
 
 enum AdminBroadcastTarget: String, CaseIterable, Identifiable {
@@ -77,22 +76,25 @@ struct AdminBroadcastDraft {
     return nil
   }
 
-  var rpcParams: [String: AnyJSON] {
-    func text(_ value: String) -> AnyJSON {
-      value.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank.map(AnyJSON.string) ?? .null
-    }
-    return [
-      "p_title": text(title),
-      "p_title_no": text(titleNo),
-      "p_body": text(body),
-      "p_body_no": text(bodyNo),
-      "p_target": .string(target.rawValue),
-      "p_deeplink": text(deeplink),
-      "p_deeplink_no": text(deeplinkNo),
-      "p_specific_user_ids": target == .specific
-        ? .array(recipients.map { .string($0.id) }) : .null,
-      "p_include_self": false,
+  /// Arguments for `admin:sendBroadcast`. Convex rejects null, so blank fields are left out.
+  var convexArgs: [String: AnyJSON] {
+    var args: [String: AnyJSON] = [
+      "target": .string(target.rawValue),
+      "include_self": false,
     ]
+    let texts = [
+      "title": title, "title_no": titleNo, "body": body, "body_no": bodyNo,
+      "deeplink": deeplink, "deeplink_no": deeplinkNo,
+    ]
+    for (key, value) in texts {
+      if let text = value.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank {
+        args[key] = .string(text)
+      }
+    }
+    if target == .specific {
+      args["specific_user_ids"] = .array(recipients.map { .string($0.id) })
+    }
+    return args
   }
 }
 

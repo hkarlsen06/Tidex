@@ -6,11 +6,11 @@ import Foundation
 internal struct TablePullResult {
   internal let table: SyncTable
   internal let rowsProcessed: Int
-  /// Last updated_at timestamp processed (for cursor)
+  /// Not used since the pull moved to revision cursors. Always nil.
   internal let lastUpdatedAt: Date?
-  /// ID of the last row at the lastUpdatedAt timestamp (tie-breaker)
+  /// Not used since the pull moved to revision cursors. Always nil.
   internal let lastUpdatedAtTieId: String?
-  /// Legacy max revision (kept for debugging only)
+  /// The table's revision cursor after the pull
   internal let maxRevision: Int64
   internal let newConflicts: Int, autoMerged: Int
   internal let affectedMonths: Set<ShiftChangeAffectedMonth>

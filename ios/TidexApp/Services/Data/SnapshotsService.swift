@@ -1,7 +1,6 @@
 import Foundation
-import Supabase
 
-/// Service for fetching and resolving wage snapshots from Supabase
+/// Service for fetching and resolving wage snapshots from Convex
 /// Resolves snapshots in one pass without sorting or allocating a dated copy.
 @MainActor
 final class SnapshotsService {
@@ -24,14 +23,19 @@ final class SnapshotsService {
     defer { isLoading = false }
 
     do {
-      let response: [WageSnapshot] =
-        try await supabase
-        .from("wage_snapshots")
-        .select()
-        .eq("user_id", value: userId)
-        .order("from_date", ascending: false, nullsFirst: false)
-        .execute()
-        .value
+      let rows: [SyncWageSnapshotRow] = try await SyncConvex.pullAll(.wageSnapshots)
+      let owner = userId.lowercased()
+      // Newest date first, and the baseline snapshot without a date last.
+      let response = rows
+        .filter { $0.deleted_at == nil && $0.user_id.lowercased() == owner }
+        .sorted { lhs, rhs in
+          switch (lhs.from_date, rhs.from_date) {
+          case (let left?, let right?): left > right
+          case (_?, nil): true
+          default: false
+          }
+        }
+        .map { $0.toWageSnapshot() }
 
       snapshots = response
       return response

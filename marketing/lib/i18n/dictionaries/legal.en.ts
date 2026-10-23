@@ -177,7 +177,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-09-30',
+    lastUpdatedDate: '2026-10-24',
     dateLocale: 'en-US',
     sections: [
       {
@@ -221,9 +221,9 @@ export const legalEn = {
       {
         heading: '4. Storage and processing',
         list: [
-          { boldLabel: 'Storage:', text: 'Account, app, and file data is stored on servers we run ourselves, rented from netcup in Germany. We run the open-source Supabase software (PostgreSQL, authentication, and file storage) on these servers.' },
+          { boldLabel: 'Storage:', text: 'Account, app, and file data is stored on servers we run ourselves, rented from netcup in Germany. We run the open-source Convex software (database and file storage) on these servers. Older versions of the app use the open-source Supabase software (PostgreSQL, authentication, and file storage) on the same servers, which we shut down once those versions are no longer in use.' },
           { boldLabel: 'Backups:', text: 'We back up the database every night and every hour. Backups are kept for up to 28 days, on our server and in Cloudflare R2 storage in the EU.' },
-          { boldLabel: 'Email:', text: 'Emails about your account, such as password reset links, are sent from our own mail server.' },
+          { boldLabel: 'Email:', text: 'Emails about your account, such as sign-in and password reset codes, are sent by Clerk. Older versions of the app send them from our own mail server.' },
           { boldLabel: 'On-device storage:', text: 'The iOS app stores session tokens in the iOS Keychain and may cache app data locally on your device to support sign-in and app performance.' },
           { boldLabel: 'Retention:', text: 'Data is kept for as long as you maintain an active account. Records of which hours you used the app are deleted after 32 days, and sign-in reports after 90 days. We do not guarantee long-term archival.' },
           { boldLabel: 'Deletion:', text: 'If you delete your account, we delete your account data from our active systems as part of the deletion process. Copies in backups are removed as the backups expire, within 28 days.' },
@@ -251,6 +251,14 @@ export const legalEn = {
             },
           },
           {
+            boldLabel: 'Clerk:',
+            text: 'Sign-in and account management. Clerk, Inc. in the United States stores your name, email address, hashed password and sign-in sessions, including the IP address and device of each sign-in, and sends sign-in and password reset codes by email. Clerk is certified under the EU-U.S. Data Privacy Framework. Read their {link}.',
+            link: {
+              href: 'https://clerk.com/legal/privacy',
+              text: 'privacy policy',
+            },
+          },
+          {
             boldLabel: 'Apple:',
             text: 'Sign in with Apple and Apple Push Notification service for push delivery. Read their {link}.',
             link: {
@@ -267,7 +275,7 @@ export const legalEn = {
             },
           },
         ],
-        closingParagraph: 'Data is only shared with Google if you choose Google Sign-In, with Apple when you use Apple sign-in or push notifications. No data is shared with third parties beyond those listed above.',
+        closingParagraph: 'Clerk handles sign-in for every account. Data is only shared with Google if you choose Google Sign-In, and with Apple when you use Apple sign-in or push notifications. No data is shared with third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',

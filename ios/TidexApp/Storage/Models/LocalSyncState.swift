@@ -4,7 +4,8 @@ import SwiftData
 // MARK: - Local Sync State
 
 /// SwiftData model for tracking sync state per user
-/// Uses updated_at cursors for incremental sync (NOT revision, as revision is per-row and new rows start at 1)
+/// Pulls page by revision. Convex numbers every write with one counter for the whole deployment,
+/// so a table's cursor is the revision of the last row the device has applied.
 @Model
 final class LocalSyncState {
   // MARK: - Primary Key
@@ -13,24 +14,43 @@ final class LocalSyncState {
   @Attribute(.unique)
   var userId: String
 
-  // MARK: - Legacy Revision Cursors (DEPRECATED - kept for debugging only)
+  // MARK: - Revision Cursors (primary cursors for pull sync)
 
-  /// Last synced revision for user_shifts table (DEPRECATED)
+  /// Last pulled revision for user_shifts table
   var lastRevisionUserShifts: Int64
 
-  /// Last synced revision for recurring_shifts table (DEPRECATED)
+  /// Last pulled revision for recurring_shifts table
   var lastRevisionRecurringShifts: Int64
 
-  /// Last synced revision for wage_snapshots table (DEPRECATED)
+  /// Last pulled revision for wage_snapshots table
   var lastRevisionWageSnapshots: Int64
 
-  /// Last synced revision for user_settings table (DEPRECATED)
+  /// Last pulled revision for user_settings table
   var lastRevisionUserSettings: Int64
 
-  // MARK: - Updated-At Cursors (Primary cursors for pull sync)
+  // The tables below got a revision cursor with the move to Convex. The defaults here let
+  // SwiftData add the columns to an existing store.
 
-  // These use server-managed updated_at timestamps for incremental sync.
-  // A tie-breaker (id) is used when multiple rows share the same timestamp.
+  /// Last pulled revision for jobs table
+  var lastRevisionJobs: Int64 = 0
+
+  /// Last pulled revision for events table
+  var lastRevisionEvents: Int64 = 0
+
+  /// Last pulled revision for payroll_adjustments table
+  var lastRevisionPayrollAdjustments: Int64 = 0
+
+  /// Last pulled revision for notification_preferences table
+  var lastRevisionNotificationPreferences: Int64 = 0
+
+  /// When the cursors were reset for Convex. Postgres revisions mean nothing there, so the first
+  /// sync after the update starts every table at 0. Nil means that has not happened yet.
+  var convexCursorsResetAt: Date?
+
+  // MARK: - Updated-At Cursors (Postgres, no longer read)
+
+  // These held the old Postgres pull position (updated_at plus an id tie-breaker). The columns stay
+  // so the store opens unchanged. Nothing reads them since the pull moved to revision cursors.
 
   /// Last synced updated_at for jobs table
   var lastJobsUpdatedAt: Date?
@@ -99,6 +119,11 @@ final class LocalSyncState {
     lastRevisionRecurringShifts: Int64 = 0,
     lastRevisionWageSnapshots: Int64 = 0,
     lastRevisionUserSettings: Int64 = 0,
+    lastRevisionJobs: Int64 = 0,
+    lastRevisionEvents: Int64 = 0,
+    lastRevisionPayrollAdjustments: Int64 = 0,
+    lastRevisionNotificationPreferences: Int64 = 0,
+    convexCursorsResetAt: Date? = nil,
     lastSuccessfulSyncAt: Date? = nil,
     lastSyncAttemptAt: Date? = nil,
     lastSyncError: String? = nil,
@@ -124,6 +149,11 @@ final class LocalSyncState {
     self.lastRevisionRecurringShifts = lastRevisionRecurringShifts
     self.lastRevisionWageSnapshots = lastRevisionWageSnapshots
     self.lastRevisionUserSettings = lastRevisionUserSettings
+    self.lastRevisionJobs = lastRevisionJobs
+    self.lastRevisionEvents = lastRevisionEvents
+    self.lastRevisionPayrollAdjustments = lastRevisionPayrollAdjustments
+    self.lastRevisionNotificationPreferences = lastRevisionNotificationPreferences
+    self.convexCursorsResetAt = convexCursorsResetAt
     self.lastSuccessfulSyncAt = lastSuccessfulSyncAt
     self.lastSyncAttemptAt = lastSyncAttemptAt
     self.lastSyncError = lastSyncError
@@ -157,7 +187,7 @@ final class LocalSyncState {
     lastSyncError == nil && lastSuccessfulSyncAt != nil
   }
 
-  // MARK: - Updated-At Cursor Methods (Primary)
+  // MARK: - Postgres Cursor Methods (no longer used by the pull)
 
   /// Get updated_at cursor for a specific table
   func updatedAtCursor(for table: SyncTable) -> SyncCursor {
@@ -198,56 +228,19 @@ final class LocalSyncState {
     }
   }
 
-  /// Update updated_at cursor for a specific table
-  func updateUpdatedAtCursor(for table: SyncTable, updatedAt: Date, tieId: String) {
-    switch table {
-    case .jobs:
-      lastJobsUpdatedAt = updatedAt
-      lastJobsUpdatedAtTieId = tieId
+  // MARK: - Revision Cursor Methods
 
-    case .userShifts:
-      lastUserShiftsUpdatedAt = updatedAt
-      lastUserShiftsUpdatedAtTieId = tieId
-
-    case .events:
-      lastEventsUpdatedAt = updatedAt
-      lastEventsUpdatedAtTieId = tieId
-
-    case .recurringShifts:
-      lastRecurringShiftsUpdatedAt = updatedAt
-      lastRecurringShiftsUpdatedAtTieId = tieId
-
-    case .wageSnapshots:
-      lastWageSnapshotsUpdatedAt = updatedAt
-      lastWageSnapshotsUpdatedAtTieId = tieId
-
-    case .payrollAdjustments:
-      lastPayrollAdjustmentsUpdatedAt = updatedAt
-      lastPayrollAdjustmentsUpdatedAtTieId = tieId
-
-    case .userSettings:
-      lastUserSettingsUpdatedAt = updatedAt
-      lastUserSettingsUpdatedAtTieId = tieId
-
-    case .notificationPreferences:
-      lastNotificationPreferencesUpdatedAt = updatedAt
-      lastNotificationPreferencesUpdatedAtTieId = tieId
-    }
-  }
-
-  // MARK: - Legacy Revision Cursor Methods (DEPRECATED)
-
-  /// Get cursor for a specific table (DEPRECATED - use updatedAtCursor instead)
+  /// Get the revision cursor for a specific table
   func cursor(for table: SyncTable) -> Int64 {
     switch table {
     case .jobs:
-      return 0
+      return lastRevisionJobs
 
     case .userShifts:
       return lastRevisionUserShifts
 
     case .events:
-      return 0
+      return lastRevisionEvents
 
     case .recurringShifts:
       return lastRevisionRecurringShifts
@@ -256,27 +249,27 @@ final class LocalSyncState {
       return lastRevisionWageSnapshots
 
     case .payrollAdjustments:
-      return 0
+      return lastRevisionPayrollAdjustments
 
     case .userSettings:
       return lastRevisionUserSettings
 
     case .notificationPreferences:
-      return 0  // No legacy revision for notification preferences
+      return lastRevisionNotificationPreferences
     }
   }
 
-  /// Update cursor for a specific table (DEPRECATED - use updateUpdatedAtCursor instead)
+  /// Update the revision cursor for a specific table
   func updateCursor(for table: SyncTable, to revision: Int64) {
     switch table {
     case .jobs:
-      break
+      lastRevisionJobs = revision
 
     case .userShifts:
       lastRevisionUserShifts = revision
 
     case .events:
-      break
+      lastRevisionEvents = revision
 
     case .recurringShifts:
       lastRevisionRecurringShifts = revision
@@ -285,13 +278,13 @@ final class LocalSyncState {
       lastRevisionWageSnapshots = revision
 
     case .payrollAdjustments:
-      break
+      lastRevisionPayrollAdjustments = revision
 
     case .userSettings:
       lastRevisionUserSettings = revision
 
     case .notificationPreferences:
-      break  // No legacy revision for notification preferences
+      lastRevisionNotificationPreferences = revision
     }
   }
 
@@ -314,29 +307,22 @@ final class LocalSyncState {
 
   /// Reset all cursors (for full re-sync)
   func resetAllCursors() {
-    // Reset updated_at cursors
-    lastJobsUpdatedAt = nil
-    lastJobsUpdatedAtTieId = nil
-    lastUserShiftsUpdatedAt = nil
-    lastUserShiftsUpdatedAtTieId = nil
-    lastEventsUpdatedAt = nil
-    lastEventsUpdatedAtTieId = nil
-    lastRecurringShiftsUpdatedAt = nil
-    lastRecurringShiftsUpdatedAtTieId = nil
-    lastWageSnapshotsUpdatedAt = nil
-    lastWageSnapshotsUpdatedAtTieId = nil
-    lastPayrollAdjustmentsUpdatedAt = nil
-    lastPayrollAdjustmentsUpdatedAtTieId = nil
-    lastUserSettingsUpdatedAt = nil
-    lastUserSettingsUpdatedAtTieId = nil
-    lastNotificationPreferencesUpdatedAt = nil
-    lastNotificationPreferencesUpdatedAtTieId = nil
-
-    // Reset legacy revision cursors (for debugging)
+    lastRevisionJobs = 0
     lastRevisionUserShifts = 0
+    lastRevisionEvents = 0
     lastRevisionRecurringShifts = 0
     lastRevisionWageSnapshots = 0
+    lastRevisionPayrollAdjustments = 0
     lastRevisionUserSettings = 0
+    lastRevisionNotificationPreferences = 0
+  }
+
+  /// Starts every table at revision 0 once. Revisions kept from Postgres mean nothing on Convex,
+  /// because the migration gave every row a new one. The next pull then returns every row, and
+  /// the merge gives local rows with unsent edits the server revision before they push.
+  func resetCursorsForConvex(at date: Date = Date()) {
+    resetAllCursors()
+    convexCursorsResetAt = date
   }
 }
 
@@ -379,7 +365,7 @@ enum SyncTable: String, CaseIterable {
   case userSettings = "user_settings"
   case notificationPreferences = "notification_preferences"
 
-  /// Supabase table name
+  /// Table name on the server
   var tableName: String {
     rawValue
   }
@@ -411,4 +397,6 @@ enum SyncReason: String {
   case manualRefresh = "manual_refresh"
   /// Sync after local changes (e.g., adding a shift)
   case localChange = "local_change"
+  /// The server has newer rows than the local cursors, seen by `SyncRevisionWatcher`
+  case remoteChange = "remote_change"
 }

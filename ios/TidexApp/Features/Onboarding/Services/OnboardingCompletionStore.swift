@@ -1,13 +1,12 @@
 import Foundation
-import Supabase
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "OnboardingCompletionStore")
 
 /// Records that a user finished onboarding on this device.
 ///
-/// The `finishedOnboarding` auth metadata update needs a network, so onboarding does not wait
-/// for it. The local flag is what lets a user in, and the metadata update is queued and retried.
+/// The `users:finishOnboarding` call needs a network, so onboarding does not wait
+/// for it. The local flag is what lets a user in, and the update is queued and retried.
 @MainActor
 enum OnboardingCompletionStore {
   typealias MetadataUpdater = () async throws -> Void
@@ -52,7 +51,7 @@ enum OnboardingCompletionStore {
     do {
       try await updateMetadata()
       defaults.removeObject(forKey: pendingKey(userId))
-      logger.info("Marked onboarding as finished in user metadata")
+      logger.info("Marked onboarding as finished on the server")
     } catch {
       logger.warning(
         "Onboarding metadata update queued for retry: \(error.localizedDescription)")
@@ -60,8 +59,8 @@ enum OnboardingCompletionStore {
   }
 
   static func pushFinishedMetadata() async throws {
-    _ = try await supabase.auth.update(
-      user: UserAttributes(data: ["finishedOnboarding": .bool(true)])
-    )
+    _ = try await ConvexAPI.app.mutation("users:finishOnboarding", as: ConvexAPI.Ignored.self)
+    // Reload the cached user so `finishedOnboarding` is true on the next launch offline.
+    _ = try? await AuthSessionManager.shared.forceRefresh()
   }
 }

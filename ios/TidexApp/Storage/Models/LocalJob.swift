@@ -6,7 +6,7 @@ import SwiftData
 // MARK: - Local Job
 
 /// SwiftData model for locally persisted jobs
-/// Maps to the `jobs` table in Supabase
+/// Maps to the `jobs` table
 @Model
 final class LocalJob {
   // MARK: - Primary Key & Foreign Key

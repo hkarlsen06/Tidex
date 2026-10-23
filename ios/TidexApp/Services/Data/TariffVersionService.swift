@@ -1,13 +1,11 @@
 import Foundation
 import os.log
-import Supabase
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "TariffVersionService")
 
 // MARK: - Tariff Version Service
 
-/// Service for fetching tariff types and versions from Supabase
-/// Uses RPC functions for efficient server-side date resolution
+/// Service for fetching tariff types and versions from Convex
 /// Tariff data is relatively static, so aggressive caching is used.
 /// The last successful fetch is also saved to disk, so lists still load offline and after a relaunch.
 actor TariffVersionService {
@@ -22,7 +20,7 @@ actor TariffVersionService {
   typealias FetchTypes = @Sendable () async throws -> [TariffType]
   typealias FetchVersions = @Sendable (_ tariffType: String) async throws -> [TariffVersion]
   typealias FetchVersionForDate =
-    @Sendable (_ tariffType: String, _ date: String) async throws -> TariffVersion
+    @Sendable (_ tariffType: String, _ date: String) async throws -> TariffVersion?
 
   // MARK: - Cache
 
@@ -74,27 +72,24 @@ actor TariffVersionService {
     .urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
     .appendingPathComponent("TariffCache.json")
 
+  private struct VersionsArgs: Encodable, Sendable {
+    let tariffType: String
+    enum CodingKeys: String, CodingKey { case tariffType = "tariff_type" }
+  }
+
   nonisolated static let remoteTypes: FetchTypes = {
-    try await supabase.rpc("get_tariff_types").execute().value
+    try await ConvexAPI.app.query("tariffs:types")
   }
 
   nonisolated static let remoteVersions: FetchVersions = { tariffType in
-    try await supabase
-      .rpc("get_tariff_versions", params: ["p_tariff_type": tariffType])
-      .execute()
-      .value
+    try await ConvexAPI.app.query("tariffs:versions", VersionsArgs(tariffType: tariffType))
   }
 
+  /// Convex has no lookup by date. The list is small and sorted newest first, so this
+  /// picks the newest version that is effective on `date`. ISO dates compare as strings.
   nonisolated static let remoteVersionForDate: FetchVersionForDate = { tariffType, date in
-    // The RPC returns a single row or null
-    try await supabase
-      .rpc(
-        "get_tariff_version_for_date",
-        params: ["p_tariff_type": tariffType, "p_target_date": date]
-      )
-      .single()
-      .execute()
-      .value
+    let versions = try await remoteVersions(tariffType)
+    return versions.filter { $0.effective_date <= date }.max { $0.effective_date < $1.effective_date }
   }
 
   private func persist() {
@@ -113,7 +108,7 @@ actor TariffVersionService {
 
   /// Fetch all available tariff types
   /// - Returns: Array of tariff types
-  /// - Throws: Error if the RPC call fails
+  /// - Throws: Error if the request fails
   func getTariffTypes() async throws -> [TariffType] {
     // Check cache
     if let cached = cachedTypes,
@@ -152,7 +147,7 @@ actor TariffVersionService {
   /// Fetch all versions for a specific tariff type
   /// - Parameter tariffType: The tariff type ID (e.g., "hk_retail")
   /// - Returns: Array of tariff versions, ordered by effective_date descending
-  /// - Throws: Error if the RPC call fails
+  /// - Throws: Error if the request fails
   func getTariffVersions(tariffType: String) async throws -> [TariffVersion] {
     // Check cache
     if let cached = cachedVersions[tariffType],
@@ -190,17 +185,19 @@ actor TariffVersionService {
   }
 
   /// Fetch the applicable tariff version for a specific date
-  /// Uses server-side RPC for efficient date resolution
   /// - Parameters:
   ///   - tariffType: The tariff type ID (e.g., "hk_retail")
   ///   - date: ISO date string (YYYY-MM-DD) to find the version for
   /// - Returns: The applicable tariff version, or nil if none found
-  /// - Throws: Error if the RPC call fails
+  /// - Throws: Error if the request fails
   func getTariffVersionForDate(tariffType: String, date: String) async throws -> TariffVersion? {
     logger.info("Fetching tariff version for \(tariffType) at date \(date)")
 
     do {
-      let version = try await fetchVersionForDate(tariffType, date)
+      guard let version = try await fetchVersionForDate(tariffType, date) else {
+        logger.info("No tariff version found for \(tariffType) at date \(date)")
+        return nil
+      }
 
       logger.info(
         "Found tariff version \(version.id) (effective \(version.effective_date)) for date \(date)")
@@ -211,14 +208,6 @@ actor TariffVersionService {
       }
       return version
     } catch {
-      // Check if error is "no rows returned" - return nil instead of throwing
-      if let postgrestError = error as? PostgrestError,
-        postgrestError.code == "PGRST116"
-      {
-        logger.info("No tariff version found for \(tariffType) at date \(date)")
-        return nil
-      }
-
       logger.error("Failed to fetch tariff version for date: \(error.localizedDescription)")
 
       // Resolve the date from the saved version list. ISO dates compare correctly as strings.

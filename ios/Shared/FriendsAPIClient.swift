@@ -2496,7 +2496,6 @@ struct FriendWithShift: Sendable {
 
 enum FriendsAPIError: Error, LocalizedError, Sendable {
   case noAccessToken
-  case noAnonKey
   case networkError(underlying: String)
   case offline
   case httpError(statusCode: Int)
@@ -2532,19 +2531,10 @@ enum FriendsAPIError: Error, LocalizedError, Sendable {
     case .offline:
       return String(localized: .shareErrorOffline)
 
-    case .noAnonKey, .networkError, .httpError, .decodingError:
+    case .networkError, .httpError, .decodingError:
       return String(localized: .shareErrorRequestFailed)
     }
   }
-}
-
-// MARK: - RPC Error Response
-
-private struct RPCErrorResponse: Codable {
-  let code: String?
-  let message: String?
-  let details: String?
-  let hint: String?
 }
 
 // MARK: - Friends API Client
@@ -2552,16 +2542,10 @@ private struct RPCErrorResponse: Codable {
 /// Lightweight API client for fetching friends data directly
 /// Fetches friend data for widgets without launching the main app.
 ///
-/// This client fetches from the consolidated Supabase Friends bootstrap RPC.
+/// This client fetches from the consolidated Convex `sharing:friendsBootstrap` query.
 ///
 /// Preview selection and payroll computation are handled client-side via SharingComputeCore.
 enum FriendsAPIClient {
-  /// Base URL for Supabase REST RPC
-  private static let rpcBaseURL = URL(string: "https://api.tidex.no/rest/v1/rpc")
-
-  /// Fallback anon/publishable key for extension contexts lacking Info.plist config
-  private static let fallbackAnonKey = "sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb"
-
   /// Shared URLSession with reasonable timeouts
   fileprivate static let urlSession: URLSession = {
     let config = URLSessionConfiguration.default
@@ -2570,40 +2554,21 @@ enum FriendsAPIClient {
     return URLSession(configuration: config)
   }()
 
-  /// Supabase anon key from Info.plist (or fallback)
-  fileprivate static var supabaseAnonKey: String {
-    if let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
-      !key.isEmpty
-    {
-      return key
-    }
-    return fallbackAnonKey
-  }
-
   // MARK: - Public API
 
   /// Fetch all friends with their shift previews in a single call
   /// Main entry point for the friends widget.
   /// - Returns: Array of friends with their shift data
   static func fetchFriendsWithShifts() async throws -> [FriendWithShift] {
-    guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {
-      throw FriendsAPIError.noAccessToken
-    }
-
-    guard !supabaseAnonKey.isEmpty else {
-      throw FriendsAPIError.noAnonKey
-    }
-
     let now = Date()
     let startDate = SharingComputeCore.isoDateString(
       Calendar.gregorianCurrent.date(byAdding: .day, value: -30, to: now) ?? now)
     let endDate = SharingComputeCore.isoDateString(
       Calendar.gregorianCurrent.date(byAdding: .day, value: 30, to: now) ?? now)
 
-    let bootstrap = try await fetchFriendsTabBootstrap(
+    let bootstrap: FriendsTabBootstrapRPCResponse = try await fetchFriendsTabBootstrap(
       startDate: startDate,
-      endDate: endDate,
-      accessToken: accessToken
+      endDate: endDate
     )
     let sharers = bootstrap.sharers
     let activeSharers = sharers.filter { !$0.hidden }
@@ -2689,20 +2654,18 @@ enum FriendsAPIClient {
 
   // MARK: - Private API Methods
 
-  private static func fetchFriendsTabBootstrap(
+  fileprivate static func fetchFriendsTabBootstrap<T: Decodable>(
     startDate: String,
-    endDate: String,
-    accessToken: String
-  ) async throws -> FriendsTabBootstrapRPCResponse {
-    try await callRPC(
-      functionName: "get_friends_tab_bootstrap",
-      body: [
-        "p_preview_start_date": startDate,
-        "p_preview_end_date": endDate,
-      ],
-      accessToken: accessToken,
-      expectsSingleObject: true
-    )
+    endDate: String
+  ) async throws -> T {
+    try await callConvex(
+      .query, "sharing:friendsBootstrap",
+      BootstrapArgs(preview_start_date: startDate, preview_end_date: endDate))
+  }
+
+  private struct BootstrapArgs: Encodable, Sendable {
+    let preview_start_date: String
+    let preview_end_date: String
   }
 
   private struct FriendsTabBootstrapRPCResponse: Decodable, Sendable {
@@ -2726,65 +2689,46 @@ enum FriendsAPIClient {
     let hasRecurringSharedShifts: Bool
   }
 
-  fileprivate static func callRPC<T: Decodable>(
-    functionName: String,
-    body: [String: Any],
-    accessToken: String,
-    expectsSingleObject: Bool = false
+  fileprivate enum ConvexCall {
+    case query
+    case mutation
+  }
+
+  /// Calls a Convex function as the signed-in user, with a fresh Clerk token. Failures map to
+  /// `FriendsAPIError`: no stored session is `.noAccessToken`, a refused token is
+  /// `.unauthorized` and a lost connection is `.offline`.
+  fileprivate static func callConvex<T: Decodable>(
+    _ call: ConvexCall,
+    _ path: String,
+    _ args: some Encodable & Sendable = ConvexAPI.NoArgs()
   ) async throws -> T {
-    guard let rpcBaseURL else {
-      throw FriendsAPIError.networkError(underlying: "Invalid RPC base URL")
-    }
-
-    let url = rpcBaseURL.appendingPathComponent(functionName)
-
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-    request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue(
-      expectsSingleObject ? "application/vnd.pgrst.object+json" : "application/json",
-      forHTTPHeaderField: "Accept"
-    )
-
+    try await requireToken()
     do {
-      request.httpBody = try JSONSerialization.data(withJSONObject: body)
+      switch call {
+      case .query: return try await SharedAuthToken.convex.query(path, args)
+      case .mutation: return try await SharedAuthToken.convex.mutation(path, args)
+      }
+    } catch let error as FriendsAPIError {
+      throw error
+    } catch ConvexAPI.Failure.notSignedIn {
+      throw FriendsAPIError.unauthorized
+    } catch ConvexAPI.Failure.badResponse(let status) {
+      throw FriendsAPIError.httpError(statusCode: status)
+    } catch let error as ConvexAPI.Failure {
+      throw FriendsAPIError.networkError(underlying: "\(path) failed: \(error.localizedDescription)")
+    } catch let error as DecodingError {
+      throw FriendsAPIError.decodingError(underlying: error.localizedDescription)
     } catch {
-      throw FriendsAPIError.networkError(
-        underlying: "Failed to encode RPC body: \(error.localizedDescription)")
+      throw FriendsAPIError.transportError(error)
     }
+  }
 
+  /// Makes sure a valid Clerk token exists, asking Clerk for a new one when the stored one
+  /// expired. Clerk tokens last 60 seconds, so this runs before every call.
+  fileprivate static func requireToken() async throws {
+    if SharedKeychainStorage.getValidAccessToken() != nil { return }
     do {
-      let (data, response) = try await urlSession.data(for: request)
-
-      guard let httpResponse = response as? HTTPURLResponse else {
-        throw FriendsAPIError.networkError(underlying: "Invalid response type")
-      }
-
-      switch httpResponse.statusCode {
-      case 200...299:
-        break
-
-      case 401:
-        throw FriendsAPIError.unauthorized
-
-      default:
-        if let rpcError = try? JSONDecoder().decode(RPCErrorResponse.self, from: data),
-          let message = rpcError.message,
-          !message.isEmpty
-        {
-          throw FriendsAPIError.networkError(
-            underlying: "RPC \(functionName) failed (\(httpResponse.statusCode)): \(message)")
-        }
-        throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
-      }
-
-      do {
-        return try JSONDecoder().decode(T.self, from: data)
-      } catch {
-        throw FriendsAPIError.decodingError(underlying: error.localizedDescription)
-      }
+      guard try await SharedAuthToken.renew() != nil else { throw FriendsAPIError.noAccessToken }
     } catch let error as FriendsAPIError {
       throw error
     } catch {
@@ -3078,27 +3022,20 @@ enum FriendsAPIClient {
   }
 
   enum ShareExtensionMessagingClient {
-    private static let storageBucket = "message-attachments"
-    private static let storageBaseURL = URL(string: "https://api.tidex.no/storage/v1/object")
     private static let maxUploadBytes = 1_500_000
 
     static func fetchRecipients() async throws -> [ShareRecipient] {
-      guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {
-        throw FriendsAPIError.noAccessToken
-      }
-
       let now = Date()
       let startDate = SharingComputeCore.isoDateString(
         Calendar.gregorianCurrent.date(byAdding: .day, value: -30, to: now) ?? now)
       let endDate = SharingComputeCore.isoDateString(
         Calendar.gregorianCurrent.date(byAdding: .day, value: 30, to: now) ?? now)
 
-      async let friendsTask = fetchFriends(
-        accessToken: accessToken,
+      async let friendsTask: ShareFriendsResponse = FriendsAPIClient.fetchFriendsTabBootstrap(
         startDate: startDate,
         endDate: endDate
       )
-      async let threadsTask = fetchThreadSummaries(accessToken: accessToken)
+      async let threadsTask = fetchThreadSummaries()
 
       let response = try await friendsTask
       let threads = (try? await threadsTask) ?? []
@@ -3123,35 +3060,20 @@ enum FriendsAPIClient {
       to recipientUserId: String,
       message: String
     ) async throws {
-      guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {
-        throw FriendsAPIError.noAccessToken
-      }
+      try await FriendsAPIClient.requireToken()
 
       let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
       guard !trimmedMessage.isEmpty else {
         throw FriendsAPIError.networkError(underlying: "Message content is empty")
       }
 
-      let thread = try await getOrCreateDirectThread(
-        otherUserId: recipientUserId,
-        accessToken: accessToken
-      )
-      let payload: [String: Any] = [
-        "p_thread_id": thread.threadId,
-        "p_client_id": UUID().uuidString.lowercased(),
-        "p_body": trimmedMessage,
-        "p_reply_to_message_id": NSNull(),
-        "p_attachments": [],
-        "p_metadata": [:],
-      ]
-
-      _ =
-        try await FriendsAPIClient.callRPC(
-          functionName: "send_message",
-          body: payload,
-          accessToken: accessToken,
-          expectsSingleObject: true
-        ) as ShareMessageAck
+      let thread = try await getOrCreateDirectThread(otherUserId: recipientUserId)
+      try await send(
+        SendArgs(
+          thread_id: thread.threadId,
+          client_id: UUID().uuidString.lowercased(),
+          body: trimmedMessage
+        ))
     }
 
     static func sendSharedImage(
@@ -3159,91 +3081,45 @@ enum FriendsAPIClient {
       message: String,
       imageData: Data
     ) async throws {
-      guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {
-        throw FriendsAPIError.noAccessToken
-      }
+      try await FriendsAPIClient.requireToken()
 
-      let senderUserId = try normalizedUserId(from: accessToken)
-      let thread = try await getOrCreateDirectThread(
-        otherUserId: recipientUserId,
-        accessToken: accessToken
-      )
+      let thread = try await getOrCreateDirectThread(otherUserId: recipientUserId)
       let preparedImage = try prepareImage(from: imageData)
-      let attachment = try await uploadImageAttachment(
-        preparedImage,
-        threadId: thread.threadId,
-        senderUserId: senderUserId,
-        accessToken: accessToken
-      )
+      let storageId = try await uploadImageAttachment(preparedImage, threadId: thread.threadId)
 
       let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
-      let payload: [String: Any] = [
-        "p_thread_id": thread.threadId,
-        "p_client_id": UUID().uuidString.lowercased(),
-        "p_body": trimmedMessage.isEmpty ? NSNull() : trimmedMessage,
-        "p_reply_to_message_id": NSNull(),
-        "p_attachments": [
-          [
-            "attachment_id": attachment.attachmentId,
-            "storage_path": attachment.storagePath,
-            "mime_type": attachment.mimeType,
-            "byte_size": attachment.byteSize,
-            "width": attachment.width as Any,
-            "height": attachment.height as Any,
+      try await send(
+        SendArgs(
+          thread_id: thread.threadId,
+          client_id: UUID().uuidString.lowercased(),
+          body: trimmedMessage.isEmpty ? nil : trimmedMessage,
+          attachments: [
+            SendAttachment(
+              attachment_id: preparedImage.id,
+              storage_id: storageId,
+              mime_type: preparedImage.mimeType,
+              byte_size: preparedImage.data.count,
+              width: preparedImage.width,
+              height: preparedImage.height
+            )
           ]
-        ],
-      ]
-
-      _ =
-        try await FriendsAPIClient.callRPC(
-          functionName: "send_message",
-          body: payload,
-          accessToken: accessToken,
-          expectsSingleObject: true
-        ) as ShareMessageAck
+        ))
     }
 
-    private static func getOrCreateDirectThread(
-      otherUserId: String,
-      accessToken: String
-    ) async throws -> ShareThreadRow {
-      try await FriendsAPIClient.callRPC(
-        functionName: "get_or_create_direct_thread",
-        body: ["p_other_user_id": otherUserId],
-        accessToken: accessToken,
-        expectsSingleObject: true
-      )
+    private static func send(_ args: SendArgs) async throws {
+      let _: ShareMessageAck = try await FriendsAPIClient.callConvex(
+        .mutation, "messages:send", args)
     }
 
-    private static func fetchFriends(
-      accessToken: String,
-      startDate: String,
-      endDate: String
-    ) async throws -> ShareFriendsResponse {
-      try await FriendsAPIClient.callRPC(
-        functionName: "get_friends_tab_bootstrap",
-        body: [
-          "p_preview_start_date": startDate,
-          "p_preview_end_date": endDate,
-        ],
-        accessToken: accessToken,
-        expectsSingleObject: true
-      )
+    private static func getOrCreateDirectThread(otherUserId: String) async throws -> ShareThreadRow {
+      try await FriendsAPIClient.callConvex(
+        .mutation, "threads:getOrCreateDirect", DirectThreadArgs(other_user_id: otherUserId))
     }
 
-    private static func fetchThreadSummaries(accessToken: String) async throws
-      -> [ShareRecipientThreadSummary]
-    {
-      let rows: [ShareThreadSummaryRow] = try await FriendsAPIClient.callRPC(
-        functionName: "list_my_threads",
-        body: [
-          "p_limit": 100
-        ],
-        accessToken: accessToken,
-        expectsSingleObject: false
-      )
-
-      return rows.compactMap(\.shareRecipientThreadSummary)
+    private static func fetchThreadSummaries() async throws -> [ShareRecipientThreadSummary] {
+      let inbox: ShareInboxResponse = try await FriendsAPIClient.callConvex(
+        .query, "threads:inbox", InboxArgs(limit: 100))
+      return inbox.threads.compactMap(\.shareRecipientThreadSummary)
     }
 
     private static func makeShiftPreviews(
@@ -3273,89 +3149,50 @@ enum FriendsAPIClient {
       )
     }
 
+    /// Uploads the image to the deployment's `POST /attachments` and returns the storage id
+    /// that `messages:send` takes for the attachment.
     private static func uploadImageAttachment(
       _ image: PreparedSharedImage,
-      threadId: String,
-      senderUserId: String,
-      accessToken: String
-    ) async throws -> ShareOutgoingAttachment {
-      guard let storageBaseURL else {
+      threadId: String
+    ) async throws -> String {
+      guard let accessToken = await SharedAuthToken.current() else {
+        throw FriendsAPIError.noAccessToken
+      }
+
+      var components = URLComponents(
+        url: ConvexAPI.configuredSiteURL.appending(path: "attachments"),
+        resolvingAgainstBaseURL: false)
+      components?.queryItems = [URLQueryItem(name: "thread_id", value: threadId)]
+      guard let uploadURL = components?.url else {
         throw FriendsAPIError.networkError(
           underlying: String(localized: .shareErrorInvalidStorageBaseUrl))
       }
 
-      let path = "\(threadId)/\(senderUserId)/\(image.id).\(image.fileExtension)"
-      let uploadURL =
-        storageBaseURL
-        .appendingPathComponent(storageBucket)
-        .appendingPathComponent(path)
-
       var request = URLRequest(url: uploadURL)
       request.httpMethod = "POST"
       request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-      request.setValue(FriendsAPIClient.supabaseAnonKey, forHTTPHeaderField: "apikey")
       request.setValue(image.mimeType, forHTTPHeaderField: "Content-Type")
-      request.setValue("false", forHTTPHeaderField: "x-upsert")
 
       do {
-        let (_, response) = try await FriendsAPIClient.urlSession.upload(
+        let (data, response) = try await FriendsAPIClient.urlSession.upload(
           for: request, from: image.data)
         guard let httpResponse = response as? HTTPURLResponse else {
           throw FriendsAPIError.networkError(
             underlying: String(localized: .shareErrorInvalidStorageResponse))
         }
 
+        if httpResponse.statusCode == 401 { throw FriendsAPIError.unauthorized }
         guard (200...299).contains(httpResponse.statusCode) else {
           throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
         }
+        return try JSONDecoder().decode(UploadReply.self, from: data).storageId
       } catch let error as FriendsAPIError {
         throw error
+      } catch let error as DecodingError {
+        throw FriendsAPIError.decodingError(underlying: error.localizedDescription)
       } catch {
         throw FriendsAPIError.transportError(error)
       }
-
-      return ShareOutgoingAttachment(
-        attachmentId: image.id,
-        storagePath: path,
-        mimeType: image.mimeType,
-        byteSize: Int64(image.data.count),
-        width: image.width,
-        height: image.height
-      )
-    }
-
-    private static func normalizedUserId(from accessToken: String) throws -> String {
-      let components = accessToken.split(separator: ".")
-      guard components.count >= 2 else {
-        throw FriendsAPIError.networkError(
-          underlying: String(localized: .shareErrorInvalidAccessToken))
-      }
-
-      var payload = String(components[1])
-        .replacingOccurrences(of: "-", with: "+")
-        .replacingOccurrences(of: "_", with: "/")
-
-      let remainder = payload.count % 4
-      if remainder != 0 {
-        payload += String(repeating: "=", count: 4 - remainder)
-      }
-
-      guard let payloadData = Data(base64Encoded: payload) else {
-        throw FriendsAPIError.networkError(
-          underlying: String(localized: .shareErrorInvalidTokenPayload))
-      }
-
-      let jsonObject = try JSONSerialization.jsonObject(with: payloadData)
-      guard
-        let dictionary = jsonObject as? [String: Any],
-        let subject = dictionary["sub"] as? String,
-        !subject.isEmpty
-      else {
-        throw FriendsAPIError.networkError(
-          underlying: String(localized: .shareErrorMissingTokenSubject))
-      }
-
-      return subject.lowercased()
     }
 
     private static func prepareImage(from data: Data) throws -> PreparedSharedImage {
@@ -3441,11 +3278,34 @@ enum FriendsAPIClient {
       let id: String
     }
 
-    private struct ShareOutgoingAttachment {
-      let attachmentId: String
-      let storagePath: String
-      let mimeType: String
-      let byteSize: Int64
+    private struct UploadReply: Decodable {
+      let storageId: String
+    }
+
+    private struct ShareInboxResponse: Decodable {
+      let threads: [ShareThreadSummaryRow]
+    }
+
+    private struct InboxArgs: Encodable, Sendable {
+      let limit: Int
+    }
+
+    private struct DirectThreadArgs: Encodable, Sendable {
+      let other_user_id: String
+    }
+
+    private struct SendArgs: Encodable, Sendable {
+      let thread_id: String
+      let client_id: String
+      var body: String?
+      var attachments: [SendAttachment]?
+    }
+
+    private struct SendAttachment: Encodable, Sendable {
+      let attachment_id: String
+      let storage_id: String
+      let mime_type: String
+      let byte_size: Int
       let width: Int?
       let height: Int?
     }

@@ -1,0 +1,43 @@
+# Local dev deployment of the Tidex Convex backend, run under colima on the Mac.
+# Same images as /srv/tidex/convex on one-s. Data lives in the tidex-convex-dev-data
+# volume. Start with `docker compose -f dev/compose.yml up -d` from backend/.
+name: tidex-convex-dev
+services:
+  backend:
+    image: ghcr.io/convex/convex-backend@sha256:d715e9ec088784407ca4ba2d3db592702cd328d02c76cdca3852c0018f2a76b4
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "127.0.0.1:3210:3210"
+      - "127.0.0.1:3211:3211"
+    volumes:
+      - data:/convex/data
+    environment:
+      - INSTANCE_NAME=tidex-dev
+      - INSTANCE_SECRET=${INSTANCE_SECRET:?set INSTANCE_SECRET in dev/.env}
+      - CONVEX_CLOUD_ORIGIN=http://127.0.0.1:3210
+      - CONVEX_SITE_ORIGIN=http://127.0.0.1:3211
+      - DISABLE_BEACON=true
+      - RUST_LOG=info
+    healthcheck:
+      test: curl -f http://localhost:3210/version
+      interval: 10s
+      start_period: 10s
+
+  dashboard:
+    image: ghcr.io/convex/convex-dashboard@sha256:f85cf0d0448b9c835ae3df5c7c1c6f0145dd4c8f0f92eb0245daf304efdd9f1a
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "127.0.0.1:6791:6791"
+    environment:
+      - NEXT_PUBLIC_DEPLOYMENT_URL=http://127.0.0.1:3210
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  data:
+    name: tidex-convex-dev-data

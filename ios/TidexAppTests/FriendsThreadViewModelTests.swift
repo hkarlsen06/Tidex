@@ -2241,6 +2241,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   }
 
   func sendMessage(
+    senderUserId _: String,
     threadId _: String,
     clientId _: String,
     body _: String?,

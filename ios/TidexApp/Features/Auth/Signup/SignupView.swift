@@ -316,7 +316,7 @@ struct SignupForm: View {
 
       credentialFields
 
-      fieldError(viewModel.fieldErrors.emailOrPhone)
+      fieldError(viewModel.fieldErrors.email)
       fieldError(viewModel.fieldErrors.password)
 
       PrimaryButton(
@@ -333,7 +333,7 @@ struct SignupForm: View {
     VStack(spacing: 0) {
       NativeTextField(
         placeholder: String(localized: .signupEmailPlaceholder),
-        text: $viewModel.emailOrPhone,
+        text: $viewModel.email,
         keyboardType: .emailAddress,
         textContentType: .emailAddress
       )

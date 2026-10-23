@@ -1,5 +1,4 @@
 #if DEBUG
-  import Supabase
   import SwiftData
   import SwiftUI
 
@@ -31,19 +30,15 @@
     private static let jobId: String = "00000000-0000-4000-8000-000000000028"
     private static let fixtureDate: Date = Date(timeIntervalSince1970: 1_788_220_800)
 
-    internal static var session: Session {
-      guard let fixtureUserId: UUID = UUID(uuidString: userId) else {
-        preconditionFailure("Invalid screenshot fixture UUID")
-      }
-      return Session(
-        accessToken: "screenshot-fixture-not-a-token", tokenType: "bearer",
-        expiresIn: 3_600, expiresAt: Date.now.timeIntervalSince1970 + 3_600,
-        refreshToken: "screenshot-fixture-not-a-token",
-        user: User(
-          id: fixtureUserId, appMetadata: [:],
-          userMetadata: ["full_name": .string(displayName)], aud: "authenticated",
-          createdAt: fixtureDate, updatedAt: fixtureDate
-        )
+    internal static var session: AuthSession {
+      AuthSession(
+        user: AuthUser(
+          id: userId, email: nil, name: displayName, avatarUrl: avatarURL, role: nil,
+          termsAcceptedAt: nil, finishedOnboarding: true, isImpersonating: false, actorId: userId
+        ),
+        accessToken: "screenshot-fixture-not-a-token",
+        expiresAt: Date.now.timeIntervalSince1970 + 3_600,
+        clerkSessionId: "screenshot-fixture"
       )
     }
 

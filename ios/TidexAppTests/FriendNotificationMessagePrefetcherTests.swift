@@ -177,7 +177,7 @@ private final class MockFriendsMessagesRepository: FriendsMessagesRepositoryProv
     messages[id]
   }
 
-  func saveThreads(_ threads: [FriendThread], for _: String) async {
+  func saveThreads(_ threads: [FriendThread], for _: String, isWholeInbox _: Bool) async {
     await Task.yield()
     for thread in threads {
       self.threads[thread.id] = thread
@@ -311,7 +311,9 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     XCTFail("Unexpected call to listThreadMessages in FriendNotificationMessagePrefetcherTests")
     throw TestError.failed
   }
+  // swiftlint:disable:next function_parameter_count
   func sendMessage(
+    senderUserId _: String,
     threadId _: String,
     clientId _: String,
     body _: String?,

@@ -59,6 +59,7 @@ struct AdminFeedbackView: View {
     .navigationTitle("Feedback")
     .navigationBarTitleDisplayMode(.inline)
     .task { await load() }
+    .reloadOnChange(of: "admin:feedback", args: ["limit": 100.0]) { await load() }
     .refreshable { await load() }
     .adminErrorAlert($errorMessage)
   }

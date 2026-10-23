@@ -66,13 +66,6 @@ enum APIConfiguration {
     return key
   }()
 
-  // MARK: - Google Sign-In Configuration
-
-  /// iOS Client ID from Google Cloud Console
-  /// This is used by the native Google Sign-In SDK
-  static let googleiOSClientID =
-    "496501907923-a0sng8rs2gscdu2fdenlq4j2g8vq9gas.apps.googleusercontent.com"
-
   // MARK: - Marketing Configuration
 
   /// Public marketing site used for support and legal documents.

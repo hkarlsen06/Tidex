@@ -1,3 +1,4 @@
+import Auth
 import XCTest
 
 @testable import Tidex
@@ -72,5 +73,33 @@ final class OfflineAuthTests: XCTestCase {
     XCTAssertEqual(
       TermsVersion.needsTermsReAcceptance(nil, liveVersionReference: "2026-03-01T00:00:00Z"),
       true)
+  }
+
+  // MARK: - Legacy GoTrue session exchange
+
+  private func goTrueError(status: Int, code: String) throws -> Auth.AuthError {
+    let url = try XCTUnwrap(URL(string: "https://api.tidex.no/auth/v1/token"))
+    let response = try XCTUnwrap(
+      HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil))
+    return .api(
+      message: "", errorCode: Auth.ErrorCode(code), underlyingData: Data(),
+      underlyingResponse: response)
+  }
+
+  func testRateLimitedOrTimedOutRefreshKeepsTheOldLogin() throws {
+    XCTAssertFalse(
+      isLegacyGoTrueRefusal(try goTrueError(status: 429, code: "over_request_rate_limit")))
+    XCTAssertFalse(isLegacyGoTrueRefusal(try goTrueError(status: 408, code: "request_timeout")))
+    XCTAssertFalse(isLegacyGoTrueRefusal(try goTrueError(status: 400, code: "unknown")))
+    XCTAssertFalse(
+      isLegacyGoTrueRefusal(try goTrueError(status: 500, code: "unexpected_failure")))
+    XCTAssertFalse(isLegacyGoTrueRefusal(URLError(.notConnectedToInternet)))
+  }
+
+  func testDeadRefreshTokenDropsTheOldLogin() throws {
+    XCTAssertTrue(isLegacyGoTrueRefusal(Auth.AuthError.sessionMissing))
+    XCTAssertTrue(
+      isLegacyGoTrueRefusal(try goTrueError(status: 400, code: "refresh_token_not_found")))
+    XCTAssertTrue(isLegacyGoTrueRefusal(try goTrueError(status: 400, code: "user_banned")))
   }
 }

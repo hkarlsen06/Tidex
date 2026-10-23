@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import PDFKit
-import Supabase
 import UIKit
 import os.log
 
@@ -260,7 +259,7 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     switch format {
     case .pdf:
       let session = try? await AuthSessionManager.shared.getSession()
-      let userContact = (session?.user.email ?? session?.user.phone ?? "").trimmingCharacters(
+      let userContact = (session?.user.email ?? "").trimmingCharacters(
         in: .whitespacesAndNewlines
       )
       return try await Self.generatePDFOffMain(

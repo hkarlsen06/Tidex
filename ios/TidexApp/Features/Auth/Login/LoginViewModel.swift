@@ -2,22 +2,21 @@ import Foundation
 import Observation
 
 /// View model for the login screen
-/// Handles all authentication methods: email/password, phone/OTP, Google, Apple
+/// Handles all authentication methods: email/password, Google, Apple
 @MainActor
 @Observable
 final class LoginViewModel {
 
   // MARK: - Dependencies
 
-  private let authService: AuthService
   private let emailAuth: EmailAuthProviding
-  private let passkeyAuthService: PasskeyAuthService
+  private let authService: AuthService
   private let appleAuthProvider: AppleAuthProvider
-  private let googleAuthProvider: GoogleAuthProvider
+  private let onAuthenticated: () async -> Void
 
   // MARK: - Published State
 
-  var emailOrPhone: String = ""
+  var email: String = ""
   var password: String = ""
   var otpCode: String = ""
 
@@ -31,46 +30,26 @@ final class LoginViewModel {
 
   var fieldErrors = FieldErrors()
 
-  // MARK: - Navigation Callback
-
-  /// Called with the email address when the server says the account's email is not confirmed yet.
-  var onEmailNotConfirmed: ((String) -> Void)?
-
   // MARK: - Types
 
   enum LoginStep {
     case input
+    /// Code from the sign-in email, when Clerk asks for a second factor.
     case otp
   }
 
-  typealias InputType = AuthIdentityInputType
+  static let codeLength = 6
 
   struct FieldErrors {
-    var emailOrPhone: String?
+    var email: String?
     var password: String?
     var otp: String?
 
     mutating func clear() {
-      emailOrPhone = nil
+      email = nil
       password = nil
       otp = nil
     }
-  }
-
-  // MARK: - Private State
-
-  @ObservationIgnored private var authTask: Task<Void, Never>?
-
-  // MARK: - Computed Properties
-
-  /// Detected input type based on current emailOrPhone value
-  var inputType: InputType {
-    AuthIdentityInput.detectType(emailOrPhone)
-  }
-
-  /// Normalized phone number in E.164 format
-  var normalizedPhone: String {
-    AuthIdentityInput.normalizedPhone(emailOrPhone)
   }
 
   // MARK: - Initialization
@@ -78,24 +57,21 @@ final class LoginViewModel {
   init(
     authService: AuthService? = nil,
     emailAuth: EmailAuthProviding? = nil,
-    passkeyAuthService: PasskeyAuthService? = nil,
     appleAuthProvider: AppleAuthProvider? = nil,
-    googleAuthProvider: GoogleAuthProvider? = nil,
+    onAuthenticated: (() async -> Void)? = nil
   ) {
     self.authService = authService ?? AuthService.shared
     self.emailAuth = emailAuth ?? AuthService.shared
-    self.passkeyAuthService = passkeyAuthService ?? PasskeyAuthService.shared
     self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
-    self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
-  }
-
-  deinit {
-    authTask?.cancel()
+    self.onAuthenticated =
+      onAuthenticated ?? {
+        await AppCoordinator.shared.handleLoginSuccess()
+      }
   }
 
   // MARK: - Actions
 
-  /// Main sign in action - routes to appropriate method based on input type
+  /// Main sign in action
   func signIn() async {
     clearMessages()
     fieldErrors.clear()
@@ -106,32 +82,30 @@ final class LoginViewModel {
     defer { isLoading = false }
 
     do {
-      switch inputType {
-      case .email:
-        try await signInWithEmail()
+      let result = try await emailAuth.signInWithPassword(
+        email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password)
+      switch result {
+      case .signedIn:
+        await handleSuccessfulLogin()
 
-      case .phone:
-        if password.isEmpty {
-          try await sendPhoneOTP()
-        } else {
-          try await signInWithPhone()
-        }
-
-      case .unknown:
-        fieldErrors.emailOrPhone = String(localized: .loginErrorsInvalidEmailOrPhone)
+      case .needsEmailCode:
+        currentStep = .otp
       }
     } catch {
       handleSignInError(error)
     }
   }
 
-  /// Verify OTP code for phone login
+  /// Verify the code from the sign-in email
   func verifyOTP() async {
+    guard !isLoading else { return }
     clearMessages()
     fieldErrors.clear()
 
-    guard !otpCode.isEmpty else {
-      fieldErrors.otp = String(localized: .loginErrorsFillEmailOrPhone)
+    guard otpCode.count == Self.codeLength else {
+      fieldErrors.otp =
+        otpCode.isEmpty
+        ? String(localized: .otpErrorsCodeRequired) : String(localized: .otpErrorsCodeInvalid)
       return
     }
 
@@ -139,10 +113,16 @@ final class LoginViewModel {
     defer { isLoading = false }
 
     do {
-      _ = try await authService.verifyOTP(phone: normalizedPhone, token: otpCode)
+      try await emailAuth.verifySignInCode(otpCode)
       await handleSuccessfulLogin()
     } catch {
-      handleError(error)
+      otpCode = ""
+      if AuthService.isInvalidVerificationCode(error) {
+        fieldErrors.otp = String(localized: .signupVerifyErrorsInvalidCode)
+        Haptics.play(.error)
+      } else {
+        handleError(error)
+      }
     }
   }
 
@@ -153,33 +133,10 @@ final class LoginViewModel {
     defer { isLoading = false }
 
     do {
-      let idToken = try await googleAuthProvider.signIn()
-      _ = try await authService.signInWithGoogle(idToken: idToken)
+      try await authService.signInWithGoogle()
       await handleSuccessfulLogin()
-    } catch let error as GoogleAuthError where error.isCancellation {
+    } catch where AuthService.isCancellation(error) {
       // User cancelled - do nothing
-    } catch {
-      handleError(error)
-    }
-  }
-
-  /// Sign in with Passkey
-  func signInWithPasskey() async {
-    clearMessages()
-    isLoading = true
-    defer { isLoading = false }
-
-    do {
-      _ = try await passkeyAuthService.signIn()
-      await handleSuccessfulLogin()
-    } catch let error as PasskeyAuthError where error.isCancellation {
-      // User cancelled - do nothing
-    } catch let error as PasskeyAuthError where error.isPasskeyDisabled {
-      errorMessage = String(localized: .loginPasskeyErrorsDisabled)
-      Haptics.play(.error)
-    } catch let error as PasskeyAuthError where error.isVerificationFailed {
-      errorMessage = String(localized: .loginPasskeyErrorsVerificationFailed)
-      Haptics.play(.error)
     } catch {
       handleError(error)
     }
@@ -187,88 +144,77 @@ final class LoginViewModel {
 
   /// Sign in with Apple
   func signInWithApple() async {
+    // Before Apple's sheet, so the GoTrue exchange can't sign in the old account meanwhile.
+    LegacySessionExchange.manualSignInDidStart()
     clearMessages()
     isLoading = true
     defer { isLoading = false }
 
     do {
       let result = try await appleAuthProvider.signIn()
-      _ = try await authService.signInWithApple(
+      try await authService.signInWithApple(
         idToken: result.idToken,
         fullName: result.fullName
       )
       await handleSuccessfulLogin()
-    } catch let error as AppleAuthError where error.isCancellation {
+    } catch where AuthService.isCancellation(error) {
       // User cancelled - do nothing
     } catch {
       handleError(error)
     }
   }
 
-  /// Go back from OTP step to input step
+  /// Go back from the code step to the input step
   func backToInput() {
     currentStep = .input
     otpCode = ""
     clearMessages()
   }
 
-  /// Resend OTP code
+  /// Send a new sign-in code
   func resendOTP() async {
     clearMessages()
     isLoading = true
     defer { isLoading = false }
 
     do {
-      try await authService.sendOTP(phone: normalizedPhone)
-      successMessage = String(localized: .loginSuccessSmsSent)
+      try await emailAuth.resendSignInCode()
+      successMessage = String(localized: .signupVerifyResendSent)
     } catch {
-      handleError(error)
+      if AuthService.isRateLimited(error) {
+        errorMessage = String(localized: .signupVerifyErrorsTooManyRequests)
+      } else {
+        handleError(error)
+      }
     }
   }
 
-  func applySignupPrefill(emailOrPhone: String, password: String) {
+  func applySignupPrefill(email: String, password: String) {
     currentStep = .input
-    self.emailOrPhone = emailOrPhone
+    self.email = email
     self.password = password
     otpCode = ""
     fieldErrors.clear()
     clearMessages()
-    showEmailForm = !emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    showEmailForm = !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
   // MARK: - Private Methods
 
-  private func signInWithEmail() async throws {
-    _ = try await emailAuth.signInWithPassword(email: emailOrPhone, password: password)
-    await handleSuccessfulLogin()
-  }
-
-  private func signInWithPhone() async throws {
-    _ = try await authService.signInWithPassword(phone: normalizedPhone, password: password)
-    await handleSuccessfulLogin()
-  }
-
-  private func sendPhoneOTP() async throws {
-    try await authService.sendOTP(phone: normalizedPhone)
-    successMessage = String(localized: .loginSuccessSmsSent)
-    currentStep = .otp
-  }
-
   private func validateInput() -> Bool {
-    let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
 
     if trimmed.isEmpty {
-      fieldErrors.emailOrPhone = String(localized: .loginErrorsFillEmailOrPhone)
+      fieldErrors.email = String(localized: .signupErrorsEmailRequired)
       return false
     }
 
-    if inputType == .unknown {
-      fieldErrors.emailOrPhone = String(localized: .loginErrorsInvalidEmailOrPhone)
+    if !AuthIdentityInput.isEmail(trimmed) {
+      fieldErrors.email = String(localized: .signupErrorsInvalidEmail)
       return false
     }
 
-    // Password is required unless the phone OTP flow can send an SMS
-    if inputType == .email || !AuthService.isSMSAvailable, password.isEmpty {
+    if password.isEmpty {
       fieldErrors.password = String(localized: .loginErrorsPasswordRequired)
       return false
     }
@@ -277,25 +223,16 @@ final class LoginViewModel {
   }
 
   private func handleSuccessfulLogin() async {
-    // The AppCoordinator listens to Supabase auth state changes
-    // and will automatically transition to the appropriate state
-    // (MFA required or authenticated) when the session is established.
-    //
-    // We call handleLoginSuccess() to ensure the coordinator
-    // immediately checks MFA status after successful login.
+    // The AppCoordinator also hears Clerk's sign-in event. Calling this makes it check the
+    // user and terms right away.
     Haptics.play(.success)
-    await AppCoordinator.shared.handleLoginSuccess()
+    await onAuthenticated()
   }
 
   private func handleSignInError(_ error: Error) {
-    if inputType == .email, AuthService.isEmailNotConfirmed(error), let onEmailNotConfirmed {
-      onEmailNotConfirmed(emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines))
-      return
-    }
-
-    if shouldNavigateToSignup(for: error) {
+    if AuthService.isUnknownIdentifier(error) {
       showEmailForm = true
-      accountCreationPromptMessage = ErrorTranslations.translate(error)
+      accountCreationPromptMessage = AuthService.message(for: error)
       Haptics.play(.error)
       return
     }
@@ -303,17 +240,8 @@ final class LoginViewModel {
     handleError(error)
   }
 
-  private func shouldNavigateToSignup(for error: Error) -> Bool {
-    let message = error.localizedDescription.lowercased()
-
-    return message.contains("user not found")
-      || message.contains("signups not allowed")
-  }
-
   private func handleError(_ error: Error) {
-    // Translate the error message
-    let translated = ErrorTranslations.translate(error)
-    errorMessage = translated
+    errorMessage = AuthService.message(for: error)
     Haptics.play(.error)
   }
 
@@ -322,11 +250,4 @@ final class LoginViewModel {
     successMessage = nil
     accountCreationPromptMessage = nil
   }
-}
-
-// MARK: - Notification Names
-
-extension Notification.Name {
-  static let nativeLoginComplete = Notification.Name("nativeLoginComplete")
-  static let requiresMFA = Notification.Name("requiresMFA")
 }

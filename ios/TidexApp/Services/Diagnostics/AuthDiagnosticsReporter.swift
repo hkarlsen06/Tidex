@@ -1,6 +1,5 @@
 import Foundation
 import os
-import Supabase
 import UIKit
 
 private let authDiagnosticsLog = Logger(subsystem: "com.tidex.app", category: "AuthDiagnostics")
@@ -76,12 +75,12 @@ final class AuthDiagnosticsReporter {
     lastAuthenticatedUserId != nil
   }
 
-  func sessionMetadata(_ session: Session, source: String) -> [String: AnyJSON] {
-    let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
+  func sessionMetadata(_ session: AuthSession, source: String) -> [String: AnyJSON] {
+    let expiresAt = Date(timeIntervalSince1970: session.expiresAt)
     return [
       "session_source": .string(source),
       "session_user_id": .string(session.normalizedUserId),
-      "session_expires_at": .string(String(session.expiresAt)),
+      "session_expires_at": .string(String(Int(session.expiresAt))),
       "session_seconds_until_expiry": .double(expiresAt.timeIntervalSinceNow),
     ]
   }
@@ -111,28 +110,47 @@ final class AuthDiagnosticsReporter {
 
   private func send(_ pendingEvent: PendingEvent) async {
     eventSequence += 1
-    var params: [String: AnyJSON] = [
-      "p_event_type": .string(pendingEvent.eventType.rawValue),
-      "p_severity": .string(pendingEvent.severity.rawValue),
-      "p_app_state": pendingEvent.appState.map(AnyJSON.string) ?? .null,
-      "p_auth_event": pendingEvent.authEvent.map(AnyJSON.string) ?? .null,
-      "p_app_version": appVersion.map(AnyJSON.string) ?? .null,
-      "p_build_number": buildNumber.map(AnyJSON.string) ?? .null,
-      "p_os_version": .string("iOS \(UIDevice.current.systemVersion)"),
-      "p_device_model": .string(UIDevice.current.model),
-      "p_locale": .string(Locale.autoupdatingCurrent.identifier),
-      "p_error_kind": pendingEvent.error.map { .string(String(describing: type(of: $0))) }
-        ?? .null,
-      "p_error_message": pendingEvent.error.map { .string(Self.sanitizedErrorMessage($0)) }
-        ?? .null,
-    ]
+    var params = eventParams(for: pendingEvent)
+    params["metadata"] = .object(eventMetadata(for: pendingEvent))
 
-    if let reportUserId = normalizedUserId(pendingEvent.userId) {
-      params["p_user_id"] = .string(reportUserId)
-    } else {
-      params["p_user_id"] = .null
+    do {
+      let response: Response = try await ConvexAPI.app.mutation(
+        "diagnostics:recordAuthEvent", params)
+
+      if !response.success {
+        authDiagnosticsLog.debug("Auth diagnostic returned success=false")
+      }
+    } catch {
+      authDiagnosticsLog.debug(
+        "Failed to record auth diagnostic: \(error.localizedDescription, privacy: .public)"
+      )
     }
+  }
 
+  private func eventParams(for pendingEvent: PendingEvent) -> [String: AnyJSON] {
+    // Convex rejects null for an optional argument, so a missing value is left out.
+    var params: [String: AnyJSON] = [
+      "event_type": .string(pendingEvent.eventType.rawValue),
+      "severity": .string(pendingEvent.severity.rawValue),
+      "os_version": .string("iOS \(UIDevice.current.systemVersion)"),
+      "device_model": .string(UIDevice.current.model),
+      "locale": .string(Locale.autoupdatingCurrent.identifier),
+    ]
+    if let appState = pendingEvent.appState { params["app_state"] = .string(appState) }
+    if let authEvent = pendingEvent.authEvent { params["auth_event"] = .string(authEvent) }
+    if let appVersion { params["app_version"] = .string(appVersion) }
+    if let buildNumber { params["build_number"] = .string(buildNumber) }
+    if let error = pendingEvent.error {
+      params["error_kind"] = .string(String(describing: type(of: error)))
+      params["error_message"] = .string(Self.sanitizedErrorMessage(error))
+    }
+    if let reportUserId = normalizedUserId(pendingEvent.userId) {
+      params["user_id"] = .string(reportUserId)
+    }
+    return params
+  }
+
+  private func eventMetadata(for pendingEvent: PendingEvent) -> [String: AnyJSON] {
     var eventMetadata = pendingEvent.metadata
     if let lastAuthenticatedUserId = normalizedUserId(lastAuthenticatedUserId) {
       eventMetadata["client_last_authenticated_user_id"] = .string(lastAuthenticatedUserId)
@@ -152,24 +170,7 @@ final class AuthDiagnosticsReporter {
     if let vendorId = UIDevice.current.identifierForVendor?.uuidString {
       eventMetadata["vendor_id"] = .string(vendorId)
     }
-    params["p_metadata"] = .object(eventMetadata)
-
-    do {
-      let response: Response =
-        try await supabase
-        .rpc("record_auth_diagnostic_event", params: params)
-        .single()
-        .execute()
-        .value
-
-      if !response.success {
-        authDiagnosticsLog.debug("Auth diagnostic RPC returned success=false")
-      }
-    } catch {
-      authDiagnosticsLog.debug(
-        "Failed to record auth diagnostic: \(error.localizedDescription, privacy: .public)"
-      )
-    }
+    return eventMetadata
   }
 
   private var installId: String {

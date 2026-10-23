@@ -4,7 +4,7 @@ import SwiftData
 // MARK: - Local Notification Preferences
 
 /// SwiftData model for locally persisted notification preferences
-/// Maps to the `notification_preferences` table in Supabase
+/// Maps to the `notification_preferences` table
 /// Note: iOS is the source of truth for notification preferences
 @Model
 final class LocalNotificationPreferences {

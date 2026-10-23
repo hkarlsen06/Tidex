@@ -236,12 +236,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       viewModel.prepareForReload()
       Task {
         await viewModel.reloadFromLocal()
-
-        // Play release haptic if coming from MFA verification
-        if coordinator.didJustCompleteMFA {
-          Haptics.play(.release)
-          coordinator.didJustCompleteMFA = false
-        }
       }
     }
   }

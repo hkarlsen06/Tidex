@@ -398,29 +398,16 @@
             }
           }
 
-          // Updated-at cursors (primary sync cursors)
+          // Revision cursors, one per table
           if let state = summary.syncState {
             Divider()
-            Text("Sync Cursors (updated_at)")
+            Text("Sync Cursors (revision)")
               .font(.caption.bold())
               .foregroundColor(.secondary)
               .padding(.top, Spacing.xxs)
-
-            updatedAtCursorRow("Shifts", cursor: state.updatedAtCursor(for: .userShifts))
-            updatedAtCursorRow("Recurring", cursor: state.updatedAtCursor(for: .recurringShifts))
-            updatedAtCursorRow("Snapshots", cursor: state.updatedAtCursor(for: .wageSnapshots))
-            updatedAtCursorRow("Settings", cursor: state.updatedAtCursor(for: .userSettings))
-
-            // Legacy revision cursors (for debugging only)
-            Divider()
-            Text("Legacy Revisions (debug)")
-              .font(.caption.bold())
-              .foregroundColor(.secondary)
-              .padding(.top, Spacing.xxs)
-            revisionCursorRow("Shifts Rev", revision: state.lastRevisionUserShifts)
-            revisionCursorRow("Recurring Rev", revision: state.lastRevisionRecurringShifts)
-            revisionCursorRow("Snapshots Rev", revision: state.lastRevisionWageSnapshots)
-            revisionCursorRow("Settings Rev", revision: state.lastRevisionUserSettings)
+            ForEach(SyncTable.allCases, id: \.self) { table in
+              revisionCursorRow(table.displayName, revision: state.cursor(for: table))
+            }
           }
         } else {
           Text("No data loaded")
@@ -473,31 +460,6 @@
         Text("\(revision)")
           .font(.caption.monospaced())
           .foregroundColor(.secondary)
-      }
-    }
-
-    private func updatedAtCursorRow(_ label: String, cursor: SyncCursor) -> some View {
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        HStack {
-          Text(label)
-            .font(.caption)
-            .foregroundColor(.secondary)
-          Spacer()
-          if cursor.isInitial {
-            Text("(initial)")
-              .font(.caption.monospaced())
-              .foregroundColor(.orange)
-          } else if let date = cursor.updatedAt {
-            Text(date, style: .relative)
-              .font(.caption.monospaced())
-              .foregroundColor(.green)
-          }
-        }
-        if !cursor.isInitial, !cursor.tieId.isEmpty {
-          Text("tieId: \(cursor.tieId.prefix(8))...")
-            .font(.caption2.monospaced())
-            .foregroundColor(.secondary)
-        }
       }
     }
 

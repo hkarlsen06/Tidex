@@ -40,7 +40,8 @@ private final class SendMessageIntentHandler: NSObject, INSendMessageIntentHandl
     intent: INSendMessageIntent,
     completion: @escaping (INSendMessageIntentResponse) -> Void
   ) {
-    guard SharedKeychainStorage.hasValidToken else {
+    // Clerk tokens last 60 seconds, so check for a stored session. The send renews the token.
+    guard SharedKeychainStorage.clerkSessionId != nil else {
       completion(INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: nil))
       return
     }

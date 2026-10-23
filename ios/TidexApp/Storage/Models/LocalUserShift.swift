@@ -6,7 +6,7 @@ import SwiftData
 // MARK: - Local User Shift
 
 /// SwiftData model for locally persisted user shifts
-/// Maps to the `user_shifts` table in Supabase
+/// Maps to the `user_shifts` table
 @Model
 final class LocalUserShift {
   // MARK: - Primary Key & Foreign Key
