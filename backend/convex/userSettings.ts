@@ -162,10 +162,8 @@ export const update = mutation({
 async function swapProfilePicture(ctx: MutationCtx, storageId: Id<"_storage"> | undefined) {
   const { user } = await requireViewer(ctx);
   const prev = await ownSettings(ctx, user.id);
-  if (prev === null) {
-    if (storageId !== undefined) await ctx.storage.delete(storageId);
-    reject("not_found", "No settings row yet");
-  }
+  // POST /profile-picture deletes the new file when this throws.
+  if (prev === null) reject("not_found", "No settings row yet");
   await ctx.db.patch(prev._id, {
     profile_picture_storage_id: storageId,
     updated_at: new Date().toISOString(),

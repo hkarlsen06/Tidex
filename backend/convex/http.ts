@@ -1,4 +1,5 @@
 import { httpRouter } from "convex/server";
+import { ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { createFeedWindow } from "./lib/calendarFeed/date";
@@ -14,6 +15,10 @@ async function signedIn(ctx: { auth: { getUserIdentity: () => Promise<unknown> }
     return false;
   }
 }
+
+/** The `code` of a ConvexError, such as "not_authorized" from requireViewer. */
+const errorCode = (error: unknown) =>
+  error instanceof ConvexError ? (error.data as { code?: string } | undefined)?.code : undefined;
 
 const http = httpRouter();
 
@@ -57,11 +62,18 @@ http.route({
       return new Response("Attachment size exceeds the 5 MB limit", { status: 413 });
     }
     const storageId = await ctx.storage.store(blob);
-    await ctx.runMutation(internal.messages.recordUpload, {
-      storage_id: storageId,
-      user_id: userId,
-      thread_id: threadId,
-    });
+    // Only recorded uploads are purged when no message uses them, so a failed record
+    // deletes the file here.
+    try {
+      await ctx.runMutation(internal.messages.recordUpload, {
+        storage_id: storageId,
+        user_id: userId,
+        thread_id: threadId,
+      });
+    } catch (error) {
+      await ctx.storage.delete(storageId);
+      throw error;
+    }
     return Response.json({ storageId });
   }),
 });
@@ -81,8 +93,17 @@ http.route({
     }
     if (!blob.type.startsWith("image/")) return new Response("Not an image", { status: 415 });
     const storageId = await ctx.storage.store(blob);
-    const url = await ctx.runMutation(internal.userSettings.storeProfilePicture, { storage_id: storageId });
-    return Response.json({ url });
+    try {
+      const url = await ctx.runMutation(internal.userSettings.storeProfilePicture, { storage_id: storageId });
+      return Response.json({ url });
+    } catch (error) {
+      // The mutation's writes rolled back, so nothing points to the file.
+      await ctx.storage.delete(storageId);
+      // A Clerk user without a Tidex row, or a banned one.
+      if (errorCode(error) === "not_authorized") return new Response("Not allowed", { status: 403 });
+      if (errorCode(error) === "not_found") return new Response("No settings row yet", { status: 404 });
+      throw error;
+    }
   }),
 });
 
