@@ -311,7 +311,9 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     XCTFail("Unexpected call to listThreadMessages in FriendNotificationMessagePrefetcherTests")
     throw TestError.failed
   }
+  // swiftlint:disable:next function_parameter_count
   func sendMessage(
+    senderUserId _: String,
     threadId _: String,
     clientId _: String,
     body _: String?,

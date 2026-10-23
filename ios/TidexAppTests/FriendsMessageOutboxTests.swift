@@ -119,6 +119,34 @@ final class FriendsMessageOutboxTests: XCTestCase {
     XCTAssertEqual(repository.getMessage(id: "local-a1", viewerUserId: viewerId)?.sendState, .failed)
   }
 
+  /// A drain that outlives an account switch sends the old account's messages with the new
+  /// account's token, and the server refuses them with `wrong_user`. They stay queued for their
+  /// sender as they were, and the drain stops instead of trying the rest.
+  func testWrongUserRefusalKeepsMessagesQueuedAndStopsTheDrain() async throws {
+    let repository = try makeRepository()
+    let service = OutboxStubService()
+    service.sendError = FriendsMessagingServiceError.wrongUser
+    let outbox = makeOutbox(service: service, repository: repository)
+    await queue(makeMessage(id: "local-a1", threadId: "thread-a", second: 1), in: repository)
+    await queue(makeMessage(id: "local-b1", threadId: "thread-b", second: 2), in: repository)
+
+    // More drains than the unclassified retry limit, so a counted attempt would fail the message.
+    for _ in 0...FriendsMessageOutbox.maxUnclassifiedAttempts {
+      await outbox.drain(userId: viewerId)
+    }
+    let first = try XCTUnwrap(repository.getMessage(id: "local-a1", viewerUserId: viewerId))
+    await outbox.recordFailure(FriendsMessagingServiceError.wrongUser, for: first, userId: viewerId)
+
+    XCTAssertEqual(Set(service.sentSenderIds), [viewerId], "The send names the message's sender")
+    XCTAssertEqual(
+      Set(service.sentClientIds), ["client-local-a1"], "Each drain stops at the first refusal")
+    for id in ["local-a1", "local-b1"] {
+      let message = try XCTUnwrap(repository.getMessage(id: id, viewerUserId: viewerId))
+      XCTAssertEqual(message.sendState, .sending)
+      XCTAssertNil(message.failureMessage)
+    }
+  }
+
   func testDeletingQueuedMessageRemovesItAndItsPendingBytes() async throws {
     let repository = try makeRepository()
     let service = OutboxStubService()
@@ -422,10 +450,12 @@ private final class OutboxStubService: FriendsMessagingServiceProviding {
   var sendError: Error?
   var sendDelay: Duration?
   private(set) var sentClientIds: [String] = []
+  private(set) var sentSenderIds: [String] = []
   private(set) var uploadedImages: [ImageAttachment] = []
   private(set) var deletedMessageId: String?
 
   func sendMessage(
+    senderUserId: String,
     threadId: String,
     clientId: String,
     body: String?,
@@ -434,6 +464,7 @@ private final class OutboxStubService: FriendsMessagingServiceProviding {
     metadataData _: Data?
   ) async throws -> FriendMessage {
     sentClientIds.append(clientId)
+    sentSenderIds.append(senderUserId)
     if let sendDelay {
       try? await Task.sleep(for: sendDelay)
     }

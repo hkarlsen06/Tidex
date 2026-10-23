@@ -13,7 +13,10 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func listThreadEventsV2(threadId: String, afterVersion: Int64, limit: Int) async throws
     -> FriendThreadSyncEventsPage
   func listThreadStates(threadId: String) async throws -> [FriendThreadState]
-  func sendMessage(
+  /// `senderUserId` is the user the message was written as. The server refuses the send with
+  /// `wrongUser` when someone else is signed in now.
+  func sendMessage(  // swiftlint:disable:this function_parameter_count
+    senderUserId: String,
     threadId: String,
     clientId: String,
     body: String?,
@@ -55,6 +58,8 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
   case networkError(underlying: Error)
   case decodingError(underlying: Error)
   case httpError(statusCode: Int, message: String?)
+  /// The server refused a write the app queued for another account than the one signed in now.
+  case wrongUser
 
   var errorDescription: String? {
     switch self {
@@ -70,6 +75,9 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
 
     case .httpError(_, let message):
       return message ?? String(localized: .commonErrorGeneric)
+
+    case .wrongUser:
+      return String(localized: .commonErrorGeneric)
     }
   }
 }
@@ -165,6 +173,7 @@ final class FriendsMessagingService {
   }
 
   func sendMessage(
+    senderUserId: String,
     threadId: String,
     clientId: String,
     body: String?,
@@ -185,6 +194,7 @@ final class FriendsMessagingService {
     }
 
     let args = SendMessageArgs(
+      expectedUserId: senderUserId.lowercased(),
       threadId: threadId,
       clientId: clientId,
       body: body,
@@ -407,6 +417,8 @@ final class FriendsMessagingService {
       throw error
     } catch ConvexAPI.Failure.notSignedIn {
       throw FriendsMessagingServiceError.notAuthenticated
+    } catch let failure as ConvexAPI.Failure where failure.code == "wrong_user" {
+      throw FriendsMessagingServiceError.wrongUser
     } catch ConvexAPI.Failure.server(_, let message) {
       throw FriendsMessagingServiceError.httpError(statusCode: 400, message: message)
     } catch ConvexAPI.Failure.badResponse(let status) {
@@ -435,6 +447,7 @@ extension FriendsMessagingService: FriendsMessagingServiceProviding {}
 // MARK: - Request payloads
 
 private struct SendMessageArgs: Encodable, Sendable {
+  let expectedUserId: String
   let threadId: String
   let clientId: String
   let body: String?
@@ -443,6 +456,7 @@ private struct SendMessageArgs: Encodable, Sendable {
   let metadata: AnyJSON
 
   enum CodingKeys: String, CodingKey {
+    case expectedUserId = "expected_user_id"
     case threadId = "thread_id"
     case clientId = "client_id"
     case body

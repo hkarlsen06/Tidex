@@ -748,6 +748,7 @@ struct LoadingView: View {
     }
 
     func sendMessage(
+      senderUserId _: String,
       threadId: String,
       clientId: String,
       body: String?,

@@ -22,7 +22,7 @@ import {
 } from "./lib/messaging";
 import { queueReaction, queueThreadMessage } from "./lib/notify";
 import { nextRevision } from "./lib/revision";
-import { reject } from "./lib/syncWrite";
+import { reject, requireExpectedUser } from "./lib/syncWrite";
 import { ensureState, requireAccess, threadById } from "./threads";
 
 const MAX_BODY = 5000;
@@ -229,9 +229,16 @@ async function refreshThreadPreview(ctx: MutationCtx, threadId: string) {
 /**
  * Port of send_message. Resending the same client_id returns the first message, so
  * the app's outbox can retry safely.
+ *
+ * expected_user_id is the sender the app queued the message for. It throws "wrong_user"
+ * when the viewer is someone else, so a queued message drained after an account switch
+ * or the end of an impersonation can't go out as the other account, even in a thread
+ * both are in. The share extension and the Siri intent send at once and don't know the
+ * user id, so they leave it out.
  */
 export const send = mutation({
   args: {
+    expected_user_id: v.optional(v.string()),
     thread_id: v.string(),
     client_id: v.string(),
     body: v.optional(v.string()),
@@ -252,6 +259,7 @@ export const send = mutation({
   },
   handler: async (ctx, args) => {
     const { user } = await requireViewer(ctx);
+    if (args.expected_user_id !== undefined) requireExpectedUser(user.id, args.expected_user_id);
     if (!(await canPostToThread(ctx, args.thread_id, user.id))) {
       reject("posting_not_allowed", "Posting is not allowed for this thread");
     }
