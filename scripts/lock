@@ -127,6 +127,15 @@ renew() {
   echo "$OWNER||$(date +%s)" >"$(lock_dir "$1")/owner"
 }
 
+# A `run` inside the session hands the lock back when its command ends, but only
+# while the lock still names this process. Another worktree may have taken it
+# meanwhile, or a second `run` of this worktree may hold it now.
+restore_session() {
+  local pid
+  IFS='|' read -r _ pid _ <<<"$(read_lock "$1")"
+  [ "$pid" = "$$" ] && renew "$1"
+}
+
 release() {
   local name="$1" dir
   dir="$(lock_dir "$1")"
@@ -153,7 +162,7 @@ case "${1:-}" in
       # command longer than the TTL keeps it. Afterwards it is the session's
       # again, used now.
       echo "$OWNER|$$|$(date +%s)" >"$(lock_dir "$name")/owner"
-      trap 'renew "$name"' EXIT
+      trap 'restore_session "$name"' EXIT
     else
       exit "$status"
     fi
