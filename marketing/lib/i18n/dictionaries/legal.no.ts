@@ -177,7 +177,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-09-30',
+    lastUpdatedDate: '2026-10-24',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -221,9 +221,9 @@ export const legalNo = {
       {
         heading: '4. Datalagring og -behandling',
         list: [
-          { boldLabel: 'Lagring:', text: 'Konto-, app- og fildata lagres på servere vi drifter selv, leid av netcup i Tyskland. Vi kjører programvaren Supabase med åpen kildekode (PostgreSQL, autentisering og fillagring) på disse serverne.' },
+          { boldLabel: 'Lagring:', text: 'Konto-, app- og fildata lagres på servere vi drifter selv, leid av netcup i Tyskland. Vi kjører programvaren Convex med åpen kildekode (database og fillagring) på disse serverne. Eldre versjoner av appen bruker programvaren Supabase med åpen kildekode (PostgreSQL, autentisering og fillagring) på de samme serverne, som vi slår av når de versjonene ikke lenger er i bruk.' },
           { boldLabel: 'Sikkerhetskopier:', text: 'Vi tar sikkerhetskopi av databasen hver natt og hver time. Sikkerhetskopiene oppbevares i opptil 28 dager, på serveren vår og i Cloudflare R2-lagring i EU.' },
-          { boldLabel: 'E-post:', text: 'E-post om kontoen din, som lenker for å tilbakestille passord, sendes fra vår egen e-postserver.' },
+          { boldLabel: 'E-post:', text: 'E-post om kontoen din, som koder for innlogging og for å tilbakestille passord, sendes av Clerk. Eldre versjoner av appen sender dem fra vår egen e-postserver.' },
           { boldLabel: 'Lagring på enheten:', text: 'iOS-appen lagrer økttokens i iOS-nøkkelringen og kan mellomlagre appdata lokalt på enheten for å støtte innlogging og appytelse.' },
           { boldLabel: 'Oppbevaring:', text: 'Data oppbevares så lenge du har en aktiv konto. Oversikten over hvilke timer du brukte appen slettes etter 32 dager, og innloggingsrapporter etter 90 dager. Vi garanterer ikke langtidsoppbevaring.' },
           { boldLabel: 'Sletting:', text: 'Når du sletter kontoen din, sletter vi kontodataene dine fra våre aktive systemer som en del av sletteprosessen. Kopier i sikkerhetskopier forsvinner etter hvert som sikkerhetskopiene utløper, innen 28 dager.' },
@@ -251,6 +251,14 @@ export const legalNo = {
             },
           },
           {
+            boldLabel: 'Clerk:',
+            text: 'Innlogging og kontoadministrasjon. Clerk, Inc. i USA lagrer navnet ditt, e-postadressen din, passordhasher og innloggingsøkter, inkludert IP-adressen og enheten for hver innlogging, og sender koder for innlogging og tilbakestilling av passord på e-post. Clerk er sertifisert under EU–US Data Privacy Framework. Les deres {link}.',
+            link: {
+              href: 'https://clerk.com/legal/privacy',
+              text: 'personvernerklæring',
+            },
+          },
+          {
             boldLabel: 'Apple:',
             text: 'Logg inn med Apple og Apple Push Notification service for levering av pushvarsler. Les deres {link}.',
             link: {
@@ -267,7 +275,7 @@ export const legalNo = {
             },
           },
         ],
-        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging eller pushvarsler. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
+        closingParagraph: 'Clerk håndterer innloggingen for alle kontoer. Data deles kun med Google hvis du velger Google-innlogging, og med Apple når du bruker Apple-innlogging eller pushvarsler. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',
