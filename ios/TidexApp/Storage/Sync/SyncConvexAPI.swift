@@ -48,11 +48,13 @@ extension SyncTable {
 internal enum SyncConvex {
   // Swift doesn't allow a type inside a generic function, so this lives here.
   private struct NotificationPreferencesArgs: Encodable, Sendable {
+    let expectedUserId: String
     let shiftRemindersEnabled: Bool
     let shiftReminderMinutesArray: [Int]
     let sharedShiftsEnabled: Bool
 
     enum CodingKeys: String, CodingKey {
+      case expectedUserId = "expected_user_id"
       case shiftRemindersEnabled = "shift_reminders_enabled"
       case shiftReminderMinutesArray = "shift_reminder_minutes_array"
       case sharedShiftsEnabled = "shared_shifts_enabled"
@@ -175,13 +177,16 @@ internal enum SyncConvex {
     return try outcome(reply)
   }
 
-  /// Sends the whole row. The last write wins, as with the old upsert on `user_id`.
+  /// Sends the whole row. The last write wins, as with the old upsert on `user_id`. `owner` is
+  /// the user the preferences were saved for, checked like an insert's.
   static func upsertNotificationPreferences<Row: Decodable>(
+    owner: String,
     shiftRemindersEnabled: Bool, shiftReminderMinutesArray: [Int], sharedShiftsEnabled: Bool
   ) async throws -> Row {
     try await ConvexAPI.app.mutation(
       "notificationPreferences:upsert",
       NotificationPreferencesArgs(
+        expectedUserId: owner.lowercased(),
         shiftRemindersEnabled: shiftRemindersEnabled,
         shiftReminderMinutesArray: shiftReminderMinutesArray,
         sharedShiftsEnabled: sharedShiftsEnabled))

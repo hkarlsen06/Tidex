@@ -5284,6 +5284,7 @@ final class SyncCoordinator: @unchecked Sendable {
 
     // iOS is the source of truth, so every push sends all fields.
     let returnedRow: SyncNotificationPreferencesRow = try await SyncConvex.upsertNotificationPreferences(
+      owner: userId,
       shiftRemindersEnabled: preferences.shiftRemindersEnabled,
       shiftReminderMinutesArray: preferences.shiftReminderMinutesArray,
       sharedShiftsEnabled: preferences.sharedShiftsEnabled)
