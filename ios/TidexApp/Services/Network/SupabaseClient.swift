@@ -19,16 +19,26 @@ private let legacyClient = SupabaseClient(
 
 var legacyGoTrue: AuthClient { legacyClient.auth }
 
-/// True when GoTrue refused the stored session, so retrying can't help. Its server errors
-/// and network failures are worth another try on the next launch.
+/// True when GoTrue refused the stored session, so retrying can't help. GoTrue names a dead
+/// refresh token with one of these codes. The SDK already turns `refresh_token_not_found`,
+/// `refresh_token_already_used`, `session_not_found` and `session_expired` into
+/// `sessionMissing`, and they are listed for SDK versions that don't. Any other error, such as a
+/// rate limit (429), a timeout, a server error or a network failure, is worth another try.
 func isLegacyGoTrueRefusal(_ error: Error) -> Bool {
   guard let error = error as? Auth.AuthError else { return false }
   switch error {
   case .sessionMissing:
     return true
-  case .api(_, _, _, let response):
-    return (400..<500).contains(response.statusCode)
+  case .api(_, let code, _, _):
+    return legacyGoTrueRefusalCodes.contains(code)
   default:
     return false
   }
 }
+
+private let legacyGoTrueRefusalCodes: Set<Auth.ErrorCode> = [
+  .refreshTokenNotFound, .refreshTokenAlreadyUsed, .sessionNotFound, .sessionExpired,
+  .userNotFound, .userBanned,
+  // GoTrue's answer to a refresh token that isn't in its format.
+  .validationFailed,
+]
