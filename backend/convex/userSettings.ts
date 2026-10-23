@@ -132,11 +132,13 @@ export const insert = mutation({
 export const update = mutation({
   args: {
     expected_revision: v.number(),
+    expected_user_id: v.string(),
     set: all.partial(),
     clear: v.optional(v.array(v.union(...optionalFields.map((k) => v.literal(k))))),
   },
   handler: async (ctx, args) => {
     const { user } = await requireViewer(ctx);
+    requireExpectedUser(user.id, args.expected_user_id);
     const prev = await ownSettings(ctx, user.id);
     if (prev === null) return { status: "conflict" as const, row: null };
     if (prev.revision !== args.expected_revision) {

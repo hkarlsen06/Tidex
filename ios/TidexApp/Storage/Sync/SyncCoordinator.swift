@@ -1949,7 +1949,8 @@ final class SyncCoordinator: @unchecked Sendable {
     try requireNonEmptyUpdate(updateData, table: .payrollAdjustments, id: adjustment.id)
 
     let outcome: SyncWriteOutcome<SyncPayrollAdjustmentRow> = try await SyncConvex.update(
-      .payrollAdjustments, id: adjustment.id, expectedRevision: adjustment.serverRevision,
+      .payrollAdjustments, owner: adjustment.userId, id: adjustment.id,
+      expectedRevision: adjustment.serverRevision,
       data: updateData)
 
     switch outcome {
@@ -2046,7 +2047,7 @@ final class SyncCoordinator: @unchecked Sendable {
     // but its response was lost. No server row has revision 0, so the remove below reports a
     // conflict, and the row it returns decides whether the row is gone, already deleted or live.
     let outcome: SyncWriteOutcome<SyncPayrollAdjustmentRow> = try await SyncConvex.remove(
-      .payrollAdjustments, id: adjustment.id,
+      .payrollAdjustments, owner: adjustment.userId, id: adjustment.id,
       expectedRevision: retryRevision ?? adjustment.serverRevision)
 
     let returnedRow: SyncPayrollAdjustmentRow
@@ -2640,14 +2641,15 @@ final class SyncCoordinator: @unchecked Sendable {
     let outcome: SyncWriteOutcome<SyncJobRow>
     do {
       outcome = try await SyncConvex.update(
-        .jobs, id: jobId, expectedRevision: job.serverRevision, data: updateData)
+        .jobs, owner: job.userId, id: jobId, expectedRevision: job.serverRevision, data: updateData)
     } catch let failure as ConvexAPI.Failure where failure.code == Self.defaultJobExistsCode {
       // Another job is the default. Resolve it like a moved revision: rebase onto the server
       // row and retry once, then mark the conflict with the server row.
       logger.warning(
         "Job \(jobId.prefix(8)) hit the one default job rule on UPDATE, resolving via conflict flow"
       )
-      let serverRow: SyncJobRow? = try await SyncConvex.currentRow(.jobs, id: jobId)
+      let serverRow: SyncJobRow? = try await SyncConvex.currentRow(
+        .jobs, owner: job.userId, id: jobId)
       return try await handleJobPushConflict(
         job: job,
         serverRow: serverRow,
@@ -2703,7 +2705,7 @@ final class SyncCoordinator: @unchecked Sendable {
     // but its response was lost. No server row has revision 0, so the remove below reports a
     // conflict, and the row it returns decides whether the row is gone, already deleted or live.
     let outcome: SyncWriteOutcome<SyncJobRow> = try await SyncConvex.remove(
-      .jobs, id: jobId, expectedRevision: retryRevision ?? job.serverRevision)
+      .jobs, owner: job.userId, id: jobId, expectedRevision: retryRevision ?? job.serverRevision)
 
     let serverRow: SyncJobRow?
     switch outcome {
@@ -3028,7 +3030,8 @@ final class SyncCoordinator: @unchecked Sendable {
     try requireNonEmptyUpdate(updateData, table: .userShifts, id: shiftId)
 
     let outcome: SyncWriteOutcome<SyncShiftRow> = try await SyncConvex.update(
-      .userShifts, id: shiftId, expectedRevision: shift.serverRevision, data: updateData)
+      .userShifts, owner: shift.userId, id: shiftId,
+      expectedRevision: shift.serverRevision, data: updateData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -3080,7 +3083,8 @@ final class SyncCoordinator: @unchecked Sendable {
     let shiftId = shift.id
 
     let outcome: SyncWriteOutcome<SyncShiftRow> = try await SyncConvex.remove(
-      .userShifts, id: shiftId, expectedRevision: retryRevision ?? shift.serverRevision)
+      .userShifts, owner: shift.userId, id: shiftId,
+      expectedRevision: retryRevision ?? shift.serverRevision)
 
     let serverRow: SyncShiftRow?
     switch outcome {
@@ -3450,7 +3454,8 @@ final class SyncCoordinator: @unchecked Sendable {
     try requireNonEmptyUpdate(updateData, table: .events, id: eventId)
 
     let outcome: SyncWriteOutcome<SyncEventRow> = try await SyncConvex.update(
-      .events, id: eventId, expectedRevision: event.serverRevision, data: updateData)
+      .events, owner: event.userId, id: eventId,
+      expectedRevision: event.serverRevision, data: updateData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -3496,7 +3501,8 @@ final class SyncCoordinator: @unchecked Sendable {
     // but its response was lost. No server row has revision 0, so the remove below reports a
     // conflict, and the row it returns decides whether the row is gone, already deleted or live.
     let outcome: SyncWriteOutcome<SyncEventRow> = try await SyncConvex.remove(
-      .events, id: eventId, expectedRevision: retryRevision ?? event.serverRevision)
+      .events, owner: event.userId, id: eventId,
+      expectedRevision: retryRevision ?? event.serverRevision)
 
     let serverRow: SyncEventRow?
     switch outcome {
@@ -3866,7 +3872,8 @@ final class SyncCoordinator: @unchecked Sendable {
     try requireNonEmptyUpdate(updateData, table: .recurringShifts, id: shiftId)
 
     let outcome: SyncWriteOutcome<SyncRecurringShiftRow> = try await SyncConvex.update(
-      .recurringShifts, id: shiftId, expectedRevision: shift.serverRevision, data: updateData)
+      .recurringShifts, owner: shift.userId, id: shiftId,
+      expectedRevision: shift.serverRevision, data: updateData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -3913,7 +3920,8 @@ final class SyncCoordinator: @unchecked Sendable {
     // but its response was lost. No server row has revision 0, so the remove below reports a
     // conflict, and the row it returns decides whether the row is gone, already deleted or live.
     let outcome: SyncWriteOutcome<SyncRecurringShiftRow> = try await SyncConvex.remove(
-      .recurringShifts, id: shiftId, expectedRevision: retryRevision ?? shift.serverRevision)
+      .recurringShifts, owner: shift.userId, id: shiftId,
+      expectedRevision: retryRevision ?? shift.serverRevision)
 
     let serverRow: SyncRecurringShiftRow?
     switch outcome {
@@ -4264,7 +4272,8 @@ final class SyncCoordinator: @unchecked Sendable {
     try requireNonEmptyUpdate(updateData, table: .wageSnapshots, id: snapshotId)
 
     let outcome: SyncWriteOutcome<SyncWageSnapshotRow> = try await SyncConvex.update(
-      .wageSnapshots, id: snapshotId, expectedRevision: snapshot.serverRevision, data: updateData)
+      .wageSnapshots, owner: snapshot.userId, id: snapshotId,
+      expectedRevision: snapshot.serverRevision, data: updateData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -4311,7 +4320,8 @@ final class SyncCoordinator: @unchecked Sendable {
     // but its response was lost. No server row has revision 0, so the remove below reports a
     // conflict, and the row it returns decides whether the row is gone, already deleted or live.
     let outcome: SyncWriteOutcome<SyncWageSnapshotRow> = try await SyncConvex.remove(
-      .wageSnapshots, id: snapshotId, expectedRevision: retryRevision ?? snapshot.serverRevision)
+      .wageSnapshots, owner: snapshot.userId, id: snapshotId,
+      expectedRevision: retryRevision ?? snapshot.serverRevision)
 
     let serverRow: SyncWageSnapshotRow?
     switch outcome {
@@ -4655,7 +4665,8 @@ final class SyncCoordinator: @unchecked Sendable {
       for: settings, userId: userId, dirtyFields: dirtyFields)
 
     let outcome: SyncWriteOutcome<SyncUserSettingsRow> = try await SyncConvex.update(
-      .userSettings, id: nil, expectedRevision: settings.serverRevision, data: updateData)
+      .userSettings, owner: settings.userId, id: nil,
+      expectedRevision: settings.serverRevision, data: updateData)
 
     switch outcome {
     case .ok(let returnedRow):
@@ -4824,10 +4835,11 @@ final class SyncCoordinator: @unchecked Sendable {
   // MARK: - Conflict Resolution API
 
   /// Whether the server has a row with this key, deleted or not. `key` is the user id for
-  /// `user_settings`, and the row id for the other tables.
-  private func serverRowExists(table: SyncTable, key: String) async throws -> Bool {
+  /// `user_settings`, and the row id for the other tables. `owner` is the user id of the local
+  /// row.
+  private func serverRowExists(table: SyncTable, owner: String, key: String) async throws -> Bool {
     let row: AnyJSON? = try await SyncConvex.currentRow(
-      table, id: table == .userSettings ? nil : key)
+      table, owner: owner, id: table == .userSettings ? nil : key)
     return row != nil
   }
 
@@ -4932,7 +4944,9 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { JobServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .jobs, key: jobId) },
+      serverRowExists: {
+        try await self.serverRowExists(table: .jobs, owner: job.userId, key: jobId)
+      },
       applyServer: { await storeActor.resolveJobConflictKeepServer(id: jobId, serverSnapshot: $0) },
       discard: {
         let now = Date()
@@ -4971,7 +4985,9 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { UserShiftServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .userShifts, key: shiftId) },
+      serverRowExists: {
+        try await self.serverRowExists(table: .userShifts, owner: shift.userId, key: shiftId)
+      },
       applyServer: {
         await storeActor.resolveShiftConflictKeepServer(id: shiftId, serverSnapshot: $0)
       },
@@ -5012,7 +5028,9 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { EventServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .events, key: eventId) },
+      serverRowExists: {
+        try await self.serverRowExists(table: .events, owner: event.userId, key: eventId)
+      },
       applyServer: {
         await storeActor.resolveEventConflictKeepServer(id: eventId, serverSnapshot: $0)
       },
@@ -5053,7 +5071,9 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { RecurringShiftServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .recurringShifts, key: shiftId) },
+      serverRowExists: {
+        try await self.serverRowExists(table: .recurringShifts, owner: shift.userId, key: shiftId)
+      },
       applyServer: {
         await storeActor.resolveRecurringShiftConflictKeepServer(id: shiftId, serverSnapshot: $0)
       },
@@ -5096,7 +5116,10 @@ final class SyncCoordinator: @unchecked Sendable {
       storeActor: storeActor,
       decode: { WageSnapshotServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
-      serverRowExists: { try await self.serverRowExists(table: .wageSnapshots, key: snapshotId) },
+      serverRowExists: {
+        try await self.serverRowExists(
+          table: .wageSnapshots, owner: snapshot.userId, key: snapshotId)
+      },
       applyServer: {
         await storeActor.resolveWageSnapshotConflictKeepServer(id: snapshotId, serverSnapshot: $0)
       },
@@ -5142,7 +5165,8 @@ final class SyncCoordinator: @unchecked Sendable {
       decode: { PayrollAdjustmentServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
       serverRowExists: {
-        try await self.serverRowExists(table: .payrollAdjustments, key: adjustmentId)
+        try await self.serverRowExists(
+          table: .payrollAdjustments, owner: adjustment.userId, key: adjustmentId)
       },
       applyServer: {
         await storeActor.resolvePayrollAdjustmentConflictKeepServer(
@@ -5189,7 +5213,7 @@ final class SyncCoordinator: @unchecked Sendable {
       decode: { UserSettingsServerSnapshot.decode(from: $0) },
       revision: { $0.revision },
       serverRowExists: {
-        try await self.serverRowExists(table: .userSettings, key: userId)
+        try await self.serverRowExists(table: .userSettings, owner: settings.userId, key: userId)
       },
       applyServer: {
         await storeActor.resolveUserSettingsConflictKeepServer(userId: userId, serverSnapshot: $0)

@@ -9,10 +9,11 @@ import { nextRevision } from "./revision";
 // Writes for the synced tables keyed by `id`. They keep the contract the app's sync
 // coordinator has with Postgres:
 // - insert takes a row with an id made on the device. If that id exists, it returns
-//   the server row with status "exists", which replaces the 23505 refetch. It also takes
-//   expected_user_id, the account that queued the row, and throws "wrong_user" when the
-//   viewer is someone else, so a sync in flight across an account switch or the end of
-//   an impersonation can't put one account's rows in another's.
+//   the server row with status "exists", which replaces the 23505 refetch.
+// - insert, update and remove take expected_user_id, the account that queued the write,
+//   and throw "wrong_user" when the viewer is someone else. A sync in flight across an
+//   account switch or the end of an impersonation then can't put one account's rows in
+//   another's, and can't read the other account's "conflict" reply as its own.
 // - update and remove are compare-and-set on `revision` and skip deleted rows. A miss
 //   returns status "conflict" with the server row (null if it is gone), which replaces
 //   the zero-row result and the refetch by id.
@@ -126,6 +127,7 @@ export function syncedTable<T extends IdTable>(
     args: {
       id: v.string(),
       expected_revision: v.number(),
+      expected_user_id: v.string(),
       set: all.omit("id").partial(),
       clear: v.optional(clearable),
     },
@@ -134,11 +136,13 @@ export function syncedTable<T extends IdTable>(
       args: {
         id: string;
         expected_revision: number;
+        expected_user_id: string;
         set: Record<string, unknown>;
         clear?: string[];
       },
     ) => {
       const { user } = await requireViewer(ctx);
+      requireExpectedUser(user.id, args.expected_user_id);
       const prev = await byUuid(ctx, args.id);
       if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
       if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
@@ -161,9 +165,10 @@ export function syncedTable<T extends IdTable>(
 
   /** Soft delete. The purge job removes the row later. */
   const remove = mutation({
-    args: { id: v.string(), expected_revision: v.number() },
+    args: { id: v.string(), expected_revision: v.number(), expected_user_id: v.string() },
     handler: async (ctx, args) => {
       const { user } = await requireViewer(ctx);
+      requireExpectedUser(user.id, args.expected_user_id);
       const prev = await byUuid(ctx, args.id);
       if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
       if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
