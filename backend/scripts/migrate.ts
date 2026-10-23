@@ -46,10 +46,18 @@ async function pg(sql: string): Promise<any[]> {
   return out.split("\n").filter((l) => l.trim() !== "").map((l) => JSON.parse(l));
 }
 
-/** A file from Supabase Storage, read from its disk, which works while Caddy blocks /storage/v1. */
+/** Quotes a string as one literal word for a POSIX shell. Double quotes would still expand $(...). */
+const shellQuote = (s: string) => "'" + s.replaceAll("'", "'\\''") + "'";
+
+/**
+ * A file from Supabase Storage, read from its disk, which works while Caddy blocks /storage/v1.
+ * Object names come from users, so the path is quoted for the remote shell and may not climb
+ * out of the storage folder.
+ */
 async function storageFile(bucket: string, name: string, version: string): Promise<Buffer> {
   const path = `/srv/tidex/tidex-sb/volumes/storage/stub/stub/${bucket}/${name}/${version}`;
-  return await run(["ssh", "-T", "one-s", `sudo cat ${JSON.stringify(path)}`]);
+  if (path.split("/").includes("..")) throw new Error(`Refusing a Storage path with "..": ${path}`);
+  return await run(["ssh", "-T", "one-s", `sudo cat -- ${shellQuote(path)}`]);
 }
 
 // ---------- Writing Convex ----------
