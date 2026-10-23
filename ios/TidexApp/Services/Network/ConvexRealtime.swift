@@ -149,23 +149,17 @@ final class ConvexRealtime {
       )
   }
 
-  /// Yields once each time the result of a query changes after its first result, for screens
-  /// that load over HTTP and only need to know when to load again. Finishes when the
-  /// subscription fails or nobody is signed in, and stops the subscription when the caller
-  /// stops listening.
+  /// Yields once for each result of a query, the first one included, for screens that load
+  /// over HTTP and only need to know when to load again. The first result matters too: the
+  /// screen's own load may have failed offline, or the data may have changed before the
+  /// subscription started. Finishes when the subscription fails or nobody is signed in, and
+  /// stops the subscription when the caller stops listening.
   func changes(of name: String, args: [String: ConvexEncodable?] = [:]) async -> AsyncStream<Void> {
     guard await signIn() else { return AsyncStream { $0.finish() } }
     return AsyncStream { continuation in
-      var isFirst = true
       let subscription = subscribe(
         to: name, args: args, as: ConvexAPI.Ignored.self,
-        onUpdate: { _ in
-          if isFirst {
-            isFirst = false
-          } else {
-            continuation.yield()
-          }
-        },
+        onUpdate: { _ in continuation.yield() },
         onFailure: { _ in continuation.finish() }
       )
       guard let subscription else {
