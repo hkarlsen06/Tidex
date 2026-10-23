@@ -4,7 +4,7 @@ import { internalMutation, type MutationCtx, mutation, type QueryCtx } from "./_
 import { requireViewer } from "./lib/auth";
 import { nextRevision } from "./lib/revision";
 import { checkColumns } from "./lib/columns";
-import { publicRow, reject } from "./lib/syncWrite";
+import { publicRow, reject, requireExpectedUser } from "./lib/syncWrite";
 import schema from "./schema";
 
 // One row per user, keyed by user_id. Same contract as lib/syncWrite.ts without remove:
@@ -92,9 +92,11 @@ export const insert = mutation({
     row: all
       .omit(...defaultable)
       .extend(Object.fromEntries(defaultable.map((k) => [k, v.optional(all.fields[k])]))),
+    expected_user_id: v.string(),
   },
-  handler: async (ctx, { row }) => {
+  handler: async (ctx, { row, expected_user_id }) => {
     const { user } = await requireViewer(ctx);
+    requireExpectedUser(user.id, expected_user_id);
     const existing = await ownSettings(ctx, user.id);
     if (existing !== null) return { status: "exists" as const, row: await settingsRow(ctx, existing) };
     checkColumns("user_settings", row);

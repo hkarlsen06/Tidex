@@ -9,7 +9,10 @@ import { nextRevision } from "./revision";
 // Writes for the synced tables keyed by `id`. They keep the contract the app's sync
 // coordinator has with Postgres:
 // - insert takes a row with an id made on the device. If that id exists, it returns
-//   the server row with status "exists", which replaces the 23505 refetch.
+//   the server row with status "exists", which replaces the 23505 refetch. It also takes
+//   expected_user_id, the account that queued the row, and throws "wrong_user" when the
+//   viewer is someone else, so a sync in flight across an account switch or the end of
+//   an impersonation can't put one account's rows in another's.
 // - update and remove are compare-and-set on `revision` and skip deleted rows. A miss
 //   returns status "conflict" with the server row (null if it is gone), which replaces
 //   the zero-row result and the refetch by id.
@@ -48,6 +51,11 @@ export function reject(code: string, message?: string): never {
   throw new ConvexError(message === undefined ? { code } : { code, message });
 }
 
+/** Throws "wrong_user" when the app queued the write for another account than the viewer. */
+export function requireExpectedUser(userId: string, expectedUserId: string) {
+  if (expectedUserId !== userId) reject("wrong_user", "The row was queued for another account");
+}
+
 /** Character count as Postgres char_length() counts it. */
 export const chars = (s: string) => [...s].length;
 
@@ -82,9 +90,13 @@ export function syncedTable<T extends IdTable>(
     await db(ctx).query(table).withIndex("by_uuid", (q: any) => q.eq("id", id)).unique();
 
   const insert = mutation({
-    args: { row: insertRow },
-    handler: async (ctx, { row }: { row: Record<string, unknown> & { id: string } }) => {
+    args: { row: insertRow, expected_user_id: v.string() },
+    handler: async (
+      ctx,
+      { row, expected_user_id }: { row: Record<string, unknown> & { id: string }; expected_user_id: string },
+    ) => {
       const { user } = await requireViewer(ctx);
+      requireExpectedUser(user.id, expected_user_id);
       const existing = await byUuid(ctx, row.id);
       if (existing !== null) {
         if (existing.user_id !== user.id) reject("id_taken");
