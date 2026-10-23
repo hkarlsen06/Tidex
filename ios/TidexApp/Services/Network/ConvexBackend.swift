@@ -72,10 +72,20 @@ enum LegacySessionExchange {
     case retryLater
     /// GoTrue or Convex refused the session. The user signs in again.
     case failed
+    /// The user started or finished a sign-in by hand while this ran. Nothing changed.
+    case superseded
   }
 
   static var hasLegacySession: Bool {
     legacyGoTrue.currentSession != nil
+  }
+
+  /// Set when the user starts a sign-in or sign-up by hand, so the exchange can't sign them
+  /// in to the old account behind their back.
+  private static var manualSignInStarted = false
+
+  static func manualSignInDidStart() {
+    manualSignInStarted = true
   }
 
   static func run() async -> Outcome {
@@ -89,6 +99,11 @@ enum LegacySessionExchange {
       struct Ticket: Decodable { let ticket: String }
       let ticket: Ticket = try await ConvexAPI.anonymous.action(
         "sessionExchange:exchange", Args(accessToken: session.accessToken))
+      // The refresh and the exchange wait on the network. If the user signed in by hand
+      // meanwhile, maybe to another account, the ticket must not replace that sign-in.
+      guard !manualSignInStarted, !Task.isCancelled, Clerk.shared.session == nil,
+        hasLegacySession
+      else { return .superseded }
       try await Clerk.shared.auth.signInWithTicket(ticket.ticket)
       await discardLegacySession()
       logger.info("Exchanged the GoTrue session for a Clerk session")

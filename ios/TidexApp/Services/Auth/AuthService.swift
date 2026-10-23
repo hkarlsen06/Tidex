@@ -88,6 +88,7 @@ final class AuthService: EmailAuthProviding {
   /// - Returns: `.signedIn` when Clerk created the session, or `.needsEmailCode` when it sent
   ///   a code that `verifySignInCode` must check.
   func signInWithPassword(email: String, password: String) async throws -> EmailSignInResult {
+    LegacySessionExchange.manualSignInDidStart()
     isLoading = true
     defer { isLoading = false }
 
@@ -145,6 +146,7 @@ final class AuthService: EmailAuthProviding {
     firstName: String? = nil,
     lastName: String? = nil
   ) async throws -> EmailSignupResult {
+    LegacySessionExchange.manualSignInDidStart()
     isLoading = true
     defer { isLoading = false }
 
@@ -210,6 +212,7 @@ final class AuthService: EmailAuthProviding {
 
   /// Send a password reset code to the email address.
   func sendPasswordResetEmail(email: String) async throws {
+    LegacySessionExchange.manualSignInDidStart()
     isLoading = true
     defer { isLoading = false }
 
@@ -258,6 +261,7 @@ final class AuthService: EmailAuthProviding {
   /// Sign in with Apple using the ID token from the native sheet.
   /// - Parameter fullName: Name components from Apple, which sends them only on the first sign-in.
   func signInWithApple(idToken: String, fullName: PersonNameComponents? = nil) async throws {
+    LegacySessionExchange.manualSignInDidStart()
     isLoading = true
     defer { isLoading = false }
 
@@ -283,6 +287,7 @@ final class AuthService: EmailAuthProviding {
 
   /// Sign in with Google in a web sheet. Clerk has no native Google ID token path.
   func signInWithGoogle() async throws {
+    LegacySessionExchange.manualSignInDidStart()
     isLoading = true
     defer { isLoading = false }
 

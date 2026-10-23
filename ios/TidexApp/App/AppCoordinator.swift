@@ -325,6 +325,7 @@ final class AppCoordinator {
         guard let self else { return }
         switch event {
         case .signInCompleted, .signUpCompleted:
+          legacyExchangeRetryTask?.cancel()
           recordAuthStateEvent("signed_in", hasSession: true)
           // A manual sign-in replaces any GoTrue session the exchange could not use.
           if LegacySessionExchange.hasLegacySession {
