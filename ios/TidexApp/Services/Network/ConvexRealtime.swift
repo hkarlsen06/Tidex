@@ -75,6 +75,14 @@ final class ConvexRealtime {
   /// Bumped by every sign-out. A login that finishes after one belongs to the old account.
   private var generation = 0
 
+  /// Whether the client's WebSocket is connected. The client reconnects by itself after it loses
+  /// the server, and a reconnect asks AppCoordinator to retry a failed sync.
+  private var isConnected = false
+  private var connectionStateSubscription: AnyCancellable?
+  private var reconnectTask: Task<Void, Never>?
+  /// The socket can drop again right after it connects, so wait this long before retrying.
+  private static let reconnectDebounce: Duration = .seconds(1.5)
+
   private init() {}
 
   /// Signs the client in with the current Clerk session. Returns false when nobody is signed
@@ -116,6 +124,10 @@ final class ConvexRealtime {
     generation += 1
     signInTask = nil
     isSignedIn = false
+    connectionStateSubscription = nil
+    reconnectTask?.cancel()
+    reconnectTask = nil
+    isConnected = false
     nonisolated(unsafe) let client = client
     self.client = nil
     guard let client else { return }
@@ -178,6 +190,30 @@ final class ConvexRealtime {
       authProvider: ClerkConvexAuthProvider()
     )
     client = created
+    connectionStateSubscription = created.watchWebSocketState()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] state in
+        MainActor.assumeIsolated { self?.handle(state) }
+      }
     return created
+  }
+
+  private func handle(_ state: WebSocketState) {
+    let transition = ConnectivityTransition.between(
+      wasOnline: isConnected, isOnline: state == .connected)
+    isConnected = state == .connected
+    switch transition {
+    case .none:
+      break
+    case .wentOffline:
+      reconnectTask?.cancel()
+    case .wentOnline:
+      reconnectTask?.cancel()
+      reconnectTask = Task { [weak self] in
+        try? await Task.sleep(for: Self.reconnectDebounce)
+        guard !Task.isCancelled, self?.isConnected == true else { return }
+        await AppCoordinator.shared.handleServerReconnected()
+      }
+    }
   }
 }

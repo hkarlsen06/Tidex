@@ -830,6 +830,23 @@ final class AppCoordinator {
     await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: userId)
   }
 
+  /// Called by `ConvexRealtime` when its WebSocket connects again. The server can go away while
+  /// the network path stays up, and `ConnectivityMonitor` never sees that, so a failed push would
+  /// wait for the next launch or foreground. Retries when the last sync failed or local changes
+  /// are still unsent.
+  func handleServerReconnected() async {
+    guard appState == .authenticated, let userId else { return }
+    let lastSyncFailed =
+      switch SyncStatusManager.shared.status {
+      case .offline, .failed: true
+      case .synced, .syncing: false
+      }
+    if !lastSyncFailed {
+      guard await hasPendingChanges(userId: userId) else { return }
+    }
+    await handleConnectivityRestored()
+  }
+
   /// Cancels pending foreground work. Called when the app resigns active or enters
   /// the background.
   func cancelForegroundWork() {
