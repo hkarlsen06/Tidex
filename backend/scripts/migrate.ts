@@ -408,14 +408,13 @@ async function main() {
   for (const table of [
     "profiles", "jobs", "user_shifts", "events", "recurring_shifts", "wage_snapshots", "payroll_adjustments",
     "notification_preferences", "shift_shares", "direct_threads", "thread_memberships", "thread_user_state",
-    "messages", "message_reactions", "abuse_reports", "subscriptions", "feedback", "onboarding_funnel_steps",
+    "messages", "message_reactions", "abuse_reports", "feedback", "onboarding_funnel_steps",
   ]) {
     await put(table, (await pg(all(`public.${table}`))).map((r) => shape(table, r)));
   }
   for (const table of [
-    "admin_audit_log", "admin_broadcasts", "app_account_tokens", "app_activity_hours", "user_app_activity",
-    "apple_notifications", "apple_orphan_notifications", "auth_diagnostic_events", "calendar_subscription_tokens",
-    "impersonation_audit_log", "live_activity_deliveries", "onboarding_preauth_steps", "paywall_config",
+    "admin_audit_log", "admin_broadcasts", "app_activity_hours", "user_app_activity", "auth_diagnostic_events",
+    "calendar_subscription_tokens", "impersonation_audit_log", "live_activity_deliveries", "onboarding_preauth_steps",
     "tariff_types", "tariff_versions",
   ]) {
     await put(table, (await pg(all(`internal.${table}`))).map((r) => shape(table, r)));
