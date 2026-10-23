@@ -128,11 +128,12 @@ final class ConvexRealtime {
     reconnectTask?.cancel()
     reconnectTask = nil
     isConnected = false
-    nonisolated(unsafe) let client = client
+    guard let current = client else { return }
     self.client = nil
-    guard let client else { return }
-    retiredClients.append(client)
-    await client.logout()
+    retiredClients.append(current)
+    // logout runs off the main actor. The client is retired, so nothing here uses it meanwhile.
+    nonisolated(unsafe) let retired = current
+    await retired.logout()
   }
 
   /// Subscribes to a query. `onUpdate` runs on the main actor with each new result, the first
