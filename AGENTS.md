@@ -290,7 +290,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 - The developer often runs multiple agents in parallel in the same worktree.
 - If you see unrelated changes, do not touch, revert, reformat, or "clean up" them.
 - Treat unrelated diffs as owned by the user or another agent, even if they appeared after your work began.
-- Only modify files and hunks required for your task. If unrelated changes block you, start a fresh worktree off `origin/main` and do the task there.
+- Only modify files and hunks required for your task. If unrelated changes block you, start a fresh worktree off `main` and do the task there.
 - Never run `git stash`, `git reset`, `git checkout -- <path>` or `git clean` in the shared worktree. Other agents stage whole files, so check your own hunks with `git diff -- <file>` and `git diff --cached -- <file>`.
 - A warning or compile error the user pastes may come from another agent's edit. Check `git diff` for the file before you fix it.
 
@@ -301,7 +301,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 - Tools are BSD: `sed -i ''`, no `cat -A`. `fd`, PIL and ImageMagick are not installed.
 - On `one-s`, add `</dev/null` or `-T` when `docker compose exec` should not read your stdin, and don't `pkill -f` a pattern that also matches your own ssh command.
 
-**Commits and PRs.** Commit on your own branch in your own worktree off `origin/main`. When you change files, end by pushing the branch and opening a ready PR with `gh pr create`. Merging and deploys wait until Hjalmar asks for them.
+**Commits.** Commit on your own branch in your own worktree off `main`. Deploys wait until Hjalmar asks for them.
 
 **Commits must always be signed** - never disable commit signing. If signing fails, stop and report the signing failure instead of creating an unsigned commit.
 
