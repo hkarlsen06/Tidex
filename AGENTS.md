@@ -6,7 +6,7 @@ This file provides guidance to coding agents when working with code in this repo
 
 Every agent, subagents included, builds and runs the app and its tests itself to prove its change works. Reading the code is not proof. Never hand the user a check you could run yourself.
 
-- Use the wrappers only, never raw `xcodebuild`. They share one machine-wide lock, `/tmp/xcode-agent.lock`, across Tidex, Paeonia, Kvil and Notex, so parallel agents queue instead of colliding. If a run prints `waiting for another agent's xcodebuild`, wait. Do not kill the other run or set `XCODE_AGENT_NO_LOCK=1`.
+- Use the wrappers only, never raw `xcodebuild`. They share one machine-wide lock, `/tmp/xcode-agent.lock`, across Tidex, Paeonia, Kvil and Notex, so parallel agents queue instead of colliding. If a run prints `waiting for another agent's xcodebuild`, wait. Waits of 5 to 10 minutes are normal, so give the Bash call a 600000 ms timeout. Do not kill the other run or set `XCODE_AGENT_NO_LOCK=1`.
 - Run the smallest set of tests that proves the change, filtered with `-only-testing:<Target>/<Class>` where possible. The test wrapper builds the app itself, so do not run the build wrapper first.
 - Run UI tests (`TidexAppUITests`) when the change alters a journey they walk. Unfiltered runs skip them, so name the class with `-only-testing:TidexAppUITests/<Class>`.
 - Run on a connected device, or on the shared simulator when none is connected. [Devices and simulators](#devices-and-simulators) below says how. Do not open Simulator.app.
@@ -56,7 +56,7 @@ A test earns its place by checking an outcome a user would notice. Assertions on
 
 A monorepo for the Tidex iOS app and its supporting infrastructure.
 
-Tidex is now an iOS-only product. The repository still includes supporting public/legal web surfaces, the legacy compatibility host for `app.tidex.no`, and the shared backend.
+Tidex is now an iOS-only product, and it has been free since 2026-09-28. The paywall and the Apple subscriptions are gone, so don't add purchase, entitlement or StoreKit code. The repository still includes supporting public/legal web surfaces, the legacy compatibility host for `app.tidex.no`, and the shared backend.
 
 - **marketing/** - Next.js 16 public website for `tidex.no`
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
@@ -230,6 +230,7 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 - **Location**: `supabase/functions/<function-name>/index.ts`
 - **Shared code**: `supabase/functions/_shared/`
 - **Deployment**: Sync the function to `/srv/tidex/tidex-sb/volumes/functions/` on `one-s` and restart the `functions` service
+- **Imports**: type-only imports from Node built-ins need the `node:` prefix (`"node:crypto"`, not `"crypto"`). The self-hosted edge runtime fails on the bare name.
 - **Tests**: `deno` is not installed on the Mac. From `supabase/functions` run `bunx deno-bin@2.2.7 test -A --no-lock <file>`, and use `check` the same way.
 
 **JWT enforcement:**
@@ -301,7 +302,11 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 - Tools are BSD: `sed -i ''`, no `cat -A`. `fd`, PIL and ImageMagick are not installed.
 - On `one-s`, add `</dev/null` or `-T` when `docker compose exec` should not read your stdin, and don't `pkill -f` a pattern that also matches your own ssh command.
 
-**Commits.** Commit on your own branch in your own worktree off `main`. Deploys wait until Hjalmar asks for them.
+**Commits.** Commit on your own branch in your own worktree off `main`. Deploys wait until Hjalmar asks for them. A push to `main` is a deploy: the Cloudflare Pages project `tidex` builds `tidex.no` from committed `main` (root dir `marketing`) and overwrites any direct upload made with `bun run pages:deploy:marketing`. Keep the root `prepare` script as `husky || true`, because Pages runs its own `npm install` at the repo root and fails without husky.
+
+**Old app builds.** Endpoints that regular users call must keep working for older iOS builds still in use. Admin functions and admin screens need no such compatibility, because the admins always run the latest build, so change or drop admin fields freely.
+
+**App Review demo account.** The Apple App Review account has the jobs "Harbor Café" and "City Library" in `$` on a Norwegian device. That is demo data on purpose. Leave the account out of production data audits and cleanups, and change its data only when Hjalmar asks.
 
 **Commits must always be signed** - never disable commit signing. If signing fails, stop and report the signing failure instead of creating an unsigned commit.
 
@@ -316,6 +321,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
   - `marketing/public/no/version.json`
 - Do not update `ios/TidexApp/App/TermsVersion.swift` fallback version reference as part of normal legal copy changes; it is only a placeholder for API failure scenarios and should not be treated as the canonical legal version.
 - This is required so every client surface, including iOS re-acceptance checks and localized public pages, picks up the new legal version from the shared public manifests.
+- A manifest bump makes every iOS user accept the policy again on next launch. For an edit that only discloses existing processing or follows a product change, ask Hjalmar whether to bump the manifests or only `lastUpdatedDate`. The Terms page date (2026-09-30) is newer than `termsVersionDate` (2026-05-30) on purpose, so leave that gap alone.
 
 Run commands from the repository root unless explicitly stated otherwise.
 
