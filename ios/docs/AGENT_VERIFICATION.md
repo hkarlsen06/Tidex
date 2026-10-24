@@ -51,3 +51,13 @@ Agents run builds and tests themselves through the wrappers below. "Builds and t
   - If present, read the `TESTS`, `WARNINGS`, `ERRORS`, and `test_failures` diagnostics
 
 UI test, simulator and machine-load rules are in the root [AGENTS.md](../../AGENTS.md).
+
+## Screens without signing in
+
+`ios/TidexApp/Storage/Testing/DesignReviewView.swift` renders real components with fixture data, so a screen can be checked in the simulator without an account. Take the simulator lock first, as the root [AGENTS.md](../../AGENTS.md#devices-and-simulators) describes, and find the screen names in the `case` labels of that file (`login`, `settings`, `money`, `calendar`, `shift-editor` and others).
+
+- Launch a screen with `SIMCTL_CHILD_TIDEX_UI_TEST_SCENARIO=design-review SIMCTL_CHILD_TIDEX_DESIGN_SCREEN=<screen> xcrun simctl launch <udid> no.tidex.app -ui-testing`.
+- The app ignores `simctl ui appearance`, because `AppearanceManager` applies the cached `cachedTheme` value. Add the launch arguments `-cachedTheme dark` or `-cachedTheme light` to force a theme.
+- Set the text size with `xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large`, and reset it with `large`.
+- To dump the accessibility tree with the T3 `agent-device snapshot` command, open the app with `agent-device open no.tidex.app --relaunch --launch-args -ui-testing`. That command can't pass environment variables, so set them first with `xcrun simctl spawn <udid> launchctl setenv TIDEX_UI_TEST_SCENARIO design-review` (and the same for `TIDEX_DESIGN_SCREEN`), and unset them afterwards. In zsh, split a flags variable with `${=F}`, or the tool reports "Call device_open first".
+- The build wrapper puts the app in `~/Library/Developer/Xcode/DerivedData/Tidex-<hash>/Build/Products/Debug-iphonesimulator/Tidex.app`. Match the hash to your worktree with `plutil -extract WorkspacePath raw <dir>/info.plist`.

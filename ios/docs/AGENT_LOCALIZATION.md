@@ -26,6 +26,8 @@ bun run ios:l10n:validate
 ```
 
 - New keys must include English, Norwegian Bokmal, and a translator comment.
+- Add every key to the App catalog, widget, share extension and Siri strings too. Code in `ios/Shared/` compiles into several targets, and per-target catalogs drifted apart and broke builds, so they were merged into this one. Keep it the only catalog.
+- `xcstrings-set` rejects underscores in new keys. Use dot-separated camelCase segments.
 - The helper writes the catalog exactly as Xcode's String Catalog editor saves it, so a later save in Xcode leaves no diff. The translator, `reset-translations.mjs` and `audit-strings --remove` write through it too (`scripts/xcstrings-set --format-stdin`). Edit catalogs with these scripts or Xcode, not by hand or with other JSON tools.
 - Use `--locale <code>=<value>` for additional languages if a specific non-generated locale edit is needed.
 - Use Xcode's String Catalog editor or XLIFF export/import for pluralization, substitutions, device variants, or bulk translator workflows.
@@ -40,7 +42,7 @@ bun run ios:l10n:validate
 
 - Dot-separated keys generate camelCase symbols, and underscores also start a new word: `settings.pay.add_job.title` becomes `.settingsPayAddJobTitle`. Older keys mix `snake_case` and `camelCase` segments, so search the catalog with `bun run ios:l10n:search` instead of guessing the key.
 - Argument types of generated symbols vary (`Int` or `Int32`). After a build, read them in `~/Library/Developer/Xcode/DerivedData/Tidex-*/Build/Intermediates.noindex/Tidex.build/Debug-iphonesimulator/TidexApp.build/DerivedSources/GeneratedStringSymbols_Localizable.swift`, or copy an existing call site of the same symbol.
-- Permission purpose strings are not in the catalog. They are in `ios/TidexApp/Supporting/Info.plist` and in `ios/TidexApp/Resources/<locale>.lproj/InfoPlist.strings`.
+- Permission purpose strings are not in the catalog. They are in `ios/TidexApp/Supporting/Info.plist` and in `ios/TidexApp/Resources/<locale>.lproj/InfoPlist.strings`. Keep `NSLocationWhenInUseUsageDescription` even though Tidex never asks for location. The Exyte Chat fork calls `CLLocationManager`, and App Store Connect flagged uploads without the string (ITMS-90683). The fork also calls the microphone permission API, but add `NSMicrophoneUsageDescription` only if Apple flags it.
 - For relevant changes, `ios/lint-strings` checks hardcoded UI strings and `ios/Scripts/validate-localization.sh` checks catalog integrity.
 - Keep `ios/Resources/Localization/App/Localizable.xcstrings` as the app catalog source and preserve system locale / FormatStyle conventions.
 - `bun run ios:l10n:validate` fails if a dot key lacks English, Norwegian or a translator comment, if any language is missing or not marked translated, if a translation's format specifiers differ from English, or if an entry is stale.

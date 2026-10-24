@@ -21,7 +21,7 @@ Paths are under `ios/TidexApp/` unless they start with `ios/`.
 - To find a screen from its visible text, run `bun run ios:l10n:search -- "<text>"`, then search Swift for the generated camelCase symbol, not the dotted key (see [localization](docs/AGENT_LOCALIZATION.md)).
 - `Features/Schedule` is the shifts tab. `ScheduleViewModel.swift` defines `ShiftsViewModel`, and `Components/ScheduleCalendarView.swift` defines `ShiftsCalendarView`.
 - The jobs list is `payChooserJobsSection` in `Features/Settings/SettingsView.swift`. `Settings/Pay/Components/AddJobSheet.swift` adds a job. `PaySettingsWorkplaceSheets.swift` is only a workplace picker.
-- Friends chat is in `Features/Friends/Messages/`. `FriendsThreadView.swift` handles layout and the footer accessory. `FriendsThreadExyteChat.swift` (2400+ lines) bridges to the Exyte `Chat` fork for gestures and scrolling. `FriendsThreadComposerView.swift` and `FriendsComposerAttachmentController.swift` hold the composer. The table and insets are in `../Chat/Sources/ExyteChat/Views/UIList.swift`.
+- Friends chat is in `Features/Friends/Messages/`. `FriendsThreadView.swift` handles layout and the footer accessory. `FriendsThreadExyteChat.swift` (2400+ lines) bridges to the Exyte `Chat` fork for gestures and scrolling. `FriendsThreadComposerView.swift` and `FriendsComposerAttachmentController.swift` hold the composer. The table and insets are in `../Chat/Sources/ExyteChat/Views/UIList.swift`. `UIList.updateInsets` turns the height of the view between the list and the composer into the table's `contentInset`, so anything there that appears or changes height while the user scrolls stalls the scroll for a moment. Keep that view at zero layout height and put scroll-dependent content in an overlay, as `chatFooterAccessory` does with the scroll-to-latest button.
 - Two parts set tab bar visibility: `isChatTabBarHidden` in `Features/Friends/FriendsView.swift` and `addShiftDestination(in:hidesTabBar:)` in `Features/AddShift/AddShiftNavigator.swift`. Two `.toolbar(_:for: .tabBar)` modifiers on one view conflict. Extending the chat list behind the tab bar has been tried and dropped.
 - Design tokens are in `Shared/`: `Spacing.swift`, `CornerRadius.swift`, `Typography.swift`, `MotionTokens.swift` and `Extensions/Color+Tidex.swift`. `MonthYearPickerSheet` is in `Shared/Animations/MonthTransition.swift`.
 - `Storage/Testing/DesignReviewView.swift` holds the design-review screens. None of them shows a chat thread, the composer or the attachment drawer.
@@ -95,6 +95,15 @@ Form {
 `tidexListBackground()` (in `Shared/Components/TidexAppBackground.swift`) puts `tidexBackground` behind the list. A row that should show the page background, such as a header or footer, can use `.listRowBackground(Color.clear)` on its own section instead. See `Features/Settings/SettingsView.swift` for the full pattern.
 
 App extensions can't read the app's color assets. Code in `ios/Shared` that runs in the share extension uses `SharedPalette` (`ios/Shared/SharedPalette.swift`), and the widget uses `WidgetPalette`.
+
+## Accessibility
+
+Tidex claims the Dark Interface and Reduced Motion accessibility labels in App Store Connect, and Hjalmar reviews those claims. Keep new work inside them:
+
+- Gate movement animations on `accessibilityReduceMotion` through `MotionTokens`.
+- `SemanticColorContrastTests` checks that text colors pass 4.5:1. Add a new text color pair there.
+- Calendar month grids cap their text at `.xxxLarge`, as the system Calendar does. At accessibility text sizes the Shifts tab defaults to list view.
+- A trailing `.accessibilityHidden(true)` does not hide a view that makes itself an element with `.accessibilityElement(children: .ignore)`. Use `.calendarDayAccessibility(isHidden:)` from `Shared/Components/Calendar/CalendarGridHelper.swift`, or skip the element setup when the view is hidden.
 
 ## Project Documentation
 
