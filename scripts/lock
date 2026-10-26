@@ -7,13 +7,23 @@
 #   scripts/lock acquire <name>               take it for a session of several commands,
 #                                              or renew a session this worktree holds
 #   scripts/lock release <name>               give back a lock this worktree took
-#   scripts/lock status                       list held locks
+#   scripts/lock status                       list held locks and every shared simulator
+#   scripts/lock pool                         list the shared simulators
 #
-# The simulator lock is machine-wide, in /tmp/agent-locks (AGENT_SIMULATOR_LOCK_ROOT
+# `simulator` is a pool of shared simulators with one lock each. Taking it
+# renews the slot this worktree's session holds, or else takes the first free
+# slot, boots its simulator if needed, and waits while every slot is busy.
+# `acquire simulator` prints the simulator's name on stdout, as in
+# SIM="$(scripts/lock acquire simulator)" && xcrun simctl install "$SIM" ...
+# `run simulator` passes AGENT_SIMULATOR_NAME and AGENT_SIMULATOR_UDID to its
+# command. A simulator's own name, such as "Shared iPhone 2", takes that slot
+# only. `release simulator` releases the slot this worktree's session holds.
+#
+# The simulator locks are machine-wide, in /tmp/agent-locks (AGENT_SIMULATOR_LOCK_ROOT
 # overrides it), because agents from every repo on this Mac share the simulators.
 # Tidex and Paeonia each have a copy of this script, so keep the copies
-# compatible: the same lock path, owner line and stale rules. Every other lock
-# lives in this repo's git common dir, so all its worktrees see the same ones.
+# compatible: the same pool, lock paths, owner line and stale rules. Every other
+# lock lives in this repo's git common dir, so all its worktrees see the same ones.
 #
 # `run` waits while another `run` holds the lock, even one in this worktree,
 # because several agents can share a worktree. A worktree's `acquire` session
@@ -35,18 +45,47 @@ OWNER="$(git rev-parse --show-toplevel)"
 TTL_SECONDS=$(( ${TIDEX_LOCK_TTL_MINUTES:-10} * 60 ))
 WAIT_SECONDS=$(( ${TIDEX_LOCK_WAIT_MINUTES:-90} * 60 ))
 
+# The shared simulators, as slot lock name|simulator name. The first slot keeps
+# the lock name `simulator`, so older copies of this script, which know only
+# that lock and Shared iPhone, still stay off it.
+SIMULATOR_POOL="simulator|Shared iPhone
+simulator-2|Shared iPhone 2
+simulator-3|Shared iPhone 3"
+
 mkdir -p "$REPO_LOCK_ROOT" "$SIMULATOR_LOCK_ROOT"
 
+# Prints the simulator of a slot lock, or nothing for any other lock.
+slot_simulator() {
+  local slot simulator
+  while IFS='|' read -r slot simulator; do
+    [ "$slot" = "$1" ] && echo "$simulator"
+  done <<<"$SIMULATOR_POOL"
+  return 0
+}
+
+# Prints the locks that <name> may take, one per line: every slot for
+# `simulator`, one slot for a shared simulator's name, else the name itself.
+candidates() {
+  local slot simulator found=0
+  while IFS='|' read -r slot simulator; do
+    if [ "$1" = simulator ] || [ "$1" = "$simulator" ]; then
+      echo "$slot"
+      found=1
+    fi
+  done <<<"$SIMULATOR_POOL"
+  [ "$found" -eq 1 ] || echo "$1"
+}
+
 lock_dir() {
-  if [ "$1" = simulator ]; then
-    echo "$SIMULATOR_LOCK_ROOT/simulator"
+  if [ -n "$(slot_simulator "$1")" ]; then
+    echo "$SIMULATOR_LOCK_ROOT/$1"
   else
     echo "$REPO_LOCK_ROOT/$1"
   fi
 }
 
 usage() {
-  sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '2,39p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -55,14 +94,20 @@ read_lock() {
   cat "$(lock_dir "$1")/owner" 2>/dev/null || echo "unknown||0"
 }
 
+label() {
+  local simulator
+  simulator="$(slot_simulator "$1")"
+  echo "$1${simulator:+ ($simulator)}"
+}
+
 describe() {
   local owner pid started
   IFS='|' read -r owner pid started <<<"$(read_lock "$1")"
   local age=$(( ($(date +%s) - ${started:-0}) / 60 ))
   if [ -n "$pid" ]; then
-    echo "$1: held by $owner (process $pid) for ${age} min"
+    echo "$(label "$1"): held by $owner (process $pid) for ${age} min"
   else
-    echo "$1: held by $owner (session, last used ${age} min ago)"
+    echo "$(label "$1"): held by $owner (session, last used ${age} min ago)"
   fi
 }
 
@@ -92,34 +137,76 @@ session_held_by_me() {
   [ "$owner" = "$OWNER" ] && [ -z "$pid" ]
 }
 
-# take <name> <pid or empty>. Returns 0 when it took the lock, 3 when this
-# worktree already holds it through `acquire`.
+describe_all() {
+  local lock text=""
+  for lock in $1; do
+    text="$text${text:+; }$(describe "$lock")"
+  done
+  echo "$text"
+}
+
+# take <name> <pid or empty> sets TAKEN to the lock it took. Returns 0 when it
+# took a free or stale lock, 3 when this worktree already holds one through
+# `acquire`.
 take() {
-  local name="$1" pid="$2" waited=0 dir
-  dir="$(lock_dir "$1")"
+  local locks pid="$2" waited=0 lock
+  locks="$(candidates "$1")"
   while true; do
-    if mkdir "$dir" 2>/dev/null; then
-      echo "$OWNER|$pid|$(date +%s)" >"$dir/owner"
-      return 0
-    fi
-    if session_held_by_me "$name"; then
-      return 3
-    fi
-    if is_stale "$name"; then
-      echo "[lock] taking over a stale lock. $(describe "$name")" >&2
-      rm -rf "$dir"
-      continue
-    fi
+    for lock in $locks; do
+      if session_held_by_me "$lock"; then
+        TAKEN="$lock"
+        return 3
+      fi
+    done
+    for lock in $locks; do
+      if mkdir "$(lock_dir "$lock")" 2>/dev/null; then
+        echo "$OWNER|$pid|$(date +%s)" >"$(lock_dir "$lock")/owner"
+        TAKEN="$lock"
+        return 0
+      fi
+    done
+    for lock in $locks; do
+      if is_stale "$lock"; then
+        echo "[lock] taking over a stale lock. $(describe "$lock")" >&2
+        rm -rf "$(lock_dir "$lock")"
+        continue 2
+      fi
+    done
     if [ "$waited" -ge "$WAIT_SECONDS" ]; then
-      echo "[lock] gave up waiting. $(describe "$name")" >&2
+      echo "[lock] gave up waiting. $(describe_all "$locks")" >&2
       exit 1
     fi
     if [ $(( waited % 60 )) -eq 0 ]; then
-      echo "[lock] waiting. $(describe "$name")" >&2
+      echo "[lock] waiting. $(describe_all "$locks")" >&2
     fi
     sleep 5
     waited=$(( waited + 5 ))
   done
+}
+
+# Sets SIMULATOR_UDID for the simulator of slot <lock> and boots it when it is
+# shut down. Shared simulators stay booted.
+start_simulator() {
+  local simulator state
+  simulator="$(slot_simulator "$1")"
+  read -r SIMULATOR_UDID state <<<"$(xcrun simctl list devices available -j | python3 -c '
+import json, sys
+# Read all of stdin before exiting, or simctl dies of SIGPIPE.
+runtimes = json.load(sys.stdin)["devices"]
+for devices in runtimes.values():
+    for device in devices:
+        if device["name"] == sys.argv[1]:
+            print(device["udid"], device["state"])
+            sys.exit()
+' "$simulator")"
+  if [ -z "$SIMULATOR_UDID" ]; then
+    echo "[lock] the shared simulator $simulator does not exist on this Mac. Ask the developer to create it." >&2
+    return 1
+  fi
+  if [ "$state" != Booted ]; then
+    echo "[lock] booting $simulator" >&2
+    xcrun simctl bootstatus "$SIMULATOR_UDID" -b >/dev/null
+  fi
 }
 
 # Marks this worktree's session as used now, so it stays ahead of the TTL.
@@ -136,8 +223,26 @@ restore_session() {
   [ "$pid" = "$$" ] && renew "$1"
 }
 
+# A `run` releases its lock when its command ends, while the lock still names
+# this process.
+release_run() {
+  local pid
+  IFS='|' read -r _ pid _ <<<"$(read_lock "$1")"
+  [ "$pid" != "$$" ] || rm -rf "$(lock_dir "$1")"
+}
+
 release() {
-  local name="$1" dir
+  local name="$1" dir lock
+  if [ -n "$(slot_simulator "$(candidates "$name" | head -1)")" ]; then
+    # A slot this worktree's `run` holds belongs to that run, maybe another
+    # agent's in this worktree, so only sessions are released.
+    for lock in $(candidates "$name"); do
+      if session_held_by_me "$lock"; then
+        rm -rf "$(lock_dir "$lock")"
+      fi
+    done
+    return 0
+  fi
   dir="$(lock_dir "$1")"
   [ -d "$dir" ] || return 0
   if held_by_me "$name"; then
@@ -151,51 +256,71 @@ release() {
 case "${1:-}" in
   run)
     [ $# -ge 4 ] && [ "$3" = "--" ] || usage
-    name="$2"
-    shift 3
+    shift
     status=0
-    take "$name" "$$" || status=$?
+    take "$1" "$$" || status=$?
+    shift 2
     if [ "$status" -eq 0 ]; then
-      trap 'release "$name"' EXIT
+      trap 'release_run "$TAKEN"' EXIT
     elif [ "$status" -eq 3 ]; then
       # This process holds the session's lock while the command runs, so a
       # command longer than the TTL keeps it. Afterwards it is the session's
       # again, used now.
-      echo "$OWNER|$$|$(date +%s)" >"$(lock_dir "$name")/owner"
-      trap 'restore_session "$name"' EXIT
+      echo "$OWNER|$$|$(date +%s)" >"$(lock_dir "$TAKEN")/owner"
+      trap 'restore_session "$TAKEN"' EXIT
     else
       exit "$status"
     fi
-    "$@"
+    if [ -n "$(slot_simulator "$TAKEN")" ]; then
+      start_simulator "$TAKEN"
+      AGENT_SIMULATOR_NAME="$(slot_simulator "$TAKEN")" AGENT_SIMULATOR_UDID="$SIMULATOR_UDID" "$@"
+    else
+      "$@"
+    fi
     ;;
   acquire)
     [ $# -eq 2 ] || usage
     status=0
     take "$2" "" || status=$?
     [ "$status" -eq 0 ] || [ "$status" -eq 3 ] || exit "$status"
-    [ "$status" -eq 3 ] && renew "$2"
-    echo "[lock] $2 is held by this worktree. Release it with: scripts/lock release $2" >&2
+    [ "$status" -eq 3 ] && renew "$TAKEN"
+    if [ -n "$(slot_simulator "$TAKEN")" ]; then
+      start_simulator "$TAKEN" || { rm -rf "$(lock_dir "$TAKEN")"; exit 1; }
+      slot_simulator "$TAKEN"
+    fi
+    echo "[lock] $(label "$TAKEN") is held by this worktree. Release it with: scripts/lock release $2" >&2
     ;;
   release)
     [ $# -eq 2 ] || usage
     release "$2"
     ;;
   status)
-    found=0
     # A simulator lock in the repo's own lock dir is left from before the
     # simulator lock became machine-wide, so it is not listed.
-    for dir in "$REPO_LOCK_ROOT"/*/ "$SIMULATOR_LOCK_ROOT"/simulator/; do
+    for dir in "$REPO_LOCK_ROOT"/*/; do
       [ -d "$dir" ] || continue
       name="$(basename "$dir")"
       [ "$dir" != "$REPO_LOCK_ROOT/simulator/" ] || continue
-      found=1
       if is_stale "$name"; then
         echo "$(describe "$name") (stale)"
       else
         describe "$name"
       fi
     done
-    [ "$found" -eq 1 ] || echo "no locks held"
+    for name in $(candidates simulator); do
+      if [ ! -d "$(lock_dir "$name")" ]; then
+        echo "$(label "$name"): free"
+      elif is_stale "$name"; then
+        echo "$(describe "$name") (stale)"
+      else
+        describe "$name"
+      fi
+    done
+    ;;
+  pool)
+    while IFS='|' read -r _ simulator; do
+      echo "$simulator"
+    done <<<"$SIMULATOR_POOL"
     ;;
   *)
     usage
