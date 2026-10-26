@@ -21,6 +21,10 @@ def issue(message, kind="TestIssueSummary"):
     }
 
 
+# queued, compiled, tested, simulator
+timings = ["312", "95", "140", "Shared iPhone 2"]
+
+
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
     source = root / "result.json"
@@ -43,6 +47,7 @@ with tempfile.TemporaryDirectory() as directory:
     subprocess.run([
         sys.executable, "-c", parser, "json", "FAILURE", str(source),
         str(output), str(log), "1", "simulator", "App", "result.xcresult", "0",
+        *timings,
     ], check=True, stdout=subprocess.DEVNULL)
     result = json.loads(output.read_text())
     assert result["warnings"] == ["ExampleTests.testExample(): audio warning"]
@@ -52,6 +57,8 @@ with tempfile.TemporaryDirectory() as directory:
         "ExampleTests.testExample(): build error",
     }
     assert result["tests_count"] == 2 and result["tests_failed"] == 1
+    assert (result["queued"], result["compiled"], result["tested"], result["simulator"]) == (
+        312, 95, 140, "Shared iPhone 2")
 
     # A run that never started testing: no result bundle, only the log.
     source.write_text("")
@@ -66,6 +73,7 @@ with tempfile.TemporaryDirectory() as directory:
     text_output = subprocess.run([
         sys.executable, "-c", parser, "text", "FAILURE", str(source),
         str(output), str(log), "0", "simulator", "App", "result.xcresult", "0",
+        *timings,
     ], check=True, capture_output=True, text=True).stdout
     result = json.loads(output.read_text())
     assert result["errors"] == ["Unable to boot the Simulator.", "launchd failed to respond."]
@@ -76,8 +84,11 @@ with tempfile.TemporaryDirectory() as directory:
     text_output = subprocess.run([
         sys.executable, "-c", parser, "text", "FAILURE", str(source),
         str(output), str(log), "0", "simulator", "App", "result.xcresult", "0",
+        *timings,
     ], check=True, capture_output=True, text=True).stdout
     assert "Last lines of the xcodebuild log" in text_output
     assert "** BUILD FAILED **" in text_output
+    assert text_output.splitlines()[-1] == (
+        'SUMMARY: FAILURE queued=312s compiled=95s tested=140s simulator="Shared iPhone 2"')
 
 print("Result classification passed")

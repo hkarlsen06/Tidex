@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Agents in every worktree and repo on this Mac share the simulators, so a run on
-# a simulator holds the machine-wide simulator lock (scripts/lock) from start to
-# end. It takes that lock before the xcodebuild lock. A worktree that took it
-# with `scripts/lock acquire simulator` runs straight away. A run on a physical
-# device (platform=iOS) skips the lock. Without XCODE_TEST_AGENT_DESTINATION the
-# run uses the Tidex Tests simulator, so it takes the lock.
-if [ -z "${TIDEX_SIMULATOR_LOCK_HELD:-}" ]; then
-  destination_spec=",${XCODE_TEST_AGENT_DESTINATION:-},"
-  case "${destination_spec//, /,}" in
-    *",platform=iOS,"*) ;;
-    *) TIDEX_SIMULATOR_LOCK_HELD=1 exec "$(dirname "$0")/lock" run simulator -- "$0" "$@" ;;
-  esac
-fi
+# A run has two phases, so one agent's tests and another agent's build run at
+# the same time:
+#   1. build-for-testing for the generic simulator under the machine-wide
+#      xcodebuild lock (scripts/lib/xcode-agent-throttle.sh), then release it
+#   2. test-without-building on the destination
+# Without XCODE_TEST_AGENT_DESTINATION, phase 2 tests on any free shared
+# simulator, or on the one this worktree took with `scripts/lock acquire
+# simulator`, under that simulator's lock from scripts/lock. A destination that
+# names a shared simulator waits for that one. A physical device (platform=iOS)
+# or any other simulator takes no simulator lock. A run never holds both locks,
+# nor waits for one while it holds the other.
 
 MODE="text"
 EXTRA_ARGS=()
@@ -41,10 +39,12 @@ MIN_HEARTBEAT_INTERVAL=15
 HEARTBEAT_INTERVAL="${XCODE_TEST_AGENT_HEARTBEAT_INTERVAL:-$DEFAULT_HEARTBEAT_INTERVAL}"
 PROJECT_PATH="${XCODE_TEST_AGENT_PROJECT_PATH:-ios/Tidex.xcodeproj}"
 SCHEME_NAME="${XCODE_TEST_AGENT_SCHEME:-App}"
+BUILD_BUNDLE="${TMPDIR:-/tmp}/tidex-build-for-testing-$(date +%s)-$$.xcresult"
 RESULT_BUNDLE="${TMPDIR:-/tmp}/tidex-test-$(date +%s)-$$.xcresult"
 LOG_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-test-log.XXXXXX")"
 JSON_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-test-json.XXXXXX")"
 PARSED_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-test-parsed.XXXXXX")"
+SIMULATOR_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-test-simulator.XXXXXX")"
 XCODEBUILD_PID=""
 HEARTBEAT_PID=""
 KEEP_ARTIFACTS="${XCODE_TEST_AGENT_KEEP_ARTIFACTS:-0}"
@@ -55,29 +55,37 @@ elif [ "$HEARTBEAT_INTERVAL" -lt "$MIN_HEARTBEAT_INTERVAL" ]; then
   HEARTBEAT_INTERVAL="$MIN_HEARTBEAT_INTERVAL"
 fi
 
-# Shuts down a simulator this run booted before it releases the lock. Otherwise
-# the next run could take the lock, find the simulator booted, and lose it in
-# the middle of its tests.
-release_test_simulator_and_lock() {
+# Shuts down a simulator of the destination that this run booted. Shared
+# simulators stay booted.
+shutdown_test_simulator() {
   if [ "${SHUTDOWN_TEST_SIMULATOR:-0}" = "1" ]; then
     xcrun simctl shutdown "$TEST_SIMULATOR_UDID" >/dev/null 2>&1 || true
     SHUTDOWN_TEST_SIMULATOR=0
   fi
-  xa_release_lock
+}
+
+# In phase 2, XCODEBUILD_PID can be scripts/lock, with xcodebuild as its child.
+stop_xcodebuild() {
+  if [ -n "${XCODEBUILD_PID:-}" ]; then
+    pkill -TERM -P "$XCODEBUILD_PID" 2>/dev/null || true
+  fi
+  xa_stop_xcodebuild "${XCODEBUILD_PID:-}"
 }
 
 cleanup() {
-  xa_stop_xcodebuild "${XCODEBUILD_PID:-}"
-  release_test_simulator_and_lock
+  stop_xcodebuild
+  xa_release_lock
+  shutdown_test_simulator
   if [ -n "${HEARTBEAT_PID:-}" ]; then
     kill "$HEARTBEAT_PID" 2>/dev/null || true
     wait "$HEARTBEAT_PID" 2>/dev/null || true
   fi
+  rm -f "$SIMULATOR_FILE"
   if [ "$KEEP_ARTIFACTS" = "1" ]; then
     return
   fi
   rm -f "$LOG_FILE" "$JSON_FILE" "$PARSED_FILE"
-  rm -rf "$RESULT_BUNDLE"
+  rm -rf "$BUILD_BUNDLE" "$RESULT_BUNDLE"
 }
 trap cleanup EXIT
 # shellcheck source=lib/xcode-agent-throttle.sh
@@ -87,7 +95,7 @@ xa_install_signal_traps
 start_heartbeat() {
   local start_time
   start_time="$(date +%s)"
-  echo "[xcode-test-agent] tests started; heartbeat every ${HEARTBEAT_INTERVAL}s" >&2
+  echo "[xcode-test-agent] $1 started; heartbeat every ${HEARTBEAT_INTERVAL}s" >&2
 
   (
     while kill -0 "$XCODEBUILD_PID" 2>/dev/null; do
@@ -97,7 +105,7 @@ start_heartbeat() {
       local now elapsed
       now="$(date +%s)"
       elapsed=$((now - start_time))
-      echo "[xcode-test-agent] alive: tests still running (${elapsed}s elapsed)" >&2
+      echo "[xcode-test-agent] alive: $1 still running (${elapsed}s elapsed)" >&2
     done
   ) &
   HEARTBEAT_PID=$!
@@ -115,17 +123,14 @@ stop_heartbeat() {
 # reinstalls the app, liveactivitiesd relaunches Tidex in the background.
 # xcodebuild then attaches to that launch, which has no XCTest injection, and
 # fails with "test runner hung before establishing connection" or "failed to
-# launch no.tidex.app". So every run on a simulator first uninstalls Tidex there.
-# The reset runs under the simulator lock, which every agent on this Mac takes
-# before it drives a simulator.
-TEST_SIMULATOR_NAME="Tidex Tests"
-TEST_SIMULATOR_UDID=""
-SHUTDOWN_TEST_SIMULATOR=0
+# launch no.tidex.app". So every run on a simulator first uninstalls Tidex
+# there, which also removes its Live Activities and any state left by earlier
+# runs. On a shared simulator that happens under its lock.
 
-# Prints the UDID of the available simulator that an xcodebuild destination
-# names by id or name. Prints nothing for a physical device, where uninstalling
-# would delete the user's data.
-destination_simulator_udid() {
+# Prints "<udid>|<name>" of the available simulator that an xcodebuild
+# destination names by id or name. Prints nothing for a physical device, where
+# uninstalling would delete the user's data.
+destination_simulator() {
   xcrun simctl list devices available -j | python3 -c '
 import json, sys
 # Read all of stdin before any exit, or simctl dies of SIGPIPE and pipefail
@@ -140,27 +145,33 @@ if spec.get("platform") != "iOS Simulator":
 for devices in runtimes.values():
     for device in devices:
         if device["udid"] == spec.get("id") or device["name"] == spec.get("name"):
-            print(device["udid"])
+            print(device["udid"] + "|" + device["name"])
             sys.exit()
 ' "$1"
 }
 
-if [ -n "${XCODE_TEST_AGENT_DESTINATION:-}" ]; then
-  DESTINATION="$XCODE_TEST_AGENT_DESTINATION"
-  if ! TEST_SIMULATOR_UDID="$(destination_simulator_udid "$DESTINATION" 2>/dev/null)"; then
+# The simulator lock phase 2 takes: `simulator` for any shared simulator, one
+# shared simulator's name, or nothing. TEST_SIMULATOR_UDID is a simulator
+# outside the pool, which phase 2 resets without a lock.
+SIMULATOR_LOCK=simulator
+TEST_SIMULATOR_UDID=""
+SHUTDOWN_TEST_SIMULATOR=0
+DESTINATION="${XCODE_TEST_AGENT_DESTINATION:-}"
+if [ -n "$DESTINATION" ]; then
+  SIMULATOR_LOCK=""
+  if ! DESTINATION_SIMULATOR="$(destination_simulator "$DESTINATION" 2>/dev/null)"; then
     xa_log "could not list simulators; running on $DESTINATION without resetting it"
-    TEST_SIMULATOR_UDID=""
+    DESTINATION_SIMULATOR=""
   fi
-else
-  TEST_SIMULATOR_UDID="$(destination_simulator_udid "platform=iOS Simulator,name=$TEST_SIMULATOR_NAME")"
-  if [ -z "$TEST_SIMULATOR_UDID" ]; then
-    TEST_SIMULATOR_UDID="$(xcrun simctl create "$TEST_SIMULATOR_NAME" "iPhone 18 Pro")"
+  if [ -n "$DESTINATION_SIMULATOR" ]; then
+    if grep -qxF "${DESTINATION_SIMULATOR#*|}" <<<"$("$(dirname "$0")/lock" pool)"; then
+      SIMULATOR_LOCK="${DESTINATION_SIMULATOR#*|}"
+    else
+      TEST_SIMULATOR_UDID="${DESTINATION_SIMULATOR%%|*}"
+    fi
   fi
-  DESTINATION="platform=iOS Simulator,id=$TEST_SIMULATOR_UDID"
 fi
 
-# Uninstalling the app also removes its Live Activities and any state left by
-# earlier runs.
 reset_test_simulator() {
   [ -n "$TEST_SIMULATOR_UDID" ] || return 0
   # Captured rather than piped to grep -q, which under pipefail can fail the
@@ -174,31 +185,95 @@ reset_test_simulator() {
   xcrun simctl uninstall "$TEST_SIMULATOR_UDID" no.tidex.app >/dev/null 2>&1 || true
 }
 
+# The build gets the extra arguments without their destinations.
+BUILD_EXTRA_ARGS=()
+SKIP_NEXT=0
+for arg in ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}; do
+  if [ "$SKIP_NEXT" = "1" ]; then
+    SKIP_NEXT=0
+  elif [ "$arg" = "-destination" ]; then
+    SKIP_NEXT=1
+  else
+    BUILD_EXTRA_ARGS+=("$arg")
+  fi
+done
+
+QUEUED=0
+COMPILED=0
+TESTED=0
+SIMULATOR=""
+
 set +e
-XCODEBUILD_ARGS=(
-  -quiet
-  -resultBundlePath "$RESULT_BUNDLE"
-  -project "$PROJECT_PATH"
-  -scheme "$SCHEME_NAME"
-  -destination "$DESTINATION"
-  test
-)
-
-if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
-  XCODEBUILD_ARGS+=("${EXTRA_ARGS[@]}")
-fi
-
-xa_configure test ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
+xa_configure build-for-testing
+QUEUE_START="$(date +%s)"
 xa_acquire_lock
-reset_test_simulator
+COMPILE_START="$(date +%s)"
+QUEUED=$((COMPILE_START - QUEUE_START))
 ${XA_PREFIX[@]+"${XA_PREFIX[@]}"} xcodebuild ${XA_ARGS[@]+"${XA_ARGS[@]}"} \
-  "${XCODEBUILD_ARGS[@]}" >"$LOG_FILE" 2>&1 &
+  -quiet \
+  -resultBundlePath "$BUILD_BUNDLE" \
+  -project "$PROJECT_PATH" \
+  -scheme "$SCHEME_NAME" \
+  -destination 'generic/platform=iOS Simulator' \
+  build-for-testing \
+  ${BUILD_EXTRA_ARGS[@]+"${BUILD_EXTRA_ARGS[@]}"} >"$LOG_FILE" 2>&1 &
 XCODEBUILD_PID=$!
-start_heartbeat
+start_heartbeat build
 wait "$XCODEBUILD_PID"
 EXIT_CODE=$?
+XCODEBUILD_PID=""
 stop_heartbeat
-release_test_simulator_and_lock
+xa_release_lock
+COMPILED=$(($(date +%s) - COMPILE_START))
+
+PARSED_BUNDLE="$BUILD_BUNDLE"
+if [ "$EXIT_CODE" -eq 0 ]; then
+  PARSED_BUNDLE="$RESULT_BUNDLE"
+  xa_configure test ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
+  TEST_ARGS=(
+    ${XA_ARGS[@]+"${XA_ARGS[@]}"}
+    -quiet
+    -resultBundlePath "$RESULT_BUNDLE"
+    -project "$PROJECT_PATH"
+    -scheme "$SCHEME_NAME"
+    test-without-building
+    ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
+  )
+  TEST_QUEUE_START="$(date +%s)"
+  if [ -n "$SIMULATOR_LOCK" ]; then
+    # Under the simulator's lock: note when it was taken and which simulator
+    # it is, reset it, then test on it.
+    "$(dirname "$0")/lock" run "$SIMULATOR_LOCK" -- sh -c '
+      log="$1"
+      shift
+      printf "%s|%s\n" "$(date +%s)" "$AGENT_SIMULATOR_NAME" >"$0"
+      echo "[xcode-test-agent] resetting $AGENT_SIMULATOR_NAME: uninstalling no.tidex.app" >&2
+      xcrun simctl uninstall "$AGENT_SIMULATOR_UDID" no.tidex.app >/dev/null 2>&1
+      exec "$@" -destination "platform=iOS Simulator,id=$AGENT_SIMULATOR_UDID" >>"$log" 2>&1
+    ' "$SIMULATOR_FILE" "$LOG_FILE" \
+      ${XA_PREFIX[@]+"${XA_PREFIX[@]}"} xcodebuild "${TEST_ARGS[@]}" &
+  else
+    reset_test_simulator
+    TEST_QUEUE_START="$(date +%s)"
+    printf "%s|\n" "$TEST_QUEUE_START" >"$SIMULATOR_FILE"
+    ${XA_PREFIX[@]+"${XA_PREFIX[@]}"} xcodebuild "${TEST_ARGS[@]}" \
+      -destination "$DESTINATION" >>"$LOG_FILE" 2>&1 &
+  fi
+  XCODEBUILD_PID=$!
+  start_heartbeat tests
+  wait "$XCODEBUILD_PID"
+  EXIT_CODE=$?
+  XCODEBUILD_PID=""
+  stop_heartbeat
+  shutdown_test_simulator
+  IFS='|' read -r TEST_START SIMULATOR <"$SIMULATOR_FILE" || true
+  TEST_START="${TEST_START:-$(date +%s)}"
+  QUEUED=$((QUEUED + TEST_START - TEST_QUEUE_START))
+  TESTED=$(($(date +%s) - TEST_START))
+  if [ -n "$SIMULATOR" ]; then
+    DESTINATION="platform=iOS Simulator,name=$SIMULATOR"
+  fi
+fi
 set -e
 
 STATUS="SUCCESS"
@@ -207,9 +282,9 @@ if [ "$EXIT_CODE" -ne 0 ]; then
 fi
 
 XCRESULT_OK=0
-if [ -d "$RESULT_BUNDLE" ]; then
+if [ -d "$PARSED_BUNDLE" ]; then
   set +e
-  xcrun xcresulttool get --legacy --format json --path "$RESULT_BUNDLE" >"$JSON_FILE" 2>/dev/null
+  xcrun xcresulttool get --legacy --format json --path "$PARSED_BUNDLE" >"$JSON_FILE" 2>/dev/null
   XCRESULT_EXIT=$?
   set -e
   if [ "$XCRESULT_EXIT" -eq 0 ] && [ -s "$JSON_FILE" ]; then
@@ -218,7 +293,8 @@ if [ -d "$RESULT_BUNDLE" ]; then
 fi
 
 python3 - "$MODE" "$STATUS" "$JSON_FILE" "$PARSED_FILE" "$LOG_FILE" "$XCRESULT_OK" \
-  "$DESTINATION" "$SCHEME_NAME" "$RESULT_BUNDLE" "$KEEP_ARTIFACTS" <<'PY'
+  "$DESTINATION" "$SCHEME_NAME" "$PARSED_BUNDLE" "$KEEP_ARTIFACTS" \
+  "$QUEUED" "$COMPILED" "$TESTED" "$SIMULATOR" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -235,7 +311,11 @@ from urllib.parse import parse_qs, unquote, urlparse
     scheme_name,
     result_bundle_path,
     keep_artifacts,
-) = sys.argv[1:11]
+    queued,
+    compiled,
+    tested,
+    simulator,
+) = sys.argv[1:15]
 xcresult_ok = xcresult_ok == "1"
 keep_artifacts = keep_artifacts == "1"
 
@@ -392,6 +472,10 @@ payload = {
     "test_failures": test_failures,
     "log_path": log_path if keep_artifacts else None,
     "result_bundle_path": result_bundle_path if keep_artifacts else None,
+    "queued": int(queued),
+    "compiled": int(compiled),
+    "tested": int(tested),
+    "simulator": simulator or None,
 }
 
 Path(parsed_path).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
@@ -430,6 +514,11 @@ else:
         print("WARNINGS:")
         for warning in warnings:
             print(warning)
+    # The last line, so `| tail -1` keeps it. queued is the time spent waiting
+    # for the xcodebuild lock and the simulator lock.
+    print()
+    summary = f"SUMMARY: {status} queued={queued}s compiled={compiled}s tested={tested}s"
+    print(summary + (f' simulator="{simulator}"' if simulator else ""))
 PY
 
 exit "$EXIT_CODE"

@@ -93,7 +93,9 @@ if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
   XCODEBUILD_ARGS+=("${EXTRA_ARGS[@]}")
 fi
 xa_configure "${ACTION:-build}"
+QUEUE_START="$(date +%s)"
 xa_acquire_lock
+COMPILE_START="$(date +%s)"
 ${XA_PREFIX[@]+"${XA_PREFIX[@]}"} xcodebuild ${XA_ARGS[@]+"${XA_ARGS[@]}"} "${XCODEBUILD_ARGS[@]}" >"$LOG_FILE" 2>&1 &
 XCODEBUILD_PID=$!
 start_heartbeat
@@ -101,6 +103,8 @@ wait "$XCODEBUILD_PID"
 EXIT_CODE=$?
 stop_heartbeat
 xa_release_lock
+QUEUED=$((COMPILE_START - QUEUE_START))
+COMPILED=$(($(date +%s) - COMPILE_START))
 set -e
 
 STATUS="SUCCESS"
@@ -119,13 +123,14 @@ if [ -d "$RESULT_BUNDLE" ]; then
   fi
 fi
 
-python3 - "$MODE" "$STATUS" "$JSON_FILE" "$PARSED_FILE" "$LOG_FILE" "$XCRESULT_OK" <<'PY'
+python3 - "$MODE" "$STATUS" "$JSON_FILE" "$PARSED_FILE" "$LOG_FILE" "$XCRESULT_OK" \
+  "$QUEUED" "$COMPILED" <<'PY'
 import json
 import re
 import sys
 from pathlib import Path
 
-mode, status, json_path, parsed_path, log_path, xcresult_ok = sys.argv[1:7]
+mode, status, json_path, parsed_path, log_path, xcresult_ok, queued, compiled = sys.argv[1:9]
 xcresult_ok = xcresult_ok == "1"
 
 warnings = []
@@ -196,6 +201,8 @@ if not errors:
 
 payload = {
     "status": status,
+    "queued": int(queued),
+    "compiled": int(compiled),
     "warnings": warnings,
     "errors": errors,
 }
@@ -216,6 +223,10 @@ else:
         print("ERRORS:")
         for e in errors:
             print(e)
+    # The last line, so `| tail -1` keeps it. queued is the time spent waiting
+    # for the xcodebuild lock.
+    print()
+    print(f"SUMMARY: {status} queued={queued}s compiled={compiled}s")
 PY
 
 exit "$EXIT_CODE"
