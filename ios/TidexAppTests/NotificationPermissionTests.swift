@@ -5,6 +5,25 @@ import XCTest
 
 @MainActor
 final class NotificationPermissionTests: XCTestCase {
+  func testOtherAccountAndSignedOutPushesContainNoPrivateContent() throws {
+    let payload: [AnyHashable: Any] = [
+      "recipient_user_id": "account-a", "thread_id": "private-thread", "sender_name": "Private sender",
+    ]
+    for signedIn in ["account-b", nil] {
+      let content = try XCTUnwrap(
+        NotificationRecipientPrivacy.redactedContent(userInfo: payload, signedInUserId: signedIn))
+      XCTAssertTrue(content.body.isEmpty)
+      XCTAssertTrue(content.subtitle.isEmpty)
+      XCTAssertTrue(content.userInfo.isEmpty)
+      XCTAssertTrue(content.attachments.isEmpty)
+      XCTAssertTrue(content.categoryIdentifier.isEmpty)
+      XCTAssertNil(content.sound)
+      XCTAssertNil(content.badge)
+    }
+    XCTAssertNil(
+      NotificationRecipientPrivacy.redactedContent(userInfo: payload, signedInUserId: "ACCOUNT-A"))
+  }
+
   func testContextualRequestPromptsOnceAndRegistersAfterGrant() async {
     var status = UNAuthorizationStatus.notDetermined
     var requests = 0

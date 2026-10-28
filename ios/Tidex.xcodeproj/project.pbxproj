@@ -319,6 +319,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				ISO8601Timestamp.swift,
+				NotificationRecipientPrivacy.swift,
 			);
 			target = 11DC87D52F5D35990080D9F5 /* TidexNotificationService */;
 		};
