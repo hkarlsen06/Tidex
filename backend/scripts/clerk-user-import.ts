@@ -78,8 +78,8 @@ export async function syncClerkUser(u: ClerkImportUser, clerk: ClerkRequest, log
       return null;
     }
     if (existing.length > 0) return existing[0]!.id;
-    // Clerk requires an identifier even for a migration. This username supplies no
-    // password or email access. The existing GoTrue session proves ownership at exchange.
+    // Clerk tickets require an identifier even when email is optional. This username
+    // supplies no password or email access. The GoTrue session proves ownership at exchange.
     const created = object(await clerk("POST", "/users", {
       external_id: u.id,
       username: `legacy_${u.id.replaceAll("-", "")}`,

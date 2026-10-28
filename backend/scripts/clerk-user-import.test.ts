@@ -47,6 +47,7 @@ test("an Apple user without email gets one stable Clerk account without an inven
   expect(clerk.users[0]?.external_id).toBe(legacy.id);
   expect(clerk.users[0]?.email_addresses).toEqual([]);
   expect(clerk.users[0]?.password_enabled).toBe(false);
+  expect(clerk.users[0]?.username).toBeTruthy();
   expect(await syncClerkUser(legacy, clerk.request, () => {})).toBe(id);
   expect(clerk.users).toHaveLength(1);
 });

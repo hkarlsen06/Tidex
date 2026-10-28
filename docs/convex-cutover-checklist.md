@@ -4,6 +4,24 @@ Run this checklist only after Hjalmar approves the production cutover and App St
 
 Run local commands from the repository root. Keep the same terminal for the variables below. The source of truth stays in Supabase until the release step. Never run the migration script again after that step.
 
+## Check Apple sign-in requirements
+
+Apple users may have no email. Confirm that email stays optional and supplied addresses still require verification.
+
+```bash
+python3 - <<'PY'
+import json, urllib.request
+request = urllib.request.Request('https://clerk.tidex.no/v1/environment?_is_native=true', headers={'User-Agent': 'Tidex readiness verification'})
+with urllib.request.urlopen(request, timeout=20) as response:
+    settings = json.load(response)['user_settings']
+email = settings['attributes']['email_address']
+apple = settings['social']['oauth_apple']
+assert email['enabled'] and not email['required'] and email['verify_at_sign_up']
+assert apple['enabled'] and apple['authenticatable']
+print('Clerk Apple sign-in is enabled and email is optional')
+PY
+```
+
 ## Prepare the rollback files
 
 ```bash
