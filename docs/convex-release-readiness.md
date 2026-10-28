@@ -18,7 +18,7 @@ The final focused suite passed 64 tests with zero failures on Shared iPhone, iOS
 
 The final notification extension source passed a simulator callback probe for recipient restoration, signed-out and wrong-account redaction, and an account switch before expiry. The backend neutral-presentation regression and TypeScript check passed. SwiftLint completed. The Release archive and App Store export passed without warnings. The exported app and all four extensions passed signature checks and used team `48ZSLD4RMP`, distribution profiles and production endpoints. Apple validation and upload completed without errors.
 
-The exact N-to-N+1 offline retry, manual sign-in priority and in-flight impersonation UI journeys were not repeated on the final build. Physical APNs delivery was also unavailable. These remain in [the device checklist](../RELEASE_CHECKS.md). Passing integration tests does not mark those journeys complete.
+On 2026-10-28, Hjalmar confirmed that the N-to-N+1 offline retry, manual sign-in priority and unsynced-shift impersonation checks all passed on Cold Harbor. Physical APNs delivery remains unchecked in [the device checklist](../RELEASE_CHECKS.md).
 
 Local evidence is in `/tmp/tidex-n1-readiness/`. `archive-report.md` contains the full commands, results, artifact paths and device limits. `final-asc-state.json` records the attached build and draft settings. The IPA is `export/Tidex.ipa` and the archive is `Tidex-3.1.0.xcarchive` under that directory.
 
