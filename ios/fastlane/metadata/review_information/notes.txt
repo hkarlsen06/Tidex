@@ -1,0 +1,9 @@
+Tidex is free and has no in-app purchases.
+
+Sign in using the demo account credentials supplied in App Review Information. This account does not require a new-device email code. The demo jobs Harbor Café and City Library use USD intentionally, even on a Norwegian device.
+
+This update improves account sign-in and live updates across devices. Existing accounts and saved shifts are preserved. Sign-in supports Apple, Google, email codes, and email with password.
+
+The review build uses a separate rehearsal copy of the service. Changes made here do not reach people using the current App Store version. Push delivery is disabled until the approved version is manually released during the production cutover.
+
+You can add and edit shifts, inspect estimated earnings and pay settings, and use the shared calendar and messaging screens with the demo account. This version will be released manually after approval.

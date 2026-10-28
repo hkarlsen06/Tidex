@@ -106,6 +106,54 @@ platform :ios do
     UI.success("Metadata uploaded successfully!")
   end
 
+  desc "Upload promotional text and App Review notes for the current version"
+  lane :upload_review_metadata do
+    missing_vars = %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH].reject { |name| ENV[name] && !ENV[name].empty? }
+    UI.user_error!("Missing required environment variables: #{missing_vars.join(', ')}") unless missing_vars.empty?
+
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_PATH"],
+      in_house: false
+    )
+
+    app = Spaceship::ConnectAPI::App.find("no.tidex.app")
+    UI.user_error!("Tidex was not found in App Store Connect") unless app
+    version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS, includes: nil)
+    expected = tidex_release_version
+    unless version && version.version_string == expected
+      UI.user_error!("Expected an editable #{expected} App Store version")
+    end
+
+    metadata_path = File.expand_path("metadata", __dir__)
+    localizations = version.get_app_store_version_localizations(limit: 200)
+    UI.user_error!("The App Store version has no localizations") if localizations.empty?
+    promotional_texts = localizations.map do |localization|
+      path = File.join(metadata_path, localization.locale, "promotional_text.txt")
+      UI.user_error!("Missing promotional text for #{localization.locale}") unless File.file?(path)
+      text = File.read(path).strip
+      unless (1..170).cover?(text.length)
+        UI.user_error!("Promotional text for #{localization.locale} must contain 1 to 170 characters")
+      end
+      [localization, text]
+    end
+
+    notes_path = File.join(metadata_path, "review_information", "notes.txt")
+    UI.user_error!("Missing App Review notes at #{notes_path}") unless File.file?(notes_path)
+    notes = File.read(notes_path).strip
+    UI.user_error!("App Review notes must contain 1 to 4000 characters") unless (1..4000).cover?(notes.length)
+    review = version.fetch_app_store_review_detail(includes: nil)
+    UI.user_error!("App Review information must already exist on the draft") unless review
+
+    UI.message("Uploading promotional text for #{promotional_texts.length} languages on #{expected}...")
+    promotional_texts.each do |localization, text|
+      localization.update(attributes: { promotional_text: text })
+    end
+    review.update(attributes: { notes: notes })
+    UI.success("Promotional text and App Review notes uploaded for #{expected}")
+  end
+
   desc "Replace App Store screenshots with ASConnectScreenshots/<version> (no metadata)"
   lane :upload_screenshots do
     version = tidex_release_version

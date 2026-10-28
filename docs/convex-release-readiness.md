@@ -2,6 +2,8 @@
 
 Version 3.1.0, build `20261028.1856`, is uploaded and processed as `VALID` and `APP_STORE_ELIGIBLE`. It is attached to the App Store draft for app `6757129790`. The draft has manual release, phased release disabled, updated notes in all 32 locales and inherited App Review credentials. All 170 screenshots across 34 sets are complete. The draft remains `PREPARE_FOR_SUBMISSION`. It has not been submitted or released.
 
+Promotional text in all 32 locales and the App Review notes were uploaded through `fastlane ios upload_review_metadata` on 2026-10-28. Independent API readbacks match the local files. Other localized metadata, review credentials, contact information, version settings and the attached build are unchanged. The reviewer notes are in `ios/fastlane/metadata/review_information/notes.txt`. The upload log and verification result are `/tmp/tidex-n1-readiness/fastlane-review-metadata.log` and `/tmp/tidex-n1-readiness/review-metadata-verification.json`.
+
 The uploaded source is signed commit `2ae9d319`. Later migration and readiness changes do not change that binary. All implementation changes landed as signed local commits on `main`. Nothing was pushed.
 
 ## Fixes in the uploaded build

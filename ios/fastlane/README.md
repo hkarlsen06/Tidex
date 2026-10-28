@@ -39,6 +39,14 @@ Generate metadata files without uploading
 
 Upload existing metadata files (no generation)
 
+### ios upload_review_metadata
+
+```sh
+[bundle exec] fastlane ios upload_review_metadata
+```
+
+Upload promotional text and App Review notes for the current version
+
 ### ios upload_screenshots
 
 ```sh
