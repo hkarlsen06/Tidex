@@ -152,37 +152,26 @@ final class NotificationService: UNNotificationServiceExtension {
     _ request: UNNotificationRequest,
     withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
   ) {
-    // Suppressing an alert requires Apple's notification-filtering entitlement. Without
-    // it, empty content can fall back to the original alert. Deliver a neutral alert instead.
-    if let redacted = NotificationRecipientPrivacy.redactedContent(
-      userInfo: request.content.userInfo,
-      signedInUserId: UserDefaults(suiteName: "group.no.tidex.app")?
-        .string(forKey: "signed_in_user_id")
-    ) {
-      logger.info("Redacted a push meant for another account")
-      contentHandler(redacted)
-      return
-    }
-
     self.contentHandler = contentHandler
 
-    guard let bestAttemptContent = request.content.mutableCopy() as? UNMutableNotificationContent
+    let authorizedContent = Self.contentForCurrentAccount(request.content)
+    guard let bestAttemptContent = authorizedContent.mutableCopy() as? UNMutableNotificationContent
     else {
-      contentHandler(request.content)
+      contentHandler(authorizedContent)
       return
     }
 
     self.bestAttemptContent = bestAttemptContent
     processingTask?.cancel()
 
-    guard let contentCopy = request.content.mutableCopy() as? UNMutableNotificationContent
+    guard let contentCopy = bestAttemptContent.mutableCopy() as? UNMutableNotificationContent
     else {
       contentHandler(bestAttemptContent)
       return
     }
     let payload = CommunicationNotificationPayload(
-      userInfo: request.content.userInfo,
-      fallbackSenderDisplayName: request.content.title
+      userInfo: bestAttemptContent.userInfo,
+      fallbackSenderDisplayName: bestAttemptContent.title
     )
     // The task enriches its own copy, so serviceExtensionTimeWillExpire can deliver
     // bestAttemptContent while the task is still running. Nothing else references
@@ -192,7 +181,7 @@ final class NotificationService: UNNotificationServiceExtension {
     processingTask = Task {
       let updatedContent = await Self.enrichedContent(workingContent, payload: payload)
       guard !Task.isCancelled else { return }
-      contentHandler(updatedContent)
+      contentHandler(Self.contentForCurrentAccount(updatedContent))
     }
   }
 
@@ -201,8 +190,18 @@ final class NotificationService: UNNotificationServiceExtension {
     processingTask = nil
 
     if let contentHandler, let bestAttemptContent {
-      contentHandler(bestAttemptContent)
+      contentHandler(Self.contentForCurrentAccount(bestAttemptContent))
     }
+  }
+
+  private static func contentForCurrentAccount(_ content: UNNotificationContent)
+    -> UNNotificationContent
+  {
+    NotificationRecipientPrivacy.contentForDelivery(
+      content,
+      signedInUserId: UserDefaults(suiteName: "group.no.tidex.app")?
+        .string(forKey: "signed_in_user_id")
+    )
   }
 
   private static func enrichedContent(

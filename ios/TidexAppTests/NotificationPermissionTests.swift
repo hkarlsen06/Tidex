@@ -5,9 +5,40 @@ import XCTest
 
 @MainActor
 final class NotificationPermissionTests: XCTestCase {
+  func testOnlyTheCurrentAccountRestoresThePrivateNotificationPresentation() {
+    let original = UNMutableNotificationContent()
+    original.title = "Tidex"
+    original.userInfo = [
+      "recipient_user_id": "account-a",
+      "notification_presentation": [
+        "alert": ["title": "Private sender", "body": "Private message"],
+        "badge": 7, "category": "THREAD_MESSAGE", "thread-id": "private-thread",
+        "sound": "tidex_notification.caf",
+      ],
+    ]
+    let restored = NotificationRecipientPrivacy.contentForDelivery(
+      original, signedInUserId: "ACCOUNT-A")
+    XCTAssertEqual(restored.title, "Private sender")
+    XCTAssertEqual(restored.body, "Private message")
+    XCTAssertEqual(restored.badge, 7)
+    XCTAssertEqual(restored.categoryIdentifier, "THREAD_MESSAGE")
+    XCTAssertEqual(restored.threadIdentifier, "private-thread")
+    XCTAssertNotNil(restored.sound)
+    for account in ["account-b", nil] {
+      let redacted = NotificationRecipientPrivacy.contentForDelivery(
+        restored, signedInUserId: account)
+      XCTAssertEqual(redacted.title, "Tidex")
+      XCTAssertTrue(redacted.body.isEmpty)
+      XCTAssertTrue(redacted.userInfo.isEmpty)
+      XCTAssertNil(redacted.badge)
+      XCTAssertNil(redacted.sound)
+    }
+  }
+
   func testOtherAccountAndSignedOutPushesContainNoPrivateContent() throws {
     let payload: [AnyHashable: Any] = [
-      "recipient_user_id": "account-a", "thread_id": "private-thread", "sender_name": "Private sender",
+      "recipient_user_id": "account-a", "thread_id": "private-thread",
+      "sender_name": "Private sender",
     ]
     for signedIn in ["account-b", nil] {
       let content = try XCTUnwrap(

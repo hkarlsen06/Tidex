@@ -30,6 +30,7 @@ import type * as lib_calendarFeed_types from "../lib/calendarFeed/types.js";
 import type * as lib_clerk from "../lib/clerk.js";
 import type * as lib_columns from "../lib/columns.js";
 import type * as lib_messaging from "../lib/messaging.js";
+import type * as lib_notificationPresentation from "../lib/notificationPresentation.js";
 import type * as lib_notify from "../lib/notify.js";
 import type * as lib_revision from "../lib/revision.js";
 import type * as lib_shared_dateUtils from "../lib/shared/dateUtils.js";
@@ -97,6 +98,7 @@ declare const fullApi: ApiFromModules<{
   "lib/clerk": typeof lib_clerk;
   "lib/columns": typeof lib_columns;
   "lib/messaging": typeof lib_messaging;
+  "lib/notificationPresentation": typeof lib_notificationPresentation;
   "lib/notify": typeof lib_notify;
   "lib/revision": typeof lib_revision;
   "lib/shared/dateUtils": typeof lib_shared_dateUtils;

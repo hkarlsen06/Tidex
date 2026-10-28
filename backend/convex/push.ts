@@ -4,6 +4,7 @@ import type { Doc } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { userByUuid } from "./lib/auth";
 import { canAccessThread, counterpartOf, pairBlocked } from "./lib/messaging";
+import { notificationPresentation } from "./lib/notificationPresentation";
 
 // Port of the send-push-notifications edge function, APNs only. Every active device
 // has an APNs token. The 13 FCM-only rows were last seen in January 2026, from app
@@ -305,8 +306,7 @@ export function coalesce(rows: Outbox[]): Job[] {
 function apsPayload(n: Outbox, badge: number): Payload {
   const aps: Payload = { alert: { title: n.title, body: n.body }, badge: Math.max(0, badge) };
   if (n.notification_type !== "shared_shift_added") aps.sound = "tidex_notification.caf";
-  // Every alert goes through the app's notification service extension, which also drops a
-  // push meant for another account (recipient_user_id).
+  // The extension restores this presentation only for the account named by recipient_user_id.
   aps["mutable-content"] = 1;
   const thread = threadIdOf(n);
   if (thread !== null) {
@@ -369,8 +369,7 @@ function apnsHeaders(n: Outbox): Record<string, string> {
 
 function alertPayload(n: Outbox, badge: number): Payload {
   const visible = Object.fromEntries(Object.entries(data(n)).filter(([k]) => !k.startsWith("_internal_")));
-  // recipient_user_id lets the app drop a push meant for another account on this device.
-  return { aps: apsPayload(n, badge), type: n.notification_type, ...visible, recipient_user_id: n.recipient_id };
+  return { ...visible, ...notificationPresentation(apsPayload(n, badge)), type: n.notification_type, recipient_user_id: n.recipient_id };
 }
 
 /** The silent push that lets the app fetch a chat message before the user opens it. */
