@@ -20,6 +20,8 @@ The final notification extension source passed a simulator callback probe for re
 
 On 2026-10-28, Hjalmar confirmed that the N-to-N+1 offline retry, manual sign-in priority and unsynced-shift impersonation checks all passed on Cold Harbor. Physical APNs delivery remains unchecked in [the device checklist](../RELEASE_CHECKS.md).
 
+A later read-only account audit found a cutover blocker. Excluding the review demo, 247 of 257 accounts have a valid Clerk mapping. Ten do not: four phone-only accounts, three Apple accounts without stored email, and three unconfirmed email sign-ups. One phone-only account used 3.0.1 on 2026-10-20, and one unmapped Apple account used 2.7.1 on 2026-10-28. Both would fail the automatic exchange. Apple provider IDs are preserved for manual recovery, but the phone-only account needs a verified email or another ownership-verified linking path before cutover. Detailed evidence stays in `/tmp/tidex-n1-readiness/session-exchange-audit.md`, with account identifiers only in the local report. No accounts, sessions or configuration were changed by this audit.
+
 Local evidence is in `/tmp/tidex-n1-readiness/`. `archive-report.md` contains the full commands, results, artifact paths and device limits. `final-asc-state.json` records the attached build and draft settings. The IPA is `export/Tidex.ipa` and the archive is `Tidex-3.1.0.xcarchive` under that directory.
 
 ## Backend rehearsal

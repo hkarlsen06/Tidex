@@ -106,6 +106,7 @@ Start with the Clerk checks below. Any of them can change the plan, so answer th
   - Imported bcrypt hashes work. A `$2a$10$` hash, the format GoTrue stores, passed Clerk's `verify_password` on 2026-10-20.
 - N+1 drops SMS sign-in, passkeys and TOTP, so Tidex fits Clerk's free Hobby plan. MFA and passkeys need Pro ($25 a month), and SMS costs extra on top of that. Counts from 2026-10-18:
   - 9 users have a phone sign-in, and 5 of them can also sign in another way. The other 4 have no email, so they get no Clerk user. None of them opened the app in the 90 days before. Their data still moves, and their `users` row has no `clerk_user_id`. An admin can link one by hand if they get in touch.
+  - Update from the read-only audit on 2026-10-28: one of the phone-only accounts used 3.0.1 on 2026-10-20. It has no supported N+1 sign-in path and needs ownership-verified recovery before cutover. Three Apple accounts also have no Clerk mapping because they have no stored email. One used 2.7.1 on 2026-10-28. Their Apple provider IDs are preserved for manual sign-in recovery, which still needs verification for that account. The older inactivity assessment must not be used as the cutover decision.
   - The 2 users with a passkey also have a password.
   - 5 users turned on TOTP. They sign in without a second factor on N+1.
 - Passwords move. All 36 are bcrypt hashes, and Clerk's import accepts `password_hasher: "bcrypt"`.
