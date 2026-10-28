@@ -63,6 +63,12 @@ struct ConvexAPI: Sendable {
     return URLSession(configuration: config)
   }()
 
+  private static let longActionSession: URLSession = {
+    let config = URLSessionConfiguration.default
+    config.timeoutIntervalForResource = 180
+    return URLSession(configuration: config)
+  }()
+
   func query<T: Decodable>(
     _ path: String, _ args: some Encodable & Sendable = NoArgs(), as _: T.Type = T.self
   ) async throws -> T {
@@ -76,12 +82,15 @@ struct ConvexAPI: Sendable {
   }
 
   func action<T: Decodable>(
-    _ path: String, _ args: some Encodable & Sendable = NoArgs(), as _: T.Type = T.self
+    _ path: String, _ args: some Encodable & Sendable = NoArgs(), as _: T.Type = T.self,
+    timeout: TimeInterval? = nil
   ) async throws -> T {
-    try await call("action", path, args)
+    try await call("action", path, args, timeout: timeout)
   }
 
-  private func call<T: Decodable>(_ kind: String, _ path: String, _ args: some Encodable)
+  private func call<T: Decodable>(
+    _ kind: String, _ path: String, _ args: some Encodable, timeout: TimeInterval? = nil
+  )
     async throws -> T
   {
     let body = try JSONEncoder().encode(Body(path: path, args: args))
@@ -94,7 +103,9 @@ struct ConvexAPI: Sendable {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
       }
       request.httpBody = body
-      let (data, response) = try await Self.session.data(for: request)
+      if let timeout { request.timeoutInterval = timeout }
+      let session = timeout == nil ? Self.session : Self.longActionSession
+      let (data, response) = try await session.data(for: request)
       let status = (response as? HTTPURLResponse)?.statusCode ?? 0
       // Convex answers 401 for an expired or unknown token. Try once more with a fresh one.
       if status == 401 {

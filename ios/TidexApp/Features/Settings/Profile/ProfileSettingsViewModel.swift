@@ -515,7 +515,9 @@ extension ProfileSettingsViewModel {
         let success: Bool
       }
 
-      let response: DeleteAccountResponse = try await ConvexAPI.app.action("account:deleteAccount")
+      // Deletion batches and Clerk cleanup can take longer than a normal data request.
+      let response: DeleteAccountResponse = try await ConvexAPI.app.action(
+        "account:deleteAccount", timeout: 120)
 
       if response.success {
         // Account deleted successfully. Clear local data and the Clerk session.
