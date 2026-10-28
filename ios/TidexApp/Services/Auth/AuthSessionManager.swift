@@ -95,8 +95,28 @@ final class AuthSessionManager {
   private var cachedUserClerkId: String?
   private var lastToken: (token: String, expiresAt: TimeInterval)?
   private var userTask: Task<AuthUser, Error>?
+  private var userTaskSessionId: String?
+  private var cachedUserSessionId: String?
+  private let activeSessionId: () -> String?
+  private let lookupUser: () async throws -> AuthUser
+  /// Bumped whenever the cached user is dropped, so a lookup that started before can't
+  /// publish a user that is out of date, such as one from before an impersonation change.
+  private var userGeneration = 0
 
-  private init() {}
+  init(
+    activeSessionId: @escaping () -> String? = { Clerk.shared.session?.id },
+    lookupUser: @escaping () async throws -> AuthUser = {
+      if let user: AuthUser = try await ConvexAPI.app.query("users:current") { return user }
+      _ = try await ConvexAPI.app.action("users:ensureCurrent", as: String.self)
+      guard let user: AuthUser = try await ConvexAPI.app.query("users:current") else {
+        throw AuthSessionManagerError.notSignedIn
+      }
+      return user
+    }
+  ) {
+    self.activeSessionId = activeSessionId
+    self.lookupUser = lookupUser
+  }
 
   // MARK: - Public API
 
@@ -188,6 +208,7 @@ final class AuthSessionManager {
   /// server, such as accepting terms or starting an impersonation.
   @discardableResult
   func forceRefresh() async throws -> AuthSession {
+    userGeneration += 1
     cachedUser = nil
     userTask = nil
     return try await withTimeout { try await self.resolveSession(skipCache: true) }
@@ -200,6 +221,7 @@ final class AuthSessionManager {
     #endif
     guard let session = Clerk.shared.session else { return nil }
     let token = try await session.getToken(.init(skipCache: forceRefresh))
+    guard activeSessionId() == session.id else { return nil }
     if let token { remember(token: token, sessionId: session.id) }
     return token
   }
@@ -211,6 +233,7 @@ final class AuthSessionManager {
 
   /// Forgets the cached user. Sign-out and impersonation changes call it.
   func clearCachedUser() {
+    userGeneration += 1
     cachedUser = nil
     cachedUserClerkId = nil
     userTask = nil
@@ -290,8 +313,14 @@ final class AuthSessionManager {
     guard let token = try await clerkSession.getToken(.init(skipCache: skipCache)) else {
       throw AuthSessionManagerError.notSignedIn
     }
+    guard activeSessionId() == clerkSession.id else {
+      throw AuthSessionManagerError.notSignedIn
+    }
+    let user = try await currentUser(clerkUserId: clerkSession.clerkUserId, sessionId: clerkSession.id)
+    guard activeSessionId() == clerkSession.id else {
+      throw AuthSessionManagerError.notSignedIn
+    }
     remember(token: token, sessionId: clerkSession.id)
-    let user = try await currentUser(clerkUserId: clerkSession.clerkUserId)
     return AuthSession(
       user: user,
       accessToken: token,
@@ -302,26 +331,30 @@ final class AuthSessionManager {
 
   /// `users.current`, creating or linking the row with `users.ensureCurrent` on the first
   /// sign-in. Concurrent callers share one lookup.
-  private func currentUser(clerkUserId: String) async throws -> AuthUser {
-    if let cachedUser, cachedUserClerkId == clerkUserId { return cachedUser }
-    if let userTask { return try await userTask.value }
-    let task = Task<AuthUser, Error> {
-      if let user: AuthUser = try await ConvexAPI.app.query("users:current") { return user }
-      _ = try await ConvexAPI.app.action("users:ensureCurrent", as: String.self)
-      guard let user: AuthUser = try await ConvexAPI.app.query("users:current") else {
-        throw AuthSessionManagerError.notSignedIn
-      }
-      return user
+  func currentUser(clerkUserId: String, sessionId: String) async throws -> AuthUser {
+    guard activeSessionId() == sessionId else { throw AuthSessionManagerError.notSignedIn }
+    if let cachedUser, cachedUserClerkId == clerkUserId, cachedUserSessionId == sessionId {
+      return cachedUser
     }
-    userTask = task
-    defer { userTask = nil }
+    let generation = userGeneration
+    let task: Task<AuthUser, Error>
+    if let userTask, userTaskSessionId == sessionId {
+      task = userTask
+    } else {
+      task = Task { try await self.lookupUser() }
+      userTask = task
+      userTaskSessionId = sessionId
+    }
+    defer { if userTask == task { userTask = nil } }
     let user = try await task.value
-    guard Clerk.shared.session?.clerkUserId == clerkUserId else {
-      throw AuthSessionManagerError.notSignedIn
+    guard activeSessionId() == sessionId else { throw AuthSessionManagerError.notSignedIn }
+    guard userGeneration == generation else {
+      return try await currentUser(clerkUserId: clerkUserId, sessionId: sessionId)
     }
+    cachedUserSessionId = sessionId
     cachedUser = user
     cachedUserClerkId = clerkUserId
-    // The notification service extension drops pushes meant for another account. Devices
+    // The notification service extension redacts pushes meant for another account. Devices
     // register under the signed-in person, the admin during an impersonation.
     WidgetAppGroup.storeSignedInUserId(user.actorId)
     if let data = try? JSONEncoder().encode(StoredUser(clerkUserId: clerkUserId, user: user)) {
@@ -356,7 +389,10 @@ final class AuthSessionManager {
     }
   }
 
-  private func withTimeout<T: Sendable>(
+}
+
+private extension AuthSessionManager {
+  func withTimeout<T: Sendable>(
     _ operation: @escaping @MainActor @Sendable () async throws -> T
   ) async throws -> T {
     let timeout = sessionOperationTimeout

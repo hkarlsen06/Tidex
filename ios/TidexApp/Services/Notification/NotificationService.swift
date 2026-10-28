@@ -202,7 +202,14 @@ final class NotificationService {
     let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !threadId.isEmpty, !trimmedBody.isEmpty else { return }
 
-    guard let senderUserId = AppCoordinator.shared.getCurrentUserId() else {
+    // A reply can cold-launch the app before the coordinator has loaded the user, so fall back
+    // to the session stored on the device, then to a fresh lookup.
+    var senderUserId = AppCoordinator.shared.getCurrentUserId()
+      ?? AuthSessionManager.shared.localSession()?.normalizedUserId
+    if senderUserId == nil {
+      senderUserId = await AuthSessionManager.shared.getUserIdIfAvailable()
+    }
+    guard let senderUserId else {
       await scheduleQuickReplyFailedNotification(threadId: threadId, body: trimmedBody)
       return
     }
