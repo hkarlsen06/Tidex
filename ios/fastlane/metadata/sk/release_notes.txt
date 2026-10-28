@@ -1,3 +1,3 @@
-- Do detailu smeny bolo pridané pole na poznámku, takže si môžete napísať poznámku bez toho, aby ste najprv ťukli na Upraviť
-- Opravená prázdna obrazovka, ktorá sa mohla zobraziť pri otvorení Tidexu z oznámenia
-- Opravy chýb a ďalšie vylepšenia
+- Vylepšené priebežné aktualizácie zmien, zdieľaných kalendárov a správ.
+- Aktualizované prihlasovanie cez Apple, Google, e-mailové kódy alebo e-mail a heslo.
+- Vylepšená spoľahlivosť a ochrana súkromia.

@@ -1,3 +1,3 @@
-- Menambahkan kolom catatan pada detail shift, jadi Anda bisa menulis catatan tanpa harus mengetuk Edit terlebih dahulu
-- Memperbaiki layar kosong yang bisa muncul saat Anda membuka Tidex dari notifikasi
-- Perbaikan bug dan peningkatan lainnya
+- Meningkatkan pembaruan langsung untuk sif, kalender bersama, dan pesan.
+- Memperbarui proses masuk dengan Apple, Google, kode email, atau email dan kata sandi.
+- Meningkatkan keandalan dan privasi.

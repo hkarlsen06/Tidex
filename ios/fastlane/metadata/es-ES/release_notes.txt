@@ -1,3 +1,3 @@
-- Añadido un campo de notas en los detalles del turno, para que puedas escribir una nota sin tener que tocar primero Editar
-- Corregida una pantalla en blanco que podía aparecer al abrir Tidex desde una notificación
-- Corrección de errores y otras mejoras
+- Mejoradas las actualizaciones en tiempo real de turnos, calendarios compartidos y mensajes.
+- Actualizado el inicio de sesión con Apple, Google, códigos por correo electrónico o correo y contraseña.
+- Mejoradas la fiabilidad y la privacidad.

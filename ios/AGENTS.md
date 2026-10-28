@@ -41,9 +41,9 @@ Run `swiftlint --quiet` from the repository root, or the baseline is skipped. Th
 
 ## Backend access
 
-Use the existing Swift Supabase client with the user's JWT for RLS-protected queries and authorized public RPCs. Keep privileged operations server-side in the existing Edge Functions or reviewed SQL functions. Do not introduce a web API layer or put service-role credentials in the iOS app. Inspect the affected service and handler before choosing a route.
+Use the existing `ConvexAPI` client for queries, mutations and actions, and `ConvexRealtime` for subscriptions. Clerk provides the session token. Keep authorization and privileged operations in `backend/convex/`. Inspect the affected service and handler before choosing a route. Administrative deployment keys stay out of the app.
 
-The current service layer uses `.rpc(...)` and `supabase.functions.invoke(...)`; examples include `Services/Data/FriendsMessagingService.swift` and `Services/Auth/ImpersonationManager.swift` under `ios/TidexApp/`. Backend source and self-hosted deployment guidance are in the root AGENTS.md. Static marketing and compatibility sites are not an authenticated application API server.
+Supabase remains only for the legacy GoTrue session refresh during the N-to-N+1 exchange. New app features use Convex. Backend and deployment guidance is in the root AGENTS.md.
 
 ## Tests
 

@@ -1,3 +1,3 @@
-- Đã thêm trường ghi chú vào chi tiết ca làm, ताकि bạn có thể viết ghi chú mà không cần chạm vào Sửa trước
-- Đã sửa lỗi màn hình trống có thể xuất hiện khi bạn mở Tidex từ thông báo
-- Sửa lỗi và các cải tiến khác
+- Cải thiện cập nhật trực tiếp cho ca làm, lịch được chia sẻ và tin nhắn.
+- Cập nhật đăng nhập bằng Apple, Google, mã email hoặc email và mật khẩu.
+- Cải thiện độ tin cậy và quyền riêng tư.

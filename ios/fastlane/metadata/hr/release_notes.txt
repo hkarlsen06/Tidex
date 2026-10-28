@@ -1,3 +1,3 @@
-- Dodano je polje za bilješku u detaljima smjene, tako da možete napisati bilješku bez da prvo dodirnete Uredi
-- Ispravljen je prazan zaslon koji se mogao pojaviti kada otvorite Tidex iz obavijesti
-- Ispravci pogrešaka i druga poboljšanja
+- Poboljšana ažuriranja smjena, dijeljenih kalendara i poruka u stvarnom vremenu.
+- Ažurirana prijava putem Applea, Googlea, koda e-poštom ili e-pošte i lozinke.
+- Poboljšane pouzdanost i privatnost.

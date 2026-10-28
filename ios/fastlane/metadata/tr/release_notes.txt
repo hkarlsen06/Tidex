@@ -1,3 +1,3 @@
-- Vardiya ayrıntılarına bir not alanı eklendi; böylece önce Düzenle’ye dokunmadan not yazabilirsin
-- Tidex’i bir bildirimden açtığında görünen boş ekran sorunu düzeltildi
-- Hata düzeltmeleri ve diğer iyileştirmeler
+- Vardiyalar, paylaşılan takvimler ve mesajlar için canlı güncellemeler iyileştirildi.
+- Apple, Google, e-posta kodları veya e-posta ve parola ile giriş güncellendi.
+- Güvenilirlik ve gizlilik iyileştirildi.

@@ -1,3 +1,3 @@
-- Ajout d'un champ de note dans les détails du shift, pour écrire une note sans toucher d'abord à Modifier
-- Correction d'un écran vide qui pouvait s'afficher lorsque vous ouvriez Tidex depuis une notification
-- Corrections de bugs et autres améliorations
+- Amélioration des mises à jour en temps réel des services, calendriers partagés et messages.
+- Mise à jour de la connexion avec Apple, Google, un code par e-mail ou une adresse e-mail et un mot de passe.
+- Amélioration de la fiabilité et de la confidentialité.

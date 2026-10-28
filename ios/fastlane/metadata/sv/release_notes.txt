@@ -1,3 +1,3 @@
-- Lade till ett anteckningsfält i passdetaljer, så att du kan skriva en anteckning utan att först trycka på Redigera
-- Åtgärdade en tom skärm som kunde visas när du öppnade Tidex från en notis
-- Buggfixar och andra förbättringar
+- Förbättrat uppdateringar av pass, delade kalendrar och meddelanden i realtid.
+- Uppdaterat inloggningen med Apple, Google, e-postkoder eller e-post och lösenord.
+- Förbättrat stabilitet och integritet.

@@ -1,3 +1,3 @@
-- Een notitieveld toegevoegd aan dienstdetails, zodat je een notitie kunt schrijven zonder eerst op Wijzig te tikken
-- Een leeg scherm opgelost dat kon verschijnen wanneer je Tidex opende vanuit een melding
-- Bugfixes en andere verbeteringen
+- Live-updates voor diensten, gedeelde agenda's en berichten verbeterd.
+- Inloggen met Apple, Google, e-mailcodes of e-mail en wachtwoord bijgewerkt.
+- Betrouwbaarheid en privacy verbeterd.

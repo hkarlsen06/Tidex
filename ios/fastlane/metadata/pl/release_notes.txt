@@ -1,3 +1,3 @@
-- Dodano pole notatki w szczegółach zmiany, więc możesz zapisać notatkę bez wcześniejszego stukania w Edytuj
-- Naprawiono problem z pustym ekranem, który mógł się pojawić po otwarciu Tidex z powiadomienia
-- Poprawki błędów i inne usprawnienia
+- Ulepszono aktualizacje zmian, udostępnionych kalendarzy i wiadomości w czasie rzeczywistym.
+- Zaktualizowano logowanie przez Apple, Google, kody e-mail lub adres e-mail i hasło.
+- Poprawiono niezawodność i prywatność.
