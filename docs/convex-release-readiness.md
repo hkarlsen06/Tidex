@@ -2,7 +2,7 @@
 
 Version 3.1.0, build `20261028.1856`, is uploaded and processed as `VALID` and `APP_STORE_ELIGIBLE`. It is attached to the App Store draft for app `6757129790`. The draft has manual release, phased release disabled, updated notes in all 32 locales and inherited App Review credentials. All 170 screenshots across 34 sets are complete. The draft remains `PREPARE_FOR_SUBMISSION`. It has not been submitted or released.
 
-The uploaded source is signed commit `2ae9d319`. Later readiness documentation does not change that binary. All implementation changes landed as signed local commits on `main`. Nothing was pushed.
+The uploaded source is signed commit `2ae9d319`. Later migration and readiness changes do not change that binary. All implementation changes landed as signed local commits on `main`. Nothing was pushed.
 
 ## Fixes in the uploaded build
 
@@ -20,13 +20,19 @@ The final notification extension source passed a simulator callback probe for re
 
 On 2026-10-28, Hjalmar confirmed that the N-to-N+1 offline retry, manual sign-in priority and unsynced-shift impersonation checks all passed on Cold Harbor. Physical APNs delivery remains unchecked in [the device checklist](../RELEASE_CHECKS.md).
 
-A later read-only account audit found a cutover blocker. Excluding the review demo, 247 of 257 accounts have a valid Clerk mapping. Ten do not: four phone-only accounts, three Apple accounts without stored email, and three unconfirmed email sign-ups. One phone-only account used 3.0.1 on 2026-10-20, and one unmapped Apple account used 2.7.1 on 2026-10-28. Both would fail the automatic exchange. Apple provider IDs are preserved for manual recovery, but the phone-only account needs a verified email or another ownership-verified linking path before cutover. Detailed evidence stays in `/tmp/tidex-n1-readiness/session-exchange-audit.md`, with account identifiers only in the local report. No accounts, sessions or configuration were changed by this audit.
+The initial read-only account audit found ten accounts without a Clerk mapping, excluding the review demo. Four were phone-only, three used Apple without stored email, and three were unconfirmed email sign-ups. A phone-only account used 3.0.1 on 2026-10-20, and an Apple account used 2.7.1 on 2026-10-28. Both would fail the automatic exchange. Hjalmar accepted manual help for the phone-only account on 2026-10-28. Detailed account identifiers stay in the local audit at `/tmp/tidex-n1-readiness/session-exchange-audit.md`.
+
+The importer now creates Clerk users for Apple accounts without email, using a stable internal username and Clerk's `skip_user_requirement` migration option. It supplies no invented email or password. A retained Apple provider subject is required for this path. Phone-only and unconfirmed email accounts keep their previous handling. Repeated imports reuse the Clerk user by its Supabase external ID. The migration-only username is separate from the public Tidex username.
+
+The development test passed the complete automatic exchange with an email-less test token in GoTrue's format, Clerk ticket redemption, the original Tidex UUID and an existing shift. The deployed exchange verified the token against a temporary development signing key. Verified email imports, bcrypt passwords, address removal and repeated imports also passed against Clerk. All temporary accounts and test data were removed, and development signing keys were restored. Five focused backend tests and TypeScript checks pass. Fresh Apple sign-in when Apple supplies no email remains unchecked, because it is separate from the saved-session exchange.
 
 Local evidence is in `/tmp/tidex-n1-readiness/`. `archive-report.md` contains the full commands, results, artifact paths and device limits. `final-asc-state.json` records the attached build and draft settings. The IPA is `export/Tidex.ipa` and the archive is `Tidex-3.1.0.xcarchive` under that directory.
 
 ## Backend rehearsal
 
-The fresh import matches every expected table count. It copied 258 Supabase accounts, linked 248 Clerk users, and copied 144 referenced message images and 12 profile pictures. The old `before_paywall` field and the five retired purchase tables are gone. The App Review demo account still bypasses the new-device email code.
+The fresh import matches every expected table count. It copied 258 Supabase accounts, linked 251 Clerk users, and copied 144 referenced message images and 12 profile pictures. The three Apple accounts without email now have mappings. Seven accounts remain unmapped, four phone-only and three unconfirmed email sign-ups. The old `before_paywall` field and the five retired purchase tables are gone. The App Review demo account still bypasses the new-device email code.
+
+The post-fix audit checked all 257 non-demo accounts. All 250 mappings resolve to the correct existing Clerk user. The recently active Apple account retains its original UUID and all 57 original shift IDs match Supabase. No real customer's ticket was minted or session started for this verification. The full pre-fix snapshot and migration log are in `/tmp/tidex-rehearsal.kcJWlN/`.
 
 The backend's old 768 MiB container cap caused memory reclaim, swap use and query timeouts during imports. The isolated Tidex Convex container now has a 2 GiB limit, and the full import completed after that change. Supabase and Paeonia were unchanged. The source compose backup is recorded in [the migration plan](convex-migration-plan.md#rehearsal-backend-memory).
 

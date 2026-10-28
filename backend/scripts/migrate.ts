@@ -20,6 +20,7 @@
 
 import { readFileSync } from "node:fs";
 import schema from "../convex/schema";
+import { parseClerkUsers, syncClerkUser, type ClerkImportUser, type ClerkUser } from "./clerk-user-import";
 
 const args = process.argv.slice(2);
 const flag = (name: string) => {
@@ -168,25 +169,11 @@ const clerkRefused = (error: unknown) => {
   return status !== undefined && status >= 400 && status < 500;
 };
 
-type ClerkEmail = {
-  id: string;
-  email_address: string;
-  verification: { status: string } | null;
-  /** The Google or Apple sign-ins (type oauth_<provider>) that use this address. */
-  linked_to: { type: string; id: string }[];
-};
-type ClerkUser = {
-  id: string;
-  external_id: string | null;
-  primary_email_address_id: string | null;
-  email_addresses: ClerkEmail[];
-};
-
 /** Every Clerk user, oldest first. */
 async function allClerkUsers(): Promise<ClerkUser[]> {
   const users: ClerkUser[] = [];
   for (let offset = 0; ; offset += 500) {
-    const page = (await clerk("GET", `/users?limit=500&offset=${offset}&order_by=%2Bcreated_at`)) as ClerkUser[];
+    const page = parseClerkUsers(await clerk("GET", `/users?limit=500&offset=${offset}&order_by=%2Bcreated_at`));
     users.push(...page);
     if (page.length < 500) return users;
   }
@@ -214,9 +201,7 @@ async function deleteStaleClerkUsers(supabaseIds: ReadonlySet<string>) {
   }
 }
 
-type AuthUser = {
-  id: string;
-  email: string | null;
+type AuthUser = ClerkImportUser & {
   name: string | null;
   avatar_url: string | null;
   locale: string | null;
@@ -225,67 +210,8 @@ type AuthUser = {
   role: string | null;
   banned: boolean;
   last_sign_in_at: string | null;
-  created_at: string;
   providers: string[] | null;
-  password_hash: string | null;
-  proven_emails: string[] | null;
 };
-
-/**
- * Creates or updates the user's Clerk user and returns its id, or null without an email.
- * An existing Clerk user ends up with exactly the proven addresses, all verified, and the
- * account's own address as primary. Addresses Clerk links to a Google or Apple sign-in stay.
- */
-async function syncClerkUser(u: AuthUser): Promise<string | null> {
-  const emails = u.proven_emails ?? [];
-  const existing = (await clerk("GET", `/users?external_id=${encodeURIComponent(u.id)}`)) as ClerkUser[];
-  if (emails.length === 0) {
-    if (existing.length > 0) log(`Clerk user ${existing[0]!.id} of ${u.id} has no proven email left. Left as it is.`);
-    return null;
-  }
-  // The account's own address first, so it becomes the primary one.
-  const ordered = [...new Set([u.email, ...emails].filter((e): e is string => e !== null && emails.includes(e)))];
-  const password = u.password_hash?.startsWith("$2") ? { password_digest: u.password_hash, password_hasher: "bcrypt" } : {};
-  if (existing.length === 0) {
-    const created = await clerk("POST", "/users", {
-      external_id: u.id,
-      email_address: ordered,
-      ...password,
-      skip_password_checks: true,
-      skip_password_requirement: true,
-      created_at: u.created_at,
-    });
-    return created.id;
-  }
-  const user = existing[0]!;
-  const have = new Map(user.email_addresses.map((e) => [e.email_address.toLowerCase(), e]));
-  for (const email of ordered) {
-    const e = have.get(email);
-    if (e === undefined) {
-      have.set(email, await clerk("POST", "/email_addresses", { user_id: user.id, email_address: email, verified: true }));
-    } else if (e.verification?.status !== "verified") {
-      await clerk("PATCH", `/email_addresses/${e.id}`, { verified: true });
-    }
-  }
-  // Clerk wants a verified address of the user as primary, and the old primary can only go after.
-  const primaryId = have.get(ordered[0]!)!.id;
-  if (user.primary_email_address_id !== primaryId) {
-    await clerk("PATCH", `/users/${user.id}`, { primary_email_address_id: primaryId });
-  }
-  for (const e of user.email_addresses) {
-    if (emails.includes(e.email_address.toLowerCase()) || e.id === primaryId) continue;
-    if (e.linked_to.length > 0) {
-      log(`Clerk user ${user.id} keeps ${e.email_address}, which ${e.linked_to.map((l) => l.type).join(", ")} uses`);
-      continue;
-    }
-    await clerk("DELETE", `/email_addresses/${e.id}`);
-    log(`Removed ${e.email_address} from Clerk user ${user.id}`);
-  }
-  if (password.password_digest !== undefined) {
-    await clerk("PATCH", `/users/${user.id}`, { ...password, skip_password_checks: true });
-  }
-  return user.id;
-}
 
 // ---------- The run ----------
 
@@ -318,6 +244,7 @@ async function main() {
       'last_sign_in_at', u.last_sign_in_at,
       'created_at', u.created_at,
       'providers', u.raw_app_meta_data->'providers',
+      'apple_subject', (select nullif(i.identity_data->>'sub', '') from auth.identities i where i.user_id = u.id and i.provider = 'apple' limit 1),
       'password_hash', u.encrypted_password,
       'proven_emails', (
         select json_agg(distinct e) from (
@@ -342,7 +269,7 @@ async function main() {
     for (const [i, u] of authUsers.entries()) {
       if (CLERK_ONLY !== undefined && !CLERK_ONLY.includes(u.id)) continue;
       try {
-        const id = await syncClerkUser(u);
+        const id = await syncClerkUser(u, clerk, log);
         if (id !== null) clerkIds.set(u.id, id);
       } catch (error) {
         if (!clerkRefused(error)) throw error;
@@ -352,10 +279,10 @@ async function main() {
       if ((i + 1) % 25 === 0) log(`Clerk: ${i + 1} of ${authUsers.length}`);
     }
     for (const u of retry) {
-      const id = await syncClerkUser(u);
+      const id = await syncClerkUser(u, clerk, log);
       if (id !== null) clerkIds.set(u.id, id);
     }
-    log(`Clerk: ${clerkIds.size} users${CLERK_ONLY === undefined ? `, ${authUsers.length - clerkIds.size} without a proven email` : ""}`);
+    log(`Clerk: ${clerkIds.size} users${CLERK_ONLY === undefined ? `, ${authUsers.length - clerkIds.size} without a supported verified identity` : ""}`);
   }
   const now = new Date().toISOString();
   await put(
