@@ -1,7 +1,7 @@
 {
   "name": "ios",
   "version": "1.0.0",
-  "description": "The iOS app is a native SwiftUI application for tracking work shifts and calculating wages. It uses a **local-first, sync-based architecture** with Supabase as the backend.",
+  "description": "The native SwiftUI app tracks work shifts and estimates wages. It stores data locally, syncs with Convex and signs in with Clerk.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
