@@ -45,7 +45,7 @@ const SSH_DB = "cd /srv/tidex/tidex-sb && sudo docker compose exec -T db psql -U
 async function run(cmd: string[], stdin?: string): Promise<Buffer> {
   const proc = Bun.spawn(cmd, { stdin: stdin === undefined ? "ignore" : new TextEncoder().encode(stdin), stdout: "pipe", stderr: "pipe" });
   const [out, err, code] = await Promise.all([new Response(proc.stdout).arrayBuffer(), new Response(proc.stderr).text(), proc.exited]);
-  if (code !== 0) throw new Error(`${cmd.join(" ").slice(0, 80)} failed: ${err.slice(0, 500)}`);
+  if (code !== 0) throw new Error(`${cmd.join(" ").slice(0, 80)} failed: ${err.slice(-2000)}`);
   return Buffer.from(out);
 }
 
@@ -290,7 +290,7 @@ async function syncClerkUser(u: AuthUser): Promise<string | null> {
 // ---------- The run ----------
 
 async function main() {
-  await run(["mkdir", "-p", WORK]);
+  await run(["mkdir", "-m", "700", "-p", WORK]);
   log(`Writing to the deployment in ${ENV_FILE}${SKIP_CLERK ? ", skipping Clerk" : ""}`);
   const expected: Record<string, number> = {};
   const put = async (table: string, rows: object[]) => {
