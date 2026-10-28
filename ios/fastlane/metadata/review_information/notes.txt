@@ -1,9 +1,9 @@
-Tidex is free and has no in-app purchases.
+Version 3.1.0 migrates Tidex's backend from Supabase to Convex and moves authentication to Clerk. Existing account IDs, shifts, and settings are preserved. The submitted build is the build we intend to release.
+
+The current App Store version, 3.0.1, continues to use Supabase. After approval, we will complete the final data migration and manually release 3.1.0. Push sending from Convex is disabled until that switchover to avoid duplicate notifications from both backends.
 
 Sign in using the demo account credentials supplied in App Review Information. This account does not require a new-device email code. The demo jobs Harbor Café and City Library use USD intentionally, even on a Norwegian device.
 
-This update improves account sign-in and live updates across devices. Existing accounts and saved shifts are preserved. Sign-in supports Apple, Google, email codes, and email with password.
+You can add and edit shifts, inspect estimated earnings and pay settings, and use the shared calendar and messaging screens with the demo account.
 
-The review build uses a separate rehearsal copy of the service. Changes made here do not reach people using the current App Store version. Push delivery is disabled until the approved version is manually released during the production cutover.
-
-You can add and edit shifts, inspect estimated earnings and pay settings, and use the shared calendar and messaging screens with the demo account. This version will be released manually after approval.
+Tidex is free and has no in-app purchases.
