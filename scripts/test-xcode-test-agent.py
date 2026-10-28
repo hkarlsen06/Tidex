@@ -11,6 +11,20 @@ import tempfile
 wrapper = Path(__file__).with_name("xcode-test-agent.sh").read_text()
 parser = wrapper.split("<<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
 
+# The two phases must build and run products for the same platform.
+destination_selection = wrapper.split("BUILD_DESTINATION=", 1)[1].split("esac", 1)[0]
+for destination, expected in [
+    ("", "generic/platform=iOS Simulator"),
+    ("platform=iOS Simulator,id=simulator", "generic/platform=iOS Simulator"),
+    ("platform=iOS,id=phone", "generic/platform=iOS"),
+]:
+    result = subprocess.check_output([
+        "bash", "-c",
+        'DESTINATION="$1"\nBUILD_DESTINATION=' + destination_selection
+        + 'esac\nprintf "%s" "$BUILD_DESTINATION"', "test", destination,
+    ], text=True)
+    assert result == expected, (destination, result, expected)
+
 
 def issue(message, kind="TestIssueSummary"):
     return {

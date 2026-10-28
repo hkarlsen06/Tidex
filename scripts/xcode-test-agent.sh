@@ -3,7 +3,7 @@ set -euo pipefail
 
 # A run has two phases, so one agent's tests and another agent's build run at
 # the same time:
-#   1. build-for-testing for the generic simulator under the machine-wide
+#   1. build-for-testing for the destination platform under the machine-wide
 #      xcodebuild lock (scripts/lib/xcode-agent-throttle.sh), then release it
 #   2. test-without-building on the destination
 # Without XCODE_TEST_AGENT_DESTINATION, phase 2 tests on any free shared
@@ -157,6 +157,10 @@ SIMULATOR_LOCK=simulator
 TEST_SIMULATOR_UDID=""
 SHUTDOWN_TEST_SIMULATOR=0
 DESTINATION="${XCODE_TEST_AGENT_DESTINATION:-}"
+BUILD_DESTINATION='generic/platform=iOS Simulator'
+case "$DESTINATION" in
+  platform=iOS,*|platform=iOS) BUILD_DESTINATION='generic/platform=iOS' ;;
+esac
 if [ -n "$DESTINATION" ]; then
   SIMULATOR_LOCK=""
   if ! DESTINATION_SIMULATOR="$(destination_simulator "$DESTINATION" 2>/dev/null)"; then
@@ -214,7 +218,7 @@ ${XA_PREFIX[@]+"${XA_PREFIX[@]}"} xcodebuild ${XA_ARGS[@]+"${XA_ARGS[@]}"} \
   -resultBundlePath "$BUILD_BUNDLE" \
   -project "$PROJECT_PATH" \
   -scheme "$SCHEME_NAME" \
-  -destination 'generic/platform=iOS Simulator' \
+  -destination "$BUILD_DESTINATION" \
   build-for-testing \
   ${BUILD_EXTRA_ARGS[@]+"${BUILD_EXTRA_ARGS[@]}"} >"$LOG_FILE" 2>&1 &
 XCODEBUILD_PID=$!

@@ -30,7 +30,7 @@ Agents run builds and tests themselves through the wrappers below. "Builds and t
 ```
 
 - Do NOT run `xcodebuild test` directly.
-- The wrapper runs in two phases. It builds for testing under the machine-wide xcodebuild lock and releases it. Then it tests under one shared simulator's lock: the one your worktree holds, else the first free one. Set `XCODE_TEST_AGENT_DESTINATION` only for a connected device, as the root [AGENTS.md](../../AGENTS.md#devices-and-simulators) describes.
+- The wrapper runs in two phases. It builds for the destination platform under the machine-wide xcodebuild lock and releases it. Then it tests under one shared simulator's lock: the one your worktree holds, else the first free one. A physical destination builds iOS device products and takes no simulator lock. Set `XCODE_TEST_AGENT_DESTINATION` only for a connected device, as the root [AGENTS.md](../../AGENTS.md#devices-and-simulators) describes.
 - Before each run on a simulator, the wrapper uninstalls Tidex there, because a leftover Live Activity makes the system relaunch the app right after install. xcodebuild then attaches to that launch without the test bundle, and the run fails with "test runner hung before establishing connection" or "failed to launch no.tidex.app". On a shared simulator the reset runs under that simulator's lock. If a run fails that way, run it again through the wrapper. To uninstall the app with `xcrun simctl` yourself, take a simulator first, as the root [AGENTS.md](../../AGENTS.md#devices-and-simulators) describes.
 - On a physical device, the wrapper skips the reset, because uninstalling there deletes the user's data.
 - JSON output is available with:
