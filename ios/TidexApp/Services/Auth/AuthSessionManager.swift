@@ -136,7 +136,14 @@ final class AuthSessionManager {
       }
     #endif
     do {
+      let generation = userGeneration
       let session = try await withTimeout { try await self.resolveSession(skipCache: false) }
+      guard activeSessionId() == session.clerkSessionId else {
+        throw AuthSessionManagerError.notSignedIn
+      }
+      guard userGeneration == generation else {
+        return try await getSession(reportMissingSessionWarning: reportMissingSessionWarning)
+      }
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       return session
     } catch {
@@ -211,7 +218,13 @@ final class AuthSessionManager {
     userGeneration += 1
     cachedUser = nil
     userTask = nil
-    return try await withTimeout { try await self.resolveSession(skipCache: true) }
+    let generation = userGeneration
+    let session = try await withTimeout { try await self.resolveSession(skipCache: true) }
+    guard activeSessionId() == session.clerkSessionId else {
+      throw AuthSessionManagerError.notSignedIn
+    }
+    guard userGeneration == generation else { return try await getSession() }
+    return session
   }
 
   /// The token `ConvexAPI.app` sends. Nil when nobody is signed in.
@@ -304,8 +317,9 @@ final class AuthSessionManager {
     }
   }
 
-  // MARK: - Private
+}
 
+extension AuthSessionManager {
   private func resolveSession(skipCache: Bool) async throws -> AuthSession {
     guard let clerkSession = Clerk.shared.session else {
       throw AuthSessionManagerError.notSignedIn
