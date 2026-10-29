@@ -6,15 +6,17 @@ Run local commands from the repository root. Keep the same terminal for the vari
 
 ## Current checkpoint, 2026-10-29
 
-Hjalmar authorized step 1, backups, maintenance, the API write freeze and cron drain. That step is complete. The final import, calendar and push switch, and App Store release have not run.
+Hjalmar authorized steps 1 and 2. Backups, maintenance, the API write freeze, cron drain and final import are complete. The calendar and push switch and App Store release have not run.
 
 - App Store Connect confirms build `20261028.1856` is `PENDING_DEVELOPER_RELEASE` with manual release.
 - The public gate is `minimumVersion: 3.0.0`, `maintenance: true`. Hjalmar confirmed the maintenance screen on his phone.
 - Caddy installed the Supabase-calendar freeze at `20:03:38 UTC`. Live probes on both API hostnames confirm that refresh reaches GoTrue, calendar requests reach the existing endpoint, and the other tested API routes abort.
 - All eight Supabase cron jobs were disabled at `20:05:52 UTC`. At `20:07:02 UTC`, active jobs, running jobs and queued HTTP requests were all zero.
-- Convex push delivery remains disabled. The Clerk audit found 251 users, none without `external_id`, and one imported account with Apple or Google connections. No Clerk users were changed.
+- The final import completed at `20:18:03 UTC` with `All counts match`. It copied 263 accounts, linked 256 Clerk users and retained the seven accounts without a supported verified identity.
+- Independent verification at `20:20:04 UTC` compared all 42 tables and 22,597 rows against the import files. All 156 referenced files match the Supabase originals by SHA-256. Every Clerk mapping resolves to the matching external account UUID, and no Clerk users lack `external_id`.
+- Convex push delivery remains disabled. The public gate, API freeze and disabled Supabase cron jobs remain in place.
 
-The original gate, Caddy configuration and cron states, a full Convex export with files, its environment, and validated Supabase database archives from before and after the freeze are saved on both machines. The database archive and Convex export checksums match across the copies. The files contain private data and credentials.
+The original gate, Caddy configuration and cron states, a full Convex export with files, its environment, and validated Supabase database archives from before and after the freeze are saved on both machines. The final Convex export is also saved as `convex-final.zip`, with its verification report in `final-import-verification.json` and the import log in `migration.log`. The database archive and Convex export checksums match across the copies. The files contain private data and credentials.
 
 On the Mac, resume with this existing directory. Do not rerun the preparation commands and replace the original rollback state with the frozen state.
 
@@ -22,7 +24,7 @@ On the Mac, resume with this existing directory. Do not rerun the preparation co
 CUTOVER='/Users/hkarlsen06/Library/Application Support/Tidex/cutovers/20261029T195639Z'
 ```
 
-The second copy is root-only at `/srv/tidex/cutovers/20261029T195639Z` on one-s. `clerk.env` is prepared for the final import. Wait for Hjalmar's authorization for that next step. The ordinary auth smoke check now reports the expected blocked settings and password-reset routes.
+The second copy is root-only at `/srv/tidex/cutovers/20261029T195639Z` on one-s. The final import is complete; do not repeat it when resuming. The next step is switching calendar feeds and push delivery, then running the app smoke checks. Rehearsal TestFlight installs need a sign-out and sign-in to reset their sync cursors. The ordinary auth smoke check now reports the expected blocked settings and password-reset routes.
 
 ## Check Apple sign-in requirements
 

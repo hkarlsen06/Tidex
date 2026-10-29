@@ -2,7 +2,9 @@
 
 App Store Connect confirmed on 2026-10-29 that version 3.1.0, build `20261028.1856`, is approved and `PENDING_DEVELOPER_RELEASE`, with manual release and no phased release. It has not been released. The build is `VALID`. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
 
-Hjalmar authorized the first cutover step on 2026-10-29. Backups, maintenance, the old API write freeze and the Supabase cron drain are complete. The final import and release remain pending. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
+Hjalmar authorized the first two cutover steps on 2026-10-29. Backups, maintenance, the old API write freeze, the Supabase cron drain and the final import are complete. Calendar and push switching and release remain pending. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
+
+The final import completed at `20:18:03 UTC` with all counts matching. Independent verification compared all 42 tables and 22,597 rows against the import files, checked all 156 copied files against their Supabase SHA-256 hashes, and verified all 256 Clerk mappings for the 263 source accounts. The same seven accounts lack a supported verified identity. Maintenance, the write freeze and disabled Supabase cron jobs remain in place, and Convex push delivery is still disabled.
 
 Promotional text in all 32 locales and the App Review notes were uploaded through `fastlane ios upload_review_metadata` on 2026-10-28. Independent API readbacks match the local files. Other localized metadata, review credentials, contact information, version settings and the attached build are unchanged. The reviewer notes are in `ios/fastlane/metadata/review_information/notes.txt`. The upload log and verification result are `/tmp/tidex-n1-readiness/fastlane-review-metadata.log` and `/tmp/tidex-n1-readiness/review-metadata-verification.json`.
 
@@ -52,7 +54,7 @@ Production Convex still has no `APNS_RECIPIENTS`. The public gate is now `minimu
 
 The migration plan and iOS guidance now describe Convex and Clerk, the merged implementation, the native Apple connection's credentials and the device wrapper's platform selection. The old Supabase descriptions and schema-blocker instructions were corrected.
 
-Finish the remaining device checklist before releasing. Apple approval is complete. Hjalmar has authorized only the first cutover step so far; the final import, calendar and push switch, and manual release need his go-ahead.
+Finish the remaining device checklist before releasing. Apple approval and the final import are complete. The next step is switching calendar feeds and push delivery, followed by the app smoke checks. The manual App Store release remains pending.
 
 ## Release notes
 
