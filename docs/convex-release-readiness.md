@@ -2,7 +2,7 @@
 
 Apple accepted the manual release of version 3.1.0, build `20261028.1856`, at `2026-10-29 21:14:51 UTC`, with no phased release. The build was `VALID` and `PENDING_DEVELOPER_RELEASE` immediately before the request. Public maintenance stays on until storefronts offer the update. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
 
-At `21:26:50 UTC`, App Store Connect reported `READY_FOR_SALE`, and Apple's public lookup showed 3.1.0 in all six checked regions, including Norway. Hjalmar's phone still showed an older App Store version. Public maintenance remains on pending a refreshed phone check.
+At `21:26:50 UTC`, App Store Connect reported `READY_FOR_SALE`, and Apple's public lookup showed 3.1.0 in all six checked regions, including Norway. Hjalmar's phone still showed an older version after closing the App Store and reopening the direct listing. At `21:30:15 UTC`, the release status and public maintenance response were verified again. Public maintenance remains on until the phone offers 3.1.0.
 
 Hjalmar authorized continuing the cutover on 2026-10-29 and releasing the approved build with the startup issue recorded below. Backups, the old API write freeze, the Supabase cron drain, the final import, calendar and push switching, and phone checks are complete. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
 
