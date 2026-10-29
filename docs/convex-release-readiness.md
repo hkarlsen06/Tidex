@@ -1,8 +1,8 @@
 # N+1 release readiness, 2026-10-29
 
-Apple accepted the manual release of version 3.1.0, build `20261028.1856`, at `2026-10-29 21:14:51 UTC`, with no phased release. The build was `VALID` and `PENDING_DEVELOPER_RELEASE` immediately before the request. Public maintenance stays on until storefronts offer the update. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
+Version 3.1.0, build `20261028.1856`, is released and the public gate is open. Apple accepted the manual release at `2026-10-29 21:14:51 UTC`, with no phased release. The build was `VALID` and `PENDING_DEVELOPER_RELEASE` immediately before the request. Hjalmar confirmed App Store availability on his phone before maintenance was removed. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
 
-At `21:26:50 UTC`, App Store Connect reported `READY_FOR_SALE`, and Apple's public lookup showed 3.1.0 in all six checked regions, including Norway. Hjalmar's phone still showed an older version after closing the App Store and reopening the direct listing. At `21:30:15 UTC`, the release status and public maintenance response were verified again. Public maintenance remains on until the phone offers 3.1.0.
+At `21:26:50 UTC`, App Store Connect reported `READY_FOR_SALE`, and Apple's public lookup showed 3.1.0 in all six checked regions, including Norway. Hjalmar's phone initially showed an older version, so maintenance stayed on until his later confirmation. At `21:32:48 UTC`, eight live checks confirmed `minimumVersion: 3.1.0`, `maintenance: false` for all tested user agents on the public and deployment hostnames. The temporary TestFlight exception is removed, and the static config retains `Cache-Control: no-store`. The marketing build and Pages deployment passed, and Convex was healthy.
 
 Hjalmar authorized continuing the cutover on 2026-10-29 and releasing the approved build with the startup issue recorded below. Backups, the old API write freeze, the Supabase cron drain, the final import, calendar and push switching, and phone checks are complete. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
 
@@ -54,7 +54,7 @@ The post-fix audit checked all 257 non-demo accounts. All 250 mappings resolve t
 
 The backend's old 768 MiB container cap caused memory reclaim, swap use and query timeouts during imports. The isolated Tidex Convex container now has a 2 GiB limit, and the full import completed after that change. Supabase and Paeonia were unchanged. The source compose backup is recorded in [the migration plan](convex-migration-plan.md#rehearsal-backend-memory).
 
-Production Convex now has `APNS_RECIPIENTS=all`, and the old app's API writes are frozen. The gate was opened too early for phone testing, then restored to `minimumVersion: 3.0.0`, `maintenance: true` at `20:42:15 UTC`. The public response must stay in maintenance until 3.1.0 is available in the App Store. A temporary Pages function exempts only build `20261028.1856` for the phone checks, with uncached responses. Remove it when opening the public gate. The final import is complete and must not be repeated when resuming. Rehearsal phones must sign out and back in to reset their sync cursors.
+Production Convex now has `APNS_RECIPIENTS=all`, and the old app's API writes are frozen. The gate was opened too early for phone testing, then restored to `minimumVersion: 3.0.0`, `maintenance: true` at `20:42:15 UTC`. Maintenance remained until Hjalmar confirmed App Store availability. The temporary Pages exception for build `20261028.1856` was removed when the public gate opened. The final import is complete and must not be repeated when resuming. Rehearsal phones must sign out and back in to reset their sync cursors.
 
 ## Cutover preparation
 
@@ -62,7 +62,7 @@ Production Convex now has `APNS_RECIPIENTS=all`, and the old app's API writes ar
 
 The migration plan and iOS guidance now describe Convex and Clerk, the merged implementation, the native Apple connection's credentials and the device wrapper's platform selection. The old Supabase descriptions and schema-blocker instructions were corrected.
 
-Hjalmar resolved the TestFlight invitation problem and installed the approved build. No invitation was resent. Phone checks are complete and Apple accepted the manual release. Check public storefront availability before opening the public gate.
+Hjalmar resolved the TestFlight invitation problem and installed the approved build. No invitation was resent. Phone checks, App Store availability and the public gate change are complete. `RELEASE_CHECKS.md` was cleared after shipping. The accepted startup issue and unverified fresh Apple authentication step remain documented here.
 
 ## Accepted startup issue
 
