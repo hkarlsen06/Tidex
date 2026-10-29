@@ -4,6 +4,26 @@ Run this checklist only after Hjalmar approves the production cutover and App St
 
 Run local commands from the repository root. Keep the same terminal for the variables below. The source of truth stays in Supabase until the release step. Never run the migration script again after that step.
 
+## Current checkpoint, 2026-10-29
+
+Hjalmar authorized step 1, backups, maintenance, the API write freeze and cron drain. That step is complete. The final import, calendar and push switch, and App Store release have not run.
+
+- App Store Connect confirms build `20261028.1856` is `PENDING_DEVELOPER_RELEASE` with manual release.
+- The public gate is `minimumVersion: 3.0.0`, `maintenance: true`. Hjalmar confirmed the maintenance screen on his phone.
+- Caddy installed the Supabase-calendar freeze at `20:03:38 UTC`. Live probes on both API hostnames confirm that refresh reaches GoTrue, calendar requests reach the existing endpoint, and the other tested API routes abort.
+- All eight Supabase cron jobs were disabled at `20:05:52 UTC`. At `20:07:02 UTC`, active jobs, running jobs and queued HTTP requests were all zero.
+- Convex push delivery remains disabled. The Clerk audit found 251 users, none without `external_id`, and one imported account with Apple or Google connections. No Clerk users were changed.
+
+The original gate, Caddy configuration and cron states, a full Convex export with files, its environment, and validated Supabase database archives from before and after the freeze are saved on both machines. The database archive and Convex export checksums match across the copies. The files contain private data and credentials.
+
+On the Mac, resume with this existing directory. Do not rerun the preparation commands and replace the original rollback state with the frozen state.
+
+```bash
+CUTOVER='/Users/hkarlsen06/Library/Application Support/Tidex/cutovers/20261029T195639Z'
+```
+
+The second copy is root-only at `/srv/tidex/cutovers/20261029T195639Z` on one-s. `clerk.env` is prepared for the final import. Wait for Hjalmar's authorization for that next step. The ordinary auth smoke check now reports the expected blocked settings and password-reset routes.
+
 ## Check Apple sign-in requirements
 
 Apple users may have no email. Confirm that email stays optional and supplied addresses still require verification.

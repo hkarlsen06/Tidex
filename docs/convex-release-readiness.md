@@ -1,6 +1,8 @@
-# N+1 review preparation, 2026-10-28
+# N+1 release readiness, 2026-10-29
 
-Version 3.1.0, build `20261028.1856`, is uploaded and processed as `VALID` and `APP_STORE_ELIGIBLE`. It is attached to the App Store draft for app `6757129790`. The draft has manual release, phased release disabled, updated notes in all 32 locales and inherited App Review credentials. All 170 screenshots across 34 sets are complete. The draft remains `PREPARE_FOR_SUBMISSION`. It has not been submitted or released.
+App Store Connect confirmed on 2026-10-29 that version 3.1.0, build `20261028.1856`, is approved and `PENDING_DEVELOPER_RELEASE`, with manual release and no phased release. It has not been released. The build is `VALID`. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
+
+Hjalmar authorized the first cutover step on 2026-10-29. Backups, maintenance, the old API write freeze and the Supabase cron drain are complete. The final import and release remain pending. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
 
 Promotional text in all 32 locales and the App Review notes were uploaded through `fastlane ios upload_review_metadata` on 2026-10-28. Independent API readbacks match the local files. Other localized metadata, review credentials, contact information, version settings and the attached build are unchanged. The reviewer notes are in `ios/fastlane/metadata/review_information/notes.txt`. The upload log and verification result are `/tmp/tidex-n1-readiness/fastlane-review-metadata.log` and `/tmp/tidex-n1-readiness/review-metadata-verification.json`.
 
@@ -42,15 +44,15 @@ The post-fix audit checked all 257 non-demo accounts. All 250 mappings resolve t
 
 The backend's old 768 MiB container cap caused memory reclaim, swap use and query timeouts during imports. The isolated Tidex Convex container now has a 2 GiB limit, and the full import completed after that change. Supabase and Paeonia were unchanged. The source compose backup is recorded in [the migration plan](convex-migration-plan.md#rehearsal-backend-memory).
 
-Production Convex still has no `APNS_RECIPIENTS`, and the public gate remains `minimumVersion: 3.0.0`, `maintenance: false`. The existing app continues to use Supabase. Rehearsal phones must sign out and back in after updating to reset their sync cursors.
+Production Convex still has no `APNS_RECIPIENTS`. The public gate is now `minimumVersion: 3.0.0`, `maintenance: true`, and the old app's API writes are frozen. Supabase remains the source of truth until the final import and release. Rehearsal phones must sign out and back in after the final import to reset their sync cursors.
 
 ## Cutover preparation
 
-[The command checklist](convex-cutover-checklist.md) covers backup, maintenance, write freeze, cron drain, final import, calendar and push switching, release and rollback. Both generated Caddy configurations validate with the server's real credentials. An isolated Caddy test passes 26 requests across both stages, including duplicate grant parameters. Only refresh and calendar requests reach their upstreams. No Caddy candidate was installed.
+[The command checklist](convex-cutover-checklist.md) covers backup, maintenance, write freeze, cron drain, final import, calendar and push switching, release and rollback. The isolated Caddy test passed again on 2026-10-29 with 26 requests across both stages, including duplicate grant parameters. The Supabase-calendar freeze configuration was validated and installed. Live probes on both hostnames confirm that refresh and calendar requests reach their upstreams while the other tested API routes abort.
 
 The migration plan and iOS guidance now describe Convex and Clerk, the merged implementation, the native Apple connection's credentials and the device wrapper's platform selection. The old Supabase descriptions and schema-blocker instructions were corrected.
 
-Finish the device checklist before releasing. Submit the prepared App Store draft when ready, then wait for approval and Pending Developer Release. The production cutover still needs Hjalmar's approval.
+Finish the remaining device checklist before releasing. Apple approval is complete. Hjalmar has authorized only the first cutover step so far; the final import, calendar and push switch, and manual release need his go-ahead.
 
 ## Release notes
 
