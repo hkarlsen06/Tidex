@@ -64,7 +64,7 @@ Tidex is now an iOS-only product, and it has been free since 2026-09-28. The pay
 
 The iOS app uses Convex in `backend/` and Clerk authentication. The production cutover and manual release of 3.1.0 took place on 2026-10-29. Before migration or retirement work, read the [live cutover checkpoint](docs/convex-cutover-checklist.md#current-checkpoint-2026-10-29).
 
-Supabase in `supabase/` is retained on `one-s` for read-only source data and legacy GoTrue session refresh. Public API writes and Supabase cron jobs are disabled. Caddy routes saved calendar URLs on `api.tidex.no` and `identity.tidex.no` to Convex. The former `mdr` host and hosted Supabase project are retired.
+Supabase retains only Postgres, GoTrue and Envoy on `one-s` for source data and legacy session refresh. The other nine services were removed on 2026-10-29. Before changing that bridge, read [the aftercare record](docs/convex-aftercare.md). Public API writes and Supabase cron jobs are disabled. Caddy routes saved calendar URLs on `api.tidex.no` and `identity.tidex.no` to Convex. The former `mdr` host and hosted Supabase project are retired.
 
 ## Supabase Production Access
 
@@ -82,20 +82,23 @@ inspect logs and services or make task-authorized service changes, and use
 database inspection or task-authorized data mutations. Direct SSH is the normal
 production access path, so do not block on Supabase MCP or the hosted dashboard.
 
-After any change to the auth service, `.env`, `gotrue-extra.env`, Caddy, or
-the compose stack, run `ssh one-s sudo /srv/tidex/auth-smoke.sh`. It prints
-nothing when auth works the way the iOS app needs and one line per problem
-otherwise. Without `sudo` it can't read the auth container and reports false
-problems. The watchdog also runs it as root every 5 minutes and emails
-failures. The source is `supabase/ops/auth-smoke.sh`, so copy it back to one-s
-when you change it.
+After changing auth, its configuration, Caddy, or Compose, run
+`ssh one-s sudo /srv/tidex/auth-smoke.sh`. This compatibility command runs
+`/srv/tidex/healthcheck.py --legacy-refresh`, checking Convex, Clerk, calendar
+routing and the retained GoTrue route. Success is silent. The source is
+`backend/ops/healthcheck.py`; the wrapper is `supabase/ops/auth-smoke.sh`.
+It needs root access to read the legacy API key.
 
-one-s was resized to 4 vCPU and 8 GB RAM on 2026-10-13. It runs Tidex and
-Paeonia's Convex backend side by side, and the agent sessions run there too.
-Before that it had 4 GB, and swapped-out edge runtime memory slowed cold
-starts. The watchdog (`/srv/backup/watchdog.sh`, only on one-s) reports any
-Tidex container that is not running. Before you stop a container on purpose,
-add it to `STOPPED_ON_PURPOSE` in that script.
+The one-s watchdog runs every five minutes and emails failures. Its source is
+`backend/ops/one-s-watchdog.sh`, deployed as `/srv/backup/watchdog.sh`.
+It checks the three retained Supabase containers, both production Convex
+backends, backup freshness and host capacity. Update its explicit service
+checks when retiring the bridge. Keep Paeonia's checks intact.
+
+one-s has 4 vCPU and 8 GB RAM. Tidex and Paeonia share the host with agent
+sessions. The resolved Supabase Compose file puts retired services in the
+`retired` profile with `restart: no`. Normal Compose startup keeps only
+`db`, `auth` and `api-gw` running.
 
 Tidex's production Convex deployment runs in `/srv/tidex/convex`
 on one-s, with the Compose project name `tidex-convex`. Keep that name, because
@@ -231,6 +234,8 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 
 ## Supabase Edge Functions
 
+These functions are retained source only. Their production container is retired and all Supabase cron jobs stay disabled. Use the instructions below only for an explicitly authorized legacy restore.
+
 **CRITICAL: Edit locally in `supabase/functions/`, then deploy to the self-hosted stack on `one-s`, NOT via Supabase's hosted deployment or MCP deploy tools**
 
 - **Location**: `supabase/functions/<function-name>/index.ts`
@@ -243,12 +248,12 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 
 The router at `supabase/ops/edge-router/main/` (deployed as `volumes/functions/main/` on `one-s`) enforces JWTs. It ignores the `VERIFY_JWT` env var and `verify_jwt` in `supabase/config.toml`, which only matter for `supabase functions serve`. Keep both in sync with the router's `PUBLIC_FUNCTIONS` list.
 
-- Public, no JWT check: `apple-server-notifications` (Apple signature), `before-user-created` (Standard Webhooks signature), `calendar-feed` (calendar token), `health` (Uptime Robot), `wagey-chat-v2` (shutdown stub for old app versions). A new webhook or public function must be added to `PUBLIC_FUNCTIONS` in the router and to `config.toml` with `verify_jwt = false`.
-- Uptime Robot polls `GET /functions/v1/health`, a function with no imports. Idle workers stop after about 30 s, so every check starts a new worker. Keep the monitored function free of imports: `send-push-notifications` took 330 ms to start cold, and those cold starts set off Uptime Robot's slow response alerts. Uptime Robot's monitors check from Europe only, because US probes added up to 1.2 s of transatlantic latency. Keep their HTTP method on GET. Auth answers HEAD with 405, and Uptime Robot then retries with GET and reports both requests as one response time. Change the monitor URL before you rename or remove `health`. Removing the old monitored path on 2026-09-30 caused a 2 minute outage alert.
+- Public, no JWT check: `apple-server-notifications` (Apple signature), `before-user-created` (Standard Webhooks signature), `calendar-feed` (calendar token), `health` (retired monitoring endpoint), `wagey-chat-v2` (shutdown stub for old app versions). A new webhook or public function must be added to `PUBLIC_FUNCTIONS` in the router and to `config.toml` with `verify_jwt = false`.
+- Uptime Kuma on depressed-louis now checks the Convex API, `actions.tidex.no/health`, Clerk and the website. The relay reads current iPhone registrations through the internal `monitoring:uptimeDevices` query. See [aftercare](docs/convex-aftercare.md) for source and deployment paths.
 - Every other function needs a valid, unexpired JWT with role `authenticated` or `service_role`. The router accepts ES256/RS256 tokens signed with a key in `SUPABASE_JWKS` (what GoTrue issues) and HS256 tokens signed with `JWT_SECRET` (the legacy service role key that pg_cron sends from the vault). The router rejects the `sb_publishable_` key and the anon JWTs, so a signed-out call fails on protected functions.
 - The router returns 404 for any first path segment that is not a directory under `volumes/functions/` with an `index.ts` (so `_shared`, `main` and `node_modules` are not routable).
 - Functions still check the caller themselves, for example with `withSupabase({ auth: "user" })`. The router is the first check, not the only one.
-- To deploy the router, copy `supabase/ops/edge-router/main/` to `/srv/tidex/tidex-sb/volumes/functions/main/` on `one-s`, back up the old files first, and restart the `functions` service. Run `ssh one-s sudo /srv/tidex/auth-smoke.sh` and check that the `process-pending-push-notifications` cron still gets 200s in `net._http_response`.
+- To deploy the router, copy `supabase/ops/edge-router/main/` to `/srv/tidex/tidex-sb/volumes/functions/main/` on `one-s`, back up the old files first, and restart the `functions` service. Run `ssh one-s sudo /srv/tidex/auth-smoke.sh`. Keep legacy push cron disabled while Convex sends production notifications.
 
 ## Supabase SQL Functions & Cron Jobs
 

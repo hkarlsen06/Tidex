@@ -22,6 +22,14 @@ const errorCode = (error: unknown) =>
 
 const http = httpRouter();
 
+http.route({
+  path: "/health",
+  method: "GET",
+  handler: httpAction(async (ctx) =>
+    Response.json(await ctx.runQuery(internal.monitoring.health, {}), { headers: { "Cache-Control": "no-store" } }),
+  ),
+});
+
 /**
  * GET /attachments/<attachment id> with `Authorization: Bearer <Clerk token>`. Serves a
  * message image to members who can read its thread, and 404s for everyone else.

@@ -6,6 +6,8 @@ Run local commands from the repository root. Keep the same terminal for the vari
 
 ## Current checkpoint, 2026-10-29
 
+After release, use [the aftercare record](convex-aftercare.md) for retired services, monitoring and the temporary sign-in bridge.
+
 The cutover and public release are complete. Hjalmar authorized the approved build with the startup issue below. Apple accepted the manual release at `21:14:51 UTC`, and Hjalmar then confirmed 3.1.0 was available in the App Store on his phone. At `21:32:48 UTC`, live verification confirmed `minimumVersion: 3.1.0`, `maintenance: false`. The temporary TestFlight exception is removed. Do not run the pre-release rollback or importer.
 
 - Immediately before release, App Store Connect confirmed version 3.1.0, build `20261028.1856`, was `PENDING_DEVELOPER_RELEASE`, `VALID`, manual, with no phased release. The release request and timestamp are saved as `asc-release-response.json` and `released-at.txt`.
@@ -34,7 +36,7 @@ On the Mac, resume with this existing directory. Do not rerun the preparation co
 CUTOVER='/Users/hkarlsen06/Library/Application Support/Tidex/cutovers/20261029T195639Z'
 ```
 
-The second copy is root-only at `/srv/tidex/cutovers/20261029T195639Z` on one-s. The final import is complete; do not repeat it when resuming. Phone results are in `phone-verification.json`. The ordinary auth smoke check reports the expected blocked settings and password-reset routes.
+The second copy is root-only at `/srv/tidex/cutovers/20261029T195639Z` on one-s. The final import is complete; do not repeat it when resuming. Phone results are in `phone-verification.json`. Aftercare replaced the obsolete auth smoke checks with checks for Convex, Clerk, calendar routing and legacy refresh. The current command passes.
 
 ## Check Apple sign-in requirements
 

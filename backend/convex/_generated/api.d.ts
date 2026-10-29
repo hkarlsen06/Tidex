@@ -54,6 +54,7 @@ import type * as liveActivities from "../liveActivities.js";
 import type * as maintenance from "../maintenance.js";
 import type * as messages from "../messages.js";
 import type * as migration from "../migration.js";
+import type * as monitoring from "../monitoring.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
 import type * as onboarding from "../onboarding.js";
 import type * as payrollAdjustments from "../payrollAdjustments.js";
@@ -122,6 +123,7 @@ declare const fullApi: ApiFromModules<{
   maintenance: typeof maintenance;
   messages: typeof messages;
   migration: typeof migration;
+  monitoring: typeof monitoring;
   notificationPreferences: typeof notificationPreferences;
   onboarding: typeof onboarding;
   payrollAdjustments: typeof payrollAdjustments;

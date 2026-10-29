@@ -156,14 +156,16 @@ Use [the command checklist](convex-cutover-checklist.md). Both Caddy stages were
    Phones that ran a rehearsal TestFlight build keep sync cursors from the rehearsal copy. Those are higher than the revisions the import starts from, so the phones would skip rows. Sign out and back in on them after the import.
 4. Switch the server side. Disable the Supabase cron jobs, set `APNS_RECIPIENTS=all` on the production deployment so its crons start sending pushes and Live Activities, and point `calendar-feed` at Convex.
 5. With the TestFlight build of N+1, check sign-in, shifts, pay, messages, a push notification and a calendar feed refresh.
-6. Point of no return. Press Release in App Store Connect, set `minimumVersion` to N+1, set `maintenance: false`, and deploy. Users on N see the update screen. Until N+1 reaches their App Store region, which can take a few hours, the App Store button shows no update yet.
+6. Point of no return. Press Release in App Store Connect and keep maintenance on while Apple distributes N+1. Confirm that the App Store listing on Hjalmar's phone offers N+1. Then set `minimumVersion` to N+1, set `maintenance: false`, and deploy. Public lookup metadata alone is not proof that the update is available on the phone.
 
 Rolling back before step 6 means turning maintenance off, removing the Caddy blocks and re-enabling the Supabase crons. N+1 stays unreleased. After step 6, phones run an app that only talks to Convex, and Convex has writes that Postgres doesn't. Going back would take a new release and a script that copies changed shifts and messages back to Postgres, so plan to fix forward.
 
 ## Phase 4. Retire Supabase
 
-1. Keep GoTrue running for token refresh while users update, so the session exchange works for them. Shut it down once `record_app_activity` shows nearly every active user on N+1, or after a month. Anyone who updates later signs in again with Clerk.
-2. Keep Postgres read-only for a month, then take a final dump to cold storage and shut down the Supabase stack. Remove its containers from the watchdog. The old `subscriptions` rows and Apple notifications stay only in that dump, because the migration script doesn't copy them to Convex.
+The [aftercare record](convex-aftercare.md) tracks the live state and the retained bridge deadline.
+
+1. Keep GoTrue running for token refresh while users update, so the session exchange works for them. Shut it down once Convex activity and session-exchange evidence show nearly every active user on N+1, or by 2026-11-29. Anyone who updates later signs in again with Clerk.
+2. Retire unused Supabase services once monitoring reads Convex. Keep Postgres for source data and GoTrue session writes for at most a month, then take a final dump to cold storage and shut down the remaining bridge. Update its explicit checks in the watchdog. The old `subscriptions` rows and Apple notifications stay only in that dump, because the migration script doesn't copy them to Convex.
 3. Clear the App Store Server Notifications URL in App Store Connect. Tidex is free, so nothing receives them after cutover.
 
 ## Decisions
