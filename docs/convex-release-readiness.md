@@ -2,6 +2,8 @@
 
 Apple accepted the manual release of version 3.1.0, build `20261028.1856`, at `2026-10-29 21:14:51 UTC`, with no phased release. The build was `VALID` and `PENDING_DEVELOPER_RELEASE` immediately before the request. Public maintenance stays on until storefronts offer the update. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
 
+At `21:26:50 UTC`, App Store Connect reported `READY_FOR_SALE`, and Apple's public lookup showed 3.1.0 in all six checked regions, including Norway. Hjalmar's phone still showed an older App Store version. Public maintenance remains on pending a refreshed phone check.
+
 Hjalmar authorized continuing the cutover on 2026-10-29 and releasing the approved build with the startup issue recorded below. Backups, the old API write freeze, the Supabase cron drain, the final import, calendar and push switching, and phone checks are complete. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
 
 The final import completed at `20:18:03 UTC` with all counts matching. Independent verification compared all 42 tables and 22,597 rows against the import files, checked all 156 copied files against their Supabase SHA-256 hashes, and verified all 256 Clerk mappings for the 263 source accounts. The same seven accounts lack a supported verified identity. The old API write freeze and disabled Supabase cron jobs remain in place.
@@ -30,7 +32,7 @@ The final focused suite passed 64 tests with zero failures on Shared iPhone, iOS
 
 The final notification extension source passed a simulator callback probe for recipient restoration, signed-out and wrong-account redaction, and an account switch before expiry. The backend neutral-presentation regression and TypeScript check passed. SwiftLint completed. The Release archive and App Store export passed without warnings. The exported app and all four extensions passed signature checks and used team `48ZSLD4RMP`, distribution profiles and production endpoints. Apple validation and upload completed without errors.
 
-On 2026-10-28, Hjalmar confirmed that the N-to-N+1 offline retry, manual sign-in priority and unsynced-shift impersonation checks all passed on Cold Harbor. Physical APNs delivery remains unchecked in [the device checklist](../RELEASE_CHECKS.md).
+On 2026-10-28, Hjalmar confirmed that the N-to-N+1 offline retry, manual sign-in priority and unsynced-shift impersonation checks all passed on Cold Harbor. The 2026-10-29 phone checks also verified physical APNs delivery, notification replies and signed-out privacy, as recorded above.
 
 The initial read-only account audit found ten accounts without a Clerk mapping, excluding the review demo. Four were phone-only, three used Apple without stored email, and three were unconfirmed email sign-ups. A phone-only account used 3.0.1 on 2026-10-20, and an Apple account used 2.7.1 on 2026-10-28. Both would fail the automatic exchange. Hjalmar accepted manual help for the phone-only account on 2026-10-28. Detailed account identifiers stay in the local audit at `/tmp/tidex-n1-readiness/session-exchange-audit.md`.
 
