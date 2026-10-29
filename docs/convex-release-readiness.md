@@ -2,9 +2,15 @@
 
 App Store Connect confirmed on 2026-10-29 that version 3.1.0, build `20261028.1856`, is approved and `PENDING_DEVELOPER_RELEASE`, with manual release and no phased release. It has not been released. The build is `VALID`. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
 
-Hjalmar authorized the first two cutover steps on 2026-10-29. Backups, maintenance, the old API write freeze, the Supabase cron drain and the final import are complete. Calendar and push switching and release remain pending. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
+Hjalmar authorized continuing the cutover on 2026-10-29 and releasing the approved build with the startup issue recorded below. Backups, the old API write freeze, the Supabase cron drain, the final import, calendar and push switching, and phone checks are complete. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
 
-The final import completed at `20:18:03 UTC` with all counts matching. Independent verification compared all 42 tables and 22,597 rows against the import files, checked all 156 copied files against their Supabase SHA-256 hashes, and verified all 256 Clerk mappings for the 263 source accounts. The same seven accounts lack a supported verified identity. Maintenance, the write freeze and disabled Supabase cron jobs remain in place, and Convex push delivery is still disabled.
+The final import completed at `20:18:03 UTC` with all counts matching. Independent verification compared all 42 tables and 22,597 rows against the import files, checked all 156 copied files against their Supabase SHA-256 hashes, and verified all 256 Clerk mappings for the 263 source accounts. The same seven accounts lack a supported verified identity. The old API write freeze and disabled Supabase cron jobs remain in place.
+
+Calendar routing and push delivery switched to Convex at `20:26 UTC`. Fresh reviewer password login, account linking, all eight sync queries, the message inbox and authenticated realtime access passed after the switch. The verification session was revoked. Hjalmar accepted the unverified fresh Apple authentication step for this release on 2026-10-29.
+
+Hjalmar confirmed his jobs, shifts and pay after signing out and back in. The phone tests verified message delivery and replies, the matching-account sender, text and Reply action, and neutral notification content after sign-out. Apple Calendar displayed shifts after refresh and Convex recorded the request. The temporary test account was removed from Clerk and Convex.
+
+The first push test found APNs `TooManyProviderTokenUpdates`. The backend now stores the provider token in an internal-only table and reuses it across push and Live Activity actions, including concurrent calls. Three local integration tests, the neutral-notification test and TypeScript checks passed. Production verification sent the second test push on its first attempt. The cache is inaccessible through public query and mutation calls.
 
 Promotional text in all 32 locales and the App Review notes were uploaded through `fastlane ios upload_review_metadata` on 2026-10-28. Independent API readbacks match the local files. Other localized metadata, review credentials, contact information, version settings and the attached build are unchanged. The reviewer notes are in `ios/fastlane/metadata/review_information/notes.txt`. The upload log and verification result are `/tmp/tidex-n1-readiness/fastlane-review-metadata.log` and `/tmp/tidex-n1-readiness/review-metadata-verification.json`.
 
@@ -46,15 +52,23 @@ The post-fix audit checked all 257 non-demo accounts. All 250 mappings resolve t
 
 The backend's old 768 MiB container cap caused memory reclaim, swap use and query timeouts during imports. The isolated Tidex Convex container now has a 2 GiB limit, and the full import completed after that change. Supabase and Paeonia were unchanged. The source compose backup is recorded in [the migration plan](convex-migration-plan.md#rehearsal-backend-memory).
 
-Production Convex still has no `APNS_RECIPIENTS`. The public gate is now `minimumVersion: 3.0.0`, `maintenance: true`, and the old app's API writes are frozen. Supabase remains the source of truth until the final import and release. Rehearsal phones must sign out and back in after the final import to reset their sync cursors.
+Production Convex now has `APNS_RECIPIENTS=all`, and the old app's API writes are frozen. The gate was opened too early for phone testing, then restored to `minimumVersion: 3.0.0`, `maintenance: true` at `20:42:15 UTC`. The public response must stay in maintenance until 3.1.0 is available in the App Store. A temporary Pages function exempts only build `20261028.1856` for the phone checks, with uncached responses. Remove it when opening the public gate. The final import is complete and must not be repeated when resuming. Rehearsal phones must sign out and back in to reset their sync cursors.
 
 ## Cutover preparation
 
-[The command checklist](convex-cutover-checklist.md) covers backup, maintenance, write freeze, cron drain, final import, calendar and push switching, release and rollback. The isolated Caddy test passed again on 2026-10-29 with 26 requests across both stages, including duplicate grant parameters. The Supabase-calendar freeze configuration was validated and installed. Live probes on both hostnames confirm that refresh and calendar requests reach their upstreams while the other tested API routes abort.
+[The command checklist](convex-cutover-checklist.md) covers backup, maintenance, write freeze, cron drain, final import, calendar and push switching, release and rollback. The isolated Caddy test passed again on 2026-10-29 with 26 requests across both stages, including duplicate grant parameters. Both stages were validated before installation. Live probes on both hostnames confirm that refresh and calendar requests reach their upstreams while the other tested API routes abort. Calendar GET and HEAD requests reach the Convex action.
 
 The migration plan and iOS guidance now describe Convex and Clerk, the merged implementation, the native Apple connection's credentials and the device wrapper's platform selection. The old Supabase descriptions and schema-blocker instructions were corrected.
 
-Finish the remaining device checklist before releasing. Apple approval and the final import are complete. The next step is switching calendar feeds and push delivery, followed by the app smoke checks. The manual App Store release remains pending.
+Hjalmar resolved the TestFlight invitation problem and installed the approved build. No invitation was resent. Phone checks are complete and the manual App Store release is next.
+
+## Accepted startup issue
+
+During the 2026-10-29 phone check, build `20261028.1856` reported Clerk session authentication failures and showed the post-authentication purpose and first-job screens. The error fallback in `AppCoordinator.checkTermsAndUpdateState` can call `enterAuthenticatedState(user: nil)`, which opens onboarding without a resolved user. Foreground handling then treats `AuthSessionManagerError.notSignedIn` as transient and keeps that state.
+
+Fully closing and reopening restored the normal dashboard. Hjalmar confirmed his existing jobs, shifts and pay are correct. The live account's onboarding flag and Clerk mapping were unchanged, and no new user row was created. The server data was not deleted. The exact cause of the first Clerk session rejection is not established.
+
+Hjalmar explicitly chose to release the approved build with this known issue. No iOS code was changed for this cutover. Follow up with a fix that requires a resolved user before entering authenticated onboarding, routes a missing session back to sign-in, and preserves offline data during recovery. Cover rejected or missing sessions and offline launch in the regression checks. Diagnostic evidence is saved privately as `auth-events-phone-check.json` in the cutover directory.
 
 ## Release notes
 

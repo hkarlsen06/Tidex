@@ -6,15 +6,22 @@ Run local commands from the repository root. Keep the same terminal for the vari
 
 ## Current checkpoint, 2026-10-29
 
-Hjalmar authorized steps 1 and 2. Backups, maintenance, the API write freeze, cron drain and final import are complete. The calendar and push switch and App Store release have not run.
+Hjalmar authorized continuing the cutover and releasing the approved build with the startup issue below. Backups, the API write freeze, cron drain, final import, calendar and push switching, and phone checks are complete. Manual release is next.
 
 - App Store Connect confirms build `20261028.1856` is `PENDING_DEVELOPER_RELEASE` with manual release.
-- The public gate is `minimumVersion: 3.0.0`, `maintenance: true`. Hjalmar confirmed the maintenance screen on his phone.
-- Caddy installed the Supabase-calendar freeze at `20:03:38 UTC`. Live probes on both API hostnames confirm that refresh reaches GoTrue, calendar requests reach the existing endpoint, and the other tested API routes abort.
+- Hjalmar confirmed the initial maintenance screen. The gate was opened too early at `20:28:47 UTC`, sending old clients to an unavailable update. Maintenance was restored and verified at `20:42:15 UTC`, with `minimumVersion: 3.0.0`, `maintenance: true`. Keep this public response until 3.1.0 is available in the App Store.
+- At `20:48:49 UTC`, live probes verified the temporary exception for `Tidex/20261028.1856 CFNetwork/`. Public requests, the current App Store build, and other build numbers still receive maintenance. All responses have `Cache-Control: no-store` and `Vary: User-Agent`. The marketing build, local routing checks and live routing checks passed.
+- Caddy installed the Supabase-calendar freeze at `20:03:38 UTC` and switched calendar routing to Convex at `20:26:28 UTC`. Live GET and HEAD probes reach the Convex calendar action through both old API hostnames. GoTrue refresh still works and the other tested API routes abort.
 - All eight Supabase cron jobs were disabled at `20:05:52 UTC`. At `20:07:02 UTC`, active jobs, running jobs and queued HTTP requests were all zero.
 - The final import completed at `20:18:03 UTC` with `All counts match`. It copied 263 accounts, linked 256 Clerk users and retained the seven accounts without a supported verified identity.
 - Independent verification at `20:20:04 UTC` compared all 42 tables and 22,597 rows against the import files. All 156 referenced files match the Supabase originals by SHA-256. Every Clerk mapping resolves to the matching external account UUID, and no Clerk users lack `external_id`.
-- Convex push delivery remains disabled. The public gate, API freeze and disabled Supabase cron jobs remain in place.
+- `APNS_RECIPIENTS=all` was verified at `20:26:34 UTC`. Supabase cron remains disabled and drained.
+- Fresh password login, account linking, all eight sync queries, the message inbox and an authenticated realtime subscription passed against production after the switch. Only the verification session was revoked. The demo account's data was unchanged.
+- Hjalmar accepted the remaining unverified fresh Apple authentication step for this release. He installed the approved TestFlight build himself after the invitation problem. No invitation was resent.
+- On first launch, Clerk rejected the stored session and the app incorrectly showed post-authentication onboarding. Fully closing and reopening recovered the normal dashboard. Hjalmar confirmed his existing jobs, shifts and pay are correct, including after a fresh sign-out and sign-in. The live user record still has the original Clerk mapping and `finished_onboarding: true`; no replacement user was created. Hjalmar explicitly chose to release the approved build with this known startup issue.
+- The phone push test found APNs `TooManyProviderTokenUpdates` errors. Provider tokens now persist in an internal-only Convex table, shared by push and Live Activity senders. Three local integration tests, the existing neutral-notification test and TypeScript checks passed. The fix is deployed. The second phone push was sent on its first attempt, and independent reads confirmed the provider token was unchanged.
+- Hjalmar confirmed the test sender, message text and Reply action, and both device replies reached the temporary test account. Replaying the notification after sign-out returned APNs 200 and showed only a neutral Tidex alert with no message or Reply. The temporary Clerk and Convex users were removed after the checks.
+- Hjalmar confirmed shifts appear in Apple Calendar after refresh, and Convex recorded the feed request at `20:59:15 UTC`. His subscription token was replaced on the phone, so this verifies the current feed rather than the original saved token. GET and HEAD routing through both legacy hostnames was verified separately. A Python-default-agent probe was blocked upstream with 403; a Calendar user agent reached the action. No feed URL was printed.
 
 The original gate, Caddy configuration and cron states, a full Convex export with files, its environment, and validated Supabase database archives from before and after the freeze are saved on both machines. The final Convex export is also saved as `convex-final.zip`, with its verification report in `final-import-verification.json` and the import log in `migration.log`. The database archive and Convex export checksums match across the copies. The files contain private data and credentials.
 
@@ -24,7 +31,7 @@ On the Mac, resume with this existing directory. Do not rerun the preparation co
 CUTOVER='/Users/hkarlsen06/Library/Application Support/Tidex/cutovers/20261029T195639Z'
 ```
 
-The second copy is root-only at `/srv/tidex/cutovers/20261029T195639Z` on one-s. The final import is complete; do not repeat it when resuming. The next step is switching calendar feeds and push delivery, then running the app smoke checks. Rehearsal TestFlight installs need a sign-out and sign-in to reset their sync cursors. The ordinary auth smoke check now reports the expected blocked settings and password-reset routes.
+The second copy is root-only at `/srv/tidex/cutovers/20261029T195639Z` on one-s. The final import is complete; do not repeat it when resuming. Phone results are in `phone-verification.json`. The ordinary auth smoke check reports the expected blocked settings and password-reset routes.
 
 ## Check Apple sign-in requirements
 
@@ -151,11 +158,13 @@ bunx convex env set APNS_RECIPIENTS all --env-file .env.production
 cd ..
 ```
 
-Leave the Supabase cron jobs disabled. With the final TestFlight build, check sign-in, shifts, pay, messaging, one push and a saved calendar subscription refresh. Keep any feed URL out of logs and chat because it contains its access token.
+Leave the Supabase cron jobs disabled and keep the public maintenance response until 3.1.0 is available in the App Store. Maintenance blocks TestFlight too. The temporary Pages function at `marketing/functions/app-config.json.js` exempts only the approved build's `Tidex/20261028.1856 CFNetwork/` user agent. It sends `Cache-Control: no-store` and `Vary: User-Agent`. This controls the maintenance screen only; backend authorization and the old API freeze still apply. Verify both the public maintenance response and the approved-build exception after deployment.
+
+With the final TestFlight build, check sign-in, shifts, pay, messaging, one push and a saved calendar subscription refresh. Keep any feed URL out of logs and chat because it contains its access token.
 
 ## Release 3.1.0
 
-This is the point of no return. Confirm the smoke checks passed. In App Store Connect, release 3.1.0 manually with phased release disabled. Then run:
+This is the point of no return. Confirm the smoke checks passed or Hjalmar explicitly accepted each remaining gap. In App Store Connect, release 3.1.0 manually with phased release disabled. Keep public maintenance while Apple distributes the release. Verify that the App Store offers 3.1.0 for installation before raising the minimum version. Remove `marketing/functions/app-config.json.js`, then run:
 
 ```bash
 python3 - <<'PY'
@@ -169,7 +178,7 @@ bun run pages:deploy:marketing
 curl -fsS https://tidex.no/app-config.json
 ```
 
-Check the old app shows the update gate and the new app signs in. App Store propagation can leave some regions waiting for the update. Commit the gate change signed after verification. Do not push unless Hjalmar asks. Clear completed release checks only after the release ships.
+Check the old app shows the update gate and the new app signs in. An App Store Connect release status alone does not prove the update is available to users. Check the public storefronts before changing the gate. Commit the gate change signed after verification. Do not push unless Hjalmar asks. Clear completed release checks only after the release ships.
 
 Keep GoTrue refresh and the read-only Supabase data for the retirement period in the migration plan. Remove the obsolete App Store Server Notifications URL when retiring the old subscription receiver.
 
