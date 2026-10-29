@@ -62,7 +62,9 @@ Tidex is now an iOS-only product, and it has been free since 2026-09-28. The pay
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
 - **ios/** - Native iOS application
 
-The supporting web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`. Production Supabase is self-hosted on the `one-s` server behind `api.tidex.no`. It moved there from `mdr` on 2026-10-03. `mdr` has since been wiped and no longer runs anything for Tidex. The old hosted Supabase project is retired.
+The iOS app uses Convex in `backend/` and Clerk authentication. The production cutover and manual release of 3.1.0 took place on 2026-10-29. Before migration or retirement work, read the [live cutover checkpoint](docs/convex-cutover-checklist.md#current-checkpoint-2026-10-29).
+
+Supabase in `supabase/` is retained on `one-s` for read-only source data and legacy GoTrue session refresh. Public API writes and Supabase cron jobs are disabled. Caddy routes saved calendar URLs on `api.tidex.no` and `identity.tidex.no` to Convex. The former `mdr` host and hosted Supabase project are retired.
 
 ## Supabase Production Access
 
@@ -95,14 +97,14 @@ starts. The watchdog (`/srv/backup/watchdog.sh`, only on one-s) reports any
 Tidex container that is not running. Before you stop a container on purpose,
 add it to `STOPPED_ON_PURPOSE` in that script.
 
-Tidex's Convex deployment for the Convex migration runs in `/srv/tidex/convex`
+Tidex's production Convex deployment runs in `/srv/tidex/convex`
 on one-s, with the Compose project name `tidex-convex`. Keep that name, because
 Paeonia's stack is also in a folder called `convex`. The API is
 `convex.tidex.no` on port 3220, HTTP actions are on `actions.tidex.no` on 3221,
 and the dashboard is on the tailnet-only `convex-dashboard.tidex.no` on 6792.
 `/srv/backup/tidex-convex-backup.sh` backs it up to `/srv/tidex/convex-backups`
-and R2, and the watchdog checks it. Deploy from `backend/` on the `convex`
-branch with `bun run deploy`, which reads the URL and admin key from the
+and R2, and the watchdog checks it. Deploy from `backend/` on `main`
+with `bun run deploy`, which reads the URL and admin key from the
 gitignored `backend/.env.production`.
 
 The dev deployment runs on the Mac under colima, from `backend/dev/compose.yml`
@@ -122,9 +124,12 @@ can't speak it. Each deployment's environment holds `CLERK_JWT_ISSUER_DOMAIN`,
 `CLERK_SECRET_KEY`, the `APNS_*` keys and `GOTRUE_JWKS`. Set them with
 `bunx convex env set` and pipe secrets in on stdin, so they never reach the
 shell history or the chat. `APNS_RECIPIENTS` decides who a deployment may push
-to: `all`, or user IDs separated by commas. Unset sends nothing. Until cutover,
-keep it unset or set to a test account on both deployments, because they hold
-copies of real device tokens while Supabase still sends the real pushes.
+to: `all`, or user IDs separated by commas. Unset sends nothing. Production uses
+`all` after cutover, and Supabase's push cron stays disabled. Development must
+stay unset or restricted to a test account because it holds copies of real
+device tokens. APNs provider tokens persist in the internal-only
+`apns_provider_tokens` table; action-local memory does not preserve them between
+invocations.
 
 `backend/scripts/migrate.ts` copies Supabase into a Convex deployment and a
 Clerk instance. It reads one-s read-only and replaces every Convex table and
@@ -153,7 +158,8 @@ tidex/
 ├── marketing/      # Marketing static site (tidex.no)
 ├── app-compat/     # Compatibility redirects + Apple association files (app.tidex.no)
 ├── ios/            # Native iOS application (see ios/AGENTS.md)
-├── supabase/       # Shared backend (edge functions, migrations)
+├── backend/        # Production Convex backend
+├── supabase/       # Retained source data and legacy GoTrue refresh
 └── docs/           # Shared documentation
 ```
 
@@ -271,7 +277,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 3. Dry-run it on production by wrapping the file in `BEGIN;` and `ROLLBACK;` and piping it to `ssh one-s "cd /srv/tidex/tidex-sb && sudo docker compose exec -T db psql -U postgres -d postgres -v ON_ERROR_STOP=1"`.
 4. Apply it with the same command plus `--single-transaction`, reading the migration file on stdin, then verify the result with a read-only query.
 
-**Current Cron Jobs:**
+**Retained Supabase cron jobs, all disabled after the Convex cutover:**
 
 | Job Name                            | Schedule            | Description                            |
 | ----------------------------------- | ------------------- | -------------------------------------- |

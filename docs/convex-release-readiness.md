@@ -1,6 +1,6 @@
 # N+1 release readiness, 2026-10-29
 
-App Store Connect confirmed on 2026-10-29 that version 3.1.0, build `20261028.1856`, is approved and `PENDING_DEVELOPER_RELEASE`, with manual release and no phased release. It has not been released. The build is `VALID`. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
+Apple accepted the manual release of version 3.1.0, build `20261028.1856`, at `2026-10-29 21:14:51 UTC`, with no phased release. The build was `VALID` and `PENDING_DEVELOPER_RELEASE` immediately before the request. Public maintenance stays on until storefronts offer the update. The review preparation included updated notes in all 32 locales, inherited App Review credentials and all 170 screenshots complete across 34 sets.
 
 Hjalmar authorized continuing the cutover on 2026-10-29 and releasing the approved build with the startup issue recorded below. Backups, the old API write freeze, the Supabase cron drain, the final import, calendar and push switching, and phone checks are complete. The [cutover checkpoint](convex-cutover-checklist.md#current-checkpoint-2026-10-29) records the live state, verification and durable rollback files.
 
@@ -60,7 +60,7 @@ Production Convex now has `APNS_RECIPIENTS=all`, and the old app's API writes ar
 
 The migration plan and iOS guidance now describe Convex and Clerk, the merged implementation, the native Apple connection's credentials and the device wrapper's platform selection. The old Supabase descriptions and schema-blocker instructions were corrected.
 
-Hjalmar resolved the TestFlight invitation problem and installed the approved build. No invitation was resent. Phone checks are complete and the manual App Store release is next.
+Hjalmar resolved the TestFlight invitation problem and installed the approved build. No invitation was resent. Phone checks are complete and Apple accepted the manual release. Check public storefront availability before opening the public gate.
 
 ## Accepted startup issue
 
