@@ -429,6 +429,7 @@ export const run = internalAction({
               ? fallbackEndPresentation(delivery.shift_id, now)
               : presentationForShift(ended, device.time_zone, person.currency, person.snapshots);
           const result = await sendToApns(
+            ctx,
             delivery.update_token,
             buildLiveActivityEndPayload(presentation, now) as unknown as Record<string, unknown>,
             headers(new Date(now.getTime() + 5 * 60_000), device.id),
@@ -459,6 +460,7 @@ export const run = internalAction({
         if (deliveryId === null) continue;
         const presentation = presentationForShift(ongoing, device.time_zone, person.currency, person.snapshots);
         const result = await sendToApns(
+          ctx,
           device.token,
           buildLiveActivityStartPayload(presentation, now) as unknown as Record<string, unknown>,
           headers(presentation.endDate, device.id),

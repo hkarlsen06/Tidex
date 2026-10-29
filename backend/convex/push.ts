@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { userByUuid } from "./lib/auth";
 import { canAccessThread, counterpartOf, pairBlocked } from "./lib/messaging";
 import { notificationPresentation } from "./lib/notificationPresentation";
@@ -416,7 +416,29 @@ function pkcs8(pem: string) {
   return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 }
 
-const apnsTokens = new Map<ApnsEnvironment, { token: string; expiresAt: number }>();
+export const providerToken = internalQuery({
+  args: { key_id: v.string(), team_id: v.string() },
+  handler: async (ctx, { key_id, team_id }) => {
+    const cached = await ctx.db.query("apns_provider_tokens")
+      .withIndex("by_key_team", (q) => q.eq("key_id", key_id).eq("team_id", team_id))
+      .unique();
+    return cached === null ? null : { token: cached.token, expires_at: cached.expires_at };
+  },
+});
+
+// Concurrent actions may sign different candidates. Only the first is stored and used.
+export const rememberProviderToken = internalMutation({
+  args: { key_id: v.string(), team_id: v.string(), token: v.string(), expires_at: v.number() },
+  handler: async (ctx, args): Promise<string> => {
+    const cached = await ctx.db.query("apns_provider_tokens")
+      .withIndex("by_key_team", (q) => q.eq("key_id", args.key_id).eq("team_id", args.team_id))
+      .unique();
+    if (cached !== null && cached.expires_at > Date.now() + 300_000) return cached.token;
+    if (cached === null) await ctx.db.insert("apns_provider_tokens", args);
+    else await ctx.db.replace(cached._id, args);
+    return args.token;
+  },
+});
 
 function apnsCredentials(environment: ApnsEnvironment) {
   const pem = (name: string) => (process.env[name] ?? "").replace(/\\n/g, "\n");
@@ -446,24 +468,29 @@ export const apnsConfigured = () => Boolean(process.env.APNS_KEY_ID && process.e
 const sandboxConfigured = () => Boolean(process.env.APNS_SANDBOX_KEY_ID && process.env.APNS_SANDBOX_PRIVATE_KEY);
 
 /** An ES256 provider token. Web Crypto returns the raw r||s signature APNs expects. */
-async function apnsToken(environment: ApnsEnvironment) {
-  const cached = apnsTokens.get(environment);
-  if (cached !== undefined && Date.now() < cached.expiresAt - 300_000) return cached.token;
+async function apnsToken(ctx: ActionCtx, environment: ApnsEnvironment): Promise<string> {
   const { keyId, privateKey } = apnsCredentials(environment);
+  const teamId = process.env.APNS_TEAM_ID ?? "";
+  const cacheKey = { key_id: keyId, team_id: teamId };
+  const cached = await ctx.runQuery(internal.push.providerToken, cacheKey);
+  if (cached !== null && cached.expires_at > Date.now() + 300_000) return cached.token;
   const encode = (o: object) => b64url(new TextEncoder().encode(JSON.stringify(o)));
-  const input = `${encode({ alg: "ES256", typ: "JWT", kid: keyId })}.${encode({ iss: process.env.APNS_TEAM_ID, iat: Math.floor(Date.now() / 1000) })}`;
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const input = `${encode({ alg: "ES256", typ: "JWT", kid: keyId })}.${encode({ iss: teamId, iat: issuedAt })}`;
   const key = await crypto.subtle.importKey("pkcs8", pkcs8(privateKey), { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
   const signature = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(input)));
   if (signature.length !== 64) throw new Error(`Unexpected ECDSA signature length ${signature.length}`);
   const token = `${input}.${b64url(signature)}`;
-  apnsTokens.set(environment, { token, expiresAt: Date.now() + 3_600_000 });
-  return token;
+  return await ctx.runMutation(internal.push.rememberProviderToken, {
+    ...cacheKey, token, expires_at: (issuedAt + 3600) * 1000,
+  });
 }
 
 export type SendResult = { success: boolean; invalidToken?: boolean; retryable?: boolean; environment?: ApnsEnvironment };
 
 /** Tries the device's known environment first, then the other one. */
 export async function sendToApns(
+  ctx: ActionCtx,
   deviceToken: string,
   payload: Payload,
   headers: Record<string, string>,
@@ -476,7 +503,7 @@ export async function sendToApns(
     const response = await fetch(`https://${host}/3/device/${deviceToken}`, {
       method: "POST",
       headers: {
-        Authorization: `bearer ${await apnsToken(environment)}`,
+        Authorization: `bearer ${await apnsToken(ctx, environment)}`,
         "apns-topic": process.env.APNS_BUNDLE_ID ?? "no.tidex.app",
         ...headers,
         "Content-Type": "application/json",
@@ -554,7 +581,7 @@ export const run = internalAction({
               // A transport error on one device must not undo another device's delivery.
               let result: SendResult;
               try {
-                result = await sendToApns(device.apns_token, alertPayload(n, now.badge), apnsHeaders(n), device.apns_environment);
+                result = await sendToApns(ctx, device.apns_token, alertPayload(n, now.badge), apnsHeaders(n), device.apns_environment);
               } catch (error) {
                 console.error(`[Push] APNs request failed for ${n.id} on device ${device.id}:`, error);
                 return { success: false, retryable: true };
@@ -565,7 +592,7 @@ export const run = internalAction({
               if (silent !== null) {
                 // The alert is delivered. A failed prefetch only costs the app a fetch.
                 try {
-                  const prefetched = await sendToApns(device.apns_token, silent.payload, silent.headers, result.environment ?? device.apns_environment);
+                  const prefetched = await sendToApns(ctx, device.apns_token, silent.payload, silent.headers, result.environment ?? device.apns_environment);
                   if (!prefetched.success) console.warn(`[Push] Prefetch failed for ${n.id} on device ${device.id}`);
                 } catch (error) {
                   console.warn(`[Push] Prefetch failed for ${n.id} on device ${device.id}:`, error);

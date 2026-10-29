@@ -32,6 +32,14 @@ export default defineSchema({
   // One document. Holds the last revision handed out. See lib/revision.ts.
   revision_counter: defineTable({ value: v.number() }),
 
+  // Shared by push and Live Activity actions. APNs rejects frequent token changes.
+  apns_provider_tokens: defineTable({
+    key_id: v.string(),
+    team_id: v.string(),
+    token: v.string(),
+    expires_at: v.number(),
+  }).index("by_key_team", ["key_id", "team_id"]),
+
   // Replaces auth.users. Convex finds the row from the Clerk token by clerk_user_id.
   // `id` is the uuid every other table uses. Users from Postgres keep their Supabase
   // uuid in both `id` and `supabase_user_id`. Users who sign up on N+1 get a new uuid
