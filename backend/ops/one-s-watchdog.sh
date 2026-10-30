@@ -47,28 +47,52 @@ fi
 # The cgroup counters start over when the container starts. The container keeps its id
 # when Docker restarts it after a kill, so the kernel log still matches it.
 MEMORY_STATE=/run/supabase-watchdog-paeonia-memory.state
+MEMORY_PROBLEM="paeonia: convex-backend-1 memory at or above 70% of its mem_limit for at least 10 minutes"
+MEMORY_ACTIVE=0
+grep -Fxq "$MEMORY_PROBLEM" "$STATE" && MEMORY_ACTIVE=1
 read -r ID STARTED < <(docker inspect -f "{{.Id}} {{.State.StartedAt}}" convex-backend-1 2>/dev/null)
 CG=/sys/fs/cgroup/system.slice/docker-$ID.scope
 if [ -n "$ID" ] && [ -r "$CG/memory.current" ] && [ "$(cat "$CG/memory.max")" != max ]; then
   NOW=$(date +%s)
-  if [ $(( $(cat "$CG/memory.current") * 100 / $(cat "$CG/memory.max") )) -ge 70 ]; then
-    PREVIOUS_INSTANCE= HIGH_SINCE= LAST_CHECK=
-    [ ! -r "$MEMORY_STATE" ] || read -r PREVIOUS_INSTANCE HIGH_SINCE LAST_CHECK < "$MEMORY_STATE"
-    if [[ "$PREVIOUS_INSTANCE" != "$ID/$STARTED" || ! "$HIGH_SINCE" =~ ^[0-9]+$ || ! "$LAST_CHECK" =~ ^[0-9]+$ ]] \
-      || (( HIGH_SINCE > LAST_CHECK || LAST_CHECK > NOW || NOW - LAST_CHECK >= 600 )); then
-      HIGH_SINCE=$NOW
+  MEMORY_CURRENT=$(cat "$CG/memory.current")
+  MEMORY_LIMIT=$(cat "$CG/memory.max")
+  INACTIVE_FILE=$(awk '$1 == "inactive_file" { print $2 }' "$CG/memory.stat")
+  [[ "$INACTIVE_FILE" =~ ^[0-9]+$ ]] || INACTIVE_FILE=0
+  # Match Docker's working set: exclude inactive file cache that Linux can reclaim.
+  WORKING_MEMORY=$MEMORY_CURRENT
+  (( INACTIVE_FILE < MEMORY_CURRENT )) && WORKING_MEMORY=$(( MEMORY_CURRENT - INACTIVE_FILE ))
+  MEMORY_PERCENT=$(( WORKING_MEMORY * 100 / MEMORY_LIMIT ))
+  PHASE=
+  if [ "$MEMORY_ACTIVE" -eq 0 ] && [ "$MEMORY_PERCENT" -ge 70 ]; then
+    PHASE=high
+  elif [ "$MEMORY_ACTIVE" -eq 1 ] && (( WORKING_MEMORY * 100 <= MEMORY_LIMIT * 65 )); then
+    PHASE=recovery
+  fi
+  if [ -n "$PHASE" ]; then
+    PREVIOUS_INSTANCE= PREVIOUS_PHASE= SINCE= LAST_CHECK=
+    [ ! -r "$MEMORY_STATE" ] || read -r PREVIOUS_INSTANCE PREVIOUS_PHASE SINCE LAST_CHECK < "$MEMORY_STATE"
+    if [[ "$PREVIOUS_INSTANCE" != "$ID/$STARTED" || "$PREVIOUS_PHASE" != "$PHASE" \
+      || ! "$SINCE" =~ ^[0-9]+$ || ! "$LAST_CHECK" =~ ^[0-9]+$ ]] \
+      || (( SINCE > LAST_CHECK || LAST_CHECK > NOW || NOW - LAST_CHECK >= 600 )); then
+      SINCE=$NOW
     fi
-    printf '%s %s %s\n' "$ID/$STARTED" "$HIGH_SINCE" "$NOW" > "$MEMORY_STATE"
-    [ $(( NOW - HIGH_SINCE )) -ge 600 ] \
-      && PROBLEMS+=("paeonia: convex-backend-1 memory at or above 70% of its mem_limit for at least 10 minutes")
+    printf '%s %s %s %s\n' "$ID/$STARTED" "$PHASE" "$SINCE" "$NOW" > "$MEMORY_STATE"
+    if [ $(( NOW - SINCE )) -ge 600 ]; then
+      if [ "$PHASE" = high ]; then MEMORY_ACTIVE=1; else MEMORY_ACTIVE=0; fi
+      : > "$MEMORY_STATE"
+    fi
   else
     : > "$MEMORY_STATE"
   fi
+  printf 'paeonia memory: working_set=%sMiB (%s%%), total=%sMiB, inactive_file=%sMiB, limit=%sMiB, alert=%s\n' \
+    "$(( WORKING_MEMORY / 1048576 ))" "$MEMORY_PERCENT" "$(( MEMORY_CURRENT / 1048576 ))" \
+    "$(( INACTIVE_FILE / 1048576 ))" "$(( MEMORY_LIMIT / 1048576 ))" "$MEMORY_ACTIVE"
   awk '$1 == "max" && $2 > 0 { hit = 1 } END { exit !hit }' "$CG/memory.events" \
     && PROBLEMS+=("paeonia: convex-backend-1 reached its mem_limit since it started, so requests stalled")
 else
   : > "$MEMORY_STATE"
 fi
+[ "$MEMORY_ACTIVE" -eq 1 ] && PROBLEMS+=("$MEMORY_PROBLEM")
 [ -n "$ID" ] && journalctl -k --since "-6min" -q --no-pager | grep -q "oom-kill:.*docker-$ID.scope" \
   && PROBLEMS+=("paeonia: the kernel killed convex-backend-1 for running out of memory in the last few minutes")
 docker logs --since 6m convex-backend-1 2>&1 | grep -q -E "Too many concurrent requests|SystemTimeout|Query execution time out" \
