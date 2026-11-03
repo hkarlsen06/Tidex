@@ -60,6 +60,7 @@ struct AdminSettingsView: View {
   @State private var deepLinkedReportID: String?
   @State private var didApplyDeepLink = false
   @State private var summary = Summary()
+  @State private var errorMessage: String?
   @State private var activeUsers: AdminActiveUsersChart?
   @Environment(\.dismiss) private var dismiss
 
@@ -115,6 +116,7 @@ struct AdminSettingsView: View {
       // The deep-linked report opens once. Later taps show the plain list.
       if tab == nil { deepLinkedReportID = nil }
     }
+    .adminErrorAlert($errorMessage)
     .refreshable { await loadSummary() }
     .task {
       if !didApplyDeepLink {
@@ -171,18 +173,36 @@ struct AdminSettingsView: View {
     .buttonStyle(.plain)
   }
 
+  private func loadSummaryValue<T: Sendable>(
+    _ load: @Sendable () async throws -> T
+  ) async -> T? {
+    do {
+      return try await load()
+    } catch {
+      if !Task.isCancelled { errorMessage = error.localizedDescription }
+      return nil
+    }
+  }
+
   private func loadSummary() async {
-    async let users: AdminUsersPage? = try? AdminAPI.users(page: 1, perPage: 1, search: nil)
-    async let feedback: [AdminFeedback]? = try? AdminAPI.feedback()
-    async let reports: AdminReportsPage? = try? AdminAPI.reports(status: .open, limit: 1)
-    async let chart: AdminActiveUsersChart? = try? AdminAPI.activeUsersChart()
+    async let users: AdminUsersPage? = loadSummaryValue {
+      try await AdminAPI.users(page: 1, perPage: 1, search: nil)
+    }
+    async let feedback: [AdminFeedback]? = loadSummaryValue { try await AdminAPI.feedback() }
+    async let reports: AdminReportsPage? = loadSummaryValue {
+      try await AdminAPI.reports(status: .open, limit: 1)
+    }
+    async let chart: AdminActiveUsersChart? = loadSummaryValue {
+      try await AdminAPI.activeUsersChart()
+    }
     let (usersPage, feedbackItems, reportsPage, chartData) = await (users, feedback, reports, chart)
     withAnimation(reduceMotion ? nil : .default) {
-      activeUsers = chartData
+      if let chartData { activeUsers = chartData }
       summary = Summary(
-        users: usersPage?.totalCount,
-        unansweredFeedback: feedbackItems?.count(where: { !$0.isAnswered }),
-        openReports: reportsPage?.total
+        users: usersPage?.totalCount ?? summary.users,
+        unansweredFeedback: feedbackItems?.count(where: { !$0.isAnswered })
+          ?? summary.unansweredFeedback,
+        openReports: reportsPage?.total ?? summary.openReports
       )
     }
   }

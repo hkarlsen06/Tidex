@@ -87,6 +87,7 @@ struct AdminUserQuery: Hashable, Sendable {
   var messages: AdminUserUsage = .any
   var friends: AdminUserUsage = .any
   var appVersion: String?
+  var openedSince: Date?
 
   /// The query with the same sort and no filters.
   var withoutFilters: Self { Self(sort: sort, reversed: reversed) }
@@ -102,6 +103,7 @@ struct AdminUserQuery: Hashable, Sendable {
       "messages": .string(messages.rawValue),
       "friends": .string(friends.rawValue),
     ]
+    if let openedSince { args["opened_since"] = .string(openedSince.ISO8601Format()) }
     if let language { args["language"] = .string(language.rawValue) }
     if let provider { args["provider"] = .string(provider.rawValue) }
     if let signedUpWithin { args["signed_up_days"] = .integer(signedUpWithin.rawValue) }

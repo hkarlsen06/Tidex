@@ -80,6 +80,10 @@ struct AdminUsersView: View {
   @State private var request = AdminUsersRequest()
   @State private var isSuperadmin = false
 
+  init(query: AdminUserQuery = AdminUserQuery()) {
+    _request = State(initialValue: AdminUsersRequest(query: query))
+  }
+
   /// A list row rather than a safe area inset: on iOS 27.2 the inset under the search
   /// drawer stays blank.
   private var filterSection: some View {
@@ -243,6 +247,10 @@ private struct AdminUserFilterBar: View {
           } label: {
             AdminChipLabel(text: "Clear", systemImage: "xmark", isActive: true)
           }
+        }
+        if query.openedSince != nil {
+          Button("Opened the app", systemImage: "xmark") { query.openedSince = nil }
+            .font(.tidexFootnoteMedium)
         }
         accountChips
         usageChips

@@ -48,25 +48,32 @@ struct AdminActiveUsersCharts: View {
   ) -> some View {
     // Whole-number ticks, so one or two users don't get a 0.5 gridline.
     let top: Int = max(buckets.map(\.users).max() ?? 0, 1)
-    return VStack(alignment: .leading, spacing: Spacing.xxs) {
-      Text(title)
-        .font(.tidexCaptionRegular)
-        .foregroundStyle(Color.tidexTextSecondary)
-      Text(caption ?? "–")
-        .font(.tidexFootnoteStrong)
-        .foregroundStyle(Color.tidexTextPrimary)
-      chart()
-        .chartYScale(domain: 0...top)
-        .chartYAxis {
-          AxisMarks(position: .leading, values: Array(Set([0, top / 2, top])).sorted()) { _ in
-            AxisGridLine().foregroundStyle(Color.tidexSeparator)
-            AxisValueLabel().foregroundStyle(Color.tidexTextSecondary)
+    return NavigationLink {
+      AdminUsersView(query: AdminUserQuery(sort: .lastActive, openedSince: buckets.first?.time))
+    } label: {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        Text(title)
+          .font(.tidexCaptionRegular)
+          .foregroundStyle(Color.tidexTextSecondary)
+        Text(caption ?? "–")
+          .font(.tidexFootnoteStrong)
+          .foregroundStyle(Color.tidexTextPrimary)
+        chart()
+          .chartYScale(domain: 0...top)
+          .chartYAxis {
+            AxisMarks(position: .leading, values: Array(Set([0, top / 2, top])).sorted()) { _ in
+              AxisGridLine().foregroundStyle(Color.tidexSeparator)
+              AxisValueLabel().foregroundStyle(Color.tidexTextSecondary)
+            }
           }
-        }
-        .frame(height: 110)
+          .frame(height: 110)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(Spacing.sm)
+      .background(Color.tidexSurfacePrimary, in: .rect(cornerRadius: CornerRadius.md))
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(Spacing.sm)
-    .background(Color.tidexSurfacePrimary, in: .rect(cornerRadius: CornerRadius.md))
+    .buttonStyle(.plain)
+    .disabled(buckets.isEmpty)
+    .accessibilityHint("Show users who opened the app in this period")
   }
 }

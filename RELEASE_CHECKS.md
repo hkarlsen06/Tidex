@@ -1,0 +1,1 @@
+- Admin: tap both "Users who opened the app" cards on a device. Check that each opens the matching users list, excludes your own account, and lets you open a user. Check that a failed refresh keeps the previous values and shows an error.

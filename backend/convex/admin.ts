@@ -70,21 +70,19 @@ function requireTimeZone(timeZone: string) {
   }
 }
 
-/** YYYY-MM-DD of an instant in a time zone. */
-const localDate = (ms: number, timeZone: string) => new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date(ms));
 const addDays = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 /** The Monday of the week containing `date`, as date_trunc('week') picks it. */
 const mondayOf = (date: string) => addDays(date, -((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7));
 
 /** internal.admin_weekly_counts: one point per week for the last `weeks` weeks. */
-function weeklyCounts(times: (string | undefined)[], timeZone: string, weeks: number) {
+function weeklyCounts(times: (string | undefined)[], localDate: (ms: number) => string, weeks: number) {
   const counts = new Map<string, number>();
   for (const t of times) {
     if (t === undefined) continue;
-    const week = mondayOf(localDate(Date.parse(t), timeZone));
+    const week = mondayOf(localDate(Date.parse(t)));
     counts.set(week, (counts.get(week) ?? 0) + 1);
   }
-  const thisWeek = mondayOf(localDate(Date.now(), timeZone));
+  const thisWeek = mondayOf(localDate(Date.now()));
   return Array.from({ length: weeks }, (_, i) => addDays(thisWeek, -7 * (weeks - 1 - i))).map((date) => ({
     date,
     value: counts.get(date) ?? 0,
@@ -157,9 +155,19 @@ export const listUsers = query({
     messages: v.optional(literals("any", "with", "without")),
     friends: v.optional(literals("any", "with", "without")),
     app_version: v.optional(v.string()),
+    opened_since: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
+    let openers: Set<string> | undefined;
+    if (args.opened_since !== undefined) {
+      const start = Date.parse(args.opened_since);
+      if (!Number.isFinite(start)) throw new ConvexError({ code: "invalid", message: "Invalid activity start" });
+      const hours = await ctx.db.query("app_activity_hours")
+        .withIndex("by_hour_user", (q) => q.gte("hour", new Date(start).toISOString()))
+        .collect();
+      openers = new Set(hours.filter((r) => r.user_id !== admin.id).map((r) => r.user_id));
+    }
     const page = Math.max(Math.floor(args.page ?? 1), 1);
     const perPage = Math.min(Math.max(Math.floor(args.per_page ?? 20), 1), 100);
     const sort = args.sort ?? "name";
@@ -221,6 +229,7 @@ export const listUsers = query({
           not_banned: !banned,
         }[args.account ?? "any"];
         return (
+          (openers === undefined || openers.has(r.u.id)) &&
           filterOk &&
           accountOk &&
           (args.language === undefined || r.language === args.language) &&
@@ -512,6 +521,8 @@ export const stats = query({
     const admin = await requireAdmin(ctx);
     const tz = args.time_zone ?? "Europe/Oslo";
     requireTimeZone(tz);
+    const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: tz });
+    const localDate = (ms: number) => dateFormatter.format(new Date(ms));
     const users = await ctx.db.query("users").collect();
     const lastActive = await lastActiveByUser(ctx);
     const others = users.filter((u) => u.id !== admin.id);
@@ -534,7 +545,7 @@ export const stats = query({
             { label: "Active in 30 days", value: String(active30.size) },
           ],
         },
-        { kind: "series", title: "New accounts per week", points: weeklyCounts(users.map((u) => u.created_at), tz, 26) },
+        { kind: "series", title: "New accounts per week", points: weeklyCounts(users.map((u) => u.created_at), localDate, 26) },
         breakdown(
           "Sign-in method",
           users.map((u) => {
@@ -613,7 +624,7 @@ export const stats = query({
     const dayOne = recent.filter((r) => within(r, 1)).length;
     const firstWeek = recent.filter((r) => within(r, 7)).length;
     const returned = settled.filter((r) => r.active).length;
-    const monthStart = `${localDate(Date.now(), tz).slice(0, 7)}-01`;
+    const monthStart = `${localDate(Date.now()).slice(0, 7)}-01`;
     const cohortStart = (() => {
       const d = new Date(`${monthStart}T00:00:00Z`);
       d.setUTCMonth(d.getUTCMonth() - 5);
@@ -621,7 +632,7 @@ export const stats = query({
     })();
     const cohorts = new Map<string, { total: number; logged: number; active: number }>();
     for (const r of accountRows) {
-      const month = localDate(Date.parse(r.u.created_at), tz).slice(0, 7);
+      const month = localDate(Date.parse(r.u.created_at)).slice(0, 7);
       if (month < cohortStart) continue;
       const c = cohorts.get(month) ?? { total: 0, logged: 0, active: 0 };
       c.total += 1;
@@ -671,7 +682,7 @@ export const stats = query({
     const shiftWeeks = new Map<string, string>();
     for (const s of shifts) {
       if (s.created_at === undefined) continue;
-      const key = `${s.user_id}:${mondayOf(localDate(Date.parse(s.created_at), tz))}`;
+      const key = `${s.user_id}:${mondayOf(localDate(Date.parse(s.created_at)))}`;
       const current = shiftWeeks.get(key);
       if (current === undefined || s.created_at < current) shiftWeeks.set(key, s.created_at);
     }
@@ -690,8 +701,8 @@ export const stats = query({
             { label: "Shifts saved", value: String(shifts.filter((s) => s.deleted_at === undefined).length), caption: "in total" },
           ],
         },
-        { kind: "series", title: "Shifts added per week", points: weeklyCounts(shifts.map((s) => s.created_at), tz, 26) },
-        { kind: "series", title: "People adding shifts per week", collapsed: true, points: weeklyCounts([...shiftWeeks.values()], tz, 26) },
+        { kind: "series", title: "Shifts added per week", points: weeklyCounts(shifts.map((s) => s.created_at), localDate, 26) },
+        { kind: "series", title: "People adding shifts per week", collapsed: true, points: weeklyCounts([...shiftWeeks.values()], localDate, 26) },
         breakdown("Pay setup", [...latestWage.values()].map((w) => (w.tariff_type_id !== undefined ? "Tariff" : "Own hourly wage"))),
         breakdown("Tax deduction", [...latestWage.values()].map((w) => (w.tax_enabled ? "On" : "Off"))),
         {
@@ -726,7 +737,7 @@ export const stats = query({
             { label: "Messages", value: String(messages.filter((m) => m.created_at >= since(30)).length), caption: "last 30 days" },
           ],
         },
-        { kind: "series", title: "Messages per week", points: weeklyCounts(messages.map((m) => m.created_at), tz, 26) },
+        { kind: "series", title: "Messages per week", points: weeklyCounts(messages.map((m) => m.created_at), localDate, 26) },
         {
           kind: "list",
           rows: [
