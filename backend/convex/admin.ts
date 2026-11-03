@@ -480,14 +480,25 @@ export const activeUsersChart = query({
         .withIndex("by_hour_user", (q) => q.gte("hour", new Date(currentHour - 31 * DAY_MS).toISOString()))
         .collect()
     ).filter((r) => r.user_id !== admin.id);
+    const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone });
+    const hourlyCounts = new Map<number, number>();
+    const dailyUsers = new Map<string, Set<string>>();
+    for (const row of rows) {
+      const hour = Date.parse(row.hour);
+      hourlyCounts.set(hour, (hourlyCounts.get(hour) ?? 0) + 1);
+      const date = dateFormatter.format(new Date(hour));
+      const users = dailyUsers.get(date) ?? new Set<string>();
+      users.add(row.user_id);
+      dailyUsers.set(date, users);
+    }
     const hours = Array.from({ length: 24 }, (_, i) => new Date(currentHour - (23 - i) * hourMs).toISOString()).map((start) => ({
       start,
-      users: rows.filter((r) => Date.parse(r.hour) === Date.parse(start)).length,
+      users: hourlyCounts.get(Date.parse(start)) ?? 0,
     }));
-    const today = localDate(Date.now(), timeZone);
+    const today = dateFormatter.format(new Date());
     const days = Array.from({ length: 30 }, (_, i) => addDays(today, -(29 - i))).map((date) => ({
       date,
-      users: new Set(rows.filter((r) => localDate(Date.parse(r.hour), timeZone) === date).map((r) => r.user_id)).size,
+      users: dailyUsers.get(date)?.size ?? 0,
     }));
     return { hours, days };
   },
