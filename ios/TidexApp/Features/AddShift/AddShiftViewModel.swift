@@ -1,3 +1,4 @@
+import AppIntents
 import Combine
 import Foundation
 import Observation
@@ -958,11 +959,10 @@ internal final class AddShiftViewModel {
     guard let time = endTime else {
       return ""
     }
-    let formatted = formatTimeAsHHmm(time)
-    if formatted == "00:00", let start = startTime, formatTimeAsHHmm(start) != "00:00" {
-      return "24:00"
+    guard let start = startTime else {
+      return formatTimeAsHHmm(time)
     }
-    return formatted
+    return ShiftSchedule.storedEndTime(formatTimeAsHHmm(time), start: formatTimeAsHHmm(start))
   }
 
   var eventReminderAnchorTimeString: String? {
@@ -1400,6 +1400,7 @@ internal final class AddShiftViewModel {
         createdDates.insert(shiftDate.toISODateString())
       }
 
+      donateAddShift(jobId: jobId, dates: createdDates)
       await finishSingleSubmission(createdDates: createdDates, userId: userId)
     } catch {
       kLogger.error("Failed to create shifts: \(error.localizedDescription)")
@@ -1409,6 +1410,19 @@ internal final class AddShiftViewModel {
         : String(localized: .addShiftSinglePartialSave) + "\n" + error.localizedDescription
       Haptics.play(.error)
     }
+  }
+
+  /// Lets Siri suggest adding a shift like this one.
+  private func donateAddShift(jobId: String?, dates: Set<String>) {
+    guard
+      let day = dates.min().flatMap({ Date.fromISODateString($0) }),
+      let startTime,
+      let endTime
+    else {
+      return
+    }
+    let job = activeJobs.first { $0.id == jobId }.map(JobEntity.init)
+    _ = AddShiftIntent(job: job, date: day, start: startTime, end: endTime).donate()
   }
 
   private func resolveSubmitUserId() -> String? {

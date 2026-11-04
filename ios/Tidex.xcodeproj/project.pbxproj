@@ -87,6 +87,7 @@
 		ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */; };
 		A6CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift */; };
 		A64917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift */; };
+		AF50CE5B2483AFF4F7A6564B /* ShiftScheduleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E42213FFE2D238F1A7C6171 /* ShiftScheduleTests.swift */; };
 		ECD7A2F33AB681B306945A67 /* AssistantEarningsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D309DBAA8A9B8426E275DF /* AssistantEarningsTests.swift */; };
 		AF93110130C8000000A1B2C3 /* AddShiftSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */; };
 		AF93110330C8000000A1B2C3 /* ScheduleListMonthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */; };
@@ -235,6 +236,7 @@
 		ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SiriMessageRecipientMatcherTests.swift; sourceTree = "<group>"; };
 		A5CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessageRecipientResolverTests.swift; sourceTree = "<group>"; };
 		A54917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AssistantPrivacyTests.swift; sourceTree = "<group>"; };
+		7E42213FFE2D238F1A7C6171 /* ShiftScheduleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftScheduleTests.swift; sourceTree = "<group>"; };
 		68D309DBAA8A9B8426E275DF /* AssistantEarningsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AssistantEarningsTests.swift; sourceTree = "<group>"; };
 		ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheInvalidationTests.swift; sourceTree = "<group>"; };
 		AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsComposerDraftStoreTests.swift; sourceTree = "<group>"; };
@@ -496,6 +498,7 @@
 				ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */,
 				A5CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift */,
 				A54917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift */,
+				7E42213FFE2D238F1A7C6171 /* ShiftScheduleTests.swift */,
 				68D309DBAA8A9B8426E275DF /* AssistantEarningsTests.swift */,
 				CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */,
 				ECC72DB88ADB99743AF1F1DA /* AdminAPITests.swift */,
@@ -1033,6 +1036,7 @@
 				ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */,
 				A6CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift in Sources */,
 				A64917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift in Sources */,
+				AF50CE5B2483AFF4F7A6564B /* ShiftScheduleTests.swift in Sources */,
 				ECD7A2F33AB681B306945A67 /* AssistantEarningsTests.swift in Sources */,
 				CD50000030B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift in Sources */,
 				969F64792CB12C677FAEBA0A /* AdminAPITests.swift in Sources */,

@@ -25637,6 +25637,168 @@
         }
       }
     },
+    "assistant.addShift.confirm" : {
+      "comment" : "Siri asks before adding a shift. The argument is a shift summary, e.g. 'Café, Friday 6 November, 22:00 to 06:00'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add this shift? %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vil du legge til denne vakten? %@"
+          }
+        }
+      }
+    },
+    "assistant.addShift.date" : {
+      "comment" : "Name of the date parameter of the Add Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dato"
+          }
+        }
+      }
+    },
+    "assistant.addShift.date.description" : {
+      "comment" : "Description of the date parameter of the Add Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The day the shift starts."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dagen vakten starter."
+          }
+        }
+      }
+    },
+    "assistant.addShift.description" : {
+      "comment" : "Description of the Siri action that adds a shift.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds a shift on the day you choose. An end time before the start is on the next day."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legger til en vakt på dagen du velger. En sluttid før starttiden er neste dag."
+          }
+        }
+      }
+    },
+    "assistant.addShift.done" : {
+      "comment" : "Siri answer after adding a shift. The argument is a shift summary.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added: %@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagt til: %@."
+          }
+        }
+      }
+    },
+    "assistant.addShift.end.description" : {
+      "comment" : "Description of the end time parameter of the Add Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When the shift ends. A time before the start is on the next day."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når vakten slutter. Et klokkeslett før starttiden er neste dag."
+          }
+        }
+      }
+    },
+    "assistant.addShift.job.description" : {
+      "comment" : "Description of the job parameter of the Add Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The job the shift is for. Leave it out to use your default job."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jobben vakten gjelder. Står den tom, brukes standardjobben din."
+          }
+        }
+      }
+    },
+    "assistant.addShift.start.description" : {
+      "comment" : "Description of the start time parameter of the Add Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When the shift starts."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når vakten starter."
+          }
+        }
+      }
+    },
+    "assistant.addShift.title" : {
+      "comment" : "Name of the Siri and Shortcuts action that adds a shift.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Shift"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til vakt"
+          }
+        }
+      }
+    },
     "assistant.earnedSoFar.description" : {
       "comment" : "Description of the Siri action that says what the user has earned on the current shift.",
       "extractionState" : "manual",
@@ -25813,6 +25975,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Siri kan ikke bruke Tidex mens du ser en annen brukers konto."
+          }
+        }
+      }
+    },
+    "assistant.error.invalidTimes" : {
+      "comment" : "Siri error when the given day and times can't form a shift.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Those times don't make a shift."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De tidene gir ingen gyldig vakt."
+          }
+        }
+      }
+    },
+    "assistant.error.noChange" : {
+      "comment" : "Siri error when the user asks to move a shift without giving a new day or time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Say the new day or times for the shift."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si ny dag eller nye tider for vakten."
           }
         }
       }
@@ -26339,6 +26537,204 @@
         }
       }
     },
+    "assistant.moveShift.confirm" : {
+      "comment" : "Siri asks before moving a shift. The argument is the shift summary after the move.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move the shift to %@?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vil du flytte vakten til %@?"
+          }
+        }
+      }
+    },
+    "assistant.moveShift.description" : {
+      "comment" : "Description of the Siri action that moves a shift.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moves a shift to another day or time."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flytter en vakt til en annen dag eller tid."
+          }
+        }
+      }
+    },
+    "assistant.moveShift.done" : {
+      "comment" : "Siri answer after moving a shift. The argument is the shift summary after the move.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moved: %@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flyttet: %@."
+          }
+        }
+      }
+    },
+    "assistant.moveShift.newDate" : {
+      "comment" : "Name of the new date parameter of the Move Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Date"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny dato"
+          }
+        }
+      }
+    },
+    "assistant.moveShift.newDate.description" : {
+      "comment" : "Description of the new date parameter of the Move Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The day to move the shift to."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dagen vakten skal flyttes til."
+          }
+        }
+      }
+    },
+    "assistant.moveShift.newEnd" : {
+      "comment" : "Name of the new end time parameter of the Move Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New End"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny slutt"
+          }
+        }
+      }
+    },
+    "assistant.moveShift.newEnd.description" : {
+      "comment" : "Description of the new end time parameter of the Move Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new end time. A time before the start is on the next day."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny sluttid. Et klokkeslett før starttiden er neste dag."
+          }
+        }
+      }
+    },
+    "assistant.moveShift.newStart" : {
+      "comment" : "Name of the new start time parameter of the Move Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Start"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny start"
+          }
+        }
+      }
+    },
+    "assistant.moveShift.newStart.description" : {
+      "comment" : "Description of the new start time parameter of the Move Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new start time. The shift keeps its length unless you also give a new end."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny starttid. Vakten beholder lengden hvis du ikke også gir ny sluttid."
+          }
+        }
+      }
+    },
+    "assistant.moveShift.shift.description" : {
+      "comment" : "Description of the shift parameter of the Move Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shift to move."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vakten som skal flyttes."
+          }
+        }
+      }
+    },
+    "assistant.moveShift.title" : {
+      "comment" : "Name of the Siri and Shortcuts action that moves a shift to another day or time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move Shift"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flytt vakt"
+          }
+        }
+      }
+    },
     "assistant.nextShift.description" : {
       "comment" : "Description of the Siri and Shortcuts action that tells the user their next shift.",
       "extractionState" : "manual",
@@ -26713,6 +27109,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Start"
+          }
+        }
+      }
+    },
+    "assistant.shift.summary" : {
+      "comment" : "Shift summary read by Siri. 1: job name. 2: day, e.g. 'Friday 6 November'. 3: start time. 4: end time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, %3$@ to %4$@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, %3$@ til %4$@"
           }
         }
       }
