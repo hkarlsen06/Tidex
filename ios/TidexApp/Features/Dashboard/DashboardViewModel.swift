@@ -3440,85 +3440,22 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     from session: TemporaryClockSession,
     at referenceDate: Date = Date()
   ) -> ShiftWithComputations {
-    let alignedStart = Self.minuteAligned(session.startedAt)  // swiftlint:disable:this explicit_type_interface
-    let alignedReference = max(Self.minuteAligned(referenceDate), alignedStart)  // swiftlint:disable:this explicit_type_interface line_length
-    let shiftDate = alignedStart.toISODateString()  // swiftlint:disable:this explicit_type_interface
-    let startTime = Self.timeString(from: alignedStart)  // swiftlint:disable:this explicit_type_interface
-    let endTime = Self.timeString(from: alignedReference)  // swiftlint:disable:this explicit_type_interface
-    let shift = ShiftRow(  // swiftlint:disable:this explicit_type_interface
-      id: session.id,
-      user_id: session.userId,
-      job_id: session.jobId,
-      shift_date: shiftDate,
-      start_time: startTime,
-      end_time: endTime,
-      custom_supplements: nil
-    )
-
     let snapshot = snapshotsRepository.snapshotForDate(  // swiftlint:disable:this explicit_type_interface
-      shiftDate,
+      ClockSessionRules.minuteAligned(session.startedAt).toISODateString(),
       userId: session.userId,
       jobId: session.jobId
     )
-
-    let computed: ShiftComputed
-    if startTime == endTime {
-      // HH:mm precision can produce equal start/end in the first minute; keep preview at zero
-      // until at least one minute has elapsed to avoid accidental cross-midnight interpretation.
-      computed = Self.zeroShiftComputed(id: session.id)
-    } else {
-      computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-    }
-
-    return ShiftWithComputations(
-      shift: shift,
-      computed: computed,
-      taxEnabled: snapshot?.effectiveTaxEnabled ?? false,
-      taxPercentage: snapshot?.effectiveTaxPercentage ?? 0
-    )
+    return ClockSessionRules.shiftSoFar(session, snapshot: snapshot, at: referenceDate)
   }
 
   func liveFeaturedShiftWhileOngoing(  // swiftlint:disable:this explicit_acl type_contents_order
     from shift: ShiftWithComputations,
     at referenceDate: Date = Date()
   ) -> ShiftWithComputations {
-    let alignedReference = Self.minuteAligned(referenceDate)  // swiftlint:disable:this explicit_type_interface
-    let endTime = Self.timeString(from: alignedReference)  // swiftlint:disable:this explicit_type_interface
-    let reconstructedShift = ShiftRow(  // swiftlint:disable:this explicit_type_interface
-      id: shift.id,
-      user_id: shift.shift.user_id,
-      job_id: shift.shift.job_id,
-      shift_date: shift.shiftDate,
-      start_time: shift.startTime,
-      end_time: endTime,
-      custom_supplements: shift.shift.custom_supplements
-    )
-
-    let snapshot: WageSnapshot?
-    if let snapshotUserId = shift.shift.user_id ?? cachedUserId {
-      snapshot = snapshotsRepository.snapshotForDate(
-        shift.shiftDate,
-        userId: snapshotUserId,
-        jobId: shift.shift.job_id
-      )
-    } else {
-      snapshot = nil
+    let snapshot = (shift.shift.user_id ?? cachedUserId).flatMap { userId in  // swiftlint:disable:this explicit_type_interface line_length
+      snapshotsRepository.snapshotForDate(shift.shiftDate, userId: userId, jobId: shift.shift.job_id)
     }
-
-    let computed: ShiftComputed
-    if shift.startTime == endTime {
-      computed = Self.zeroShiftComputed(id: shift.id)
-    } else {
-      computed = PayrollCalculator.computeShift(reconstructedShift, snapshot: snapshot)
-    }
-
-    return ShiftWithComputations(
-      shift: reconstructedShift,
-      computed: computed,
-      taxEnabled: shift.taxEnabled,
-      taxPercentage: shift.taxPercentage,
-      calculationContext: shift.calculationContext
-    )
+    return ClockSessionRules.shiftSoFar(shift, snapshot: snapshot, at: referenceDate)
   }
 
   func clockIn(jobId: String? = nil, at now: Date = Date()) async {  // swiftlint:disable:this explicit_acl function_body_length line_length type_contents_order
@@ -3549,7 +3486,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
       return
     }
 
-    let alignedStart = Self.minuteAligned(now)  // swiftlint:disable:this explicit_type_interface
+    let alignedStart = ClockSessionRules.minuteAligned(now)  // swiftlint:disable:this explicit_type_interface
     let session = TemporaryClockSession(  // swiftlint:disable:this explicit_type_interface
       id: UUID().lowercasedString,
       userId: userId,
@@ -4195,29 +4132,8 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     ClockSessionRules.timeString(from: date)
   }
 
-  private static func minuteAligned(_ date: Date) -> Date {
-    var calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
-    calendar.timeZone = Date.localTimeZone
-    let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)  // swiftlint:disable:this explicit_type_interface line_length
-    return calendar.date(from: components) ?? date
-  }
-
   private static func isShiftOngoing(_ shift: ShiftRow, at date: Date) -> Bool {
     ClockSessionRules.isShiftOngoing(shift, at: date)
-  }
-
-  private static func zeroShiftComputed(id: String) -> ShiftComputed {
-    ShiftComputed(
-      id: id,
-      durationHours: 0,
-      paidHours: 0,
-      basePay: 0,
-      supplementPay: 0,
-      gross: 0,
-      wagePeriods: [],
-      originalWagePeriods: [],
-      breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
-    )
   }
 
   /// Calculate the adjusted payroll date for a given month

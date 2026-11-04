@@ -434,6 +434,7 @@ struct MainTabView: View {
 
   // MARK: - Deep Link Handling
 
+  // swiftlint:disable cyclomatic_complexity
   /// Handle pending deep link from AppCoordinator
   /// Switches to the appropriate tab based on the deep link type
   private func handlePendingDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
@@ -447,6 +448,10 @@ struct MainTabView: View {
     case .shifts:
       // ShiftsView handles the specific navigation
       activateTab(.shifts)
+
+    case .clockOut:
+      // DashboardView clocks out, then clears the link.
+      activateTab(.home)
 
     case .addShift:
       // Push Add onto the current tab. AddShiftView applies the mode and date,
@@ -478,6 +483,7 @@ struct MainTabView: View {
     }
     // Note: We don't clear the deep link here for tab-based navigation - the destination view will consume and clear it
   }
+  // swiftlint:enable cyclomatic_complexity
 
   private func activateTab(_ tab: Tab) {
     loadedTabs.insert(tab)

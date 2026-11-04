@@ -486,6 +486,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         }
         .onAppear {
           handleDashboardAppear()
+          handleClockOutDeepLink(coordinator.pendingDeepLink)
+        }
+        .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
+          handleClockOutDeepLink(deepLink)
         }
         .onDisappear {
           activeDashboardRefreshTask?.cancel()
@@ -1221,7 +1225,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   @ViewBuilder
-  private func clockButtonsSection() -> some View {  // swiftlint:disable:this function_body_length type_contents_order
+  private func clockButtonsSection() -> some View {  // swiftlint:disable:this type_contents_order
     let layout =  // swiftlint:disable:this explicit_type_interface
       dynamicTypeSize.isAccessibilitySize
       ? AnyLayout(VStackLayout(spacing: Spacing.sm))
@@ -1258,13 +1262,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         guard viewModel.isClockOutEnabled else { return }  // swiftlint:disable:this conditional_returns_on_newline
         Haptics.play(.medium)
         Task {
-          let route = await viewModel.routeClockOut()  // swiftlint:disable:this explicit_type_interface
-          if case .temporaryReview(let session) = route {
-            await presentTemporaryClockReview(session)
-          } else if case .persistedEnded = route {
-            AccessibilityNotification.Announcement(String(localized: .dashboardAccessibilityClockedOut))
-              .post()
-          }
+          await clockOut()
         }
       }
     }
@@ -1554,6 +1552,26 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           isElevated: false
         )
       }
+    }
+  }
+
+  private func clockOut() async {  // swiftlint:disable:this type_contents_order
+    let route = await viewModel.routeClockOut()  // swiftlint:disable:this explicit_type_interface
+    if case .temporaryReview(let session) = route {
+      await presentTemporaryClockReview(session)
+    } else if case .persistedEnded = route {
+      AccessibilityNotification.Announcement(String(localized: .dashboardAccessibilityClockedOut))
+        .post()
+    }
+  }
+
+  // swiftlint:disable:next type_contents_order
+  /// Siri's Clock Out action opens Home with this link.
+  private func handleClockOutDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
+    guard deepLink == .clockOut else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    coordinator.clearPendingDeepLink()
+    Task {
+      await clockOut()
     }
   }
 

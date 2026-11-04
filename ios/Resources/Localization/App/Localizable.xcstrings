@@ -25637,6 +25637,60 @@
         }
       }
     },
+    "assistant.earnedSoFar.description" : {
+      "comment" : "Description of the Siri action that says what the user has earned on the current shift.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tells you what you've earned on the shift you're working now."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forteller hva du har tjent på vakten du jobber nå."
+          }
+        }
+      }
+    },
+    "assistant.earnedSoFar.dialog" : {
+      "comment" : "Siri answer. The argument is the amount earned so far on the current shift, before tax, e.g. '1 250 kr'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've earned %@ so far."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du har tjent %@ så langt."
+          }
+        }
+      }
+    },
+    "assistant.earnedSoFar.title" : {
+      "comment" : "Name of the Siri and Shortcuts action that says what the user has earned on the shift they are working now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get Earned So Far"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent tjent så langt"
+          }
+        }
+      }
+    },
     "assistant.earnings.description" : {
       "comment" : "Shortcuts action description.",
       "extractionState" : "manual",
@@ -25727,6 +25781,24 @@
         }
       }
     },
+    "assistant.error.clockHasNoEnd" : {
+      "comment" : "Siri error when the user asks to extend a shift but clocked in without an end time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You clocked in without an end time. Clock out when you're done."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du stemplet inn uten sluttid. Stemple ut når du er ferdig."
+          }
+        }
+      }
+    },
     "assistant.error.impersonating" : {
       "comment" : "Siri or Shortcuts reply while an admin is viewing another user's account in Tidex.",
       "extractionState" : "manual",
@@ -25741,6 +25813,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Siri kan ikke bruke Tidex mens du ser en annen brukers konto."
+          }
+        }
+      }
+    },
+    "assistant.error.notWorking" : {
+      "comment" : "Siri error when the user asks about or changes the current shift but is not working now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're not on a shift or clocked in right now."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du er ikke på vakt eller stemplet inn nå."
+          }
+        }
+      }
+    },
+    "assistant.error.recurringShift" : {
+      "comment" : "Siri error when the user asks to change a shift that comes from a recurring schedule.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This shift comes from a recurring shift. Change it in Tidex."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne vakten kommer fra en fast vakt. Endre den i Tidex."
           }
         }
       }
@@ -25763,6 +25871,24 @@
         }
       }
     },
+    "assistant.error.shiftTooLong" : {
+      "comment" : "Siri error when a change would make a shift 24 hours or longer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A shift can't be 24 hours or longer."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En vakt kan ikke vare i 24 timer eller mer."
+          }
+        }
+      }
+    },
     "assistant.error.signedOut" : {
       "comment" : "Siri or Shortcuts reply when nobody is logged in to Tidex.",
       "extractionState" : "manual",
@@ -25777,6 +25903,114 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Åpne Tidex og logg inn først."
+          }
+        }
+      }
+    },
+    "assistant.extendShift.confirm" : {
+      "comment" : "Siri asks before changing the shift. The argument is the new end time, e.g. '18:30'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change your shift to end at %@?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vil du at vakten skal slutte kl. %@?"
+          }
+        }
+      }
+    },
+    "assistant.extendShift.description" : {
+      "comment" : "Description of the Siri action that makes the shift the user is working now end later.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moves the end of the shift you're working now later."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flytter slutten på vakten du jobber nå til senere."
+          }
+        }
+      }
+    },
+    "assistant.extendShift.done" : {
+      "comment" : "Siri answer after the shift was extended. The argument is the new end time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your shift now ends at %@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vakten slutter nå kl. %@."
+          }
+        }
+      }
+    },
+    "assistant.extendShift.minutes" : {
+      "comment" : "Name of the minutes parameter of the Extend Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minutes"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minutter"
+          }
+        }
+      }
+    },
+    "assistant.extendShift.minutes.description" : {
+      "comment" : "Description of the minutes parameter of the Extend Shift action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many minutes to add to the end of the shift."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvor mange minutter som skal legges til slutten av vakten."
+          }
+        }
+      }
+    },
+    "assistant.extendShift.title" : {
+      "comment" : "Name of the Siri and Shortcuts action that makes the current shift end later.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Extend Shift"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forleng vakt"
           }
         }
       }
@@ -26497,6 +26731,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vakt"
+          }
+        }
+      }
+    },
+    "assistant.stopClock.description" : {
+      "comment" : "Description of the Siri action that opens the app and clocks the user out.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens Tidex and clocks you out, like the Clock out button on Home."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpner Tidex og stempler deg ut, som knappen Stemple ut på Hjem."
+          }
+        }
+      }
+    },
+    "assistant.stopClock.title" : {
+      "comment" : "Name of the Siri and Shortcuts action that clocks the user out. Matches the Clock out button on Home.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clock Out"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stemple ut"
           }
         }
       }

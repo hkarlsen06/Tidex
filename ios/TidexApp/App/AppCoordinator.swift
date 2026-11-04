@@ -81,6 +81,7 @@ final class AppCoordinator {
     case feedback  // Navigate to feedback settings (for users receiving response)
     case adminFeedback  // Navigate to admin panel with feedback tab (for admins receiving new feedback)
     case adminReport(reportId: String?)  // Open admin panel on reports tab and optionally select a report
+    case clockOut  // Open Home and clock out like its Clock out button
   }
 
   enum SettingsDeepLinkDestination: Equatable {

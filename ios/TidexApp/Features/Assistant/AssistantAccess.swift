@@ -41,6 +41,10 @@ enum AssistantError: Error, CustomLocalizedStringResourceConvertible {
   case signedOut
   case impersonating
   case shiftNotFound
+  case notWorking
+  case clockHasNoEnd
+  case recurringShift
+  case shiftTooLong
 
   var localizedStringResource: LocalizedStringResource {
     switch self {
@@ -52,6 +56,18 @@ enum AssistantError: Error, CustomLocalizedStringResourceConvertible {
 
     case .shiftNotFound:
       return .assistantErrorShiftNotFound
+
+    case .notWorking:
+      return .assistantErrorNotWorking
+
+    case .clockHasNoEnd:
+      return .assistantErrorClockHasNoEnd
+
+    case .recurringShift:
+      return .assistantErrorRecurringShift
+
+    case .shiftTooLong:
+      return .assistantErrorShiftTooLong
     }
   }
 }

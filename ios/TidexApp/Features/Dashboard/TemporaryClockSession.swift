@@ -49,6 +49,94 @@ enum ClockSessionRules {  // swiftlint:disable:this explicit_acl explicit_top_le
     exceedsMaxDuration(from: session.startedAt, to: referenceDate)
   }
 
+  static func minuteAligned(_ date: Date) -> Date {  // swiftlint:disable:this explicit_acl
+    var calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
+    calendar.timeZone = Date.localTimeZone
+    let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)  // swiftlint:disable:this explicit_type_interface line_length
+    return calendar.date(from: components) ?? date
+  }
+
+  /// The clock session from its start to `referenceDate`, priced like Home's featured card.
+  static func shiftSoFar(  // swiftlint:disable:this explicit_acl
+    _ session: TemporaryClockSession,
+    snapshot: WageSnapshot?,
+    at referenceDate: Date
+  ) -> ShiftWithComputations {
+    let alignedStart = minuteAligned(session.startedAt)  // swiftlint:disable:this explicit_type_interface
+    let alignedReference = max(minuteAligned(referenceDate), alignedStart)  // swiftlint:disable:this explicit_type_interface line_length
+    let shift = ShiftRow(  // swiftlint:disable:this explicit_type_interface
+      id: session.id,
+      user_id: session.userId,
+      job_id: session.jobId,
+      shift_date: alignedStart.toISODateString(),
+      start_time: timeString(from: alignedStart),
+      end_time: timeString(from: alignedReference),
+      custom_supplements: nil
+    )
+    return ShiftWithComputations(
+      shift: shift,
+      computed: computedSoFar(shift, snapshot: snapshot),
+      taxEnabled: snapshot?.effectiveTaxEnabled ?? false,
+      taxPercentage: snapshot?.effectiveTaxPercentage ?? 0
+    )
+  }
+
+  /// A running shift cut off at `referenceDate`.
+  static func shiftSoFar(  // swiftlint:disable:this explicit_acl
+    _ shift: ShiftWithComputations,
+    snapshot: WageSnapshot?,
+    at referenceDate: Date
+  ) -> ShiftWithComputations {
+    let reconstructedShift = ShiftRow(  // swiftlint:disable:this explicit_type_interface
+      id: shift.id,
+      user_id: shift.shift.user_id,
+      job_id: shift.shift.job_id,
+      shift_date: shift.shiftDate,
+      start_time: shift.startTime,
+      end_time: timeString(from: minuteAligned(referenceDate)),
+      custom_supplements: shift.shift.custom_supplements
+    )
+    return ShiftWithComputations(
+      shift: reconstructedShift,
+      computed: computedSoFar(reconstructedShift, snapshot: snapshot),
+      taxEnabled: shift.taxEnabled,
+      taxPercentage: shift.taxPercentage,
+      calculationContext: shift.calculationContext
+    )
+  }
+
+  /// Equal HH:mm start and end would read as a 24-hour shift, so the first minute earns nothing.
+  private static func computedSoFar(_ shift: ShiftRow, snapshot: WageSnapshot?) -> ShiftComputed {
+    guard shift.start_time != shift.end_time else {
+      return ShiftComputed(
+        id: shift.id,
+        durationHours: 0,
+        paidHours: 0,
+        basePay: 0,
+        supplementPay: 0,
+        gross: 0,
+        wagePeriods: [],
+        originalWagePeriods: [],
+        breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
+      )
+    }
+    return PayrollCalculator.computeShift(shift, snapshot: snapshot)
+  }
+
+  /// The end after adding `minutes`, or nil when the shift would reach `maxClockDuration`.
+  static func extendedEnd(of shift: ShiftRow, byMinutes minutes: Int) -> Date? {  // swiftlint:disable:this explicit_acl
+    let startTime: String = String(shift.start_time.prefix(5))  // swiftlint:disable:this no_magic_numbers
+    let endTime: String = String(shift.end_time.prefix(5))  // swiftlint:disable:this no_magic_numbers
+    guard
+      let start = Date.fromDateAndTime(shift.shift_date, time: startTime),
+      let end = Date.shiftEndDate(shiftDate: shift.shift_date, startTime: startTime, endTime: endTime)
+    else {
+      return nil
+    }
+    let extended: Date = end.addingTimeInterval(TimeInterval(minutes) * 60)  // swiftlint:disable:this no_magic_numbers
+    return exceedsMaxDuration(from: start, to: extended) ? nil : extended
+  }
+
   static func isShiftOngoing(_ shift: ShiftRow, at date: Date) -> Bool {  // swiftlint:disable:this explicit_acl
     let calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
     let startTime = String(shift.start_time.prefix(5))  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers

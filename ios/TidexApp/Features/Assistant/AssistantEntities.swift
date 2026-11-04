@@ -169,6 +169,15 @@ enum AssistantShifts {
     now: Date = Date(),
     readService: MonthlyPayrollReadService = .shared
   ) async throws -> [ShiftEntity] {
+    let loaded = try await computedShifts(access: access, now: now, readService: readService)
+    return entities(from: loaded.shifts, jobs: loaded.context.jobs)
+  }
+
+  static func computedShifts(
+    access: AssistantAccess,
+    now: Date = Date(),
+    readService: MonthlyPayrollReadService = .shared
+  ) async throws -> (shifts: [ShiftWithComputations], context: PayrollReadContext) {
     let userId = try access.requireUserId()
     let window = window(around: now)
     let context = await readService.loadContextOffMain(for: userId)
@@ -186,7 +195,7 @@ enum AssistantShifts {
         visibleRange: (window.startDate, window.endDate),
         jobs: context.jobs
       ))
-    return entities(from: computed, jobs: context.jobs)
+    return (computed, context)
   }
 
   /// Sorted by start time.

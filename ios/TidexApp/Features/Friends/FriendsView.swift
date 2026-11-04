@@ -322,8 +322,8 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       }
       coordinator.clearPendingDeepLink()
 
-    case .shifts, .addShift, .settings, .feedback, .adminFeedback, .adminReport:
-      // Not handled here. ShiftsView, AddShiftView and MainTabView own these.
+    case .shifts, .addShift, .settings, .feedback, .adminFeedback, .adminReport, .clockOut:
+      // Not handled here. ShiftsView, AddShiftView, DashboardView and MainTabView own these.
       break
     }
   }
