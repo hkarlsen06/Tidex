@@ -47,6 +47,7 @@ enum AssistantError: Error, CustomLocalizedStringResourceConvertible {
   case shiftTooLong
   case invalidTimes
   case noChange
+  case friendNotSharing
 
   var localizedStringResource: LocalizedStringResource {
     switch self {
@@ -76,6 +77,9 @@ enum AssistantError: Error, CustomLocalizedStringResourceConvertible {
 
     case .noChange:
       return .assistantErrorNoChange
+
+    case .friendNotSharing:
+      return .assistantErrorFriendNotSharing
     }
   }
 }

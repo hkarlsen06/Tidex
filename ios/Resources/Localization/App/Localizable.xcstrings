@@ -25961,6 +25961,24 @@
         }
       }
     },
+    "assistant.error.friendNotSharing" : {
+      "comment" : "Siri error when the chosen friend does not share shifts with the user.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That friend doesn't share their shifts with you."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den vennen deler ikke vaktene sine med deg."
+          }
+        }
+      }
+    },
     "assistant.error.impersonating" : {
       "comment" : "Siri or Shortcuts reply while an admin is viewing another user's account in Tidex.",
       "extractionState" : "manual",
@@ -26245,6 +26263,168 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Venn"
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.date.description" : {
+      "comment" : "Description of the date parameter of the friend's shifts action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The day to check. Today if you leave it out."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dagen du vil sjekke. I dag hvis den står tom."
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.description" : {
+      "comment" : "Description of the Siri action that tells the user when a friend works on a day.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tells you when a friend who shares their shifts with you works on a day."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forteller når en venn som deler vaktene sine med deg, jobber en dag."
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.friend.description" : {
+      "comment" : "Description of the friend parameter of the friend's shifts action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The friend whose shifts you want."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vennen du vil se vaktene til."
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.none" : {
+      "comment" : "Siri answer when the friend has no shifts that day. 1: friend's name. 2: day, e.g. 'Friday 6 November'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ has no shifts on %2$@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ har ingen vakter %2$@."
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.notLoaded" : {
+      "comment" : "Siri answer when the app has not downloaded the friend's shifts for that month. The argument is the friend's name. 'Friends' is the tab name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex hasn't loaded %@'s shifts for that month yet. Open them in Friends first."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex har ikke lastet vaktene til %@ for den måneden ennå. Åpne dem under Venner først."
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.shift" : {
+      "comment" : "One of a friend's shifts read by Siri. 1: start time. 2: end time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ to %2$@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ til %2$@"
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.shiftEarnings" : {
+      "comment" : "One of a friend's shifts with pay, read by Siri. 1: start time. 2: end time. 3: pay before tax, e.g. '1 200 kr'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ to %2$@ (%3$@ before tax)"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ til %2$@ (%3$@ før skatt)"
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.title" : {
+      "comment" : "Name of the Siri and Shortcuts action that tells the user when a friend works.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get Friend's Shifts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent vaktene til en venn"
+          }
+        }
+      }
+    },
+    "assistant.friendSchedule.works" : {
+      "comment" : "Siri answer about a friend's day. 1: friend's name. 2: day, e.g. 'Friday 6 November'. 3: list of shifts, e.g. '09:00 to 17:00'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ works on %2$@: %3$@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ jobber %2$@: %3$@."
           }
         }
       }
