@@ -4,6 +4,7 @@ import Foundation
 struct AddShiftIntent: AppIntent {
   static let title: LocalizedStringResource = "assistant.addShift.title"
   static let description = IntentDescription("assistant.addShift.description")
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "assistant.shift.job", description: "assistant.addShift.job.description")
   var job: JobEntity?
@@ -60,6 +61,7 @@ struct AddShiftIntent: AppIntent {
 struct MoveShiftIntent: AppIntent {
   static let title: LocalizedStringResource = "assistant.moveShift.title"
   static let description = IntentDescription("assistant.moveShift.description")
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "assistant.shift.type", description: "assistant.moveShift.shift.description")
   var shift: ShiftEntity

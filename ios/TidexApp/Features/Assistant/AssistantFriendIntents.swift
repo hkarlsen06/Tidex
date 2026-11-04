@@ -48,6 +48,7 @@ struct FriendDaySchedule: Equatable {
 struct FriendScheduleIntent: AppIntent {
   static let title: LocalizedStringResource = "assistant.friendSchedule.title"
   static let description = IntentDescription("assistant.friendSchedule.description")
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "assistant.friend.type", description: "assistant.friendSchedule.friend.description")
   var friend: FriendEntity
