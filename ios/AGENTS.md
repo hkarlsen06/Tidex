@@ -16,7 +16,7 @@ Build and run tests yourself to prove each change, as [the verification guide](d
 
 Paths are under `ios/TidexApp/` unless they start with `ios/`.
 
-- The only string catalog is `ios/Resources/Localization/App/Localizable.xcstrings`. `TidexApp/Resources` has assets, `*.lproj/InfoPlist.strings` (permission strings) and Swift helpers, but no catalog.
+- The string catalog is `ios/Resources/Localization/App/Localizable.xcstrings`. `TidexApp/Resources` has assets, `*.lproj/InfoPlist.strings` (permission strings), Swift helpers and `AppShortcuts.xcstrings`, which holds only the Siri phrases of `Features/Assistant/AssistantShortcuts.swift` because App Shortcuts read phrases from no other catalog.
 - The marketing version is in `ios/Version.xcconfig` and the build number is in `ios/BuildNumber.xcconfig`.
 - To find a screen from its visible text, run `bun run ios:l10n:search -- "<text>"`, then search Swift for the generated camelCase symbol, not the dotted key (see [localization](docs/AGENT_LOCALIZATION.md)).
 - `Features/Schedule` is the shifts tab. `ScheduleViewModel.swift` defines `ShiftsViewModel`, and `Components/ScheduleCalendarView.swift` defines `ShiftsCalendarView`.

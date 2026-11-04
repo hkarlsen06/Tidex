@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 
 /// Card displaying a single shift in the shifts list
@@ -97,6 +98,7 @@ struct ShiftRowCard: View {
       .accessibilityAction(.default) {
         onTap?()
       }
+      .appEntityIdentifier(EntityIdentifier(for: ShiftEntity.self, identifier: shift.id))
   }
 
   /// One spoken summary instead of a fragment per text label.

@@ -41,6 +41,7 @@ enum AssistantSpotlight {
       try await index.indexAppEntities(shiftEntities, priority: 0)
       try await index.indexAppEntities(
         jobs.filter { $0.archived_at == nil }.map(JobEntity.init), priority: 0)
+      TidexShortcuts.updateAppShortcutParameters()
     } catch {
       logger.error("Spotlight update failed: \(error.localizedDescription, privacy: .public)")
     }
@@ -48,6 +49,7 @@ enum AssistantSpotlight {
 
   /// Sign-out and account switches call this, so the next account never finds these items.
   static func removeAll(index: any AssistantSearchIndex = CSSearchableIndex.default()) async {
+    TidexShortcuts.updateAppShortcutParameters()
     do {
       try await index.deleteAllSearchableItems()
     } catch {

@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 
 /// Sheet view displaying detailed information about a shift
@@ -514,6 +515,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         )
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+    }
+    // Lets Siri act on the shift on screen.
+    .userActivity(ShiftEntity.viewActivityType) { activity in
+      activity.isEligibleForHandoff = false
+      activity.appEntityIdentifier = EntityIdentifier(for: ShiftEntity.self, identifier: shift.id)
     }
     .onAppear {
       initializeEditState()

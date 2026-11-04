@@ -9,6 +9,8 @@ import Foundation
 struct ShiftEntity: IndexedEntity {
   static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "assistant.shift.type")
   static let defaultQuery = ShiftEntityQuery()
+  /// The shift details screen advertises its shift under this activity type.
+  static let viewActivityType = "no.tidex.shift"
 
   let id: String
 

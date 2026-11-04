@@ -1,0 +1,276 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add a ${job} shift in ${applicationName}" : {
+      "comment" : "Siri phrase for the add shift action. ${job} is a job name such as 'Café'. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a ${job} shift in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til en vakt på ${job} i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Add a shift in ${applicationName}" : {
+      "comment" : "Siri phrase for the add shift action. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a shift in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til en vakt i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Check a friend's shifts in ${applicationName}" : {
+      "comment" : "Siri phrase for a friend's shifts. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check a friend's shifts in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sjekk vaktene til en venn i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Clock out in ${applicationName}" : {
+      "comment" : "Siri phrase for the clock out action. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clock out in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stemple ut i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Extend my shift in ${applicationName}" : {
+      "comment" : "Siri phrase for the action that makes the current shift end later. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Extend my shift in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forleng vakten min i ${applicationName}"
+          }
+        }
+      }
+    },
+    "How many hours have I worked in ${applicationName}" : {
+      "comment" : "Siri phrase for the hours worked action. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many hours have I worked in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvor mange timer har jeg jobbet i ${applicationName}"
+          }
+        }
+      }
+    },
+    "How much have I earned in ${applicationName}" : {
+      "comment" : "Siri phrase for the earnings action. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How much have I earned in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvor mye har jeg tjent i ${applicationName}"
+          }
+        }
+      }
+    },
+    "How much have I earned this shift in ${applicationName}" : {
+      "comment" : "Siri phrase for what the user has earned on the shift they are working now. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How much have I earned this shift in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvor mye har jeg tjent denne vakten i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Show earnings for ${period} in ${applicationName}" : {
+      "comment" : "Siri phrase for the earnings action. ${period} is a period such as 'this month'. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show earnings for ${period} in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis inntekt for ${period} i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Show hours for ${period} in ${applicationName}" : {
+      "comment" : "Siri phrase for the hours worked action. ${period} is a period such as 'this week'. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show hours for ${period} in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis timer for ${period} i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Stop the clock in ${applicationName}" : {
+      "comment" : "Siri phrase for the clock out action. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop the clock in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopp klokken i ${applicationName}"
+          }
+        }
+      }
+    },
+    "What have I earned so far in ${applicationName}" : {
+      "comment" : "Siri phrase for what the user has earned on the shift they are working now. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What have I earned so far in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hva har jeg tjent så langt i ${applicationName}"
+          }
+        }
+      }
+    },
+    "What's my next shift in ${applicationName}" : {
+      "comment" : "Siri phrase for the next shift action. Keep ${applicationName}.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What's my next shift in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hva er neste vakt i ${applicationName}"
+          }
+        }
+      }
+    },
+    "When do I work next in ${applicationName}" : {
+      "comment" : "Siri phrase for the next shift action. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When do I work next in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når jobber jeg neste gang i ${applicationName}"
+          }
+        }
+      }
+    },
+    "When does ${friend} work in ${applicationName}" : {
+      "comment" : "Siri phrase for a friend's shifts. ${friend} is the friend's name. Keep the ${...} placeholders.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When does ${friend} work in ${applicationName}"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når jobber ${friend} i ${applicationName}"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -483,6 +483,8 @@ final class SharingViewModel: MonthNavigable {
       chatOnlyUserIds: chatOnlyUserIds,
       for: userId
     )
+    // Siri learns friend names for "When does <friend> work".
+    TidexShortcuts.updateAppShortcutParameters()
   }
 
   private func persistShiftPreviews(_ previews: [SharerShiftPreview], userId: String) async {
