@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 
 /// Stats tab view - displays statistics and analytics
@@ -102,6 +103,8 @@ struct StatsView: View {
     }
     .onAppear {
       refreshWorkSetupPresentationState()
+      // Teaches Siri that the user checks earnings, so it can suggest the shortcut.
+      _ = EarningsIntent(period: .thisMonth).donate()
     }
     .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
       let hadShifts = hasAnyShifts  // swiftlint:disable:this explicit_type_interface

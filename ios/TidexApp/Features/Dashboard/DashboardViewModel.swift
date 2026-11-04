@@ -682,7 +682,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
   private let clockSessionStore: TemporaryClockSessionStore  // swiftlint:disable:this type_contents_order
   nonisolated private static let gregorianCalendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
 
-  private struct DashboardDataBuildInput {
+  struct DashboardDataBuildInput {
     let displayedMonthShifts: [ShiftWithComputations]
     let displayedMonthEvents: [EventRow]
     let previousMonthShifts: [ShiftWithComputations]
@@ -3181,27 +3181,16 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     let prevTax: Double? = prevTaxEnabled ? previousGross - previousNet : nil
 
     let fallbackCurrency = settings?.currency ?? "kr"  // swiftlint:disable:this explicit_type_interface
-    let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(  // swiftlint:disable:this explicit_type_interface
-      shifts: displayedMonthShifts,
+    let earnings = EarningsTotals.compute(  // swiftlint:disable:this explicit_type_interface
+      shiftsByMonth: [(displayYM.month, displayedMonthShifts)],
       jobs: displayJobs,
       fallbackCurrency: fallbackCurrency,
-      referenceDate: now
-    )
-    let primaryMonthShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface
-      matching: currentMonthAggregate.primary,
-      in: displayedMonthShifts,
-      jobs: displayJobs,
-      fallbackCurrency: fallbackCurrency
-    )
-
-    // Displayed month totals (primary currency bucket only).
-    let displayTotals = PayrollEngine.summarizeShiftTotals(  // swiftlint:disable:this explicit_type_interface
-      shifts: primaryMonthShifts,
       halfTaxMonth: halfTaxMonth,
-      earningsMonth: displayYM.month,
       now: now
     )
-    let displayTaxEnabled = currentMonthAggregate.primary.hasTaxEnabled  // swiftlint:disable:this explicit_type_interface line_length
+    let currentMonthAggregate = earnings.aggregate  // swiftlint:disable:this explicit_type_interface
+    let displayTotals = earnings.totals  // swiftlint:disable:this explicit_type_interface
+    let displayTaxEnabled = earnings.taxEnabled  // swiftlint:disable:this explicit_type_interface
     let completedShiftsCount = currentMonthAggregate.primary.completedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
     let plannedShiftsCount = currentMonthAggregate.primary.plannedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
 
@@ -3266,7 +3255,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
   }
 
   /// Build dashboard data off the main actor to avoid blocking animations.
-  nonisolated private static func buildDashboardDataOffMain(  // swiftlint:disable:this function_body_length line_length type_contents_order
+  nonisolated static func buildDashboardDataOffMain(  // swiftlint:disable:this function_body_length line_length type_contents_order
     _ input: DashboardDataBuildInput
   ) -> DashboardData {
     let displayedMonthShifts = input.displayedMonthShifts  // swiftlint:disable:this explicit_type_interface
@@ -3327,26 +3316,16 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     let previousNet = prevTotals.net + adjustmentTotals.net  // swiftlint:disable:this explicit_type_interface
     let prevTax: Double? = prevTaxEnabled ? previousGross - previousNet : nil
 
-    let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(  // swiftlint:disable:this explicit_type_interface
-      shifts: displayedMonthShifts,
+    let earnings = EarningsTotals.compute(  // swiftlint:disable:this explicit_type_interface
+      shiftsByMonth: [(displayYM.month, displayedMonthShifts)],
       jobs: jobs,
       fallbackCurrency: currency,
-      referenceDate: now
-    )
-    let primaryMonthShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface
-      matching: currentMonthAggregate.primary,
-      in: displayedMonthShifts,
-      jobs: jobs,
-      fallbackCurrency: currency
-    )
-
-    let displayTotals = PayrollEngine.summarizeShiftTotals(  // swiftlint:disable:this explicit_type_interface
-      shifts: primaryMonthShifts,
       halfTaxMonth: halfTaxMonth,
-      earningsMonth: displayYM.month,
       now: now
     )
-    let displayTaxEnabled = currentMonthAggregate.primary.hasTaxEnabled  // swiftlint:disable:this explicit_type_interface line_length
+    let currentMonthAggregate = earnings.aggregate  // swiftlint:disable:this explicit_type_interface
+    let displayTotals = earnings.totals  // swiftlint:disable:this explicit_type_interface
+    let displayTaxEnabled = earnings.taxEnabled  // swiftlint:disable:this explicit_type_interface
     let completedShiftsCount = currentMonthAggregate.primary.completedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
     let plannedShiftsCount = currentMonthAggregate.primary.plannedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
 

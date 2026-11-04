@@ -25637,6 +25637,96 @@
         }
       }
     },
+    "assistant.earnings.description" : {
+      "comment" : "Shortcuts action description.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tells you what you earn in a period, added up the way Home does."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forteller hva du tjener i en periode, regnet ut slik Hjem gjør."
+          }
+        }
+      }
+    },
+    "assistant.earnings.net" : {
+      "comment" : "Second sentence of the Siri earnings reply when tax is on. %@ is an amount with currency.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After tax: %@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etter skatt: %@."
+          }
+        }
+      }
+    },
+    "assistant.earnings.title" : {
+      "comment" : "Shortcuts action name. Says how much the user earns in a time span.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get Earnings"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent inntekt"
+          }
+        }
+      }
+    },
+    "assistant.earnings.total" : {
+      "comment" : "Siri reply. %1$@ is the time span, such as Last month. %2$@ is an amount with currency.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ before tax."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ før skatt."
+          }
+        }
+      }
+    },
+    "assistant.earnings.totalSoFar" : {
+      "comment" : "Siri reply while some shifts in the span are still ahead. %1$@ is the span. %2$@ is the total including planned shifts. %3$@ is the amount from finished shifts.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ before tax with planned shifts, %3$@ earned so far."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ før skatt med planlagte vakter, %3$@ tjent så langt."
+          }
+        }
+      }
+    },
     "assistant.error.impersonating" : {
       "comment" : "Siri or Shortcuts reply while an admin is viewing another user's account in Tidex.",
       "extractionState" : "manual",
@@ -25723,6 +25813,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Venn"
+          }
+        }
+      }
+    },
+    "assistant.hours.description" : {
+      "comment" : "Shortcuts action description.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tells you how many paid hours your shifts add up to in a period."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forteller hvor mange betalte timer vaktene dine blir i en periode."
+          }
+        }
+      }
+    },
+    "assistant.hours.title" : {
+      "comment" : "Shortcuts action name. Says how many hours the user works in a time span.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get Hours Worked"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent arbeidstimer"
+          }
+        }
+      }
+    },
+    "assistant.hours.total" : {
+      "comment" : "Siri reply. %1$@ is the time span, such as This week. %2$@ is a duration, such as 32 hours.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@."
+          }
+        }
+      }
+    },
+    "assistant.hours.totalSoFar" : {
+      "comment" : "Siri answer. 1: period name, e.g. 'This week'. 2: paid hours including planned shifts, e.g. '32 hours'. 3: hours from shifts already worked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ with planned shifts, %3$@ worked so far."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ med planlagte vakter, %3$@ jobbet så langt."
           }
         }
       }
@@ -25943,6 +26105,78 @@
         }
       }
     },
+    "assistant.nextShift.description" : {
+      "comment" : "Description of the Siri and Shortcuts action that tells the user their next shift.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tells you when your next shift starts and where."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forteller når og hvor neste vakt begynner."
+          }
+        }
+      }
+    },
+    "assistant.nextShift.dialog" : {
+      "comment" : "Siri answer about the next shift. 1: job name. 2: day, e.g. 'Thursday 5 November'. 3: start time. 4: end time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your next shift is at %1$@ on %2$@, from %3$@ to %4$@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neste vakt er på %1$@ %2$@, fra %3$@ til %4$@."
+          }
+        }
+      }
+    },
+    "assistant.nextShift.none" : {
+      "comment" : "Siri answer when the user has no upcoming shifts in the next 60 days.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have no shifts in the next 60 days."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du har ingen vakter de neste 60 dagene."
+          }
+        }
+      }
+    },
+    "assistant.nextShift.title" : {
+      "comment" : "Name of the Siri and Shortcuts action that tells the user their next shift.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get Next Shift"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent neste vakt"
+          }
+        }
+      }
+    },
     "assistant.openJob.description" : {
       "comment" : "Shortcuts action description.",
       "extractionState" : "manual",
@@ -26047,6 +26281,132 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Åpne vakt"
+          }
+        }
+      }
+    },
+    "assistant.period.description" : {
+      "comment" : "Shortcuts parameter description for the time span to add up.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The period to add up."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perioden som skal summeres."
+          }
+        }
+      }
+    },
+    "assistant.period.lastMonth" : {
+      "comment" : "Time span option in Siri and Shortcuts. Starts a sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last month"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forrige måned"
+          }
+        }
+      }
+    },
+    "assistant.period.noShifts" : {
+      "comment" : "Siri reply when the time span has no shifts. %@ is the span, such as This week.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: no shifts."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: ingen vakter."
+          }
+        }
+      }
+    },
+    "assistant.period.thisMonth" : {
+      "comment" : "Time span option in Siri and Shortcuts. Starts a sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This month"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne måneden"
+          }
+        }
+      }
+    },
+    "assistant.period.thisWeek" : {
+      "comment" : "Time span option in Siri and Shortcuts. Starts a sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This week"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne uken"
+          }
+        }
+      }
+    },
+    "assistant.period.thisYear" : {
+      "comment" : "Time span option in Siri and Shortcuts. Starts a sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This year"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I år"
+          }
+        }
+      }
+    },
+    "assistant.period.type" : {
+      "comment" : "Shortcuts parameter name: the time span to add up, such as this week or this month.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Period"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periode"
           }
         }
       }
