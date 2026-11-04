@@ -47,6 +47,7 @@ fi
 # The cgroup counters start over when the container starts. The container keeps its id
 # when Docker restarts it after a kill, so the kernel log still matches it.
 MEMORY_STATE=/run/supabase-watchdog-paeonia-memory.state
+MEMORY_EVENTS_STATE=/run/supabase-watchdog-paeonia-memory-events.state
 MEMORY_PROBLEM="paeonia: convex-backend-1 memory at or above 70% of its mem_limit for at least 10 minutes"
 MEMORY_ACTIVE=0
 grep -Fxq "$MEMORY_PROBLEM" "$STATE" && MEMORY_ACTIVE=1
@@ -87,10 +88,23 @@ if [ -n "$ID" ] && [ -r "$CG/memory.current" ] && [ "$(cat "$CG/memory.max")" !=
   printf 'paeonia memory: working_set=%sMiB (%s%%), total=%sMiB, inactive_file=%sMiB, limit=%sMiB, alert=%s\n' \
     "$(( WORKING_MEMORY / 1048576 ))" "$MEMORY_PERCENT" "$(( MEMORY_CURRENT / 1048576 ))" \
     "$(( INACTIVE_FILE / 1048576 ))" "$(( MEMORY_LIMIT / 1048576 ))" "$MEMORY_ACTIVE"
-  awk '$1 == "max" && $2 > 0 { hit = 1 } END { exit !hit }' "$CG/memory.events" \
-    && PROBLEMS+=("paeonia: convex-backend-1 reached its mem_limit since it started, so requests stalled")
+  # Establish a baseline on first observation. A lifetime counter does not prove
+  # a current incident or a request failure. Only alert when it increases.
+  LIMIT_HITS=$(awk '$1 == "max" { print $2 }' "$CG/memory.events")
+  PREVIOUS_INSTANCE= PREVIOUS_HITS=
+  [ ! -r "$MEMORY_EVENTS_STATE" ] || read -r PREVIOUS_INSTANCE PREVIOUS_HITS < "$MEMORY_EVENTS_STATE"
+  if [[ "$LIMIT_HITS" =~ ^[0-9]+$ ]]; then
+    if [[ "$PREVIOUS_INSTANCE" = "$ID/$STARTED" && "$PREVIOUS_HITS" =~ ^[0-9]+$ ]] \
+      && (( LIMIT_HITS > PREVIOUS_HITS )); then
+      PROBLEMS+=("paeonia: convex-backend-1 reached its mem_limit since the previous watchdog check")
+    fi
+    printf '%s %s\n' "$ID/$STARTED" "$LIMIT_HITS" > "$MEMORY_EVENTS_STATE"
+  else
+    PROBLEMS+=("paeonia: could not read convex-backend-1 memory-limit counter")
+  fi
 else
   : > "$MEMORY_STATE"
+  : > "$MEMORY_EVENTS_STATE"
 fi
 [ "$MEMORY_ACTIVE" -eq 1 ] && PROBLEMS+=("$MEMORY_PROBLEM")
 [ -n "$ID" ] && journalctl -k --since "-6min" -q --no-pager | grep -q "oom-kill:.*docker-$ID.scope" \
