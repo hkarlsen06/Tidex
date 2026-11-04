@@ -4,7 +4,7 @@ iOS-specific development guidance for the Tidex native app.
 
 ## iOS Development Rules
 
-**Deployment target: iOS 26.** `TidexApp` and `TidexAppTests` are at 26.6 and the extensions are at 26.0. Xcode raised the app and test targets on its own. Keep the test target equal to the app target, or the test build fails. Don't add `#available` checks or fallbacks for iOS 26 or earlier. An API introduced in iOS 27 needs an `#available(iOS 27, *)` check and an iOS 26 fallback, because about half of active users were still on iOS 26 in September 2026. Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
+**Deployment target: iOS 26.** All app, test and extension targets use 26.0. Keep the test target equal to the app target, or the test build fails. Don't add `#available` checks or fallbacks for iOS 26 or earlier. An API introduced in iOS 27 needs an `#available(iOS 27, *)` check and an iOS 26 fallback, because about half of active users were still on iOS 26 in September 2026. Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
 
 Run commands from the repository root unless explicitly stated otherwise.
 
