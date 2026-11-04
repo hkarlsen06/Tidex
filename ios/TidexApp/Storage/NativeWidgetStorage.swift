@@ -102,6 +102,8 @@ private actor NativeWidgetStorageRefreshCoordinator {
 /// Triggered after:
 /// - Successful sync (SyncCoordinator)
 /// - Local shift changes (ShiftsRepository)
+///
+/// It also refreshes the shifts and jobs that Spotlight and Siri find.
 enum NativeWidgetStorage {
   /// Default currency symbol if settings don't specify one
   private static let defaultCurrencySymbol = "kr"
@@ -210,7 +212,7 @@ enum NativeWidgetStorage {
       source: source, shifts: regularShifts, now: now, visibleRange: (startDate, endDate))
 
     if allShifts.isEmpty {
-      await clearAfterEmptyRefresh(for: userId, generation: generation)
+      await clearAfterEmptyRefresh(for: userId, generation: generation, jobs: source.jobs)
       return
     }
 
@@ -224,6 +226,7 @@ enum NativeWidgetStorage {
 
     // Trigger widget reload
     reloadWidgetTimelines()
+    await AssistantSpotlight.reindex(userId: userId, shifts: allShifts, jobs: source.jobs, now: now)
 
     // Re-check in-app Live Activity state after fresh shift data is written.
     await checkLiveActivityState()
@@ -260,11 +263,14 @@ enum NativeWidgetStorage {
     }
   }
 
-  private static func clearAfterEmptyRefresh(for userId: String, generation: Int) async {
+  private static func clearAfterEmptyRefresh(for userId: String, generation: Int, jobs: [Job])
+    async
+  {
     guard await canApplyResults(for: userId, generation: generation) else { return }
 
     logger.info("No shifts to store for widget")
     clearWidgetStorage()
+    await AssistantSpotlight.reindex(userId: userId, shifts: [], jobs: jobs)
     await checkLiveActivityState()
   }
 

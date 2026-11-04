@@ -1221,6 +1221,9 @@ final class AppCoordinator {
     AuthSessionManager.shared.clearSharedKeychain()
     AuthSessionManager.shared.clearCachedUser()
     WidgetAppGroup.markSignedOut()
+
+    // After the cached user is gone, so a refresh still in flight can't index again.
+    await AssistantSpotlight.removeAll()
   }
 
   private func resetPayrollCaches() {

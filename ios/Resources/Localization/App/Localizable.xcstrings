@@ -25637,6 +25637,330 @@
         }
       }
     },
+    "assistant.error.impersonating" : {
+      "comment" : "Siri or Shortcuts reply while an admin is viewing another user's account in Tidex.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siri can't use Tidex while you're viewing another user's account."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siri kan ikke bruke Tidex mens du ser en annen brukers konto."
+          }
+        }
+      }
+    },
+    "assistant.error.shiftNotFound" : {
+      "comment" : "Siri or Shortcuts reply when the requested shift was deleted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That shift no longer exists."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den vakten finnes ikke lenger."
+          }
+        }
+      }
+    },
+    "assistant.error.signedOut" : {
+      "comment" : "Siri or Shortcuts reply when nobody is logged in to Tidex.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Tidex and log in first."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne Tidex og logg inn først."
+          }
+        }
+      }
+    },
+    "assistant.friend.name" : {
+      "comment" : "Shortcuts property name: a friend's name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Navn"
+          }
+        }
+      }
+    },
+    "assistant.friend.type" : {
+      "comment" : "Name of the friend type in Siri and Shortcuts: a friend who shares shifts with the user. Singular noun.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Friend"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Venn"
+          }
+        }
+      }
+    },
+    "assistant.job.name" : {
+      "comment" : "Shortcuts property name: the name of a job.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Navn"
+          }
+        }
+      }
+    },
+    "assistant.job.type" : {
+      "comment" : "Name of the job type in Siri, Shortcuts and Spotlight. Singular noun.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Job"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jobb"
+          }
+        }
+      }
+    },
+    "assistant.openJob.description" : {
+      "comment" : "Shortcuts action description.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the job's pay settings in Tidex."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpner lønnsinnstillingene for jobben i Tidex."
+          }
+        }
+      }
+    },
+    "assistant.openJob.target.description" : {
+      "comment" : "Shortcuts parameter description for the job to open.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The job to open."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jobben som skal åpnes."
+          }
+        }
+      }
+    },
+    "assistant.openJob.title" : {
+      "comment" : "Shortcuts action name. Opens a job's pay settings in the app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Job"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne jobb"
+          }
+        }
+      }
+    },
+    "assistant.openShift.description" : {
+      "comment" : "Shortcuts action description.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the shift in Tidex."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpner vakten i Tidex."
+          }
+        }
+      }
+    },
+    "assistant.openShift.target.description" : {
+      "comment" : "Shortcuts parameter description for the shift to open.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shift to open."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vakten som skal åpnes."
+          }
+        }
+      }
+    },
+    "assistant.openShift.title" : {
+      "comment" : "Shortcuts action name. Opens a shift in the app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Shift"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne vakt"
+          }
+        }
+      }
+    },
+    "assistant.shift.end" : {
+      "comment" : "Shortcuts property name: when a shift ends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slutt"
+          }
+        }
+      }
+    },
+    "assistant.shift.fallbackJobName" : {
+      "comment" : "Title of a shift in Siri and Spotlight when its job has no name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shift"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vakt"
+          }
+        }
+      }
+    },
+    "assistant.shift.job" : {
+      "comment" : "Shortcuts property name: the job a shift belongs to.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Job"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jobb"
+          }
+        }
+      }
+    },
+    "assistant.shift.start" : {
+      "comment" : "Shortcuts property name: when a shift starts.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start"
+          }
+        }
+      }
+    },
+    "assistant.shift.type" : {
+      "comment" : "Name of the shift type in Siri, Shortcuts and Spotlight. Singular noun.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shift"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vakt"
+          }
+        }
+      }
+    },
     "auth.apple.error.cancelled" : {
       "comment" : "Sign in with Apple was canceled by the user",
       "extractionState" : "manual",
