@@ -25763,6 +25763,186 @@
         }
       }
     },
+    "assistant.message.attribute.reply" : {
+      "comment" : "Message attribute name in Siri: the message answers an earlier message.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reply"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Svar"
+          }
+        }
+      }
+    },
+    "assistant.message.conversation.muted" : {
+      "comment" : "Chat attribute name in Siri: the chat's notifications are off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muted"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dempet"
+          }
+        }
+      }
+    },
+    "assistant.message.effect.standard" : {
+      "comment" : "Message effect name in Siri: no special effect.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
+    },
+    "assistant.message.error.empty" : {
+      "comment" : "Siri reply when the message to send has no text.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The message is empty."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meldingen er tom."
+          }
+        }
+      }
+    },
+    "assistant.message.error.oneFriendOnly" : {
+      "comment" : "Siri reply when the user asks to message several people at once in Tidex.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex can message one friend at a time."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex kan sende melding til én venn om gangen."
+          }
+        }
+      }
+    },
+    "assistant.message.error.unknownFriend" : {
+      "comment" : "Siri reply when the spoken name matches none of the user's Tidex friends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can only message your Tidex friends, and none of them matched."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan bare sende melding til Tidex-vennene dine, og ingen av dem passet."
+          }
+        }
+      }
+    },
+    "assistant.message.error.unsupportedContent" : {
+      "comment" : "Siri reply when the user asks Tidex to send a file, voice message, location or scheduled message.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex can only send text messages right away."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex kan bare sende tekstmeldinger med en gang."
+          }
+        }
+      }
+    },
+    "assistant.message.reaction.heart" : {
+      "comment" : "Reaction name in Siri: a heart on a chat message.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heart"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hjerte"
+          }
+        }
+      }
+    },
+    "assistant.message.type.unspecified" : {
+      "comment" : "Message kind that Siri may show for a Tidex chat message. Means an ordinary message.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Message"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melding"
+          }
+        }
+      }
+    },
+    "assistant.message.whichFriend" : {
+      "comment" : "Siri asks which friend to message when the spoken name matches several Tidex friends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Which friend?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvilken venn?"
+          }
+        }
+      }
+    },
     "assistant.openJob.description" : {
       "comment" : "Shortcuts action description.",
       "extractionState" : "manual",

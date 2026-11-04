@@ -85,6 +85,7 @@
 		ABCD20023070000000ABCDEF /* TidexSiriIntents.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = ABCD20013070000000ABCDEF /* TidexSiriIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		ABCD200D3070000000ABCDEF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
 		ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */; };
+		A6CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift */; };
 		A64917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift */; };
 		AF93110130C8000000A1B2C3 /* AddShiftSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */; };
 		AF93110330C8000000A1B2C3 /* ScheduleListMonthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */; };
@@ -231,6 +232,7 @@
 		ABCD10013052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EmploymentDataCompletedAverageTests.swift; sourceTree = "<group>"; };
 		ABCD20013070000000ABCDEF /* TidexSiriIntents.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexSiriIntents.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SiriMessageRecipientMatcherTests.swift; sourceTree = "<group>"; };
+		A5CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessageRecipientResolverTests.swift; sourceTree = "<group>"; };
 		A54917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AssistantPrivacyTests.swift; sourceTree = "<group>"; };
 		ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheInvalidationTests.swift; sourceTree = "<group>"; };
 		AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsComposerDraftStoreTests.swift; sourceTree = "<group>"; };
@@ -490,6 +492,7 @@
 				D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */,
 				B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */,
 				ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */,
+				A5CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift */,
 				A54917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift */,
 				CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */,
 				ECC72DB88ADB99743AF1F1DA /* AdminAPITests.swift */,
@@ -1025,6 +1028,7 @@
 				B75A10013060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift in Sources */,
 				AB5C10013070000000F1E2D3 /* FriendShiftTimingTests.swift in Sources */,
 				ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */,
+				A6CDA42D359126A57E237759 /* MessageRecipientResolverTests.swift in Sources */,
 				A64917D44D7FD7F96453CA8F /* AssistantPrivacyTests.swift in Sources */,
 				CD50000030B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift in Sources */,
 				969F64792CB12C677FAEBA0A /* AdminAPITests.swift in Sources */,
