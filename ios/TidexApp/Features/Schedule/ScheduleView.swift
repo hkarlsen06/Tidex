@@ -1526,7 +1526,11 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     PullToRefreshContainer(onRefresh: {
       await refreshShiftsContent()
     }) {  // swiftlint:disable:this closure_body_length
-      GeometryReader { _ in  // swiftlint:disable:this closure_body_length
+      GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
+        let calendarWidth =
+          geometry.size.width >= 700
+          ? min(AdaptiveMaxWidth.tabContent, max(350, geometry.size.height * 0.7))
+          : AdaptiveMaxWidth.tabContent
         // Calendar only - no list below. Tapping days opens day sheet.
         ZStack {  // swiftlint:disable:this closure_body_length
           // Background layer to dismiss selection when tapping outside calendar
@@ -1651,7 +1655,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               conflictDates: viewModel.conflictDates,
               excludedFromTotalIds: viewModel.excludedFromTotalIds
             )
-            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+            .frame(maxWidth: calendarWidth)
             .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
             if !hasAnyShifts {
               FirstShiftPrompt { openAddShift() }

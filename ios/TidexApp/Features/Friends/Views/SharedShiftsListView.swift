@@ -132,12 +132,19 @@ extension SharedShiftsListView {
 
   /// Centers the calendar vertically like in ShiftsView
   private var calendarContent: some View {
-    VStack {
-      Spacer()
-      calendarView
-        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-        .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-      Spacer()
+    GeometryReader { geometry in
+      let calendarWidth =
+        geometry.size.width >= 700
+        ? min(AdaptiveMaxWidth.tabContent, max(350, geometry.size.height * 0.7))
+        : AdaptiveMaxWidth.tabContent
+      VStack {
+        Spacer()
+        calendarView
+          .frame(maxWidth: calendarWidth)
+          .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+        Spacer()
+      }
+      .frame(maxWidth: .infinity)
     }
     // Offset for month picker overlay so content centers in available space
     .padding(.bottom, MonthPickerLayout.totalBottomInset)
