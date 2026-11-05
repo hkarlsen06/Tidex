@@ -50,13 +50,7 @@ final class ShiftJourneyUITests: XCTestCase {
 
   func testPaymentSuggestionCancelPreservesShiftAndSaveLeavesDayWithoutHours() {
     let app = XCUIApplication()
-    app.launchArguments = [
-      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-      "-defaultStartupTab", "shifts",
-    ]
-    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
-    app.launchEnvironment["TIDEX_SCREENSHOT_JOB"] = "NAV"
-    app.launchEnvironment["TIDEX_TEST_PAYMENTS"] = "1"
+    configurePaymentJourney(app)
     app.launch()
     let date = Self.emptyFixtureDay()
     let emptyDay = app.descendants(matching: .any)
@@ -69,10 +63,15 @@ final class ShiftJourneyUITests: XCTestCase {
     selectNineToFive(in: app)
     let offer = app.buttons["add-shift.payment-adjustment"]
     XCTAssertTrue(offer.waitForExistence(timeout: timeout), app.debugDescription)
+    retainScreenshot(app, name: "payment-suggestion")
     offer.tap()
     let amount = app.textFields["payroll-adjustment.amount"]
     XCTAssertTrue(amount.waitForExistence(timeout: timeout), app.debugDescription)
     XCTAssertEqual(amount.value as? String, "2000.0")
+    retainScreenshot(app, name: "payment-editor")
+    app.swipeUp()
+    retainScreenshot(app, name: "payment-editor-date")
+    app.swipeDown()
     app.buttons["Cancel"].tap()
     XCTAssertTrue(offer.waitForExistence(timeout: timeout), "Cancel must retain the unsaved shift")
     offer.tap()
@@ -89,6 +88,29 @@ final class ShiftJourneyUITests: XCTestCase {
       app.descendants(matching: .any)
         .matching(NSPredicate(format: "label BEGINSWITH %@", date + ",")).firstMatch.exists,
       "A payment must not create a shift or add worked hours")
+  }
+
+  private func configurePaymentJourney(_ app: XCUIApplication) {
+    app.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+      "-defaultStartupTab", "shifts",
+    ]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    app.launchEnvironment["TIDEX_SCREENSHOT_JOB"] = "NAV"
+    app.launchEnvironment["TIDEX_TEST_PAYMENTS"] = "1"
+    if ProcessInfo.processInfo.environment["TIDEX_QA_LARGE"] == "1" {
+      app.launchArguments += [
+        "-cachedTheme", "dark", "-UIPreferredContentSizeCategoryName",
+        "UICTContentSizeCategoryAccessibilityXXXL",
+      ]
+    }
+  }
+
+  private func retainScreenshot(_ app: XCUIApplication, name: String) {
+    let attachment = XCTAttachment(screenshot: app.screenshot())
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    add(attachment)
   }
 
   /// Saves a 09:00 to 17:00 single shift on the date the Add screen opened with.
