@@ -1,6 +1,8 @@
-- Ulepszono układy na iPhone Duo, w tym ekran wdrożenia, kalendarze, edycję zmian i duży tekst.
-- Dodano odpowiedzi Siri dotyczące Twojej następnej zmiany, przepracowanych godzin, zarobków oraz zmian udostępnionych przez znajomych.
-- Dodano działania Siri do dodawania, przenoszenia i przedłużania zmian oraz otwierania podsumowania przed wyjściem.
+- Ulepszono układy na iPhone Duo, w tym onboarding, kalendarze, edycję zmian i duży tekst.
+- Dodano sugestie korekty wynagrodzenia dla płatności wprowadzonych jako zmiany, bez dodawania przepracowanych godzin.
+- Dodano odpowiedzi Siri dotyczące Twojej następnej zmiany, przepracowanych godzin, zarobków i zmian udostępnionych przez znajomych.
+- Dodano działania Siri do dodawania, przenoszenia lub wydłużania zmian oraz otwierania podglądu przed zakończeniem pracy.
 - Dodano wyszukiwanie zmian i miejsc pracy w Spotlight.
-- Dodano obsługę Siri do wysyłania wiadomości i tworzenia ich wersji roboczych w iOS 27.
-- Poprawiono wprowadzanie czasu, aby niepełne godziny były niezawodnie uzupełniane, a zmiany zachowywane przy zmianie klawiatury lub układu.
+- Dodano obsługę Siri do wysyłania i tworzenia wersji roboczych wiadomości w iOS 27.
+- Poprawiono wprowadzanie czasu, aby niepełne godziny były niezawodnie uzupełniane, a zmiany były zachowywane przy zmianie klawiatury lub układu.
+- Poprawiono przewijanie czatu, aby przejścia do wiadomości nie były przerywane.

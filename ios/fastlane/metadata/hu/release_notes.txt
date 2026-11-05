@@ -1,6 +1,8 @@
-- Javítottuk az iPhone Duo elrendezéseit, beleértve az üdvözlést, a naptárakat, a műszakszerkesztést és a nagy méretű szöveget.
-- Siri-válaszokkal bővült a következő műszakra, a ledolgozott órákra, a keresetre és a barátok által megosztott műszakokra vonatkozó támogatás.
+- Javítottuk az elrendezéseket iPhone Duo készüléken, beleértve az üdvözlő képernyőket, a naptárakat, a műszakszerkesztést és a nagy méretű szöveget.
+- Bérkorrekciós javaslatokat adtunk hozzá a műszakként rögzített kifizetésekhez, ledolgozott órák hozzáadása nélkül.
+- Siri-válaszokat adtunk hozzá a következő műszakodra, a ledolgozott óráidra, a keresetedre és a barátaid által megosztott műszakokra vonatkozóan.
 - Siri-műveleteket adtunk hozzá műszakok hozzáadásához, áthelyezéséhez vagy meghosszabbításához, valamint a kijelentkezés előtti áttekintés megnyitásához.
-- Hozzáadtuk a műszakok és munkák Spotlight-keresését.
-- Hozzáadtuk a Siri támogatását az üzenetek küldéséhez és piszkozatának megírásához iOS 27-en.
-- Javítottuk az időbevitelt, hogy a részlegesen megadott időpontok megbízhatóan kiegészüljenek, és a módosítások megmaradjanak a billentyűzet vagy az elrendezés változásakor.
+- Hozzáadtuk a Spotlight-keresést a műszakokhoz és a munkákhoz.
+- Hozzáadtuk a Siri támogatását üzenetek küldéséhez és piszkozatként mentéséhez iOS 27 rendszeren.
+- Javítottuk az időbevitelt, hogy a hiányos időpontok megbízhatóan kiegészüljenek, és a szerkesztések megmaradjanak a billentyűzet vagy az elrendezés változásakor.
+- Javítottuk a görgetést a csevegésben, hogy az üzenetekhez való ugrást ne szakítsa meg semmi.

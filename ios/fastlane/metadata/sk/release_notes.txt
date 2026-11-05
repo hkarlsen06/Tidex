@@ -1,6 +1,8 @@
-- Vylepšili sme rozloženia pre iPhone Duo vrátane úvodného nastavenia, kalendárov, úprav zmien a veľkého textu.
-- Pridali sme odpovede Siri o vašej najbližšej zmene, odpracovaných hodinách, zárobkoch a zdieľaných zmenách priateľov.
-- Pridali sme akcie Siri na pridanie, presunutie alebo predĺženie zmien a na otvorenie kontroly pred odhlásením z práce.
-- Pridali sme vyhľadávanie zmien a pracovných miest v Spotlighte.
-- Pridali sme podporu Siri na odosielanie a koncepty správ v iOS 27.
-- Opravili sme zadávanie času, aby sa neúplné časy spoľahlivo dopĺňali a úpravy sa zachovali pri zmene klávesnice alebo rozloženia.
+- Vylepšené rozloženia pre iPhone Duo vrátane úvodného nastavenia, kalendárov, úprav zmien a veľkého textu.
+- Pridané návrhy na úpravu mzdy pri platbách zadaných ako zmeny bez pridania odpracovaných hodín.
+- Pridané odpovede Siri o vašej ďalšej zmene, odpracovaných hodinách, zárobkoch a zmenách zdieľaných priateľmi.
+- Pridané akcie Siri na pridanie, presunutie alebo predĺženie zmien a otvorenie kontroly pred odhlásením.
+- Pridané vyhľadávanie zmien a prác v Spotlight.
+- Pridaná podpora Siri na odosielanie a rozpracovanie správ v iOS 27.
+- Opravené zadávanie času, aby sa neúplné časy spoľahlivo dopĺňali a úpravy sa zachovali pri zmene klávesnice alebo rozloženia.
+- Opravené posúvanie v chate, aby sa skoky na správy neprerušovali.

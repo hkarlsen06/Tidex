@@ -1,6 +1,8 @@
-- Verbesserte Layouts für iPhone Duo, einschließlich Onboarding, Kalendern, Schichtbearbeitung und großer Schrift.
+- Verbesserte Layouts für iPhone Duo, einschließlich Onboarding, Kalender, Schichtbearbeitung und großer Textgrößen.
+- Vorschläge zur Lohnanpassung für als Schichten erfasste Auszahlungen hinzugefügt, ohne geleistete Stunden hinzuzufügen.
 - Siri-Antworten für deine nächste Schicht, geleistete Stunden, Verdienst und von Freunden geteilte Schichten hinzugefügt.
 - Siri-Aktionen zum Hinzufügen, Verschieben oder Verlängern von Schichten sowie zum Öffnen der Überprüfung vor dem Ausstempeln hinzugefügt.
 - Spotlight-Suche für Schichten und Jobs hinzugefügt.
 - Siri-Unterstützung zum Senden und Entwerfen von Nachrichten unter iOS 27 hinzugefügt.
-- Zeiteingabe korrigiert, damit unvollständige Uhrzeiten zuverlässig vervollständigt werden und Änderungen erhalten bleiben, wenn sich die Tastatur oder das Layout ändert.
+- Die Zeiterfassung korrigiert, sodass unvollständige Uhrzeiten zuverlässig vervollständigt werden und Änderungen erhalten bleiben, wenn sich Tastatur oder Layout ändern.
+- Das Scrollen im Chat korrigiert, sodass Sprünge zu Nachrichten nicht unterbrochen werden.

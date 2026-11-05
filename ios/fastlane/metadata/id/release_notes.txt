@@ -1,6 +1,8 @@
-- Tata letak ditingkatkan untuk iPhone Duo, termasuk onboarding, kalender, pengeditan shift, dan teks besar.
-- Menambahkan jawaban Siri untuk shift berikutnya, jam kerja, penghasilan, dan shift yang dibagikan teman.
-- Menambahkan tindakan Siri untuk menambah, memindahkan, atau memperpanjang shift serta membuka tinjauan sebelum clock-out.
+- Tata letak untuk iPhone Duo ditingkatkan, termasuk alur onboarding, kalender, pengeditan shift, dan teks besar.
+- Menambahkan saran penyesuaian upah untuk pembayaran yang dimasukkan sebagai shift, tanpa menambahkan jam kerja.
+- Menambahkan jawaban Siri untuk shift berikutnya, jam kerja, penghasilan, dan shift teman yang dibagikan.
+- Menambahkan tindakan Siri untuk menambah, memindahkan, atau memperpanjang shift dan membuka tinjauan sebelum clock-out.
 - Menambahkan pencarian Spotlight untuk shift dan pekerjaan.
-- Menambahkan dukungan Siri untuk mengirim dan membuat draf pesan di iOS 27.
+- Menambahkan dukungan Siri untuk mengirim dan menyusun draf pesan di iOS 27.
 - Memperbaiki entri waktu agar waktu yang belum lengkap dapat dilengkapi dengan andal dan perubahan tetap tersimpan saat keyboard atau tata letak berubah.
+- Memperbaiki pengguliran chat agar lompatan ke pesan tidak terputus.
