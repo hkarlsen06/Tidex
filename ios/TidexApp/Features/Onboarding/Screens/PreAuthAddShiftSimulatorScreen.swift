@@ -37,11 +37,6 @@ struct PreAuthAddShiftSimulatorScreen: View {
       wrappedValue: PreAuthAddShiftSimulatorViewModel(initialCurrency: initialCurrency))
   }
 
-  /// Whether running on iPhone-sized idiom.
-  private var isIPhone: Bool {
-    UIDevice.current.userInterfaceIdiom == .phone
-  }
-
   private var simulatorSubtitle: String {
     String(localized: .onboardingAddSimulatorSubtitle)
   }
@@ -205,6 +200,13 @@ struct PreAuthAddShiftSimulatorScreen: View {
 
 extension PreAuthAddShiftSimulatorScreen {
   private var simulatorContent: some View {
+    GeometryReader { geometry in
+      simulatorBody(
+        usesColumns: geometry.size.width >= 700 && !dynamicTypeSize.isAccessibilitySize)
+    }
+  }
+
+  private func simulatorBody(usesColumns: Bool) -> some View {
     VStack(spacing: Spacing.sm) {
       Spacer(minLength: 0)
 
@@ -219,7 +221,7 @@ extension PreAuthAddShiftSimulatorScreen {
           .layoutPriority(1)
           .padding(.top, Spacing.sm)
 
-        calendarAndTimes
+        calendarAndTimes(usesColumns: usesColumns)
 
         OnboardingHintShimmerText(
           text: simulatorHint,
@@ -227,17 +229,23 @@ extension PreAuthAddShiftSimulatorScreen {
         )
         .layoutPriority(1)
       }
-      .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-      .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+      .padding(.horizontal, Spacing.xs)
+      .frame(maxWidth: usesColumns ? 820 : AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: .infinity)
 
       Spacer(minLength: 0)
     }
     .scrollsOnOverflow()
   }
 
-  private var calendarAndTimes: some View {
-    VStack(spacing: 0) {
+  private func calendarAndTimes(usesColumns: Bool) -> some View {
+    let layout =
+      usesColumns
+      ? AnyLayout(HStackLayout(spacing: Spacing.xl))
+      : AnyLayout(VStackLayout(spacing: 0))
+    return layout {
       AddShiftCalendarView(viewModel: viewModel)
+        .frame(maxWidth: usesColumns ? 400 : .infinity)
         .simulatorFocusStyle(
           isFocused: !shouldDimNonFocusedSections || focusStage == .calendar
         )
@@ -248,6 +256,7 @@ extension PreAuthAddShiftSimulatorScreen {
         focusedFieldBinding: $focusedTimeField,
         presetRanges: viewModel.presetTimeRanges
       )
+      .frame(maxWidth: usesColumns ? 360 : .infinity)
       .padding(.top, Spacing.sm)
       .simulatorFocusStyle(
         isFocused: !shouldDimNonFocusedSections || focusStage == .times
@@ -285,8 +294,8 @@ extension PreAuthAddShiftSimulatorScreen {
         }
       }
     }
-    .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-    .padding(.horizontal, isIPhone ? Spacing.sm : Spacing.md)
+    .padding(.horizontal, Spacing.sm)
+    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .padding(.top, Spacing.xxxs)
     .padding(.bottom, Spacing.sm)
     .frame(maxWidth: .infinity)

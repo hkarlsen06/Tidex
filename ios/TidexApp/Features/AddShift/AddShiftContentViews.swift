@@ -7,13 +7,27 @@ struct SingleShiftContent: View {
   @Bindable var viewModel: AddShiftViewModel
   var scrollProxy: ScrollViewProxy
   @Binding var focusedTimeField: TimeInputField?
+  var usesColumns = false
 
   var body: some View {
+    let layout =
+      usesColumns
+      ? AnyLayout(HStackLayout(spacing: Spacing.xl))
+      : AnyLayout(VStackLayout(spacing: Spacing.xs))
+    layout {
+      VStack(spacing: Spacing.xs) {
+        CalendarHeaderRow(totals: viewModel.toolbarTotals, secondaryStyle: .delta)
+        AddShiftCalendarView(viewModel: viewModel)
+      }
+      .frame(maxWidth: usesColumns ? 400 : .infinity)
+
+      timeControls
+        .frame(maxWidth: usesColumns ? 360 : .infinity)
+    }
+  }
+
+  private var timeControls: some View {
     VStack(spacing: Spacing.xs) {
-      CalendarHeaderRow(totals: viewModel.toolbarTotals, secondaryStyle: .delta)
-
-      AddShiftCalendarView(viewModel: viewModel)
-
       if viewModel.shouldShowSingleTimeScopeHint {
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "info.circle")
@@ -193,6 +207,7 @@ struct AddShiftScreenContent: View {
           focusedTimeField: $focusedTimeField,
           scrollProxy: scrollProxy,
           keyboardHeight: keyboardHeight,
+          availableWidth: geometry.size.width,
           availableHeight: geometry.size.height - bottomControlsInset,
           bottomControlsInset: bottomControlsInset
         )
@@ -222,7 +237,7 @@ struct AddShiftScreenContent: View {
         },
         onDismiss: { viewModel.error = nil }
       )
-      .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
       .padding(.bottom, bottomControlsInset + Spacing.xs)
       .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
@@ -236,9 +251,15 @@ struct AddShiftModeContent: View {
   @Binding var focusedTimeField: TimeInputField?
   let scrollProxy: ScrollViewProxy
   let keyboardHeight: CGFloat
+  let availableWidth: CGFloat
   let availableHeight: CGFloat
   let bottomControlsInset: CGFloat
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  private var usesColumns: Bool {
+    availableWidth >= 700 && !dynamicTypeSize.isAccessibilitySize
+  }
 
   private var isIPhone: Bool {
     UIDevice.current.userInterfaceIdiom == .phone
@@ -267,9 +288,10 @@ struct AddShiftModeContent: View {
 
         SingleShiftContent(
           viewModel: viewModel, scrollProxy: scrollProxy,
-          focusedTimeField: $focusedTimeField
+          focusedTimeField: $focusedTimeField,
+          usesColumns: usesColumns
         )
-        .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+        .frame(maxWidth: usesColumns ? 820 : AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
 
         Spacer()
@@ -284,13 +306,13 @@ struct AddShiftModeContent: View {
         onSwipeRight: { viewModel.goToPreviousMonth() },
         isEnabled: true
       )
-      .offset(y: focusedTimeField != nil ? -keyboardHeight : 0)
+      .offset(y: focusedTimeField != nil && !usesColumns ? -keyboardHeight : 0)
       .motionAnimation(
         .subtle, value: focusedTimeField != nil, reduceMotion: reduceMotion)
     }
     .scrollBounceBehavior(.basedOnSize)
     .scrollIndicators(.hidden)
-    .ignoresSafeArea(.keyboard)
+    .ignoresSafeArea(.keyboard, edges: usesColumns ? [] : .all)
   }
 
   /// Recurring mode: scrollable content (more elements)
@@ -301,7 +323,7 @@ struct AddShiftModeContent: View {
           viewModel: viewModel, scrollProxy: scrollProxy,
           focusedTimeField: $focusedTimeField)
       }
-      .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
       .padding(.top, Spacing.md)
       .frame(maxWidth: .infinity)
@@ -318,7 +340,7 @@ struct AddShiftModeContent: View {
       VStack(spacing: Spacing.lg) {
         EventContent(viewModel: viewModel, focusedTimeField: $focusedTimeField)
       }
-      .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
       .padding(.top, Spacing.md)
       .frame(maxWidth: .infinity)

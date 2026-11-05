@@ -29,6 +29,10 @@
     internal var body: some View {
       Group {  // swiftlint:disable:this closure_body_length
         switch screen {
+        case "onboarding":
+          OnboardingView(onNavigateToSignup: {}, onNavigateToLogin: {})
+        case "onboarding-setup":
+          DesignReviewOnboardingSetup()
         case "friends":
           DesignReviewFriendCards()
         case "money", "money-payroll":

@@ -55,18 +55,18 @@ struct WelcomeScreen: View {
 
   var body: some View {
     GeometryReader { geometry in
-      let isIPadLandscape =
-        UIDevice.current.userInterfaceIdiom == .pad && geometry.size.width > geometry.size.height
+      let usesColumns = geometry.size.width >= 700 && !dynamicTypeSize.isAccessibilitySize
 
-      // The hero sits at 44% of the height. It scrolls when large text makes it taller than the page.
       ScrollView {
-        heroContent(isIPadLandscape: isIPadLandscape)
+        heroContent(usesColumns: usesColumns, availableHeight: geometry.size.height)
+          .frame(maxWidth: 820)
+          .padding(.horizontal, Spacing.xl)
           .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.lg)
-          .padding(.bottom, geometry.size.height * 0.12)
+          .padding(.vertical, geometry.size.height < 400 ? Spacing.xs : Spacing.lg)
           .frame(minHeight: geometry.size.height)
       }
       .scrollBounceBehavior(.basedOnSize)
+      .clipped()
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .onAppear {
@@ -85,14 +85,16 @@ struct WelcomeScreen: View {
 
   // MARK: - Subviews
 
-  private func heroContent(isIPadLandscape: Bool) -> some View {
-    VStack(spacing: 0) {
-      textContent(isIPadLandscape: isIPadLandscape)
-
+  private func heroContent(usesColumns: Bool, availableHeight: CGFloat) -> some View {
+    let layout =
+      usesColumns
+      ? AnyLayout(HStackLayout(spacing: Spacing.huge))
+      : AnyLayout(VStackLayout(spacing: availableHeight < 400 ? Spacing.sm : Spacing.huge))
+    return layout {
+      textContent
       ghostedPaycheckPreview
         .opacity(showCard ? 1 : 0)
         .offset(y: showCard || reduceMotion ? 0 : 14)
-        .padding(.top, Spacing.huge + Spacing.xl)
     }
     .frame(maxWidth: .infinity)
   }
@@ -216,16 +218,12 @@ struct WelcomeScreen: View {
   }
 
   @ViewBuilder
-  private func textContent(isIPadLandscape: Bool) -> some View {
-    let horizontalAlignment: HorizontalAlignment = isIPadLandscape ? .center : .leading
-    let frameAlignment: Alignment = isIPadLandscape ? .center : .leading
-    let textAlignment: TextAlignment = isIPadLandscape ? .center : .leading
-
+  private var textContent: some View {
     VStack(spacing: Spacing.sm) {
       heroTitle(
-        horizontalAlignment: horizontalAlignment,
-        frameAlignment: frameAlignment,
-        textAlignment: textAlignment
+        horizontalAlignment: .leading,
+        frameAlignment: .leading,
+        textAlignment: .leading
       )
       .opacity(showHeadline ? 1 : 0)
       .offset(y: showHeadline || reduceMotion ? 0 : 8)
@@ -233,10 +231,10 @@ struct WelcomeScreen: View {
       Text(.onboardingWelcomeSubtitle)
         .font(heroSubtitleFont)
         .foregroundColor(.tidexTextSecondary)
-        .multilineTextAlignment(textAlignment)
+        .multilineTextAlignment(.leading)
         .lineSpacing(2)
         .lineLimit(usesFlowingTitle ? nil : 3)
-        .frame(maxWidth: .infinity, alignment: frameAlignment)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
         .opacity(showSubheadline ? 1 : 0)
         .offset(y: showSubheadline || reduceMotion ? 0 : 6)
@@ -244,15 +242,13 @@ struct WelcomeScreen: View {
       Text(.onboardingWelcomeFree)
         .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexBlueText)
-        .multilineTextAlignment(textAlignment)
-        .frame(maxWidth: .infinity, alignment: frameAlignment)
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
         .opacity(showSubheadline ? 1 : 0)
         .offset(y: showSubheadline || reduceMotion ? 0 : 6)
     }
-    .frame(maxWidth: 350, alignment: frameAlignment)
-    .frame(maxWidth: .infinity, alignment: frameAlignment)
-    .padding(.leading, isIPadLandscape ? 0 : Spacing.xl)
+    .frame(maxWidth: 350, alignment: .leading)
   }
 }
 

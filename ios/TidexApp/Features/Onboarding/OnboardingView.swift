@@ -113,6 +113,7 @@ extension OnboardingView {
         .tag(simulatorPage)
     }
     .tabViewStyle(.page(indexDisplayMode: .never))
+    .clipped()
     .motionAnimation(.pageTransition, value: currentPage, reduceMotion: reduceMotion)
     .onChange(of: currentPage) { _, newPage in
       shouldPreloadSimulatorScreen = newPage < simulatorPage

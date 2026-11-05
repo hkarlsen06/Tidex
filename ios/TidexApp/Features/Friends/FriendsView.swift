@@ -1098,10 +1098,6 @@ private struct SharedShiftsDetailView: View {
   @State private var shouldNavigateBack = false
   @State private var visibleContextOwnerToken = UUID()
 
-  private var isIPhone: Bool {
-    UIDevice.current.userInterfaceIdiom == .phone
-  }
-
   private var effectiveCurrency: String {
     viewModel.sharedCurrency ?? fallbackCurrency
   }
@@ -1136,7 +1132,7 @@ private struct SharedShiftsDetailView: View {
           onSendToChatCompleted(result)
         }
       )
-      .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .frame(maxWidth: .infinity)
       .environment(\.userCurrency, effectiveCurrency)
     }

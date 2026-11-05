@@ -1651,7 +1651,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               conflictDates: viewModel.conflictDates,
               excludedFromTotalIds: viewModel.excludedFromTotalIds
             )
-            .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
             if !hasAnyShifts {
               FirstShiftPrompt { openAddShift() }

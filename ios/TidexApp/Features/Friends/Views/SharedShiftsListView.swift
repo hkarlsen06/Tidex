@@ -135,7 +135,7 @@ extension SharedShiftsListView {
     VStack {
       Spacer()
       calendarView
-        .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
       Spacer()
     }

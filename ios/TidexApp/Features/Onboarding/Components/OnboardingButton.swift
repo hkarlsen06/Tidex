@@ -75,6 +75,7 @@ extension View {
         frame(minHeight: proxy.size.height, alignment: alignment)
       }
       .scrollBounceBehavior(.basedOnSize)
+      .clipped()
     }
   }
 }

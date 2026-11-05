@@ -226,6 +226,7 @@ extension SettingsView {
     NavigationStack(path: $navigationPath) {
       settingsList
         .listStyle(.insetGrouped)
+        .adaptiveContentWidth()
         .tidexListBackground()
         .navigationTitle(String(localized: .settingsTitle))
         .navigationBarTitleDisplayMode(.large)
