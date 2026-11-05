@@ -46,7 +46,7 @@ struct AddShiftView: View {
       case .single(let dates):
         onShiftsCreated(dates)
 
-      case .recurring, .event:
+      case .payment, .recurring, .event:
         onShiftsCreated(nil)
       }
     }
@@ -146,6 +146,10 @@ struct AddShiftView: View {
         compactDetent: Self.payManagerCompactDetent
       )
     )
+    .sheet(item: $viewModel.paymentFormContext, onDismiss: viewModel.paymentEditorDismissed) {
+      context in
+      PayrollAdjustmentFormSheet(context: context, onSave: viewModel.savePaymentAdjustment)
+    }
     .confirmationDialog(
       String(localized: .addShiftStartFreshConfirmTitle),
       isPresented: $showStartFreshConfirmation,

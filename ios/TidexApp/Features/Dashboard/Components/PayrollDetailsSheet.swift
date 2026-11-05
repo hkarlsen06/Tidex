@@ -112,11 +112,11 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
             guard let onUpdateAdjustment else { return }  // swiftlint:disable:this conditional_returns_on_newline
             // swiftlint:disable:next explicit_type_interface
             let updated = try await onUpdateAdjustment(adjustment.id, draft)
-            replaceAdjustment(updated, in: context.breakdown.id)
+            replaceAdjustment(updated, in: context.jobId)
           } else {
             guard let onCreateAdjustment else { return }  // swiftlint:disable:this conditional_returns_on_newline
             let adjustment = try await onCreateAdjustment(draft)  // swiftlint:disable:this explicit_type_interface
-            createdAdjustmentsByJobId[context.breakdown.id, default: []].append(adjustment)
+            createdAdjustmentsByJobId[context.jobId, default: []].append(adjustment)
           }
         },
         onDelete: context.adjustment == nil
@@ -124,7 +124,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           : {
             guard let adjustment = context.adjustment, let onDeleteAdjustment else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
             try await onDeleteAdjustment(adjustment.id)
-            removeAdjustment(adjustment.id, from: context.breakdown.id)
+            removeAdjustment(adjustment.id, from: context.jobId)
           }
       )
       .presentationDetents([.medium, .large])
@@ -892,7 +892,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   }
 }
 
-private struct PayrollAdjustmentJobOption: Identifiable, Equatable {
+struct PayrollAdjustmentJobOption: Identifiable, Equatable {
   let id: String
   let title: String
 }
@@ -902,11 +902,39 @@ private enum AdjustmentSectionKind: String {
   case directPayout  // swiftlint:disable:this explicit_enum_raw_value sorted_enum_cases
 }
 
-private struct PayrollAdjustmentFormContext: Identifiable {
-  let id = UUID()  // swiftlint:disable:this explicit_type_interface
-  let breakdown: PayrollCardJobBreakdown
+struct PayrollAdjustmentFormContext: Identifiable {
+  let id = UUID()
+  let jobId: String
+  let currency: String
+  let taxEnabled: Bool
+  let payoutDate: Date
   let jobOptions: [PayrollAdjustmentJobOption]
   let adjustment: PayrollAdjustment?
+  var prefill: PayrollAdjustmentDraft?
+  var allowsPayoutDateEditing = false
+
+  init(
+    breakdown: PayrollCardJobBreakdown, jobOptions: [PayrollAdjustmentJobOption],
+    adjustment: PayrollAdjustment?
+  ) {
+    self.jobId = breakdown.id
+    self.currency = breakdown.currency
+    self.taxEnabled = breakdown.taxEnabled
+    self.payoutDate = breakdown.payoutDate
+    self.jobOptions = jobOptions
+    self.adjustment = adjustment
+  }
+
+  init(prefill: PayrollAdjustmentDraft, taxEnabled: Bool) {
+    self.jobId = prefill.jobId ?? ""
+    self.currency = prefill.currency
+    self.taxEnabled = taxEnabled
+    self.payoutDate = prefill.payoutDate
+    self.jobOptions = []
+    self.adjustment = nil
+    self.prefill = prefill
+    self.allowsPayoutDateEditing = true
+  }
 }
 
 private struct PayrollAdjustmentCuratedContext: Identifiable {
@@ -975,7 +1003,7 @@ private struct PayrollAdjustmentCuratedSheet: View {
   }
 }
 
-private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_length
+struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_length
   let context: PayrollAdjustmentFormContext  // swiftlint:disable:this type_contents_order
   let onSave: (PayrollAdjustmentDraft) async throws -> Void  // swiftlint:disable:this type_contents_order
   let onDelete: (() async throws -> Void)?  // swiftlint:disable:this type_contents_order
@@ -988,6 +1016,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
   @State private var note = ""  // swiftlint:disable:this explicit_type_interface type_contents_order
   @State private var selectedJobId: String?  // swiftlint:disable:this type_contents_order
   @State private var useEarnedRange = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @State private var payoutDate: Date
   @State private var earnedFromDate: Date  // swiftlint:disable:this type_contents_order
   @State private var earnedToDate: Date  // swiftlint:disable:this type_contents_order
   @State private var isSaving = false  // swiftlint:disable:this explicit_type_interface type_contents_order
@@ -1009,20 +1038,26 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
     self.onSave = onSave
     self.onDelete = onDelete
     let adjustment = context.adjustment  // swiftlint:disable:this explicit_type_interface
-    _descriptionText = State(initialValue: adjustment?.description ?? "")
-    _amountText = State(initialValue: adjustment.map { String($0.amount) } ?? "")
-    _category = State(initialValue: adjustment?.category ?? .correction)
+    _descriptionText = State(
+      initialValue: adjustment?.description ?? context.prefill?.description ?? "")
+    _amountText = State(
+      initialValue: adjustment.map { String($0.amount) } ?? context.prefill.map {
+        String($0.amount)
+      } ?? "")
+    _category = State(
+      initialValue: adjustment?.category ?? context.prefill?.category ?? .correction)
     _taxTreatment = State(
-      initialValue: adjustment?.tax_treatment
-        ?? (context.breakdown.taxEnabled ? .grossTaxable : .netManual)
+      initialValue: adjustment?.tax_treatment ?? context.prefill?.taxTreatment
+        ?? (context.taxEnabled ? .grossTaxable : .netManual)
     )
     _note = State(initialValue: adjustment?.note ?? "")
-    _selectedJobId = State(initialValue: adjustment?.job_id ?? context.breakdown.id)
+    _selectedJobId = State(initialValue: adjustment?.job_id ?? context.jobId)
     let earnedFrom = adjustment?.earned_from_date.flatMap { Date.fromISODateString($0) }  // swiftlint:disable:this explicit_type_interface line_length
     let earnedTo = adjustment?.earned_to_date.flatMap { Date.fromISODateString($0) }  // swiftlint:disable:this explicit_type_interface line_length
     _useEarnedRange = State(initialValue: earnedFrom != nil || earnedTo != nil)
-    _earnedFromDate = State(initialValue: earnedFrom ?? context.breakdown.payoutDate)
-    _earnedToDate = State(initialValue: earnedTo ?? context.breakdown.payoutDate)
+    _payoutDate = State(initialValue: context.payoutDate)
+    _earnedFromDate = State(initialValue: earnedFrom ?? context.payoutDate)
+    _earnedToDate = State(initialValue: earnedTo ?? context.payoutDate)
   }
 
   private var parsedAmount: Double? {
@@ -1033,7 +1068,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
     guard !descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       return false
     }
-    guard let parsedAmount, parsedAmount != 0 else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    guard let parsedAmount, parsedAmount.isFinite, parsedAmount != 0 else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
     guard !useEarnedRange || earnedFromDate <= earnedToDate else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
     return !isSaving
   }
@@ -1056,6 +1091,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
               TextField(
                 String(localized: .dashboardPayrollDetailsAdjustmentAmount), text: $amountText
               )
+              .accessibilityIdentifier("payroll-adjustment.amount")
               .keyboardType(.numbersAndPunctuation)
               .focused($focusedField, equals: .amount)
               .onChange(of: amountText) { _, newValue in
@@ -1066,7 +1102,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
               }
 
               if focusedField != .amount, !amountText.isEmpty {
-                Text(context.breakdown.currency)
+                Text(context.currency)
                   .font(.tidexBodyMedium)
                   .foregroundColor(.tidexTextSecondary)
               }
@@ -1079,7 +1115,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
             categoryOption(.correction)
           }
 
-          if context.breakdown.taxEnabled {
+          if context.taxEnabled {
             Section(String(localized: .dashboardPayrollDetailsAdjustmentTaxTreatment)) {
               taxTreatmentOption(.grossTaxable)
               taxTreatmentOption(.netManual)
@@ -1098,6 +1134,12 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
                 }
               }
             }
+          }
+
+          if context.allowsPayoutDateEditing {
+            DatePicker(
+              String(localized: .addShiftPaymentDate), selection: $payoutDate,
+              displayedComponents: .date)
           }
 
           Section {
@@ -1188,24 +1230,25 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
         }
       }
     }
+    .interactiveDismissDisabled(isSaving)
   }
 
   private func save() {
-    guard let parsedAmount else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    guard canSave, let parsedAmount else { return }  // swiftlint:disable:this conditional_returns_on_newline
     isSaving = true
     errorMessage = nil
 
     let draft = PayrollAdjustmentDraft(  // swiftlint:disable:this explicit_type_interface
       jobId: selectedJobId,
       amount: parsedAmount,
-      currency: context.breakdown.currency,
+      currency: context.currency,
       category: category,
-      taxTreatment: context.breakdown.taxEnabled ? taxTreatment : .netManual,
+      taxTreatment: context.taxEnabled ? taxTreatment : .netManual,
       description: descriptionText.trimmingCharacters(in: .whitespacesAndNewlines),
       note: normalizedNote(),
       earnedFromDate: useEarnedRange ? earnedFromDate : nil,
       earnedToDate: useEarnedRange ? earnedToDate : nil,
-      payoutDate: context.breakdown.payoutDate
+      payoutDate: payoutDate
     )
 
     Task {

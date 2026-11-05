@@ -42,6 +42,10 @@ struct SingleShiftContent: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
+      if let reason = viewModel.paymentSuggestionReason {
+        paymentSuggestion(reason: reason)
+      }
+
       TimeRangePicker(
         startTime: $viewModel.startTime,
         endTime: $viewModel.endTime,
@@ -52,6 +56,21 @@ struct SingleShiftContent: View {
       )
     }
   }
+  private func paymentSuggestion(reason: LocalizedStringResource) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(.addShiftPaymentTitle).font(.tidexLabelStrong)
+      Text(reason).font(.tidexFootnote).foregroundStyle(Color.tidexTextSecondary)
+      Button(String(localized: .addShiftPaymentAction)) {
+        viewModel.proposePaymentAdjustment()
+      }
+      .foregroundStyle(Color.tidexBlueText)
+      .accessibilityIdentifier("add-shift.payment-adjustment")
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(Spacing.sm)
+    .background(Color.tidexSurfacePrimary, in: RoundedRectangle(cornerRadius: CornerRadius.sm))
+  }
+
 }
 
 // MARK: - Recurring Shift Content

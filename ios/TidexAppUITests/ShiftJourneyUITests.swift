@@ -19,6 +19,7 @@ final class ShiftJourneyUITests: XCTestCase {
       "-defaultStartupTab", "shifts",
     ]
     app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    app.launchEnvironment["TIDEX_SCREENSHOT_JOB"] = "NAV"
     app.launch()
 
     let date = Self.emptyFixtureDay()
@@ -47,15 +48,66 @@ final class ShiftJourneyUITests: XCTestCase {
     XCTAssertFalse(savedDay.exists, "The deleted shift must leave the schedule")
   }
 
+  func testPaymentSuggestionCancelPreservesShiftAndSaveLeavesDayWithoutHours() {
+    let app = XCUIApplication()
+    app.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+      "-defaultStartupTab", "shifts",
+    ]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    app.launchEnvironment["TIDEX_SCREENSHOT_JOB"] = "NAV"
+    app.launchEnvironment["TIDEX_TEST_PAYMENTS"] = "1"
+    app.launch()
+    let date = Self.emptyFixtureDay()
+    let emptyDay = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label == %@", date)).firstMatch
+    XCTAssertTrue(emptyDay.waitForExistence(timeout: timeout), app.debugDescription)
+    let store = app.staticTexts["ui-testing.payment-store"]
+    XCTAssertTrue(store.waitForExistence(timeout: timeout))
+    let initialStore = store.label
+    emptyDay.tap()
+    selectNineToFive(in: app)
+    let offer = app.buttons["add-shift.payment-adjustment"]
+    XCTAssertTrue(offer.waitForExistence(timeout: timeout), app.debugDescription)
+    offer.tap()
+    let amount = app.textFields["payroll-adjustment.amount"]
+    XCTAssertTrue(amount.waitForExistence(timeout: timeout), app.debugDescription)
+    XCTAssertEqual(amount.value as? String, "2000.0")
+    app.buttons["Cancel"].tap()
+    XCTAssertTrue(offer.waitForExistence(timeout: timeout), "Cancel must retain the unsaved shift")
+    offer.tap()
+    XCTAssertTrue(amount.waitForExistence(timeout: timeout))
+    app.buttons["Save"].tap()
+    let expectedStore = initialStore.replacingOccurrences(
+      of: "adjustments=0;amounts=",
+      with: "adjustments=1;amounts=2000.0")
+    let persisted = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "label == %@", expectedStore), object: store)
+    XCTAssertEqual(XCTWaiter.wait(for: [persisted], timeout: timeout), .completed, store.label)
+    XCTAssertTrue(emptyDay.waitForExistence(timeout: timeout), app.debugDescription)
+    XCTAssertFalse(
+      app.descendants(matching: .any)
+        .matching(NSPredicate(format: "label BEGINSWITH %@", date + ",")).firstMatch.exists,
+      "A payment must not create a shift or add worked hours")
+  }
+
   /// Saves a 09:00 to 17:00 single shift on the date the Add screen opened with.
   private func saveNineToFiveShift(in app: XCUIApplication) {
+    selectNineToFive(in: app)
+    app.buttons["add-shift.save"].tap()
+    dismissNotificationPrompt()
+  }
+
+  private func selectNineToFive(in app: XCUIApplication) {
     let singleMode = app.buttons["add-shift.mode.single"]
     XCTAssertTrue(singleMode.waitForExistence(timeout: timeout), app.debugDescription)
     if !singleMode.isSelected {
       singleMode.tap()
     }
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
-      .firstMatch
+    let recentTime = app.buttons.matching(
+      NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")
+    )
+    .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: timeout), app.debugDescription)
     let preview = app.descendants(matching: .any)
       .matching(NSPredicate(format: "label CONTAINS %@", "after tax")).firstMatch
@@ -64,8 +116,6 @@ final class ShiftJourneyUITests: XCTestCase {
       recentTime.tap()
     }
     XCTAssertTrue(preview.waitForExistence(timeout: timeout), app.debugDescription)
-    app.buttons["add-shift.save"].tap()
-    dismissNotificationPrompt()
   }
 
   /// The day the fixture leaves empty, as the schedule's accessibility label names it.

@@ -90,6 +90,28 @@ final class AddShiftSubmissionTests: XCTestCase {
     XCTAssertEqual(model.submitBlockers, [.missingTimes])
   }
 
+  func testPaymentNamesMatchWholeWordsAndKeepRealEmployerNamesPossible() {
+    XCTAssertTrue(AddShiftViewModel.hasPaymentLikeName("NAV"))
+    XCTAssertTrue(AddShiftViewModel.hasPaymentLikeName("Quarterly bonuses"))
+    XCTAssertFalse(AddShiftViewModel.hasPaymentLikeName("Naval services"))
+    XCTAssertFalse(AddShiftViewModel.hasPaymentLikeName("Bonusteel"))
+  }
+
+  func testPaymentOverlapAcrossMidnightAndMonthBoundaryDoesNotIncludeAdjacentHours() {
+    let shift = ShiftRow(
+      id: "overnight", user_id: nil, job_id: "job",
+      shift_date: "2026-10-31", start_time: "22:00", end_time: "06:00", custom_supplements: nil)
+    XCTAssertEqual(
+      ShiftConflictDetector.detectConflicts(
+        dates: ["2026-11-01"],
+        startTime: "01:00", endTime: "05:00", existingShifts: [shift]), ["2026-11-01"])
+    XCTAssertTrue(
+      ShiftConflictDetector.detectConflicts(
+        dates: ["2026-11-01"],
+        startTime: "06:00", endTime: "09:00", existingShifts: [shift]
+      ).isEmpty)
+  }
+
   private func time(hour: Int) throws -> Date {
     try XCTUnwrap(Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: .now))
   }

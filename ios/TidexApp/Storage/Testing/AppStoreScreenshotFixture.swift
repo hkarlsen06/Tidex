@@ -54,7 +54,8 @@
       context.insert(settings)
       context.insert(
         LocalJob(
-          id: jobId, userId: userId, name: "Nord", currency: currency, isDefault: true,
+          id: jobId, userId: userId, name: environment["TIDEX_SCREENSHOT_JOB"] ?? "Nord",
+          currency: currency, isDefault: true,
           sortOrder: 0,
           payrollDay: 15, serverUpdatedAt: fixtureDate, serverRevision: 1,
           lastSyncedSnapshot: Data(), localUpdatedAt: fixtureDate
@@ -119,12 +120,14 @@
 
     /// The current month has 14 shifts and the eight months before it have 12 each.
     @MainActor
-    private static func seedShifts(in context: ModelContext, year: Int, month: Int, days: Set<Int>) {
+    private static func seedShifts(in context: ModelContext, year: Int, month: Int, days: Set<Int>)
+    {
       for offset in 0...8 {
         let total: Int = year * 12 + month - 1 - offset
         let shiftYear: Int = total / 12
         let shiftMonth: Int = total % 12 + 1
-        let monthDays: [Int] = offset == 0 ? days.sorted() : [2, 4, 6, 9, 11, 13, 16, 18, 20, 23, 25, 27]
+        let monthDays: [Int] =
+          offset == 0 ? days.sorted() : [2, 4, 6, 9, 11, 13, 16, 18, 20, 23, 25, 27]
         for day in monthDays {
           let dateString: String = String(format: "%04d-%02d-%02d", shiftYear, shiftMonth, day)
           guard let date: Date = Date.fromISODateString(dateString) else { continue }
@@ -144,6 +147,14 @@
     @State private var isReady: Bool = false
     @State private var errorMessage: String?
     @State private var keyboardHideCount = 0
+
+    private var paymentStoreSummary: String {
+      let context = LocalStore.shared.mainContext
+      let shifts = (try? context.fetchCount(FetchDescriptor<LocalUserShift>())) ?? -1
+      let adjustments = (try? context.fetch(FetchDescriptor<LocalPayrollAdjustment>())) ?? []
+      let amounts = adjustments.map { String($0.amount) }.sorted().joined(separator: ",")
+      return "shifts=\(shifts);adjustments=\(adjustments.count);amounts=\(amounts)"
+    }
 
     internal var body: some View {
       Group {
@@ -166,6 +177,16 @@
             ) { _ in
               keyboardHideCount += 1
             }
+        }
+      }
+      .overlay(alignment: .bottomLeading) {
+        if ProcessInfo.processInfo.environment["TIDEX_TEST_PAYMENTS"] == "1" {
+          TimelineView(.periodic(from: .now, by: 1)) { _ in
+            Text(verbatim: paymentStoreSummary)
+              .font(.caption2)
+              .accessibilityIdentifier("ui-testing.payment-store")
+              .allowsHitTesting(false)
+          }
         }
       }
       .task {

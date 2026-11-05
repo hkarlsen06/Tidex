@@ -8,6 +8,7 @@ import os.log
 private let kLogger: Logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
 
 internal enum AddShiftCompletion {
+  case payment
   case event
   case recurring
   case single(dates: Set<String>)
@@ -1111,6 +1112,8 @@ internal final class AddShiftViewModel {
       return
     }
 
+    paymentDataOwnerId = userId
+
     // Load any saved draft first (before other data to set mode correctly)
     loadDraft()
 
@@ -1360,6 +1363,114 @@ internal final class AddShiftViewModel {
 
     let generator = UIImpactFeedbackGenerator(style: .light)
     generator.impactOccurred()
+  }
+
+  var paymentFormContext: PayrollAdjustmentFormContext?
+  private var paymentDataOwnerId: String?
+  private var paymentOwnerId: String?
+  private var paymentSaved = false
+
+  /// A single optional offer. Multi-date selections and repeating shifts remain shifts.
+  var paymentSuggestionReason: LocalizedStringResource? {
+    guard mode == .single, selectedDates.count == 1, startTime != nil, endTime != nil,
+      let job = selectedJob
+    else { return nil }
+    if Self.hasPaymentLikeName(job.name) { return .addShiftPaymentNameReason }
+    let conflicts = ShiftConflictDetector.detectConflicts(
+      dates: Array(selectedDates), startTime: startTimeString, endTime: endTimeString,
+      existingShifts: paymentConflictShifts, existingRecurringShifts: cachedRecurringShifts)
+    if !conflicts.isEmpty { return .addShiftPaymentOverlapReason }
+    let start = CalendarGridHelper.timeToMinutes(startTimeString)
+    let end = CalendarGridHelper.timeToMinutes(endTimeString)
+    let minutesPerDay = 24 * 60
+    let longShiftMinutes = 16 * 60
+    let duration = end > start ? end - start : end + minutesPerDay - start
+    if duration >= longShiftMinutes { return .addShiftPaymentLongReason }
+    let comparableGross = cachedShifts.filter { $0.job_id == job.id }.map { shift in
+      PayrollCalculator.computeShift(
+        shift,
+        snapshot: snapshotForDate(shift.shift_date, jobId: job.id)
+      ).gross
+    }.filter { $0.isFinite && $0 > 0 }.sorted()
+    let minimumComparableShifts = 5
+    let unusualEarningsMultiplier = 4.0
+    if comparableGross.count >= minimumComparableShifts,
+      let date = selectedDates.first, let preview = computeEarningsForDate(date),
+      preview.gross >= comparableGross[comparableGross.count / 2] * unusualEarningsMultiplier
+    {
+      return .addShiftPaymentLargeReason
+    }
+    return nil
+  }
+
+  private var paymentConflictShifts: [ShiftRow] {
+    guard let owner = paymentDataOwnerId,
+      owner == AppCoordinator.shared.getCurrentUserId(),
+      let selected = selectedDates.first.flatMap({ Date.fromISODateString($0) }),
+      let start = Calendar.gregorianCurrent.date(byAdding: .day, value: -1, to: selected),
+      let end = Calendar.gregorianCurrent.date(byAdding: .day, value: 1, to: selected)
+    else { return [] }
+    return shiftsRepository.getShifts(for: owner, startDate: start, endDate: end)
+  }
+
+  static func hasPaymentLikeName(_ name: String) -> Bool {
+    let words = name.folding(
+      options: [.caseInsensitive, .diacriticInsensitive], locale: .appLocale
+    )
+    .split { !$0.isLetter && !$0.isNumber }
+    let paymentWords: Set<String> = [
+      "nav", "benefit", "benefits", "bonus", "bonuses", "trygd", "trygdeytelse", "dagpenger",
+      "utbetaling",
+    ]
+    return words.contains { paymentWords.contains(String($0)) }
+  }
+
+  func proposePaymentAdjustment() {
+    guard paymentSuggestionReason != nil, let job = selectedJob,
+      let dateISO = selectedDates.first, let date = Date.fromISODateString(dateISO),
+      let owner = try? AppCoordinator.shared.requireUserId(),
+      owner == paymentDataOwnerId
+    else { return }
+    // Compute from the current inputs rather than a potentially stale debounced preview.
+    let preview = Self.computeEarningsForDate(
+      dateISO, startTime: startTimeString, endTime: endTimeString,
+      context: .init(
+        requiresExplicitJobSelection: requiresExplicitJobSelection,
+        selectedJobId: selectedJobId, effectiveJobId: effectiveSelectedJobId,
+        snapshots: cachedSnapshots, jobs: activeJobs, configuredJobIds: configuredJobIds,
+        settings: cachedSettings))
+    guard let preview, preview.gross.isFinite else { return }
+    paymentOwnerId = owner
+    paymentSaved = false
+    paymentFormContext = PayrollAdjustmentFormContext(
+      prefill: PayrollAdjustmentDraft(
+        jobId: job.id, amount: preview.gross, currency: job.currency, category: .correction,
+        taxTreatment: .grossTaxable, description: job.name, note: nil,
+        earnedFromDate: nil, earnedToDate: nil, payoutDate: date), taxEnabled: true)
+  }
+
+  func savePaymentAdjustment(_ draft: PayrollAdjustmentDraft) async throws {
+    let owner = try AppCoordinator.shared.requireUserId()
+    guard owner == paymentOwnerId, let context = paymentFormContext,
+      draft.jobId == context.jobId, draft.currency == context.currency,
+      draft.amount.isFinite, draft.amount != 0
+    else { throw ShiftSaveError.invalidDate }
+    _ = try await PayrollAdjustmentsRepository.shared.createAdjustment(
+      userId: owner, jobId: draft.jobId, amount: draft.amount, currency: draft.currency,
+      category: draft.category, taxTreatment: draft.taxTreatment, description: draft.description,
+      note: draft.note, earnedFromDate: draft.earnedFromDate, earnedToDate: draft.earnedToDate,
+      payoutDate: draft.payoutDate)
+    guard (try? AppCoordinator.shared.requireUserId()) == owner else { return }
+    clearForm()
+    paymentSaved = true
+  }
+
+  func paymentEditorDismissed() {
+    paymentOwnerId = nil
+    if paymentSaved {
+      paymentSaved = false
+      onShiftsCreated?(.payment)
+    }
   }
 
   /// Submit single shifts
