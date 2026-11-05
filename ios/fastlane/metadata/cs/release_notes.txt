@@ -1,3 +1,6 @@
-- Vylepšeny průběžné aktualizace směn, sdílených kalendářů a zpráv.
-- Aktualizováno přihlašování přes Apple, Google, e-mailové kódy nebo e-mail a heslo.
-- Vylepšena spolehlivost a ochrana soukromí.
+- Vylepšili jsme rozvržení pro iPhone Duo, včetně úvodního nastavení, kalendářů, úprav směn a velkého textu.
+- Přidali jsme odpovědi Siri o vaší příští směně, odpracovaných hodinách, výdělku a směnách sdílených přáteli.
+- Přidali jsme akce Siri pro přidání, přesun nebo prodloužení směn a otevření kontroly před odhlášením z práce.
+- Přidali jsme vyhledávání směn a pracovních míst ve Spotlightu.
+- Přidali jsme podporu Siri pro odesílání zpráv a ukládání jejich konceptů v iOS 27.
+- Opravili jsme zadávání času, aby se neúplné časy spolehlivě doplňovaly a úpravy zůstaly zachovány při změně klávesnice nebo rozvržení.

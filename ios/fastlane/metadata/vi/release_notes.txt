@@ -1,3 +1,6 @@
-- Cải thiện cập nhật trực tiếp cho ca làm, lịch được chia sẻ và tin nhắn.
-- Cập nhật đăng nhập bằng Apple, Google, mã email hoặc email và mật khẩu.
-- Cải thiện độ tin cậy và quyền riêng tư.
+- Cải thiện bố cục cho iPhone Duo, bao gồm phần giới thiệu, lịch, chỉnh sửa ca làm và văn bản cỡ lớn.
+- Thêm phản hồi của Siri về ca làm tiếp theo, số giờ đã làm, thu nhập và các ca làm được bạn bè chia sẻ.
+- Thêm tác vụ Siri để thêm, di chuyển hoặc kéo dài ca làm và mở phần xem lại trước khi chấm công ra.
+- Thêm tìm kiếm ca làm và công việc trong Spotlight.
+- Thêm hỗ trợ Siri để gửi và soạn tin nhắn trên iOS 27.
+- Sửa phần nhập thời gian để các mốc giờ chưa nhập đủ được hoàn thiện ổn định và các chỉnh sửa được giữ lại khi bàn phím hoặc bố cục thay đổi.

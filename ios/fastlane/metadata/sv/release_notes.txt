@@ -1,3 +1,6 @@
-- Förbättrat uppdateringar av pass, delade kalendrar och meddelanden i realtid.
-- Uppdaterat inloggningen med Apple, Google, e-postkoder eller e-post och lösenord.
-- Förbättrat stabilitet och integritet.
+- Förbättrade layouter för iPhone Duo, inklusive introduktionen, kalendrar, redigering av arbetspass och stor text.
+- Lade till Siri-svar för ditt nästa arbetspass, arbetade timmar, intjänat belopp och vänners delade arbetspass.
+- Lade till Siri-åtgärder för att lägga till, flytta eller förlänga arbetspass och öppna granskningen innan utstämpling.
+- Lade till Spotlight-sökning för arbetspass och jobb.
+- Lade till Siri-stöd för att skicka och utforma meddelanden på iOS 27.
+- Rättade tidsinmatningen så att ofullständiga tider fylls i på ett tillförlitligt sätt och ändringar bevaras när tangentbordet eller layouten ändras.

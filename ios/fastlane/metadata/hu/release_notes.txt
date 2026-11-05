@@ -1,3 +1,6 @@
-- Javultak a műszakok, a megosztott naptárak és az üzenetek valós idejű frissítései.
-- Frissült a bejelentkezés Apple-lel, Google-lel, e-mailes kóddal vagy e-mail-címmel és jelszóval.
-- Javult a megbízhatóság és az adatvédelem.
+- Javítottuk az iPhone Duo elrendezéseit, beleértve az üdvözlést, a naptárakat, a műszakszerkesztést és a nagy méretű szöveget.
+- Siri-válaszokkal bővült a következő műszakra, a ledolgozott órákra, a keresetre és a barátok által megosztott műszakokra vonatkozó támogatás.
+- Siri-műveleteket adtunk hozzá műszakok hozzáadásához, áthelyezéséhez vagy meghosszabbításához, valamint a kijelentkezés előtti áttekintés megnyitásához.
+- Hozzáadtuk a műszakok és munkák Spotlight-keresését.
+- Hozzáadtuk a Siri támogatását az üzenetek küldéséhez és piszkozatának megírásához iOS 27-en.
+- Javítottuk az időbevitelt, hogy a részlegesen megadott időpontok megbízhatóan kiegészüljenek, és a módosítások megmaradjanak a billentyűzet vagy az elrendezés változásakor.

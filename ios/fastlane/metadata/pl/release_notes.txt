@@ -1,3 +1,6 @@
-- Ulepszono aktualizacje zmian, udostępnionych kalendarzy i wiadomości w czasie rzeczywistym.
-- Zaktualizowano logowanie przez Apple, Google, kody e-mail lub adres e-mail i hasło.
-- Poprawiono niezawodność i prywatność.
+- Ulepszono układy na iPhone Duo, w tym ekran wdrożenia, kalendarze, edycję zmian i duży tekst.
+- Dodano odpowiedzi Siri dotyczące Twojej następnej zmiany, przepracowanych godzin, zarobków oraz zmian udostępnionych przez znajomych.
+- Dodano działania Siri do dodawania, przenoszenia i przedłużania zmian oraz otwierania podsumowania przed wyjściem.
+- Dodano wyszukiwanie zmian i miejsc pracy w Spotlight.
+- Dodano obsługę Siri do wysyłania wiadomości i tworzenia ich wersji roboczych w iOS 27.
+- Poprawiono wprowadzanie czasu, aby niepełne godziny były niezawodnie uzupełniane, a zmiany zachowywane przy zmianie klawiatury lub układu.

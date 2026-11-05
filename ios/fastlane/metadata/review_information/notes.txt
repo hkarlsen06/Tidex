@@ -1,6 +1,6 @@
-Version 3.1.0 migrates Tidex's backend from Supabase to Convex and moves authentication to Clerk. Existing account IDs, shifts, and settings are preserved. The submitted build is the build we intend to release.
+Version 3.1.1 improves layouts for iPhone Duo and large text, and adds Siri actions for shift questions, shift changes and clocking out. Shifts and jobs can be opened from Spotlight. On iOS 27, Siri can also send or draft a message to a Tidex friend. iOS 26 remains supported.
 
-The current App Store version, 3.0.1, continues to use Supabase. After approval, we will complete the final data migration and manually release 3.1.0. Push sending from Convex is disabled until that switchover to avoid duplicate notifications from both backends.
+Siri asks for confirmation before adding, moving or extending a shift. Earnings, shift changes and friends' schedules require the device to be unlocked. Friends' earnings are available only when that friend has shared them.
 
 Sign in using the demo account credentials supplied in App Review Information. This account does not require a new-device email code. The demo jobs Harbor Café and City Library use USD intentionally, even on a Norwegian device.
 

@@ -1,3 +1,6 @@
-- Îmbunătățite actualizările în timp real pentru ture, calendare partajate și mesaje.
-- Actualizată autentificarea cu Apple, Google, coduri prin e-mail sau e-mail și parolă.
-- Îmbunătățite fiabilitatea și confidențialitatea.
+- Am îmbunătățit aspectul pe iPhone Duo, inclusiv pentru introducere, calendare, editarea turelor și textul mare.
+- Am adăugat răspunsuri Siri despre următoarea ta tură, orele lucrate, câștigurile și turele partajate de prieteni.
+- Am adăugat acțiuni Siri pentru a adăuga, muta sau prelungi ture și pentru a deschide verificarea de la ieșirea din tură.
+- Am adăugat căutare în Spotlight pentru ture și locuri de muncă.
+- Am adăugat suport Siri pentru trimiterea și redactarea mesajelor pe iOS 27.
+- Am corectat introducerea orelor, astfel încât orele parțiale să se completeze corect, iar modificările să fie păstrate când se schimbă tastatura sau aspectul.

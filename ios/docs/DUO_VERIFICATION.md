@@ -65,4 +65,4 @@ Use `-collect-test-diagnostics never` for focused wrapper runs on this runtime. 
 
 ## Hardware follow-up
 
-The physical Duo fold/keyboard check remains in `RELEASE_CHECKS.md`. The simulator fold command dispatched pose changes but could not read back the hinge angle. PNG dimensions confirm the active panel; they do not confirm a physical hinge angle. Siri, push delivery and Live Activities retain their separate device checks.
+Physical Duo fold/keyboard verification is unavailable. Hjalmar accepted this limitation for 3.1.1 on 2026-11-05 after the simulator checks. The unverified hardware behavior remains recorded in `RELEASE_CHECKS.md`. The simulator fold command dispatched pose changes but could not read back the hinge angle. PNG dimensions confirm the active panel; they do not confirm a physical hinge angle. Siri, push delivery and Live Activities retain their separate device checks.

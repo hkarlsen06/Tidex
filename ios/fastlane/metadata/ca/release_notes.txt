@@ -1,3 +1,6 @@
-- Millorades les actualitzacions en temps real dels torns, els calendaris compartits i els missatges.
-- Actualitzat l'inici de sessió amb Apple, Google, codis per correu electrònic o correu electrònic i contrasenya.
-- Millorades la fiabilitat i la privadesa.
+- S’han millorat els dissenys per a l’iPhone Duo, inclosos la configuració inicial, els calendaris, l’edició de torns i el text gran.
+- S’han afegit respostes de Siri sobre el teu proper torn, les hores treballades, els ingressos i els torns compartits pels amics.
+- S’han afegit accions de Siri per afegir, moure o allargar torns i obrir la revisió abans de fitxar la sortida.
+- S’ha afegit la cerca de torns i feines a Spotlight.
+- S’ha afegit compatibilitat amb Siri per enviar i redactar missatges a l’iOS 27.
+- S’ha corregit la introducció d’hores perquè les hores parcials es completin de manera fiable i es conservin les edicions quan canvien el teclat o el disseny.

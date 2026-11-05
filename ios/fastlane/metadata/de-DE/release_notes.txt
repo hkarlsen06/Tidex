@@ -1,3 +1,6 @@
-- Verbesserte Live-Aktualisierungen für Schichten, geteilte Kalender und Nachrichten.
-- Aktualisierte Anmeldung mit Apple, Google, E-Mail-Codes oder E-Mail und Passwort.
-- Verbesserte Zuverlässigkeit und Datenschutz.
+- Verbesserte Layouts für iPhone Duo, einschließlich Onboarding, Kalendern, Schichtbearbeitung und großer Schrift.
+- Siri-Antworten für deine nächste Schicht, geleistete Stunden, Verdienst und von Freunden geteilte Schichten hinzugefügt.
+- Siri-Aktionen zum Hinzufügen, Verschieben oder Verlängern von Schichten sowie zum Öffnen der Überprüfung vor dem Ausstempeln hinzugefügt.
+- Spotlight-Suche für Schichten und Jobs hinzugefügt.
+- Siri-Unterstützung zum Senden und Entwerfen von Nachrichten unter iOS 27 hinzugefügt.
+- Zeiteingabe korrigiert, damit unvollständige Uhrzeiten zuverlässig vervollständigt werden und Änderungen erhalten bleiben, wenn sich die Tastatur oder das Layout ändert.

@@ -1,3 +1,6 @@
-- Live-updates voor diensten, gedeelde agenda's en berichten verbeterd.
-- Inloggen met Apple, Google, e-mailcodes of e-mail en wachtwoord bijgewerkt.
-- Betrouwbaarheid en privacy verbeterd.
+- Verbeterde lay-outs voor iPhone Duo, waaronder onboarding, agenda's, diensten bewerken en grote tekst.
+- Siri-antwoorden toegevoegd voor je volgende dienst, gewerkte uren, verdiensten en door vrienden gedeelde diensten.
+- Siri-acties toegevoegd om diensten toe te voegen, te verplaatsen of te verlengen en om de uitklokcontrole te openen.
+- Spotlight-zoekfunctie toegevoegd voor diensten en banen.
+- Siri-ondersteuning toegevoegd voor het versturen en opstellen van berichten op iOS 27.
+- Tijdinvoer verbeterd zodat gedeeltelijk ingevulde tijden betrouwbaar worden aangevuld en bewerkingen behouden blijven wanneer het toetsenbord of de lay-out verandert.

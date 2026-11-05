@@ -1,3 +1,6 @@
-- Melhoradas as atualizações em tempo real de turnos, calendários compartilhados e mensagens.
-- Atualizado o login com Apple, Google, códigos por e-mail ou e-mail e senha.
-- Melhoradas a confiabilidade e a privacidade.
+- Melhoramos os layouts para o iPhone Duo, incluindo a introdução, os calendários, a edição de turnos e o texto grande.
+- Adicionamos respostas da Siri sobre seu próximo turno, horas trabalhadas, ganhos e turnos compartilhados por amigos.
+- Adicionamos ações da Siri para adicionar, mover ou estender turnos e abrir a revisão antes de encerrar o ponto.
+- Adicionamos a busca do Spotlight para turnos e empregos.
+- Adicionamos suporte da Siri para enviar e rascunhar mensagens no iOS 27.
+- Corrigimos a inserção de horários para que horários parciais sejam completados com confiança e as edições sejam preservadas quando o teclado ou o layout mudar.

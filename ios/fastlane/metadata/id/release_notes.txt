@@ -1,3 +1,6 @@
-- Meningkatkan pembaruan langsung untuk sif, kalender bersama, dan pesan.
-- Memperbarui proses masuk dengan Apple, Google, kode email, atau email dan kata sandi.
-- Meningkatkan keandalan dan privasi.
+- Tata letak ditingkatkan untuk iPhone Duo, termasuk onboarding, kalender, pengeditan shift, dan teks besar.
+- Menambahkan jawaban Siri untuk shift berikutnya, jam kerja, penghasilan, dan shift yang dibagikan teman.
+- Menambahkan tindakan Siri untuk menambah, memindahkan, atau memperpanjang shift serta membuka tinjauan sebelum clock-out.
+- Menambahkan pencarian Spotlight untuk shift dan pekerjaan.
+- Menambahkan dukungan Siri untuk mengirim dan membuat draf pesan di iOS 27.
+- Memperbaiki entri waktu agar waktu yang belum lengkap dapat dilengkapi dengan andal dan perubahan tetap tersimpan saat keyboard atau tata letak berubah.

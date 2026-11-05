@@ -1,3 +1,6 @@
-- Poboljšana ažuriranja smjena, dijeljenih kalendara i poruka u stvarnom vremenu.
-- Ažurirana prijava putem Applea, Googlea, koda e-poštom ili e-pošte i lozinke.
-- Poboljšane pouzdanost i privatnost.
+- Poboljšani rasporedi za iPhone Duo, uključujući uvodni prikaz, kalendare, uređivanje smjena i veliki tekst.
+- Dodani Siri odgovori za vašu sljedeću smjenu, odrađene sate, zaradu i smjene koje su prijatelji podijelili s vama.
+- Dodane Siri radnje za dodavanje, premještanje ili produljenje smjena te otvaranje pregleda prije odjave.
+- Dodano pretraživanje smjena i poslova u Spotlightu.
+- Dodana podrška za slanje i sastavljanje poruka putem Siri na iOS-u 27.
+- Ispravljen unos vremena kako bi se djelomično unesena vremena pouzdano dovršavala i kako bi se izmjene sačuvale kada se tipkovnica ili raspored promijene.
