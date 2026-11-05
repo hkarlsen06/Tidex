@@ -69,7 +69,7 @@ struct UserMenuButton: View {
     .frame(minHeight: 44)
     .contentShape(Rectangle())
     // Fixed height prevents toolbar layout shifts on iPad
-    .iPadFixedHeight(44)
+    .adaptiveFixedHeight(44)
     .accessibilityElement(children: .combine)
   }
 }

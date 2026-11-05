@@ -175,7 +175,7 @@ final class TidexAppUITests: XCTestCase {
     attachAppStoreScreenshot(app, name: "pay-review-large-text-top")
     review.tap()
     let taxSettings = app.buttons["pay-settings.review-tax"]
-    for _ in 0..<6 where !taxSettings.isHittable { app.swipeUp() }
+    for _ in 0..<6 where !taxSettings.isHittable { scrollUp(in: app.windows.firstMatch) }
     XCTAssertTrue(taxSettings.isHittable, app.debugDescription)
     attachAppStoreScreenshot(app, name: "pay-review-large-text")
     taxSettings.tap()
@@ -183,18 +183,18 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(toggle.waitForExistence(timeout: defaultTimeout))
     XCTAssertTrue(toggle.isHittable, app.debugDescription)
     let preset = app.buttons["25%"]
-    for _ in 0..<3 where !preset.isHittable { app.swipeUp() }
+    for _ in 0..<3 where !preset.isHittable { scrollUp(in: app.windows.firstMatch) }
     XCTAssertTrue(preset.isHittable, app.debugDescription)
     XCTAssertGreaterThanOrEqual(preset.frame.height, 44)
     preset.tap()
     XCTAssertTrue(preset.isSelected, app.debugDescription)
     attachAppStoreScreenshot(app, name: "pay-review-large-text-tax-editor")
     let methods = app.buttons["pay-settings.break-method"]
-    for _ in 0..<5 where !methods.isHittable { app.swipeUp() }
+    for _ in 0..<5 where !methods.isHittable { scrollUp(in: app.windows.firstMatch) }
     XCTAssertTrue(methods.isHittable, app.debugDescription)
     methods.tap()
     let threshold = app.steppers["pay-settings.break-threshold"]
-    for _ in 0..<3 where !threshold.isHittable { app.swipeUp() }
+    for _ in 0..<3 where !threshold.isHittable { scrollUp(in: app.windows.firstMatch) }
     XCTAssertTrue(threshold.isHittable, app.debugDescription)
     threshold.buttons["pay-settings.break-threshold-Increment"].tap()
     XCTAssertEqual(threshold.value as? String, "6 hours")
@@ -351,9 +351,11 @@ final class TidexAppUITests: XCTestCase {
   func testAppStoreScreenshots() {
     let environment = ProcessInfo.processInfo.environment
     let selected = environment["TIDEX_SCREENSHOT_LOCALES"]?.split(separator: ",").map(String.init)
-    let shards = environment["TIDEX_SCREENSHOT_SHARDS"]?.split(separator: ",").map(String.init) ?? []
+    let shards =
+      environment["TIDEX_SCREENSHOT_SHARDS"]?.split(separator: ",").map(String.init) ?? []
     let shard = shards.firstIndex(of: environment["SIMULATOR_UDID"] ?? "")
-    XCTAssertTrue(shards.isEmpty || shard != nil, "This simulator is not in TIDEX_SCREENSHOT_SHARDS")
+    XCTAssertTrue(
+      shards.isEmpty || shard != nil, "This simulator is not in TIDEX_SCREENSHOT_SHARDS")
     let specs = Self.screenshotLocales.filter { selected?.contains($0.id) ?? true }
       .enumerated().filter { shard == nil || $0.offset % shards.count == shard }.map(\.element)
     let avatar = URL(fileURLWithPath: #filePath)
@@ -385,7 +387,8 @@ final class TidexAppUITests: XCTestCase {
       // iPad's floating tab bar is not a TabBar element, but there its buttons carry the tab's
       // SF Symbol as their identifier. On iPhone that identifier is not reliable.
       let tabBar = app.tabBars.firstMatch
-      let scheduleTab = tabBar.waitForExistence(timeout: 2)
+      let scheduleTab =
+        tabBar.waitForExistence(timeout: 2)
         ? tabBar.buttons.element(boundBy: 1) : app.buttons["calendar"].firstMatch
       XCTAssertTrue(scheduleTab.waitForExistence(timeout: defaultTimeout), app.debugDescription)
       scheduleTab.tap()
@@ -481,8 +484,10 @@ final class TidexAppUITests: XCTestCase {
   @MainActor
   private func captureAddScreenshot(_ app: XCUIApplication, id: String, total: String) {
     openAddShift(in: app)
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
-      .firstMatch
+    let recentTime = app.buttons.matching(
+      NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")
+    )
+    .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
     let previewTotal = text(containingLabel: total, in: app)
     // A restored draft may already have this range selected; tapping it again clears it.
@@ -535,8 +540,10 @@ final class TidexAppUITests: XCTestCase {
     attachAppStoreScreenshot(app, name: "money-03-schedule")
 
     openAddShift(in: app)
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
-      .firstMatch
+    let recentTime = app.buttons.matching(
+      NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")
+    )
+    .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
     let previewTotal = app.staticTexts.matching(
       NSPredicate(format: "label MATCHES %@", ".*24[^0-9]?000.*")
@@ -601,7 +608,16 @@ final class TidexAppUITests: XCTestCase {
 
       let singleMode = app.buttons["add-shift.mode.single"]
       XCTAssertTrue(singleMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-      XCTAssertTrue(singleMode.staticTexts[singleTitle].exists, "The selected mode shows its name")
+      XCTAssertEqual(singleMode.label, singleTitle)
+      XCTAssertTrue(singleMode.isSelected)
+      XCTAssertTrue(singleMode.isHittable)
+      let eventsMode = app.buttons["add-shift.mode.events"]
+      XCTAssertTrue(eventsMode.exists)
+      if abs(singleMode.frame.midY - eventsMode.frame.midY) < 1 {
+        XCTAssertTrue(
+          singleMode.staticTexts[singleTitle].exists,
+          "The horizontal toolbar shows its selected mode name")
+      }
       let save = app.buttons["add-shift.save"]
       XCTAssertTrue(save.exists, app.debugDescription)
       XCTAssertTrue(save.staticTexts[saveTitle].exists, "The save button shows its label")
@@ -621,28 +637,36 @@ final class TidexAppUITests: XCTestCase {
     let end = app.textFields["End"]
     XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     // The time fields sit below the event calendar.
-    app.scrollViews.firstMatch.swipeUp()
-    Thread.sleep(forTimeInterval: 1)
+    scrollUp(in: app.scrollViews.firstMatch)
+    for _ in 0..<4 where !start.isHittable { scrollUp(in: app.scrollViews.firstMatch) }
+    XCTAssertTrue(start.isHittable, app.debugDescription)
     // The saved draft can have empty times. Fill both fields first so the deletes below
     // clear one full time each instead of jumping back to the start field.
     if start.value as? String != "09:00" || end.value as? String != "17:00" {
-      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")).firstMatch
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
+        .firstMatch
         .tap()
     }
     // Four deletes empty "HH:mm"; a fifth would move focus back to the start field.
-    let clear = String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4)
+    let keyboard = app.keyboards.firstMatch
+    let deleteKey = keyboard.keys.matching(NSPredicate(format: "label IN %@", ["Delete", "Slett"]))
+      .firstMatch
+    func enterTime(_ digits: String) {
+      for _ in 0..<4 { deleteKey.tap() }
+      for digit in digits { keyboard.keys[String(digit)].tap() }
+    }
     let focused = NSPredicate(format: "hasKeyboardFocus == true")
     start.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
     XCTAssertEqual(
       XCTWaiter.wait(
         for: [expectation(for: focused, evaluatedWith: start)], timeout: defaultTimeout),
       .completed)
-    app.typeText(clear + "2200")
+    enterTime("2200")
     XCTAssertEqual(
       XCTWaiter.wait(
         for: [expectation(for: focused, evaluatedWith: end)], timeout: defaultTimeout),
       .completed)
-    app.typeText(clear + "0200")
+    enterTime("0200")
     XCTAssertEqual(start.value as? String, "22:00")
     XCTAssertEqual(end.value as? String, "02:00")
     let hint = app.staticTexts["event.time-range-hint"]
@@ -656,13 +680,14 @@ final class TidexAppUITests: XCTestCase {
     let app = makeApp(scenario: "app-store-screenshots")
     app.launchArguments += ["-defaultStartupTab", "shifts", "-shiftsViewMode", "YES"]
     app.launch()
-    let scheduleTab = app.tabBars.buttons["Schedule"]
+    let scheduleTab = navigationTab(named: "Schedule", in: app)
     XCTAssertTrue(scheduleTab.waitForExistence(timeout: 30), app.debugDescription)
     let currentMonth = app.buttons.matching(identifier: "month-header.title")
       .matching(
         NSPredicate(
           format: "label BEGINSWITH %@",
-          Date.now.formatted(.dateTime.month(.wide).locale(Locale(identifier: "en_US")))))
+          Date.now.formatted(.dateTime.month(.wide).locale(Locale(identifier: "en_US"))))
+      )
       .firstMatch
     XCTAssertTrue(currentMonth.waitForExistence(timeout: 30), app.debugDescription)
 
@@ -691,7 +716,8 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     // Set times so a selected date gets earnings and the change amount appears.
     if start.value as? String != "09:00" {
-      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")).firstMatch
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
+        .firstMatch
         .tap()
     }
     Thread.sleep(forTimeInterval: 1)
@@ -713,8 +739,10 @@ final class TidexAppUITests: XCTestCase {
     let app = makeApp(scenario: "app-store-screenshots")
     app.launchArguments += ["-defaultStartupTab", "home"]
     app.launch()
-    // The profile tab is last and labelled with the user's first name.
-    let profileTab = app.tabBars.buttons.element(boundBy: 3)
+    // Native tab navigation can be a bottom bar or a vertical rail.
+    let profileTab = app.buttons.matching(
+      NSPredicate(format: "label == %@ OR label ENDSWITH %@", "Profile", ", Profile")
+    ).firstMatch
     XCTAssertTrue(profileTab.waitForExistence(timeout: 30), app.debugDescription)
     profileTab.tap()
 
@@ -743,7 +771,7 @@ final class TidexAppUITests: XCTestCase {
     app.buttons["BackButton"].tap()
     XCTAssertTrue(eventsMode.waitForNonExistence(timeout: defaultTimeout))
 
-    app.tabBars.buttons["Schedule"].tap()
+    navigationTab(named: "Schedule", in: app).tap()
     let monthTitle = app.buttons["month-header.title"].firstMatch
     XCTAssertTrue(monthTitle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     monthTitle.tap()
@@ -780,8 +808,10 @@ final class TidexAppUITests: XCTestCase {
     let jobPicker = app.buttons["add-shift.job-picker"]
     XCTAssertTrue(jobPicker.waitForExistence(timeout: defaultTimeout))
     XCTAssertTrue(jobPicker.label.contains("Nord"))
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
-      .firstMatch
+    let recentTime = app.buttons.matching(
+      NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")
+    )
+    .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: defaultTimeout))
     if app.textFields["Start"].value as? String != "09:00" {
       recentTime.tap()
@@ -839,7 +869,8 @@ final class TidexAppUITests: XCTestCase {
     let end = app.textFields["End"]
     XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout))
     if start.value as? String != "09:00" || end.value as? String != "17:00" {
-      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")).firstMatch
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
+        .firstMatch
         .tap()
     }
     let hides = app.staticTexts["ui-testing.keyboard-hide-count"]
@@ -958,8 +989,10 @@ final class TidexAppUITests: XCTestCase {
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "time-input"
     app.launch()
 
-    let preset = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
-      .firstMatch
+    let preset = app.buttons.matching(
+      NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")
+    )
+    .firstMatch
     XCTAssertTrue(preset.waitForExistence(timeout: defaultTimeout))
     XCTAssertGreaterThanOrEqual(preset.frame.height, 44)
     XCTAssertTrue(preset.isSelected)
@@ -1307,6 +1340,20 @@ final class TidexAppUITests: XCTestCase {
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "friends"
     app.launchEnvironment["TIDEX_DESIGN_FRIENDS_VIEW"] = view
     return app
+  }
+
+  @MainActor
+  private func scrollUp(in element: XCUIElement) {
+    element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+      .press(
+        forDuration: 0.05,
+        thenDragTo: element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)))
+  }
+
+  @MainActor
+  private func navigationTab(named title: String, in app: XCUIApplication) -> XCUIElement {
+    let bottomTab = app.tabBars.buttons[title]
+    return bottomTab.exists ? bottomTab : app.buttons[title].firstMatch
   }
 
   /// Opens the Add screen from the plus button beside the month picker.

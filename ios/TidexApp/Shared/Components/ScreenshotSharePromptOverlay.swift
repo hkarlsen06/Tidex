@@ -22,8 +22,6 @@ struct ScreenshotSharePromptOverlay: View {
 
   var body: some View {
     GeometryReader { geometry in
-      let safeBottom = geometry.safeAreaInsets.bottom
-
       ZStack(alignment: .bottom) {
         // Dimmed background
         Color.black
@@ -34,102 +32,27 @@ struct ScreenshotSharePromptOverlay: View {
           }
           .accessibilityHidden(true)
 
-        // Overlay card
-        VStack(spacing: 0) {
-          // Drag indicator
-          Capsule()
-            .fill(Color.tidexTextMuted.opacity(0.4))
-            .frame(width: 36, height: 5)
-            .padding(.top, Spacing.xsm)
-            .padding(.bottom, Spacing.md)
-
-          // Toolbar buttons preview - showing where share button is
-          toolbarPreview
-            .padding(.bottom, Spacing.md)
-            .accessibilityHidden(true)
-
-          // Title
-          Text(.screenshotShareTitle)
-            .font(.tidexTitle2)
-            .foregroundColor(.tidexTextPrimary)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, Spacing.mlg)
-            .padding(.bottom, Spacing.xs)
-
-          // Description
-          Text(.screenshotShareDescription)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextSecondary)
-            .multilineTextAlignment(.center)
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.mlg)
-
-          // Side-by-side buttons
-          buttonLayout {
-            // Dismiss button - secondary action
-            Button {
-              dismiss()
-            } label: {
-              Text(.screenshotShareDismiss)
-                .font(.tidexBodyMedium)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 52)
-                .background(Color.tidexSurfacePrimary)
-                .foregroundColor(.tidexTextPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
-            }
-            .buttonStyle(PromptButtonStyle())
-
-            // Use share button - primary action
-            Button {
-              Haptics.play(.medium)
-              dismiss()
-              // Small delay to let the overlay dismiss first
-              DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                onUseShareButton()
-              }
-            } label: {
-              Text(.screenshotShareUseButton)
-                .font(.tidexHeadline)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 52)
-                .background(Color.tidexBrandPrimary)
-                .foregroundColor(.tidexTextOnBrand)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
-            }
-            .buttonStyle(PromptButtonStyle())
+        ViewThatFits(in: .vertical) {
+          VStack(spacing: 0) {
+            cardInformation
+            cardActions
           }
-          .padding(.horizontal, Spacing.md)
-          .padding(.bottom, safeBottom + Spacing.md)
+          VStack(spacing: 0) {
+            ScrollView {
+              cardInformation
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            cardActions
+          }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: AdaptiveMaxWidth.content)
         .background(
           Color.tidexBackground
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
             .shadow(color: .black.opacity(0.15), radius: 20, y: -5)
         )
         .offset(y: showContent ? dragOffset : geometry.size.height + 100)
-        .gesture(
-          DragGesture()
-            .onChanged { value in
-              if value.translation.height > 0 {
-                dragOffset = value.translation.height
-              }
-            }
-            .onEnded { value in
-              if value.translation.height > 80 || value.predictedEndTranslation.height > 200 {
-                dismiss()
-              } else {
-                withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
-                  dragOffset = 0
-                }
-              }
-            }
-        )
       }
-      .ignoresSafeArea(edges: .bottom)
     }
     // The prompt covers the screen, so VoiceOver stays inside it and can dismiss it with the escape gesture.
     .accessibilityAddTraits(.isModal)
@@ -144,6 +67,99 @@ struct ScreenshotSharePromptOverlay: View {
       showContent = true
       Haptics.play(.warning)
     }
+  }
+
+  private var cardInformation: some View {
+    VStack(spacing: 0) {
+      // Drag indicator
+      Capsule()
+        .fill(Color.tidexTextMuted.opacity(0.4))
+        .frame(width: 36, height: 5)
+        .padding(.top, Spacing.xsm)
+        .padding(.bottom, Spacing.md)
+        .gesture(cardDragGesture)
+
+      // Toolbar buttons preview - showing where share button is
+      toolbarPreview
+        .padding(.bottom, Spacing.md)
+        .accessibilityHidden(true)
+
+      // Title
+      Text(.screenshotShareTitle)
+        .font(.tidexTitle2)
+        .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, Spacing.mlg)
+        .padding(.bottom, Spacing.xs)
+
+      // Description
+      Text(.screenshotShareDescription)
+        .font(.tidexBody)
+        .foregroundColor(.tidexTextSecondary)
+        .multilineTextAlignment(.center)
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.bottom, Spacing.mlg)
+    }
+  }
+
+  private var cardActions: some View {
+    // Side-by-side buttons
+    buttonLayout {
+      // Dismiss button - secondary action
+      Button {
+        dismiss()
+      } label: {
+        Text(.screenshotShareDismiss)
+          .font(.tidexBodyMedium)
+          .frame(maxWidth: .infinity)
+          .frame(minHeight: 52)
+          .background(Color.tidexSurfacePrimary)
+          .foregroundColor(.tidexTextPrimary)
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+      }
+      .buttonStyle(PromptButtonStyle())
+
+      // Use share button - primary action
+      Button {
+        Haptics.play(.medium)
+        dismiss()
+        // Small delay to let the overlay dismiss first
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+          onUseShareButton()
+        }
+      } label: {
+        Text(.screenshotShareUseButton)
+          .font(.tidexHeadline)
+          .frame(maxWidth: .infinity)
+          .frame(minHeight: 52)
+          .background(Color.tidexBrandPrimary)
+          .foregroundColor(.tidexTextOnBrand)
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+      }
+      .buttonStyle(PromptButtonStyle())
+    }
+    .padding(.horizontal, Spacing.md)
+    .padding(.bottom, Spacing.md)
+  }
+
+  private var cardDragGesture: some Gesture {
+    DragGesture()
+      .onChanged { value in
+        if value.translation.height > 0 {
+          dragOffset = value.translation.height
+        }
+      }
+      .onEnded { value in
+        if value.translation.height > 80 || value.predictedEndTranslation.height > 200 {
+          dismiss()
+        } else {
+          withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
+            dragOffset = 0
+          }
+        }
+      }
   }
 
   /// The two buttons stack at accessibility text sizes so each label keeps the full width.

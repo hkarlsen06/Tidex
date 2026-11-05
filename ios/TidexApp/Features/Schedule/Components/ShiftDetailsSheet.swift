@@ -710,6 +710,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         }
       }
       .padding(Spacing.mlg)
+      .adaptiveContentWidth()
     }
   }
 

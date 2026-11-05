@@ -50,6 +50,7 @@ struct AddFriendSheet: View {
         .listRowBackground(Color.tidexSurfacePrimary)
       }
       .scrollContentBackground(.hidden)
+      .adaptiveContentWidth()
       .background(Color.tidexBackground)
       .navigationTitle(String(localized: .sharingAddFriend))
       .navigationBarTitleDisplayMode(.inline)
@@ -191,7 +192,9 @@ private struct HiddenAndBlockedPeopleView: View {
           viewModel.actionInProgress != nil
           || (viewModel.areServerActionsUnavailable && friend.sharesWithMe != nil)
 
-        personRow(friend, actionTitle: String(localized: .sharingHiddenShow), isDisabled: isUnavailable) {
+        personRow(
+          friend, actionTitle: String(localized: .sharingHiddenShow), isDisabled: isUnavailable
+        ) {
           Task { await viewModel.toggleHidden(for: friend) }
         }
       }

@@ -56,7 +56,7 @@ struct LoginView: View {
           entranceColumn(scrollProxy: scrollProxy)
             .frame(maxWidth: 420)
             .padding(.horizontal, Spacing.xl)
-            .padding(.bottom, bottomPadding(for: geometry))
+            .padding(.bottom, Spacing.lg)
             .frame(maxWidth: .infinity)
 
           Color.clear
@@ -290,10 +290,6 @@ struct LoginView: View {
 
   private var authSectionSpacing: CGFloat {
     viewModel.showEmailForm || viewModel.currentStep != .input ? Spacing.lg : Spacing.mlg
-  }
-
-  private func bottomPadding(for geometry: GeometryProxy) -> CGFloat {
-    max(geometry.safeAreaInsets.bottom + Spacing.xs, Spacing.lg)
   }
 
 }

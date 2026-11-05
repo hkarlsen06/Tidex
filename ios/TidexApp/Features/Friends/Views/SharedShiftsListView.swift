@@ -61,9 +61,7 @@ struct SharedShiftsListView: View {
     jobs.count > 1
   }
 
-  private var isIPhone: Bool {
-    UIDevice.current.userInterfaceIdiom == .phone
-  }
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
   var body: some View {
     GeometryReader { _ in
@@ -141,7 +139,7 @@ extension SharedShiftsListView {
         Spacer()
         calendarView
           .frame(maxWidth: calendarWidth)
-          .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+          .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
         Spacer()
       }
       .frame(maxWidth: .infinity)

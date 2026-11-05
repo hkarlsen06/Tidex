@@ -54,7 +54,7 @@ struct SignupView: View {
           entranceColumn(scrollProxy: scrollProxy)
             .frame(maxWidth: 420)
             .padding(.horizontal, Spacing.xl)
-            .padding(.bottom, bottomPadding(for: geometry))
+            .padding(.bottom, Spacing.lg)
             .frame(maxWidth: .infinity)
 
           Color.clear
@@ -235,10 +235,6 @@ struct SignupView: View {
 
   private var authSectionSpacing: CGFloat {
     viewModel.showEmailForm ? Spacing.lg : Spacing.mlg
-  }
-
-  private func bottomPadding(for geometry: GeometryProxy) -> CGFloat {
-    max(geometry.safeAreaInsets.bottom + Spacing.xs, Spacing.lg)
   }
 
   private var footerView: some View {

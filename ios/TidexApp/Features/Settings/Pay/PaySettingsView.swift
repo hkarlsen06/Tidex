@@ -215,6 +215,7 @@ extension PaySettingsView {
       }
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.lg)
+      .adaptiveContentWidth()
     }
   }
 

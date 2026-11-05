@@ -81,6 +81,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.lg)
         .padding(.bottom, Spacing.xxl)
+        .adaptiveContentWidth()
       }
       .background(Color.tidexBackground.ignoresSafeArea())
       .navigationTitle(String(localized: .dashboardPayrollDetailsTitle))

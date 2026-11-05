@@ -64,6 +64,7 @@
             card("Terese Caroline Roysdatter", minutesAgo: 60, state: .outgoingSent)
           }
           .padding(.horizontal, Spacing.md)
+          .adaptiveMaxWidth(AdaptiveMaxWidth.tabContent)
         }
         .background(Color.tidexBackground)
         .navigationTitle(String(localized: .tabsSharing))
@@ -102,7 +103,8 @@
       let tomorrow =
         Calendar.gregorianCurrent.date(
           byAdding: .day, value: 1, to: Calendar.gregorianCurrent.startOfDay(for: .now)) ?? .now
-      let start = Calendar.gregorianCurrent.date(byAdding: .hour, value: hour, to: tomorrow) ?? tomorrow
+      let start =
+        Calendar.gregorianCurrent.date(byAdding: .hour, value: hour, to: tomorrow) ?? tomorrow
       return start.timeIntervalSinceNow / 60
     }
 

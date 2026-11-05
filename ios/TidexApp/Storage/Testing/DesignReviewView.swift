@@ -29,6 +29,8 @@
     internal var body: some View {
       Group {  // swiftlint:disable:this closure_body_length
         switch screen {
+        case "screenshot-prompt":
+          ScreenshotSharePromptOverlay(onDismiss: {}, onUseShareButton: {})
         case "onboarding":
           OnboardingView(onNavigateToSignup: {}, onNavigateToLogin: {})
         case "onboarding-setup":
@@ -37,8 +39,10 @@
           DesignReviewFriendCards()
         case "money", "money-payroll":
           DesignReviewMoneyCards(screen: screen)
-        case "settings":
-          SettingsView()
+        case "settings", "settings-profile", "settings-security", "settings-notifications",
+          "settings-appearance", "settings-calendar", "settings-data", "settings-recurring",
+          "settings-feedback":
+          SettingsView(initialDestination: settingsDestination)
             .environment(AppCoordinator.shared)
         case "login", "login-accessibility":
           NavigationStack {
@@ -47,6 +51,20 @@
           .dynamicTypeSize(screen == "login-accessibility" ? .accessibility5 : dynamicTypeSize)
         case "signup":
           SignupView(viewModel: signupModel, currency: "kr")
+        case "reset-password":
+          ResetPasswordView()
+        case "accept-terms":
+          AcceptTermsView(isUpdate: true, coordinator: AppCoordinator.shared)
+        case "calendar-import":
+          CalendarImportView()
+        case "event-details":
+          EventDetailsSheet(
+            event: EventRow(
+              id: "design-event", user_id: nil, start_date: "2026-11-15",
+              end_date: "2026-11-15", is_all_day: false,
+              start_time: "09:00", end_time: "17:00", note: "Team training"
+            ), onDelete: {}, onUpdate: { _ in }, startInEditMode: true
+          )
         case "time-input", "time-input-accessibility":
           NavigationStack {
             ScrollView {
@@ -121,8 +139,8 @@
             ScrollView {
               VStack(spacing: Spacing.lg) {
                 switch screen {
-                case "calendar": calendar
-                case "shared-calendar": sharedCalendar
+                case "calendar": calendar.frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                case "shared-calendar": sharedCalendar.frame(maxWidth: AdaptiveMaxWidth.tabContent)
                 case "stats": charts
                 case "controls": controls
                 default: dashboard
@@ -138,6 +156,20 @@
       }
       .userCurrency("kr")
       .tint(.tidexBlue)
+    }
+
+    private var settingsDestination: SettingsView.SettingsDestination? {
+      switch screen {
+      case "settings-profile": .profile
+      case "settings-security": .security
+      case "settings-notifications": .notifications
+      case "settings-appearance": .appearance
+      case "settings-calendar": .calendarSync()
+      case "settings-data": .data
+      case "settings-recurring": .recurringShifts
+      case "settings-feedback": .feedback
+      default: nil
+      }
     }
 
     private var dashboard: some View {
@@ -191,6 +223,7 @@
             }
           }
           .padding(Spacing.md)
+          .adaptiveContentWidth()
         }
         .background(Color.tidexBackground)
         .navigationTitle(String(localized: .settingsPayTitle))

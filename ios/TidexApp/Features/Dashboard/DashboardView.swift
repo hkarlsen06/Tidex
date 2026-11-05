@@ -432,7 +432,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           .id(coordinator.userId)
       }
       .addShiftDestination(in: .home)
-      .iPadToolbarTransaction()
+      .adaptiveToolbarTransaction()
     }
   }
 
@@ -611,8 +611,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           },
           onSave: { start, end, jobId in
             try await viewModel.commitTemporaryClockOut(start: start, end: end, jobId: jobId)
-            AccessibilityNotification.Announcement(String(localized: .dashboardAccessibilityClockedOut))
-              .post()
+            AccessibilityNotification.Announcement(
+              String(localized: .dashboardAccessibilityClockedOut)
+            )
+            .post()
           },
           onDiscard: {
             await viewModel.discardTemporaryClockSession()
@@ -1378,7 +1380,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     // its turn instead of being skipped.
     let celebrationManager = ShiftCompletionCelebrationManager.shared  // swiftlint:disable:this explicit_type_interface
     let paydayAmount: Double =
-      selectedVariant.taxEnabled ? (selectedVariant.net ?? selectedVariant.gross) : selectedVariant.gross
+      selectedVariant.taxEnabled
+      ? (selectedVariant.net ?? selectedVariant.gross) : selectedVariant.gross
     let paydayCelebrationID: String? =
       showsReceivedToggle && paydayAmount > 0 && celebrationManager.celebrationData == nil
       ? selectedVariant.payoutDate.toISODateString()

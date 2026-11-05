@@ -16,7 +16,6 @@ struct AddShiftView: View {
   var onShiftsCreated: (_ singleDates: Set<String>?) -> Void = { _ in }
   @State private var isKeyboardVisible = false
   @State private var focusedTimeField: TimeInputField?
-  @State private var keyboardHeight: CGFloat = 0
   @State private var showStartFreshConfirmation = false
   @State private var showSubmitRequirementsAlert = false
   @State private var showAddJobSheet = false
@@ -59,32 +58,41 @@ struct AddShiftView: View {
   }
 
   var body: some View {
-    Group {
-      AddShiftScreenContent(
-        viewModel: viewModel,
-        showsWorkSetupPlaceholder: shouldShowWorkSetupRequiredPlaceholder,
-        isKeyboardVisible: isKeyboardVisible,
-        keyboardHeight: keyboardHeight,
-        focusedTimeField: $focusedTimeField,
-        onBackgroundTap: hideKeyboard,
-        onStartFresh: presentStartFreshConfirmation,
-        onSave: handleSaveTap
-      )
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        if !shouldShowWorkSetupRequiredPlaceholder {
+    AddShiftScreenContent(
+      viewModel: viewModel,
+      showsWorkSetupPlaceholder: shouldShowWorkSetupRequiredPlaceholder,
+      isKeyboardVisible: isKeyboardVisible,
+      focusedTimeField: $focusedTimeField,
+      onBackgroundTap: hideKeyboard,
+      onStartFresh: presentStartFreshConfirmation,
+      onSave: handleSaveTap
+    )
+    .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      if !shouldShowWorkSetupRequiredPlaceholder {
+        if #available(iOS 27.1, *) {
+          ToolbarItem(placement: .topBarTrailing) {
+            AdaptiveShiftModeToolbarControl(mode: $viewModel.mode)
+          }
+          .axisBehavior(.verticalPreferred)
+        } else {
           ToolbarItem(placement: .topBarTrailing) {
             ShiftModeToggle(mode: $viewModel.mode, style: .toolbar)
               .fixedSize()
           }
         }
       }
-      .overlay(alignment: .bottomTrailing) {
-        keyboardButton
-      }
-      .iPadToolbarTransaction()
-      .userCurrency(viewModel.currency)
     }
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      if isKeyboardVisible, !shouldShowWorkSetupRequiredPlaceholder {
+        HStack {
+          Spacer()
+          keyboardButton
+        }
+      }
+    }
+    .adaptiveToolbarTransaction()
+    .userCurrency(viewModel.currency)
     .background(FullWidthBackSwipeBlocker())
     .disabled(viewModel.isLoading)
     .task {
@@ -121,7 +129,6 @@ struct AddShiftView: View {
     .onDisappear {
       focusedTimeField = nil
       isKeyboardVisible = false
-      keyboardHeight = 0
       viewModel.onShiftsCreated = nil
       // An unconsumed add link (for example while work setup is required) would
       // otherwise block the next identical request from reopening the sheet.
@@ -162,12 +169,7 @@ struct AddShiftView: View {
       Text(submitRequirementsMessage)
     }
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification))
-    { notification in
-      if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]
-        as? CGRect
-      {
-        keyboardHeight = keyboardFrame.height
-      }
+    { _ in
       MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
         isKeyboardVisible = true
       }
@@ -176,7 +178,6 @@ struct AddShiftView: View {
     { _ in
       MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
         isKeyboardVisible = false
-        keyboardHeight = 0
       }
     }
   }

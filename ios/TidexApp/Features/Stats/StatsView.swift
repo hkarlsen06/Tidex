@@ -90,7 +90,7 @@ struct StatsView: View {
       }
     }
     .navigationBarTitleDisplayMode(.inline)
-    .iPadToolbarTransaction()
+    .adaptiveToolbarTransaction()
     .sheet(isPresented: $showExportSettings) {
       SettingsView(initialDestination: .data)
         .presentationDetents([.large])
@@ -259,7 +259,9 @@ struct StatsView: View {
       .buttonStyle(.plain)
       .accessibilityLabel(Text(.jobsFilterTitle))
       .accessibilityValue(
-        Text(verbatim: selectedJob?.name ?? viewModel.selectedJobName ?? String(localized: .jobsFilterAll))
+        Text(
+          verbatim: selectedJob?.name ?? viewModel.selectedJobName
+            ?? String(localized: .jobsFilterAll))
       )
       .confirmationDialog(
         String(localized: .jobsFilterTitle),

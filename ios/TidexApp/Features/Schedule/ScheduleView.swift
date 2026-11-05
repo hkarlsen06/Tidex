@@ -228,17 +228,11 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     }
   }
 
-  // Orientation tracking for iPad landscape layout
-  private let orientationTracker: OrientationTracker = OrientationTracker.shared
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+  @State private var availableSize = CGSize.zero
 
-  /// Whether to show iPad landscape side-by-side layout (calendar + list)
-  private var isIPadLandscape: Bool {
-    UIDevice.current.userInterfaceIdiom == .pad && orientationTracker.isLandscape
-  }
-
-  /// Whether running on iPhone-sized idiom.
-  private var isIPhone: Bool {
-    UIDevice.current.userInterfaceIdiom == .phone
+  private var usesWideCalendarLayout: Bool {
+    availableSize.width >= 800 && availableSize.width > availableSize.height
   }
 
   @discardableResult
@@ -351,6 +345,11 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         // Content area - fills entire screen, content scrolls behind month picker
         mainContentLayer
           .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .onGeometryChange(for: CGSize.self) {
+            $0.size
+          } action: {
+            availableSize = $0
+          }
 
         // Month picker is now in shared overlay in MainTabView
 
@@ -372,7 +371,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       .onChange(of: shouldShowWorkSetupRequiredPlaceholder) { _, _ in
         publishToolbarState()
       }
-      .iPadToolbarTransaction()
+      .adaptiveToolbarTransaction()
     }
   }
 
@@ -692,8 +691,8 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             recomputeListDerivedDataIfNeeded(force: true)
           }
         }
-        .onChange(of: orientationTracker.isLandscape) { _, isLandscape in
-          if isLandscape {
+        .onChange(of: usesWideCalendarLayout) { _, usesColumns in
+          if usesColumns {
             recomputeListDerivedDataIfNeeded(force: true)
           }
         }
@@ -1223,9 +1222,9 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   /// This ensures StaggeredCardsContainer persists across month changes for consistent animation
   @ViewBuilder
   private var shiftsContent: some View {
-    if isIPadLandscape {
-      // iPad landscape: side-by-side layout (calendar left, list right)
-      iPadLandscapeContent
+    if usesWideCalendarLayout && !showListView {
+      // Wide layout: calendar and shift list side by side.
+      wideCalendarContent
     } else if showListView {
       // List view mode - just the shift cards without calendar
       listViewContent
@@ -1235,29 +1234,29 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     }
   }
 
-  // MARK: - iPad Landscape Content
+  // MARK: - Wide calendar content
 
-  /// Side-by-side layout for iPad landscape: calendar on left, shifts list on right
+  /// Calendar and shift list share the available width.
   @ViewBuilder
-  private var iPadLandscapeContent: some View {
+  private var wideCalendarContent: some View {
     HStack(spacing: Spacing.xxxl) {
       Spacer()
 
       // Left side: Calendar
-      calendarPanelForIPad
-        .frame(maxWidth: 500)
+      calendarPanelForWideLayout
+        .frame(maxWidth: min(500, max(350, availableSize.height * 0.6)))
 
       // Right side: Shifts list
-      shiftsPanelForIPad
+      shiftsPanelForWideLayout
         .frame(maxWidth: 480)
 
       Spacer()
     }
   }
 
-  /// Calendar panel for iPad landscape (left side)
+  /// Calendar panel in the wide layout.
   @ViewBuilder
-  private var calendarPanelForIPad: some View {
+  private var calendarPanelForWideLayout: some View {
     PullToRefreshContainer(onRefresh: {
       await refreshShiftsContent()
     }) {  // swiftlint:disable:this closure_body_length
@@ -1452,9 +1451,9 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     }
   }
 
-  /// Shifts list panel for iPad landscape (right side)
+  /// Shift list beside the calendar.
   @ViewBuilder
-  private var shiftsPanelForIPad: some View {
+  private var shiftsPanelForWideLayout: some View {
     if let listEmptyState {
       ScrollView {
         scheduleEmptyState(
@@ -1656,7 +1655,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               excludedFromTotalIds: viewModel.excludedFromTotalIds
             )
             .frame(maxWidth: calendarWidth)
-            .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+            .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
             if !hasAnyShifts {
               FirstShiftPrompt { openAddShift() }
                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -1712,7 +1711,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   }
 
   private var shouldMaintainListDerivedData: Bool {
-    showListView || isIPadLandscape
+    showListView || usesWideCalendarLayout
   }
 
   private var defaultActiveJobId: String? {

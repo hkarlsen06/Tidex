@@ -181,6 +181,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       ScrollViewReader { proxy in
         ScrollView {
           editorSections
+            .adaptiveContentWidth()
         }
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
@@ -493,7 +494,8 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
   @ViewBuilder
   private func effectiveDateRow(_ version: TariffVersion, isStacked: Bool) -> some View {
-    let layout = isStacked
+    let layout =
+      isStacked
       ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xxs))
       : AnyLayout(HStackLayout(spacing: Spacing.xs))
     layout {

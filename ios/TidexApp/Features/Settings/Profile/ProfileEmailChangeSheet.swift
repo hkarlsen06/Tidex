@@ -61,6 +61,7 @@ struct ProfileEmailChangeSheet: View {
       }
       .listRowBackground(Color.tidexSurfacePrimary)
     }
+    .adaptiveContentWidth()
     .tidexListBackground()
   }
 
@@ -138,6 +139,7 @@ struct ProfileEmailChangeSheet: View {
       }
       .listRowBackground(Color.tidexSurfacePrimary)
     }
+    .adaptiveContentWidth()
     .tidexListBackground()
   }
 }

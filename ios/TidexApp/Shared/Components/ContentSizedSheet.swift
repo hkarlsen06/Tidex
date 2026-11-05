@@ -10,16 +10,14 @@ import UIKit
 enum ContentSizedSheetMetrics {
   static let navigationChromeHeight: CGFloat = 76
   static let minDetentHeight: CGFloat = 180
-  static let maxScreenCoverage: CGFloat = 0.82
   static let defaultContentHeight: CGFloat = 220
   static let estimatedSummaryHeaderHeight: CGFloat = 104
 
-  @MainActor
   static func detentHeight(for contentHeight: CGFloat) -> CGFloat {
-    let maxHeight = currentWindowHeight * maxScreenCoverage
     let resolvedContentHeight = max(contentHeight, defaultContentHeight)
     let totalHeight = resolvedContentHeight + navigationChromeHeight
-    return min(max(totalHeight, minDetentHeight), maxHeight)
+    // The presentation system clamps the detent to the current scene's available height.
+    return max(totalHeight, minDetentHeight)
   }
 
   static func estimatedCardListContentHeight(
@@ -35,14 +33,6 @@ enum ContentSizedSheetMetrics {
     return (Spacing.mlg * 2) + summaryHeight + summarySpacing + cardsHeight + cardsSpacing
   }
 
-  @MainActor
-  private static var currentWindowHeight: CGFloat {
-    UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .flatMap(\.windows)
-      .first(where: \.isKeyWindow)?
-      .bounds.height ?? 800
-  }
 }
 
 extension View {

@@ -31,7 +31,7 @@ struct TimeTextField: UIViewRepresentable {
     let priorDigits: String
     let insertedDigits: String
     let didInsert: Bool
-    let didDelete: Bool
+    let didDeleteAtStart: Bool
     let caretAtEnd: Bool
     let caretAtStart: Bool
   }
@@ -68,10 +68,15 @@ struct TimeTextField: UIViewRepresentable {
     context.coordinator.parent = self
     uiView.font = .monospacedSystemFont(ofSize: fontSize, weight: .medium)
     uiView.accessibilityLabel = label
-    if uiView.text != text {
-      uiView.text = text
-      if uiView.isFirstResponder {
-        context.coordinator.setCursor(uiView, position: text.count)
+    // Keep a newer UIKit draft until SwiftUI has acknowledged that edit.
+    let pendingText = context.coordinator.pendingText
+    if !uiView.isFirstResponder || pendingText == nil || pendingText == text {
+      context.coordinator.pendingText = nil
+      if uiView.text != text {
+        uiView.text = text
+        if uiView.isFirstResponder {
+          context.coordinator.setCursor(uiView, position: text.count)
+        }
       }
     }
 
@@ -99,6 +104,7 @@ struct TimeTextField: UIViewRepresentable {
 
   final class Coordinator: NSObject, UITextFieldDelegate {
     var parent: TimeTextField
+    var pendingText: String?
     private weak var textField: TimeInputTextField?
 
     init(parent: TimeTextField) {
@@ -146,14 +152,14 @@ struct TimeTextField: UIViewRepresentable {
       let caretPosition = caretIndex(
         forDigitsBefore: cappedDigitsBeforeCursor, digitsCount: limitedDigits.count)
 
-      textField.text = formatted
+      pendingText = formatted
       parent.text = formatted
+      textField.text = formatted
       setCursor(textField, position: caretPosition)
 
       let didInsert = string.rangeOfCharacter(from: .decimalDigits) != nil
       // swiftlint:disable:next explicit_type_interface
       let insertedDigits = string.filter(\.isNumber)
-      let didDelete = string.isEmpty && adjustedRange.length > 0
       let caretAtEnd = caretPosition == formatted.count
       let caretAtStart = caretPosition == 0
 
@@ -164,7 +170,7 @@ struct TimeTextField: UIViewRepresentable {
           priorDigits: currentDigits,
           insertedDigits: insertedDigits,
           didInsert: didInsert,
-          didDelete: didDelete,
+          didDeleteAtStart: false,
           caretAtEnd: caretAtEnd,
           caretAtStart: caretAtStart
         )
@@ -182,8 +188,9 @@ struct TimeTextField: UIViewRepresentable {
 
       guard currentDigits.count <= 2, caretOffset == 0 else { return false }
 
-      textField.text = ""
+      pendingText = ""
       parent.text = ""
+      textField.text = ""
       setCursor(textField, position: 0)
 
       parent.onTextChange(
@@ -193,7 +200,7 @@ struct TimeTextField: UIViewRepresentable {
           priorDigits: currentDigits,
           insertedDigits: "",
           didInsert: false,
-          didDelete: true,
+          didDeleteAtStart: true,
           caretAtEnd: true,
           caretAtStart: true
         )

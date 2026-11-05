@@ -4,9 +4,7 @@
 // swiftlint:disable convenience_type explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable file_types_order no_magic_numbers type_contents_order unused_parameter
-import Observation
 import SwiftUI
-import UIKit
 
 // MARK: - Adaptive Layout Constants
 
@@ -78,79 +76,34 @@ extension View {
   }
 }
 
-// MARK: - iPad Detection Helper
+private struct AdaptiveToolbarTransaction: ViewModifier {
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-/// Check if running on iPad
-@MainActor
-private var isIPad: Bool {
-  UIDevice.current.userInterfaceIdiom == .pad
+  func body(content: Content) -> some View {
+    content.transaction { transaction in
+      if horizontalSizeClass == .regular {
+        transaction.animation = nil
+      }
+    }
+  }
 }
 
-// MARK: - iPad-Only View Modifiers
+private struct AdaptiveFixedHeight: ViewModifier {
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+  let height: CGFloat
+
+  func body(content: Content) -> some View {
+    content.frame(height: horizontalSizeClass == .regular ? height : nil)
+  }
+}
 
 extension View {
-  /// Disables toolbar animations only on iPad
-  /// Prevents layout shifts when toolbar items change on iPad
-  @ViewBuilder
-  func iPadToolbarTransaction() -> some View {
-    if isIPad {
-      self.transaction { $0.animation = nil }
-    } else {
-      self
-    }
+  func adaptiveToolbarTransaction() -> some View {
+    modifier(AdaptiveToolbarTransaction())
   }
 
-  /// Applies fixed height only on iPad to prevent toolbar layout shifts
-  @ViewBuilder
-  func iPadFixedHeight(_ height: CGFloat) -> some View {
-    if isIPad {
-      self.frame(height: height)
-    } else {
-      self
-    }
-  }
-}
-
-// MARK: - iPad Landscape Detection
-
-/// Observable class that tracks device orientation changes
-@MainActor
-@Observable
-class OrientationTracker {
-  static let shared = OrientationTracker()
-
-  private(set) var isLandscape: Bool = false
-
-  private init() {
-    // Set initial value
-    updateOrientation()
-
-    // Listen for orientation changes
-    NotificationCenter.default.addObserver(
-      self,
-      selector: #selector(orientationDidChange),
-      name: UIDevice.orientationDidChangeNotification,
-      object: nil
-    )
-  }
-
-  deinit {
-    NotificationCenter.default.removeObserver(self)
-  }
-
-  @objc private func orientationDidChange() {
-    updateOrientation()
-  }
-
-  private func updateOrientation() {
-    // Use window scene for more reliable orientation detection
-    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-      isLandscape = windowScene.effectiveGeometry.interfaceOrientation.isLandscape
-    } else {
-      // Fallback to device orientation
-      let orientation = UIDevice.current.orientation
-      isLandscape = orientation.isLandscape
-    }
+  func adaptiveFixedHeight(_ height: CGFloat) -> some View {
+    modifier(AdaptiveFixedHeight(height: height))
   }
 }
 

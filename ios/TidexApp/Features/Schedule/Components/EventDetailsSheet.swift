@@ -234,6 +234,7 @@ struct EventDetailsSheet: View {
         }
       }
       .padding(Spacing.mlg)
+      .adaptiveContentWidth()
     }
   }
 

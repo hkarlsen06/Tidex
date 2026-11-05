@@ -242,6 +242,8 @@ extension SettingsView {
         .addShiftDestination(in: isTabRoot ? .profile : nil)
         .navigationDestination(for: SettingsDestination.self) { destination in
           settingsDestinationView(destination)
+            .adaptiveContentWidth()
+            .tidexListBackground()
             .toolbarRole(.editor)
         }
     }

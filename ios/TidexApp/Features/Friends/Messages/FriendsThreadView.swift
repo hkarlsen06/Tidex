@@ -369,7 +369,7 @@ struct FriendsThreadView: View {
         actionsMenu
       }
     }
-    .iPadToolbarTransaction()
+    .adaptiveToolbarTransaction()
     .confirmationDialog(
       reportDialogTitle,
       isPresented: .init(
@@ -668,8 +668,11 @@ struct FriendsThreadView: View {
             )
         }
       }
-      .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
-      .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: isPinnedToBottom)
+      .animation(
+        reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill
+      )
+      .animation(
+        reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: isPinnedToBottom)
   }
 
   @ViewBuilder
@@ -945,7 +948,8 @@ struct FriendsThreadView: View {
           Text(.friendsChatNewMessages)
             .font(.tidexFootnoteMedium)
             .transition(
-              reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95, anchor: .trailing))
+              reduceMotion
+                ? .opacity : .opacity.combined(with: .scale(scale: 0.95, anchor: .trailing))
             )
 
           if unreadIncomingCount > 0 {
@@ -966,7 +970,9 @@ struct FriendsThreadView: View {
       .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.12), interactive: true)
     }
     .buttonStyle(.plain)
-    .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
+    .animation(
+      reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill
+    )
     .accessibilityIdentifier(AccessibilityID.unreadPill)
   }
 

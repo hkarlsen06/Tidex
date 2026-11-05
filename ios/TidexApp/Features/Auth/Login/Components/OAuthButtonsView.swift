@@ -39,11 +39,8 @@ private struct OAuthProviderButton<Icon: View>: View {
   @ViewBuilder let icon: () -> Icon
 
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @ScaledMetric(relativeTo: .body) private var iconFrame: CGFloat = 19
-
-  private var isIPad: Bool {
-    UIDevice.current.userInterfaceIdiom == .pad
-  }
 
   var body: some View {
     Button {
@@ -61,7 +58,7 @@ private struct OAuthProviderButton<Icon: View>: View {
       }
       .foregroundColor(colorScheme == .dark ? .black : .white)
       .padding(.horizontal, Spacing.lg)
-      .frame(maxWidth: .infinity, alignment: isIPad ? .center : .leading)
+      .frame(maxWidth: .infinity, alignment: horizontalSizeClass == .regular ? .center : .leading)
       .padding(.vertical, Spacing.sm)
       .frame(minHeight: 50)
       .background(colorScheme == .dark ? Color.white : Color.black)

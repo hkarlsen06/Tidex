@@ -26,6 +26,7 @@ struct ShiftModeToggle: View {
 
   @Binding var mode: AddShiftMode
   let style: Style
+  let axis: Axis
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Namespace private var namespace
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -33,16 +34,21 @@ struct ShiftModeToggle: View {
   @ScaledMetric(relativeTo: .footnote) private var toolbarIconFontSize: CGFloat = 14
   private let buttonSpacing: CGFloat = 8
 
-  init(mode: Binding<AddShiftMode>, style: Style = .toolbar) {
+  init(mode: Binding<AddShiftMode>, style: Style = .toolbar, axis: Axis = .horizontal) {
     self._mode = mode
     self.style = style
+    self.axis = axis
   }
 
   var body: some View {
     let metrics: ModeButtonMetrics = modeButtonMetrics
     let outerPadding: CGFloat = style == .toolbar ? Self.toolbarOuterPadding : Spacing.xxs
 
-    HStack(spacing: buttonSpacing) {
+    let layout =
+      axis == .vertical
+      ? AnyLayout(VStackLayout(spacing: buttonSpacing))
+      : AnyLayout(HStackLayout(spacing: buttonSpacing))
+    layout {
       ForEach(AddShiftMode.displayOrder) { modeOption in
         modeButton(for: modeOption, metrics: metrics)
       }
@@ -115,7 +121,9 @@ struct ShiftModeToggle: View {
     let selectedForeground: Color = style == .toolbar ? .tidexBlueText : .tidexTextOnBrand
     // The toolbar has no room for the name at accessibility sizes, so a capsule marks the
     // selected mode there instead.
-    let showsName = isSelected && !(style == .toolbar && dynamicTypeSize.isAccessibilitySize)
+    let showsName =
+      isSelected && axis == .horizontal
+      && !(style == .toolbar && dynamicTypeSize.isAccessibilitySize)
 
     // Show the selected mode's name next to its icon.
     return HStack(spacing: Spacing.xxs) {
@@ -186,4 +194,15 @@ struct ShiftModeToggle: View {
   }
   .padding()
   .background(Color.tidexBackground)
+}
+
+@available(iOS 27.1, *)
+struct AdaptiveShiftModeToolbarControl: View {
+  @Environment(\.toolbarVerticalEdge) private var verticalEdge
+  @Binding var mode: AddShiftMode
+
+  var body: some View {
+    ShiftModeToggle(mode: $mode, axis: verticalEdge == nil ? .horizontal : .vertical)
+      .fixedSize()
+  }
 }

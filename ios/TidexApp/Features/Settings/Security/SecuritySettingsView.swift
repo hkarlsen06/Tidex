@@ -250,7 +250,8 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
         content
       }
       .disabled(viewModel.isConnectingProvider || viewModel.isOfflineLimited)
-      .accessibilityHint(isConnected ? Text(.settingsAccessibilityDisconnectHint) : Text(verbatim: ""))
+      .accessibilityHint(
+        isConnected ? Text(.settingsAccessibilityDisconnectHint) : Text(verbatim: ""))
     }
   }
 
@@ -354,6 +355,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   private var passwordFormSheet: some View {
     NavigationStack {
       passwordForm
+        .adaptiveContentWidth()
         .tidexListBackground()
         .navigationTitle(
           viewModel.hasPassword

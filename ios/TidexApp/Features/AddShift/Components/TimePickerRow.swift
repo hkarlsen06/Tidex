@@ -263,7 +263,7 @@ struct NumericTimeInput: View {
 
     if change.digits.isEmpty {
       time = nil
-      if change.didDelete, previousField != nil {
+      if change.didDeleteAtStart, previousField != nil {
         focusController.focus(previousField)
       }
       return
@@ -332,6 +332,11 @@ struct NumericTimeInput: View {
 /// Auto-advances from start to end field when 4 digits are entered
 /// Includes recent time chips below the inputs for quick selection
 struct TimeRangePicker: View {
+  struct FieldScrollID: Hashable {
+    let pickerID: String?
+    let field: TimeInputField
+  }
+
   @Binding var startTime: Date?
   @Binding var endTime: Date?
   var scrollProxy: ScrollViewProxy?
@@ -345,6 +350,7 @@ struct TimeRangePicker: View {
   /// Shows the recent time chips above the inputs instead of below them.
   var chipsAboveInputs = false
   @State private var focusController = TimeInputFocusController()
+  @State private var availableInputWidth: CGFloat = 0
   @ScaledMetric(relativeTo: .body) private var compactInputWidth: CGFloat = 156
   @ScaledMetric(relativeTo: .body) private var compactInputHeight: CGFloat = 58
 
@@ -359,22 +365,27 @@ struct TimeRangePicker: View {
   }
 
   var body: some View {
+    let usesHorizontalInputs = availableInputWidth >= compactInputWidth * 2 + Spacing.sm
+    let inputLayout =
+      usesHorizontalInputs
+      ? AnyLayout(HStackLayout(alignment: .top, spacing: Spacing.sm))
+      : AnyLayout(VStackLayout(spacing: Spacing.sm))
+
     VStack(spacing: Spacing.xs) {
       if chipsAboveInputs {
         recentTimeChipRow
       }
 
-      ViewThatFits(in: .horizontal) {
-        HStack(alignment: .top, spacing: Spacing.sm) {
-          startInput.frame(width: compactInputWidth)
-          endInput.frame(width: compactInputWidth)
-        }
-        VStack(spacing: Spacing.sm) {
-          startInput
-          endInput
-        }
+      inputLayout {
+        startInput.frame(width: usesHorizontalInputs ? compactInputWidth : nil)
+        endInput.frame(width: usesHorizontalInputs ? compactInputWidth : nil)
       }
       .frame(maxWidth: .infinity, alignment: .center)
+      .onGeometryChange(for: CGFloat.self) {
+        $0.size.width
+      } action: {
+        availableInputWidth = $0
+      }
 
       if !chipsAboveInputs {
         recentTimeChipRow
@@ -416,6 +427,7 @@ struct TimeRangePicker: View {
       field: .start, nextField: .end, previousField: nil, onComplete: nil
     )
     .frame(minHeight: compactInputHeight)
+    .id(FieldScrollID(pickerID: scrollId, field: .start))
   }
 
   private var endInput: some View {
@@ -424,13 +436,14 @@ struct TimeRangePicker: View {
       field: .end, nextField: nil, previousField: .start, onComplete: nil
     )
     .frame(minHeight: compactInputHeight)
+    .id(FieldScrollID(pickerID: scrollId, field: .end))
   }
 
   /// ID of the currently active time range chip, if start/end match a chip's times
   private var activeRangeId: String? {
     guard let start = startTime, let end = endTime else { return nil }
-    let startHHmm = formatDateToHHmm(start)
-    let endHHmm = formatDateToHHmm(end)
+    let startHHmm = start.toHourMinuteString()
+    let endHHmm = end.toHourMinuteString()
     return "\(startHHmm)-\(endHHmm)"
   }
 
@@ -461,11 +474,6 @@ struct TimeRangePicker: View {
     // Haptic feedback
     let generator = UIImpactFeedbackGenerator(style: .light)
     generator.impactOccurred()
-  }
-
-  /// Format a Date to HH:mm string for comparison
-  private func formatDateToHHmm(_ date: Date) -> String {
-    date.toHourMinuteString()
   }
 
   /// Parse HH:mm string to Date

@@ -115,7 +115,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
         friendChatDestination(for: route)
       }
       .addShiftDestination(in: .friends, hidesTabBar: isChatTabBarHidden)
-      .iPadToolbarTransaction()
+      .adaptiveToolbarTransaction()
     }
     .task(id: startupTaskID) {
       guard selectedTab == .friends else { return }

@@ -530,9 +530,7 @@ private struct MonthPickerControls: View {
   private let monthContext = SharedMonthContext.shared
   @AppStorage("shiftsViewMode") private var showListView = false
 
-  private var isIPad: Bool {
-    UIDevice.current.userInterfaceIdiom == .pad
-  }
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
   var body: some View {
     GlassEffectContainer(spacing: Spacing.xs) {
@@ -558,7 +556,7 @@ private struct MonthPickerControls: View {
     .frame(maxWidth: .infinity)
     .padding(
       .horizontal,
-      isIPad
+      horizontalSizeClass == .regular
         ? MonthPickerLayout.horizontalPadding : MonthPickerLayout.tabBarAlignedHorizontalPadding
     )
     .padding(.bottom, MonthPickerLayout.bottomPadding)

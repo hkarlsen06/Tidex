@@ -40,6 +40,7 @@
             )
           }
           .padding(Spacing.xxl)
+          .adaptiveMaxWidth(AdaptiveMaxWidth.tabContent)
         }
         .background(Color.tidexBackground)
       }

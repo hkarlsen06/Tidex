@@ -62,6 +62,7 @@ struct FriendProfileView: View {
     }
     .listStyle(.insetGrouped)
     .scrollContentBackground(.hidden)
+    .adaptiveContentWidth()
     .background(Color.tidexBackground)
     .onAppear {
       guard !didPlayOpenHaptic else { return }

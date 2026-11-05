@@ -66,6 +66,7 @@ internal struct AcceptTermsView: View {
 
           Spacer(minLength: verticalSpacerLength)
         }
+        .adaptiveFormWidth()
         .frame(minHeight: geometry.size.height)
       }
       .scrollBounceBehavior(.basedOnSize)

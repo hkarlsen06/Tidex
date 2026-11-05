@@ -66,6 +66,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
               .padding(.bottom, Spacing.xxl)
           }
         }
+        .adaptiveFormWidth()
         .frame(minHeight: geometry.size.height)
       }
       .scrollBounceBehavior(.basedOnSize)
@@ -148,6 +149,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         // Hint text
         Text(.resetPasswordCodeHint)
           .font(.tidexFootnote)
+          .fixedSize(horizontal: false, vertical: true)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
 

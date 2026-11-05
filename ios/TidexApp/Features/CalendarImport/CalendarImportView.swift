@@ -162,6 +162,7 @@ internal struct CalendarImportView: View {
         }
         .listRowBackground(Color.tidexSurfacePrimary)
       }
+      .adaptiveContentWidth()
       .tidexListBackground()
       .navigationTitle(String(localized: .calendarImportTitle))
       .navigationBarTitleDisplayMode(.inline)

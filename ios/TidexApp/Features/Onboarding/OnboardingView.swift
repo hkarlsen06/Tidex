@@ -196,6 +196,7 @@ extension OnboardingView {
 
       loginButton
     }
+    .fixedSize(horizontal: false, vertical: true)
     .padding(.horizontal, Spacing.lg)
     .adaptiveContentWidth()
     .padding(.bottom, Spacing.xs)
@@ -266,6 +267,7 @@ extension OnboardingView {
       onNavigateToLogin()
     } label: {
       Text(.onboardingGetstartedLogin)
+        .fixedSize(horizontal: false, vertical: true)
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexBlueText)
         .multilineTextAlignment(.center)

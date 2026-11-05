@@ -8,6 +8,7 @@ struct SingleShiftContent: View {
   var scrollProxy: ScrollViewProxy
   @Binding var focusedTimeField: TimeInputField?
   var usesColumns = false
+  var calendarMaxWidth: CGFloat = .infinity
 
   var body: some View {
     let layout =
@@ -19,7 +20,7 @@ struct SingleShiftContent: View {
         CalendarHeaderRow(totals: viewModel.toolbarTotals, secondaryStyle: .delta)
         AddShiftCalendarView(viewModel: viewModel)
       }
-      .frame(maxWidth: usesColumns ? 400 : .infinity)
+      .frame(maxWidth: calendarMaxWidth)
 
       timeControls
         .frame(maxWidth: usesColumns ? 360 : .infinity)
@@ -151,7 +152,6 @@ struct AddShiftScreenContent: View {
   let viewModel: AddShiftViewModel
   let showsWorkSetupPlaceholder: Bool
   let isKeyboardVisible: Bool
-  let keyboardHeight: CGFloat
   @Binding var focusedTimeField: TimeInputField?
   let onBackgroundTap: () -> Void
   let onStartFresh: () -> Void
@@ -165,9 +165,7 @@ struct AddShiftScreenContent: View {
     max(Self.minimumControlsInset, measuredControlsHeight)
   }
 
-  private var isIPhone: Bool {
-    UIDevice.current.userInterfaceIdiom == .phone
-  }
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
   var body: some View {
     ZStack(alignment: .bottom) {
@@ -179,6 +177,8 @@ struct AddShiftScreenContent: View {
       } else {
         // Content area - different layouts for single vs recurring mode
         modeContent
+          .clipped()
+          .padding(.bottom, isKeyboardVisible ? 0 : bottomControlsInset)
 
         if !isKeyboardVisible {
           submitErrorBanner
@@ -206,10 +206,10 @@ struct AddShiftScreenContent: View {
           viewModel: viewModel,
           focusedTimeField: $focusedTimeField,
           scrollProxy: scrollProxy,
-          keyboardHeight: keyboardHeight,
           availableWidth: geometry.size.width,
-          availableHeight: geometry.size.height - bottomControlsInset,
-          bottomControlsInset: bottomControlsInset
+          availableHeight: max(
+            0, geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+          )
         )
         .onTapGesture(perform: onBackgroundTap)
       }
@@ -238,7 +238,7 @@ struct AddShiftScreenContent: View {
         onDismiss: { viewModel.error = nil }
       )
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+      .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
       .padding(.bottom, bottomControlsInset + Spacing.xs)
       .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
     }
@@ -250,10 +250,8 @@ struct AddShiftModeContent: View {
   @Bindable var viewModel: AddShiftViewModel
   @Binding var focusedTimeField: TimeInputField?
   let scrollProxy: ScrollViewProxy
-  let keyboardHeight: CGFloat
   let availableWidth: CGFloat
   let availableHeight: CGFloat
-  let bottomControlsInset: CGFloat
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -261,9 +259,7 @@ struct AddShiftModeContent: View {
     availableWidth >= 700 && !dynamicTypeSize.isAccessibilitySize
   }
 
-  private var isIPhone: Bool {
-    UIDevice.current.userInterfaceIdiom == .phone
-  }
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
   var body: some View {
     switch viewModel.mode {
@@ -280,7 +276,6 @@ struct AddShiftModeContent: View {
 
   /// Single mode: centered calendar that only scrolls when it doesn't fit.
   /// No pull-to-refresh, so dragging down never fights the back gesture.
-  /// Uses manual offset for keyboard avoidance to handle 6-week months
   private var singleContent: some View {
     ScrollView {
       VStack(spacing: 0) {
@@ -289,30 +284,49 @@ struct AddShiftModeContent: View {
         SingleShiftContent(
           viewModel: viewModel, scrollProxy: scrollProxy,
           focusedTimeField: $focusedTimeField,
-          usesColumns: usesColumns
+          usesColumns: usesColumns,
+          calendarMaxWidth: usesColumns ? 400 : min(500, max(336, availableHeight * 0.6))
         )
         .frame(maxWidth: usesColumns ? 820 : AdaptiveMaxWidth.tabContent)
-        .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+        .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
+        .onGeometryChange(for: CGSize.self) {
+          $0.size
+        } action: { _ in
+          revealFocusedTimeFields()
+        }
 
         Spacer()
       }
       // Fill exactly the space above the controls, so it only scrolls on screens
       // too small for the calendar.
       .frame(maxWidth: .infinity, minHeight: availableHeight)
-      .padding(.bottom, bottomControlsInset)
       .contentShape(Rectangle())
       .monthSwipeGesture(
         onSwipeLeft: { viewModel.goToNextMonth() },
         onSwipeRight: { viewModel.goToPreviousMonth() },
         isEnabled: true
       )
-      .offset(y: focusedTimeField != nil && !usesColumns ? -keyboardHeight : 0)
-      .motionAnimation(
-        .subtle, value: focusedTimeField != nil, reduceMotion: reduceMotion)
     }
     .scrollBounceBehavior(.basedOnSize)
     .scrollIndicators(.hidden)
-    .ignoresSafeArea(.keyboard, edges: usesColumns ? [] : .all)
+    .onChange(of: focusedTimeField) { _, _ in
+      revealFocusedTimeFields()
+    }
+    .onChange(of: CGSize(width: availableWidth, height: availableHeight)) { _, _ in
+      revealFocusedTimeFields()
+    }
+  }
+
+  private func revealFocusedTimeFields() {
+    DispatchQueue.main.async {
+      guard let focusedTimeField else { return }
+      MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
+        scrollProxy.scrollTo(
+          TimeRangePicker.FieldScrollID(pickerID: "singleTimePicker", field: focusedTimeField),
+          anchor: focusedTimeField == .start ? .top : .bottom
+        )
+      }
+    }
   }
 
   /// Recurring mode: scrollable content (more elements)
@@ -324,14 +338,14 @@ struct AddShiftModeContent: View {
           focusedTimeField: $focusedTimeField)
       }
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+      .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
       .padding(.top, Spacing.md)
       .frame(maxWidth: .infinity)
       .frame(minHeight: availableHeight, alignment: .center)
     }
     .scrollDismissesKeyboard(.interactively)
     .contentMargins(
-      .bottom, bottomControlsInset + Spacing.md, for: .scrollContent
+      .bottom, Spacing.md, for: .scrollContent
     )
   }
 
@@ -341,14 +355,14 @@ struct AddShiftModeContent: View {
         EventContent(viewModel: viewModel, focusedTimeField: $focusedTimeField)
       }
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+      .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
       .padding(.top, Spacing.md)
       .frame(maxWidth: .infinity)
       .frame(minHeight: availableHeight, alignment: .top)
     }
     .scrollDismissesKeyboard(.interactively)
     .contentMargins(
-      .bottom, bottomControlsInset + Spacing.md, for: .scrollContent
+      .bottom, Spacing.md, for: .scrollContent
     )
   }
 }

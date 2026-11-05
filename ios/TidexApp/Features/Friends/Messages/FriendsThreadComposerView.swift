@@ -144,21 +144,17 @@ extension FriendsThreadComposerConfiguration {
 
 struct FriendsThreadComposerHostedView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   let configuration: FriendsThreadComposerConfiguration
   let bridge: FriendsThreadComposerBridge
   let text: Binding<String>
   @State private var attachmentController = FriendsComposerAttachmentController()
-  private let orientationTracker = OrientationTracker.shared
   @State private var selectedPhotoItems: [PhotosPickerItem] = []
   @State private var isSubmitting = false
   @State private var composerFocusTrigger = 0
   @State private var isComposerFocused = false
 
   private let attachmentCollapseCharacterThreshold = 18
-
-  private var isIPadLandscape: Bool {
-    UIDevice.current.userInterfaceIdiom == .pad && orientationTracker.isLandscape
-  }
 
   var body: some View {
     // Rows above the field sit outside the scroll view. A scroll view lays its
@@ -183,7 +179,7 @@ struct FriendsThreadComposerHostedView: View {
     )
     // Size every row to its content. The chat overlay offers the full screen height.
     .fixedSize(horizontal: false, vertical: true)
-    .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+    .frame(maxWidth: horizontalSizeClass == .regular ? AdaptiveMaxWidth.tabContent : .infinity)
     .frame(maxWidth: .infinity, alignment: .bottom)
     .background(
       GeometryReader { geometry in
@@ -698,13 +694,17 @@ private struct FriendsThreadComposerPlusButton: View {
     Button(action: action) {
       Image(systemName: "plus")
         .font(.system(size: iconSize, weight: .semibold))
-        .foregroundColor(isDisabled ? .tidexTextMuted : (isOpen ? .tidexBlueText : .tidexTextPrimary))
+        .foregroundColor(
+          isDisabled ? .tidexTextMuted : (isOpen ? .tidexBlueText : .tidexTextPrimary)
+        )
         .rotationEffect(.degrees(isOpen ? 45 : 0))
         .frame(width: Spacing.buttonHeight, height: Spacing.buttonHeight)
         .contentShape(Circle())
     }
     .buttonStyle(.plain)
-    .tidexGlass(shape: .circle, tint: isOpen ? .tidexBlue.opacity(0.35) : nil, interactive: !isDisabled)
+    .tidexGlass(
+      shape: .circle, tint: isOpen ? .tidexBlue.opacity(0.35) : nil, interactive: !isDisabled
+    )
     .disabled(isDisabled)
     .accessibilityLabel(
       Text(
@@ -935,10 +935,10 @@ private struct FriendsThreadComposerImageAttachmentsCard: View {
 
   let attachments: [FriendsThreadComposerIndexedImageAttachment]
   let onRemove: (Int) -> Void
+  @State private var availableWidth: CGFloat = 0
 
   var body: some View {
-    let tileSize = resolvedTileSize(for: maxPreviewRowWidth)
-    let rowWidth = resolvedRowWidth(for: tileSize)
+    let tileSize = resolvedTileSize(for: availableWidth)
 
     HStack(spacing: Spacing.sm) {
       ForEach(Array(attachments.enumerated()), id: \.element.id) { position, attachment in
@@ -951,27 +951,12 @@ private struct FriendsThreadComposerImageAttachmentsCard: View {
         )
       }
     }
-    .frame(width: rowWidth, alignment: .leading)
-    .fixedSize(horizontal: true, vertical: false)
-  }
-
-  private var maxPreviewRowWidth: CGFloat {
-    max(Layout.maxTileSize, currentWindowWidth - (Spacing.md * 2))
-  }
-
-  private var currentWindowWidth: CGFloat {
-    let windowScenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-    let windows = windowScenes.flatMap(\.windows)
-
-    if let keyWindowWidth = windows.first(where: \.isKeyWindow)?.bounds.width {
-      return keyWindowWidth
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .onGeometryChange(for: CGFloat.self) {
+      $0.size.width
+    } action: {
+      availableWidth = $0
     }
-
-    if let windowWidth = windows.first?.bounds.width {
-      return windowWidth
-    }
-
-    return windowScenes.first?.screen.bounds.width ?? Layout.maxTileSize
   }
 
   private func resolvedTileSize(for availableWidth: CGFloat) -> CGFloat {
@@ -982,11 +967,6 @@ private struct FriendsThreadComposerImageAttachmentsCard: View {
     return min(Layout.maxTileSize, max(56, floor(rawTileSize)))
   }
 
-  private func resolvedRowWidth(for tileSize: CGFloat) -> CGFloat {
-    guard !attachments.isEmpty else { return tileSize }
-    return (tileSize * CGFloat(attachments.count))
-      + (Spacing.sm * CGFloat(max(attachments.count - 1, 0)))
-  }
 }
 
 private struct FriendsThreadComposerImageThumbnail: View {

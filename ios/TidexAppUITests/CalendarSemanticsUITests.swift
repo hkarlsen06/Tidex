@@ -19,7 +19,9 @@ final class CalendarSemanticsUITests: XCTestCase {
     app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
     app.launch()
 
-    let shiftDay = day(beginningWith: "Thursday, September 3,", in: app)
+    let today = Calendar(identifier: .gregorian).component(.day, from: .now)
+    let firstShiftDay = abs(today - 3) <= 1 ? 19 : 3
+    let shiftDay = day(beginningWith: fixtureDate(day: firstShiftDay) + ",", in: app)
     XCTAssertTrue(shiftDay.waitForExistence(timeout: timeout), app.debugDescription)
     XCTAssertTrue(shiftDay.label.contains("09:00 to 17:00"), shiftDay.label)
     XCTAssertTrue(shiftDay.label.contains("after tax"), shiftDay.label)
@@ -38,7 +40,8 @@ final class CalendarSemanticsUITests: XCTestCase {
 
     // A long-press starts selecting, and the selection bar names its Edit button.
     app.buttons["BackButton"].tap()
-    let otherShiftDay = day(beginningWith: "Thursday, September 10,", in: app)
+    let secondShiftDay = abs(today - 10) <= 1 ? 24 : 10
+    let otherShiftDay = day(beginningWith: fixtureDate(day: secondShiftDay) + ",", in: app)
     XCTAssertTrue(otherShiftDay.waitForExistence(timeout: timeout), app.debugDescription)
     otherShiftDay.press(forDuration: 1)
     XCTAssertTrue(app.buttons["Details"].waitForExistence(timeout: timeout), app.debugDescription)
@@ -71,12 +74,16 @@ final class CalendarSemanticsUITests: XCTestCase {
   /// preview amounts, labeled for VoiceOver.
   @MainActor
   private func addShiftFromEmptyDay(_ app: XCUIApplication) {
+    let today = Calendar(identifier: .gregorian).component(.day, from: .now)
+    let emptyDate = fixtureDate(day: today == 23 ? 21 : 23)
     let emptyDay = app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label == %@", "Wednesday, September 2")).firstMatch
+      .matching(NSPredicate(format: "label == %@", emptyDate)).firstMatch
     XCTAssertTrue(emptyDay.waitForExistence(timeout: timeout), app.debugDescription)
     emptyDay.tap()
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
-      .firstMatch
+    let recentTime = app.buttons.matching(
+      NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")
+    )
+    .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: timeout), app.debugDescription)
     let addPreview = app.descendants(matching: .any)
       .matching(NSPredicate(format: "label CONTAINS %@", "after tax")).firstMatch
@@ -85,6 +92,16 @@ final class CalendarSemanticsUITests: XCTestCase {
     }
     XCTAssertTrue(addPreview.waitForExistence(timeout: timeout), app.debugDescription)
     attachScreenshot(app, name: "add-empty-day-preview")
+  }
+
+  private func fixtureDate(day: Int) -> String {
+    let calendar = Calendar(identifier: .gregorian)
+    var components = calendar.dateComponents([.year, .month], from: .now)
+    components.day = day
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US")
+    formatter.dateFormat = "EEEE, MMMM d"
+    return formatter.string(from: calendar.date(from: components) ?? .now)
   }
 
   private func day(beginningWith prefix: String, in app: XCUIApplication) -> XCUIElement {
