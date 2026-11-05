@@ -50,8 +50,7 @@ final class ShiftJourneyUITests: XCTestCase {
 
   func testPaymentSuggestionCancelPreservesShiftAndSaveLeavesDayWithoutHours() {
     let app = XCUIApplication()
-    configurePaymentJourney(app)
-    app.launch()
+    launchPaymentJourney(app)
     let date = Self.emptyFixtureDay()
     let emptyDay = app.descendants(matching: .any)
       .matching(NSPredicate(format: "label == %@", date)).firstMatch
@@ -90,7 +89,7 @@ final class ShiftJourneyUITests: XCTestCase {
       "A payment must not create a shift or add worked hours")
   }
 
-  private func configurePaymentJourney(_ app: XCUIApplication) {
+  private func launchPaymentJourney(_ app: XCUIApplication) {
     app.launchArguments = [
       "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
       "-defaultStartupTab", "shifts",
@@ -103,6 +102,10 @@ final class ShiftJourneyUITests: XCTestCase {
         "-cachedTheme", "dark", "-UIPreferredContentSizeCategoryName",
         "UICTContentSizeCategoryAccessibilityXXXL",
       ]
+    }
+    app.launch()
+    if ProcessInfo.processInfo.environment["TIDEX_QA_LARGE"] == "1" {
+      app.buttons["Show calendar"].tap()
     }
   }
 
