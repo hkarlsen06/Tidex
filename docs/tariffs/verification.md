@@ -65,3 +65,7 @@ Existing snapshots are not migrated automatically. The maintenance command produ
 The Sol review identified seven confirmed issues. The fixes separate apprentice pay rules, retain Handel holiday-eve pay during overtime, halve security apprentice additions, correct energy-station time boundaries, apply the Riksavtalen night-guard holiday exception, remove a teaching-only KS salary band, and send the payroll capability through both Friends realtime subscriptions. Backend regression examples now cover these monetary outcomes. A second Sol review found that an explicitly empty per-shift supplement override could restore a removed addition during overtime. The new regression reproduced 489.50 instead of 293.70 before the fix. All three engines now honor that empty override.
 
 The separate Claude decision-trail review failed with `Claude API rate limit reached. Try again later.` It did not complete, and no alternate provider was substituted.
+
+## CI toolchain correction
+
+The first Smoke run failed while compiling existing Siri message schemas and adaptive toolbar code on the default `macos-latest` image. The local verified build uses Xcode 27.2. Smoke now selects the GitHub-hosted `xcode-27` image and its installed Xcode 27.2 explicitly. The README's Xcode 16 prerequisite was stale and now matches the required toolchain.

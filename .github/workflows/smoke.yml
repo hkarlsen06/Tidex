@@ -9,7 +9,9 @@ on:
 jobs:
   checks:
     name: Checks
-    runs-on: macos-latest
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
 
     steps:
       - name: Check out repository

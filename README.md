@@ -48,7 +48,7 @@ tidex/
 ### Prerequisites
 
 - Bun 1.3.14+
-- Xcode 16+ (for iOS development)
+- Xcode 27.2+ (for iOS development)
 
 ### Supporting Website Development
 
