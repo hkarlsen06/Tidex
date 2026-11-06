@@ -140,4 +140,170 @@ final class TariffVersionServiceTests: XCTestCase {
     XCTAssertEqual(saved.excludedShiftStartDates, decoded.excludedShiftStartDates)
   }
 
+  func testSavedNightGuardRestoresItsExactArrangement() {
+    let types = hotelSelectionTypes
+    let selection = TariffSelection(types: types, selectedTypeID: "saved-manual-guard")
+    XCTAssertEqual(selection.selectedFamilyID, "hotel-agreement")
+    XCTAssertEqual(selection.selectedValues["week"], "35.5")
+    XCTAssertEqual(selection.selectedValues["night-role"], "manual")
+    XCTAssertEqual(selection.resolvedTypeID, "saved-manual-guard")
+  }
+
+  func testNewAgreementRequiresWeekAndNightRoleBeforeResolvingPayRules() {
+    var selection = TariffSelection(types: hotelSelectionTypes)
+    selection.selectFamily("hotel-agreement")
+    XCTAssertNil(selection.resolvedTypeID)
+    selection.selectOption(dimensionID: "night-role", value: "ordinary")
+    XCTAssertNil(selection.selectedValues["night-role"])
+    selection.selectOption(dimensionID: "week", value: "37.5")
+    XCTAssertNil(selection.resolvedTypeID)
+    selection.selectOption(dimensionID: "night-role", value: "ordinary")
+    XCTAssertEqual(selection.resolvedTypeID, "hotel-standard")
+  }
+
+  func testSwitchingToApprenticeCannotKeepAnUnsupportedReducedWeek() {
+    let types = [
+      selectionType("employee-normal", answers: [("employment", "employee"), ("week", "37.5")]),
+      selectionType("employee-reduced", answers: [("employment", "employee"), ("week", "35.5")]),
+      selectionType("apprentice", answers: [("employment", "apprentice"), ("week", "37.5")]),
+    ]
+    var selection = TariffSelection(types: types, selectedTypeID: "employee-reduced")
+    selection.selectOption(dimensionID: "employment", value: "apprentice")
+    XCTAssertEqual(selection.resolvedTypeID, "apprentice")
+    XCTAssertEqual(selection.selectedValues["week"], "37.5")
+    XCTAssertEqual(selection.dimensions.last?.options.map(\.value), ["37.5"])
+  }
+
+  func testChangingWeekRequiresAnotherNightRoleWhenTheOldRoleIsUnsupported() {
+    var selection = TariffSelection(
+      types: hotelSelectionTypes, selectedTypeID: "saved-manual-guard")
+    selection.selectOption(dimensionID: "week", value: "37.5")
+    XCTAssertNil(selection.resolvedTypeID)
+    XCTAssertNil(selection.selectedValues["night-role"])
+    selection.selectOption(dimensionID: "night-role", value: "guard")
+    XCTAssertEqual(selection.resolvedTypeID, "hotel-guard")
+  }
+
+  func testChangingAgreementRequiresItsOwnAnswersInsteadOfCarryingTheOldWeek() {
+    let hotel = hotelSelectionTypes
+    let other = [
+      selectionType("other-normal", family: "other", answers: [("week", "37.5")]),
+      selectionType("other-reduced", family: "other", answers: [("week", "35.5")]),
+    ]
+    var selection = TariffSelection(types: hotel + other, selectedTypeID: "saved-manual-guard")
+    selection.selectFamily("other")
+    XCTAssertNil(selection.resolvedTypeID)
+    XCTAssertTrue(selection.selectedValues.isEmpty)
+    selection.selectOption(dimensionID: "week", value: "37.5")
+    XCTAssertEqual(selection.resolvedTypeID, "other-normal")
+  }
+
+  func testLegacyAndUnavailableSavedAgreementsRemainSelected() {
+    let legacy = TariffSelection(types: [retail], selectedTypeID: retail.id)
+    XCTAssertEqual(legacy.resolvedTypeID, retail.id)
+    XCTAssertTrue(legacy.dimensions.isEmpty)
+    let unavailable = TariffSelection(
+      types: hotelSelectionTypes, selectedTypeID: "retired-agreement")
+    XCTAssertEqual(unavailable.resolvedTypeID, "retired-agreement")
+    XCTAssertEqual(unavailable.selectedFamily?.displayName, "retired-agreement")
+  }
+
+  func testEmptySelectionDoesNotBecomeAnUnavailableAgreement() {
+    let selection = TariffSelection(types: hotelSelectionTypes, selectedTypeID: "")
+    XCTAssertNil(selection.selectedFamily)
+    XCTAssertNil(selection.resolvedTypeID)
+    XCTAssertEqual(selection.families.count, 1)
+  }
+
+  func testServerPresentationRestoresTheConcreteAgreementSelection() throws {
+    let payload = """
+      {"id":"saved-guard","display_name":"Legacy label","country":"NO","is_default":false,
+       "presentation":{"family_id":"hotel","name_en":"Hotel agreement","name_nb":"Hotellavtale",
+       "kind":"agreement","search_terms":["Riksavtalen"],"category_group":"hotel-staff",
+       "options":[{"dimension_id":"night_role","label_en":"Night guard?","label_nb":"Nattevakt?",
+       "help_en":"Check your contract","help_nb":"Se arbeidsavtalen","value":"guard",
+       "value_en":"Yes","value_nb":"Ja"}]}}
+      """
+    let type = try JSONDecoder().decode(TariffType.self, from: Data(payload.utf8))
+    let selection = TariffSelection(types: [type], selectedTypeID: "saved-guard")
+    XCTAssertEqual(selection.selectedFamilyID, "hotel")
+    XCTAssertEqual(selection.selectedValues["night_role"], "guard")
+    XCTAssertEqual(selection.resolvedTypeID, "saved-guard")
+    XCTAssertTrue(selection.selectedFamily?.searchTerms.contains("Riksavtalen") == true)
+  }
+
+  func testCategoryCanOnlyCarryAcrossDeclaredCompatibleAgreementVariants() {
+    let original = selectionType("original", group: "employee", answers: [("week", "37.5")])
+    let reduced = selectionType("reduced", group: "employee", answers: [("week", "35.5")])
+    let apprentice = selectionType("apprentice", group: "apprentice", answers: [])
+    let unrelated = selectionType("other", family: "other", group: "employee", answers: [])
+    XCTAssertTrue(TariffSelection.canPreserveCategory(from: original, to: reduced))
+    XCTAssertFalse(TariffSelection.canPreserveCategory(from: original, to: apprentice))
+    XCTAssertFalse(TariffSelection.canPreserveCategory(from: original, to: unrelated))
+    XCTAssertFalse(TariffSelection.canPreserveCategory(from: original, to: retail))
+    XCTAssertTrue(TariffSelection.canPreserveCategory(from: retail, to: retail))
+  }
+
+  func testPresentationSurvivesServiceCacheAndResolvesWithoutParsingNames() async throws {
+    let saved = hotelSelectionTypes
+    let online = makeService(types: { saved })
+    _ = try await online.getTariffTypes()
+    let offline = makeService()
+    let types = try await offline.getTariffTypes()
+    var selection = TariffSelection(types: types)
+    selection.selectFamily("hotel-agreement")
+    selection.selectOption(dimensionID: "week", value: "35.5")
+    selection.selectOption(dimensionID: "night-role", value: "manual")
+    XCTAssertEqual(selection.resolvedTypeID, "saved-manual-guard")
+  }
+
+  func testShippedCatalogueResolvesHotelAndApprenticeArrangements() throws {
+    let catalogue = try TariffCatalogueFixture.load()
+    var selection = TariffSelection(types: catalogue.types)
+    selection.selectFamily("riksavtalen")
+    selection.selectOption(dimensionID: "week", value: "35.5")
+    XCTAssertNil(selection.resolvedTypeID)
+    selection.selectOption(dimensionID: "night_role", value: "manual")
+    XCTAssertEqual(selection.resolvedTypeID, "riksavtalen_manual_355")
+    selection.selectFamily("cleaning_nho")
+    selection.selectOption(dimensionID: "employment", value: "apprentice")
+    XCTAssertEqual(selection.resolvedTypeID, "cleaning_nho_apprentice")
+    XCTAssertEqual(selection.dimensions.last?.options.map(\.value), ["37.5"])
+  }
+
+}
+
+extension TariffVersionServiceTests {
+  fileprivate var hotelSelectionTypes: [TariffType] {
+    [
+      selectionType(
+        "hotel-standard", family: "hotel-agreement",
+        answers: [("week", "37.5"), ("night-role", "ordinary")]),
+      selectionType(
+        "hotel-guard", family: "hotel-agreement",
+        answers: [("week", "37.5"), ("night-role", "guard")]),
+      selectionType(
+        "hotel-reduced", family: "hotel-agreement",
+        answers: [("week", "35.5"), ("night-role", "ordinary")]),
+      selectionType(
+        "saved-manual-guard", family: "hotel-agreement",
+        answers: [("week", "35.5"), ("night-role", "manual")]),
+    ]
+  }
+
+  fileprivate func selectionType(
+    _ id: String, family: String = "cleaning", group: String = "employee",
+    answers: [(String, String)]
+  ) -> TariffType {
+    TariffType(
+      id: id, display_name: "Same display name", description: nil, country: "NO", is_default: false,
+      presentation: TariffPresentation(
+        familyID: family, nameEnglish: "Agreement", nameNorwegian: "Avtale", kind: .agreement,
+        searchTerms: [], categoryGroup: group,
+        options: answers.map { dimension, value in
+          TariffPresentationOption(
+            dimensionID: dimension, labelEnglish: dimension, labelNorwegian: dimension,
+            value: value, valueEnglish: value, valueNorwegian: value)
+        }))
+  }
 }

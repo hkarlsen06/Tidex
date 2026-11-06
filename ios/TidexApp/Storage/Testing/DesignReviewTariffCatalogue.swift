@@ -24,6 +24,7 @@
     }
   }
   struct DesignReviewTariffOvertime: View {
+    var showsPay = false
     @State private var snapshot: WageSnapshot?
     @State private var saved: String?
 
@@ -33,10 +34,16 @@
           Text(verbatim: saved).accessibilityIdentifier("tariff.overtime-saved-result")
         } else if let snapshot {
           WageSnapshotEditorSheet(
-            mode: .edit, snapshot: snapshot, snapshots: [snapshot], initialSection: .overtime,
+            mode: .edit, snapshot: snapshot, snapshots: [snapshot],
+            initialSection: showsPay ? .wage : .overtime,
             onSave: { input in
               let dated = input.overtime.rules.filter { $0.dates != nil }
-              saved = "\(input.hourlyWage)|\(dated.count)|\(dated.map(\.percent).max() ?? 0)"
+              if showsPay {
+                saved =
+                  "\(input.tariffTypeId ?? "")|\(input.wageLevel ?? 0)|\(input.hourlyWage)|\(input.supplements == snapshot.supplements)|\(input.overtime == snapshot.overtime)"
+              } else {
+                saved = "\(input.hourlyWage)|\(dated.count)|\(dated.map(\.percent).max() ?? 0)"
+              }
               return true
             }, onDelete: { _ in }, onCancel: {})
         } else {
@@ -46,12 +53,12 @@
       .task {
         guard snapshot == nil,
           let version = try? TariffCatalogueFixture.load().versions.first(where: {
-            $0.tariff_type_id == "ks_ch4_375"
+            $0.tariff_type_id == (showsPay ? "riksavtalen_manual_355" : "ks_ch4_375")
           })
         else { return }
         snapshot = WageSnapshot(
           id: "tariff-overtime", user_id: "design-preview", from_date: "2026-11-06",
-          hourly_wage: version.rates["1"] ?? 0, wage_level: 1,
+          hourly_wage: showsPay ? 400 : version.rates["1"] ?? 0, wage_level: 1,
           tariff_type_id: version.tariff_type_id, supplements: version.supplements,
           overtime: version.effectiveOvertime, tax_enabled: false, tax_percentage: nil,
           break_enabled: false, break_method: "none", break_threshold_hours: 5.5,

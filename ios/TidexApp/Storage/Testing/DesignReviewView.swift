@@ -29,6 +29,8 @@
     internal var body: some View {
       Group {  // swiftlint:disable:this closure_body_length
         switch screen {
+        case "tariff-pay-editor":
+          DesignReviewTariffOvertime(showsPay: true)
         case "tariff-overtime-editor":
           DesignReviewTariffOvertime()
         case "tariff-catalogue":

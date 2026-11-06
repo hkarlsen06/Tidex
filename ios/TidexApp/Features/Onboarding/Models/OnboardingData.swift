@@ -21,7 +21,7 @@ final class OnboardingData {
   var wageType: WageType = .custom
 
   /// Category ID within the selected agreement.
-  var selectedTariffLevel: Int = 1
+  var selectedTariffLevel: Int = 0
 
   /// Custom hourly wage when using custom wage type
   var customHourlyWage: Double = 200.0
@@ -32,10 +32,11 @@ final class OnboardingData {
   // MARK: - Tariff Type Settings
 
   /// Selected tariff type ID (e.g., "hk_retail")
-  var selectedTariffTypeId: String = "hk_retail"
+  var selectedTariffTypeId: String = ""
 
   /// Available tariff types loaded from server
   var availableTariffTypes: [TariffType] = []
+  var tariffSelectionDraft: TariffSelection?
 
   /// Current tariff version for the selected tariff type
   var currentTariffVersion: TariffVersion?

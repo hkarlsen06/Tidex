@@ -55,6 +55,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
   // Tariff versioning state
   @State private var tariffTypes: [TariffType] = []
+  @State private var tariffSelectionDraft: TariffSelection?
   @State private var tariffVersion: TariffVersion?
   @State private var tariffTypeName: String?
   @State private var tariffTypeId: String?
@@ -320,7 +321,13 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       savedTariffRate: usesSavedTariffRates ? customWage : nil,
       selectorFooterContent: showTariffOption && usePreset
         ? AnyView(tariffVersionIndicator)
-        : nil
+        : nil,
+      selectorDetailsContent: showTariffOption && usePreset
+        ? AnyView(
+          VStack(alignment: .leading, spacing: Spacing.sm) {
+            TariffCalculationCoverage(overtime: currentOvertimeConfig)
+            if let tariffVersion { TariffSourceDetails(version: tariffVersion) }
+          }) : nil
     )
   }
 
@@ -380,26 +387,8 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       let types = try await TariffVersionService.shared.getTariffTypes()
       tariffTypes = types
 
-      // Get the tariff type ID to use
-      let effectiveTariffTypeId: String
-
-      if let existingTypeId = tariffTypeId {
-        // Use existing tariff type from snapshot
-        effectiveTariffTypeId = existingTypeId
-      } else {
-        // Get default tariff type
-        guard let defaultType = types.first(where: \.is_default) ?? types.first else {
-          logger.warning("No default tariff type found")
-          return
-        }
-        effectiveTariffTypeId = defaultType.id
-        tariffTypeId = effectiveTariffTypeId
-        tariffTypeName = defaultType.displayName
-      }
-
-      // Load tariff type name if not set
-      if tariffTypeName == nil {
-        tariffTypeName = types.first { $0.id == effectiveTariffTypeId }?.displayName
+      if let typeID = tariffTypeId {
+        tariffTypeName = types.first { $0.id == typeID }?.displayName
       }
 
     } catch {
@@ -428,10 +417,8 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         fromDate.toISODateString() == isoDate
       else { return }
       tariffVersion = version
-      if !usesSavedTariffRates, let version, version.rate(forLevel: wageLevel) == nil,
-        let first = TariffLevel.from(tariffVersion: version).first
-      {
-        wageLevel = first.level
+      if !usesSavedTariffRates, let version, version.rate(forLevel: wageLevel) == nil {
+        wageLevel = 0
       }
       applyTariffOvertimeDefaultIfNeeded(force: shouldApplyTariffOvertime)
       shouldApplyTariffOvertime = false
@@ -492,88 +479,31 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         tariffTypePicker
       }
 
-      // Tariff version info (effective date)
-      if let version = tariffVersion {
-        ViewThatFits(in: .horizontal) {
-          effectiveDateRow(version, isStacked: false)
-          effectiveDateRow(version, isStacked: true)
-        }
-        TariffSourceDetails(version: version)
-      } else if isLoadingTariff {
-        HStack(spacing: Spacing.xs) {
-          ProgressView()
-            .scaleEffect(0.7)
-          Text(.settingsPayEditorLoadingTariff)
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-          Spacer()
-        }
+      if isLoadingTariff {
+        ProgressView()
+          .frame(maxWidth: .infinity, alignment: .leading)
       }
 
       tariffRatesStatus
     }
   }
 
-  @ViewBuilder
-  private func effectiveDateRow(_ version: TariffVersion, isStacked: Bool) -> some View {
-    let layout =
-      isStacked
-      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xxs))
-      : AnyLayout(HStackLayout(spacing: Spacing.xs))
-    layout {
-      Image(systemName: "calendar")
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
-        .accessibilityHidden(true)
-
-      Text(.settingsPayEditorTariffEffectiveDate)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
-
-      Text(formatEffectiveDate(version.effective_date))
-        .font(.tidexCaption)
-        .foregroundColor(.tidexTextSecondary)
-
-      if !isStacked {
-        Spacer()
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .accessibilityElement(children: .combine)
-  }
-
   private var tariffTypePicker: some View {
-    VStack(alignment: .leading, spacing: Spacing.xxs) {
-      Text(.settingsPayEditorTariffTypeLabel)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      Picker(
-        "",
-        selection: Binding(
-          get: { tariffTypeId ?? "" },
-          set: { newValue in
-            guard newValue != tariffTypeId else { return }
-            tariffTypeId = newValue
-            tariffTypeName = tariffTypes.first { $0.id == newValue }?.displayName
-            wageLevel = 1
-            usesSavedTariffRates = false
-            shouldApplyTariffOvertime = true
-          }
-        )
-      ) {
-        ForEach(tariffTypes) { type in
-          Text(type.displayName)
-            .tag(type.id)
-        }
+    TariffSetupSelector(
+      types: tariffTypes, selectedTypeID: tariffTypeId, draft: $tariffSelectionDraft
+    ) {
+      id, previousID in
+      let previous = tariffTypes.first { $0.id == previousID }
+      let next = tariffTypes.first { $0.id == id }
+      tariffTypeId = id
+      tariffTypeName = next?.displayName
+      tariffVersion = nil
+      isLoadingTariff = false
+      if id != nil, !TariffSelection.canPreserveCategory(from: previous, to: next) {
+        wageLevel = 0
       }
-      .pickerStyle(.menu)
-      .accessibilityLabel(Text(.settingsPayEditorTariffTypeLabel))
-      .tint(.tidexBlueText)
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.xs)
-      .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+      usesSavedTariffRates = false
+      shouldApplyTariffOvertime = true
     }
   }
 
@@ -588,7 +518,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         applyTariffOvertimeDefaultIfNeeded(force: true)
       }
       .disabled(isLoadingTariff || tariffVersion?.rate(forLevel: wageLevel) == nil)
-    } else if !isLoadingTariff, tariffVersion?.rate(forLevel: wageLevel) == nil {
+    } else if !isLoadingTariff, tariffTypeId != nil, tariffVersion == nil {
       Text(.settingsPayEditorTariffUnavailable)
         .font(.tidexFootnote)
         .foregroundColor(.tidexWarning)

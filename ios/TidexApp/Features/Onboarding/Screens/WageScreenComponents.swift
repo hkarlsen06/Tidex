@@ -28,113 +28,33 @@ struct WageTariffSelector: View {
 
   var body: some View {
     VStack(spacing: Spacing.md) {
-      if data.currentTariffVersion == nil {
-        Text(.onboardingWageTariffHint)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      }
-
-      // Tariff type picker (when multiple types available)
       if !data.availableTariffTypes.isEmpty {
-        tariffTypePicker
-      }
-
-      if let version = data.currentTariffVersion {
-        TariffSourceDetails(version: version)
-      }
-
-      // Tariff level picker
-      VStack(spacing: Spacing.sm) {
-        ForEach(tariffLevels) { level in
-          TariffLevelRow(
-            level: level,
-            isSelected: data.selectedTariffLevel == level.level,
-            action: {
-              withAnimation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8)) {
-                data.selectedTariffLevel = level.level
-              }
+        TariffSetupSelector(
+          types: data.availableTariffTypes, selectedTypeID: data.selectedTariffTypeId,
+          draft: $data.tariffSelectionDraft
+        ) {
+          id, previousID in
+          let previous = data.availableTariffTypes.first { $0.id == previousID }
+          let next = data.availableTariffTypes.first { $0.id == id }
+          data.selectedTariffTypeId = id ?? ""
+          data.currentTariffVersion = nil
+          if let id {
+            if !TariffSelection.canPreserveCategory(from: previous, to: next) {
+              data.selectedTariffLevel = 0
             }
-          )
-        }
-      }
-    }
-  }
-
-  private var tariffTypePicker: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.settingsPayEditorTariffTypeLabel)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      Menu {
-        ForEach(data.availableTariffTypes) { tariffType in
-          Button(action: {
-            guard tariffType.id != data.selectedTariffTypeId else { return }
-            data.selectedTariffTypeId = tariffType.id
-            data.currentTariffVersion = nil
-            onTariffTypeChanged(tariffType.id)
-          }) {
-            HStack {
-              Text(tariffType.displayName)
-              if tariffType.id == data.selectedTariffTypeId {
-                Image(systemName: "checkmark")
-              }
-            }
+            onTariffTypeChanged(id)
           }
         }
-      } label: {
-        tariffTypeMenuLabel
-      }
-      .sensoryFeedback(.impact(weight: .light), trigger: data.selectedTariffTypeId)
-    }
-  }
-
-  private var tariffTypeMenuLabel: some View {
-    HStack {
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(selectedTariffTypeName)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-
-        if let version = data.currentTariffVersion {
-          let effectiveDate = formatEffectiveDate(version.effective_date)
-          Text("\(String(localized: .settingsPayEditorTariffEffectiveDate)): \(effectiveDate)")
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
       }
 
-      Spacer()
-
-      Image(systemName: "chevron.up.chevron.down")
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+      if !tariffLevels.isEmpty {
+        TariffCategorySelector(levels: tariffLevels, selectedLevel: $data.selectedTariffLevel)
+      }
+      if let version = data.currentTariffVersion {
+        TariffCalculationCoverage(overtime: version.effectiveOvertime)
+        TariffSourceDetails(version: version)
+      }
     }
-    .padding(Spacing.sm)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-        .stroke(Color.tidexBorder, lineWidth: 1)
-    )
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(Text(.settingsPayEditorTariffTypeLabel))
-    .accessibilityValue(Text(selectedTariffTypeName))
-  }
-
-  private var selectedTariffTypeName: String {
-    data.availableTariffTypes.first { $0.id == data.selectedTariffTypeId }?.displayName
-      ?? data.selectedTariffTypeId
-  }
-
-  private func formatEffectiveDate(_ dateString: String) -> String {
-    guard let date = Date.fromISODateString(dateString) else { return dateString }
-
-    let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    formatter.timeStyle = .none
-    return formatter.string(from: date)
   }
 }
 
@@ -263,55 +183,3 @@ struct WageTypeButton: View {
 }
 
 // MARK: - Tariff Level Row
-
-struct TariffLevelRow: View {
-  let level: TariffLevel
-  let isSelected: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: {
-      Haptics.play(.light)
-      action()
-    }) {
-      HStack {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(level.displayName)
-            .font(isSelected ? .tidexButton : .tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(level.formattedRate)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        // Selection indicator
-        ZStack {
-          Circle()
-            .stroke(isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 2)
-            .frame(width: 24, height: 24)
-
-          if isSelected {
-            Circle()
-              .fill(Color.tidexBrandPrimary)
-              .frame(width: 14, height: 14)
-          }
-        }
-        .accessibilityHidden(true)
-      }
-      .padding(Spacing.md)
-      .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(
-            isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
-      )
-    }
-    .buttonStyle(.plain)
-    .accessibilityIdentifier("tariff.category.\(level.level)")
-    .accessibilityAddTraits(isSelected ? .isSelected : [])
-  }
-}

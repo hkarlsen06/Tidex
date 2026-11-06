@@ -2,6 +2,8 @@
 
 The reviewed catalogue is checked in under `backend/convex/lib/tariffCatalogue/`. Its revision is `2026-11`. Public queries serve it only when a compatible client sends that revision. Calls without the argument retain the original database catalogue.
 
+The 48 stored configurations are grouped into 21 selectable families by explicit presentation metadata. Each configuration keeps its existing tariff ID. Family, option tuples and category compatibility are validated; names are never parsed to infer an agreement.
+
 The checked-in catalogue contains source URLs, legal effective dates, the app activation date, category labels, reviewed pay rules, the verification date, and the next review date. The November catalogue activates on 6 November 2026. Existing wage snapshots and earlier tariff versions remain unchanged. HK's earlier backpay must not be duplicated.
 
 ## Validate and export

@@ -278,14 +278,6 @@ struct WageScreen: View {
       await MainActor.run {
         data.availableTariffTypes = types
 
-        // Set default tariff type if not already set
-        if let defaultType = types.first(where: \.is_default) ?? types.first {
-          if data.selectedTariffTypeId.isEmpty
-            || !types.contains(where: { $0.id == data.selectedTariffTypeId })
-          {
-            data.selectedTariffTypeId = defaultType.id
-          }
-        }
       }
 
       // Load latest version for the selected tariff type
@@ -296,17 +288,17 @@ struct WageScreen: View {
   }
 
   private func loadTariffVersion(for tariffTypeId: String) async {
+    guard data.selectedTariffTypeId == tariffTypeId else { return }
     data.currentTariffVersion = nil
+    guard !tariffTypeId.isEmpty else { return }
     do {
       let version = try await TariffVersionService.shared.getLatestTariffVersion(
         tariffType: tariffTypeId)
       guard data.selectedTariffTypeId == tariffTypeId else { return }
       await MainActor.run {
         data.currentTariffVersion = version
-        if let version, version.rate(forLevel: data.selectedTariffLevel) == nil,
-          let first = TariffLevel.from(tariffVersion: version).first
-        {
-          data.selectedTariffLevel = first.level
+        if let version, version.rate(forLevel: data.selectedTariffLevel) == nil {
+          data.selectedTariffLevel = 0
         }
       }
       tariffLoadFailed = version == nil

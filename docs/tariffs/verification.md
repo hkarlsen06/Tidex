@@ -69,3 +69,23 @@ The separate Claude decision-trail review failed with `Claude API rate limit rea
 ## CI toolchain correction
 
 The first Smoke run failed while compiling existing Siri message schemas and adaptive toolbar code on the default `macos-latest` image. The local verified build uses Xcode 27.2. Smoke now selects the GitHub-hosted `xcode-27` image and its installed Xcode 27.2 explicitly. The README's Xcode 16 prerequisite was stale and now matches the required toolchain.
+
+## Grouped selection follow-up
+
+Two independent agents agreed on a searchable agreement sheet with dependent setup choices, then agreed to move the long category list into a searchable sheet. The 48 stored configurations now appear under 21 explicit families. A full export comparison confirmed every rate, payroll rule, version and preexisting type field is unchanged.
+
+The backend suite passed 55 tests. The local API returned 48 configurations, 21 families and the unchanged five-entry legacy response. All 17 tariff service and selection tests passed on Shared iPhone. Cold Harbor compiled successfully but could not launch tests while locked. The ten shift UI journeys passed, including the new exact night-guard selection, category reset between agreements, partial draft retention across wage-source toggles, and canceling choosers while preserving a saved 400 NOK wage and all rules. The only UI runtime warning remains the existing payment frame warning.
+
+Sol's review confirmed one issue in the first implementation. A partially answered setup was owned by the child selector and disappeared when the wage source changed. The final component binds the parent's draft instead, and the real UI journey checks that the selected week survives switching to hourly pay and back. New shared selectors pass focused SwiftLint without warnings. Localization validation covers all 1715 entries, including translations of the eleven new strings.
+
+Native screenshots were inspected in English and Norwegian, light and dark modes, and the largest accessibility text size. The follow-up evidence adds agreement search, a complete night-guard setup, and the existing personal-wage editor:
+
+- [Agreement search](screenshots/tariff-agreement-search.png)
+- [Night-guard setup](screenshots/tariff-night-guard-setup.png)
+- [Saved personal wage](screenshots/tariff-saved-personal-pay.png)
+
+[The agreed design and selection contract](selection-design.md) records the alternatives and decisions.
+
+The independent native-screen review found that collapsing all agreement details hid an important calculation limit. The final form keeps overtime coverage beside the wage, using the actual applied rules in saved-pay mode. Sources, dates and longer exclusions remain collapsed. A real UI journey checks the manual-overtime arrangement without opening those details.
+
+The final ten-journey UI run compiled in 57 seconds and tested in 232 seconds, with zero failures. Together with the 17 model and service tests, this follow-up verifies 27 distinct Swift tests. The physical-device build also passed in 79 seconds. [The manual-overtime coverage screenshot](screenshots/tariff-manual-overtime-coverage.png) shows the visible calculation limit.

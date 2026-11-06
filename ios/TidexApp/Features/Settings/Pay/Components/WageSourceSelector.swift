@@ -19,6 +19,7 @@ struct WageSourceSelector: View {
   var savedTariffRate: Double?
   /// Optional content shown between selector buttons and the tariff/custom input list.
   var selectorFooterContent: AnyView?  // swiftlint:disable:this explicit_acl
+  var selectorDetailsContent: AnyView?  // swiftlint:disable:this explicit_acl
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -74,8 +75,8 @@ struct WageSourceSelector: View {
           .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
       }
 
-      // Current wage display
-      currentWageDisplay
+      if !usePreset || !showTariffOption { currentWageDisplay }
+      if let selectorDetailsContent { selectorDetailsContent }
     }
     .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: usePreset)
     .sensoryFeedback(.selection, trigger: usePreset)
@@ -112,19 +113,11 @@ struct WageSourceSelector: View {
 
   @ViewBuilder
   private var tariffLevelPicker: some View {
-    VStack(spacing: Spacing.xs) {
-      ForEach(tariffLevels) { level in
-        TariffLevelSelectionRow(
-          level: TariffLevel(
-            level: level.level, rate: wageRate(for: level.level), label: level.label),
-          isSelected: wageLevel == level.level,
-          action: {
-            withAnimation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8)) {
-              wageLevel = level.level
-            }
-          }
-        )
-      }
+    if !tariffLevels.isEmpty {
+      TariffCategorySelector(
+        levels: tariffLevels.map {
+          TariffLevel(level: $0.level, rate: wageRate(for: $0.level), label: $0.label)
+        }, selectedLevel: $wageLevel)
     }
   }
 
@@ -228,65 +221,3 @@ private struct WageTypeToggleButton: View {
 }
 
 // MARK: - Tariff Level Selection Row
-
-private struct TariffLevelSelectionRow: View {
-  let level: TariffLevel
-  let isSelected: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      HStack {
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(level.displayName)
-            .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(level.formattedRate)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        // Selection indicator
-        ZStack {
-          Circle()
-            .stroke(isSelected ? Color.tidexBlueText : Color.tidexBorder, lineWidth: 1)
-            .frame(width: Spacing.iconSize, height: Spacing.iconSize)
-
-          if isSelected {
-            Circle()
-              .fill(Color.tidexBlueText)
-              .frame(width: 12, height: 12)
-          }
-        }
-      }
-      .padding(Spacing.sm)
-      .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-          .stroke(
-            isSelected ? Color.tidexBlueText : Color.tidexBorder, lineWidth: 1)
-      )
-    }
-    .buttonStyle(.plain)
-    .accessibilityAddTraits(isSelected ? .isSelected : [])
-  }
-}
-
-// MARK: - Preview
-
-#Preview {
-  VStack {
-    WageSourceSelector(
-      usePreset: .constant(true),
-      wageLevel: .constant(1),
-      customWage: .constant(200),
-      currency: "kr"
-    )
-  }
-  .padding()
-  .background(Color.tidexBackground)
-}

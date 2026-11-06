@@ -31,6 +31,7 @@ struct TariffType: Codable, Identifiable, Equatable {
   let is_default: Bool
   var displayNameEnglish: String?
   var displayNameNorwegian: String?
+  var presentation: TariffPresentation?
 
   var displayName: String {
     Locale.appLocale.isNorwegian
@@ -38,7 +39,7 @@ struct TariffType: Codable, Identifiable, Equatable {
   }
 
   private enum CodingKeys: String, CodingKey {
-    case id, description, country
+    case id, description, country, presentation
     case display_name, is_default  // swiftlint:disable:this identifier_name
     case displayNameEnglish = "display_name_en"
     case displayNameNorwegian = "display_name_nb"
