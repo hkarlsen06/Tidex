@@ -31,6 +31,10 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   @State private var overtimeEnabled: Bool = false
   @State private var overtimeThresholdHours: Double = OvertimeConfig.defaultWeeklyThresholdHours
   @State private var overtimeRules: [OvertimeRuleDraft] = []
+  @State private var retainSupplements = false
+  @State private var premiumBaseMultiplier: Double?
+  @State private var overtimeBaseRate: Double?
+  @State private var retainedSupplements: [SupplementRule]?
   @State private var breakEnabled: Bool = true
   @State private var breakMethod: BreakMethod = .proportional
   @State private var breakThresholdHours: Double = 5.5
@@ -121,6 +125,10 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       _overtimeEnabled = State(initialValue: source.overtime.enabled)
       _overtimeThresholdHours = State(initialValue: source.overtime.weeklyThresholdHours)
       _overtimeRules = State(initialValue: source.overtime.rules.map(OvertimeRuleDraft.init))
+      _retainSupplements = State(initialValue: source.overtime.retainSupplements)
+      _premiumBaseMultiplier = State(initialValue: source.overtime.premiumBaseMultiplier)
+      _overtimeBaseRate = State(initialValue: source.overtime.baseRate)
+      _retainedSupplements = State(initialValue: source.overtime.retainedSupplements)
       _breakEnabled = State(
         initialValue: source.effectiveBreakEnabled && source.breakMethod != .none)
       _breakMethod = State(initialValue: source.breakMethod)
@@ -386,12 +394,12 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         }
         effectiveTariffTypeId = defaultType.id
         tariffTypeId = effectiveTariffTypeId
-        tariffTypeName = defaultType.display_name
+        tariffTypeName = defaultType.displayName
       }
 
       // Load tariff type name if not set
       if tariffTypeName == nil {
-        tariffTypeName = types.first { $0.id == effectiveTariffTypeId }?.display_name
+        tariffTypeName = types.first { $0.id == effectiveTariffTypeId }?.displayName
       }
 
     } catch {
@@ -420,6 +428,11 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         fromDate.toISODateString() == isoDate
       else { return }
       tariffVersion = version
+      if !usesSavedTariffRates, let version, version.rate(forLevel: wageLevel) == nil,
+        let first = TariffLevel.from(tariffVersion: version).first
+      {
+        wageLevel = first.level
+      }
       applyTariffOvertimeDefaultIfNeeded(force: shouldApplyTariffOvertime)
       shouldApplyTariffOvertime = false
       logger.info(
@@ -448,7 +461,11 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     OvertimeConfig(
       enabled: overtimeEnabled,
       weeklyThresholdHours: overtimeThresholdHours,
-      rules: overtimeRules.map { $0.toRule() }
+      rules: overtimeRules.map { $0.toRule() },
+      retainSupplements: retainSupplements,
+      premiumBaseMultiplier: premiumBaseMultiplier,
+      baseRate: overtimeBaseRate,
+      retainedSupplements: retainedSupplements
     )
   }
 
@@ -459,6 +476,10 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     overtimeEnabled = defaultOvertime.enabled
     overtimeThresholdHours = defaultOvertime.weeklyThresholdHours
     overtimeRules = defaultOvertime.rules.map { OvertimeRuleDraft($0) }
+    retainSupplements = defaultOvertime.retainSupplements
+    premiumBaseMultiplier = defaultOvertime.premiumBaseMultiplier
+    overtimeBaseRate = defaultOvertime.baseRate
+    retainedSupplements = defaultOvertime.retainedSupplements
   }
 
   // MARK: - Tariff Version Indicator
@@ -477,6 +498,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           effectiveDateRow(version, isStacked: false)
           effectiveDateRow(version, isStacked: true)
         }
+        TariffSourceDetails(version: version)
       } else if isLoadingTariff {
         HStack(spacing: Spacing.xs) {
           ProgressView()
@@ -533,7 +555,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           set: { newValue in
             guard newValue != tariffTypeId else { return }
             tariffTypeId = newValue
-            tariffTypeName = tariffTypes.first { $0.id == newValue }?.display_name
+            tariffTypeName = tariffTypes.first { $0.id == newValue }?.displayName
             wageLevel = 1
             usesSavedTariffRates = false
             shouldApplyTariffOvertime = true
@@ -541,7 +563,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         )
       ) {
         ForEach(tariffTypes) { type in
-          Text(type.display_name)
+          Text(type.displayName)
             .tag(type.id)
         }
       }
@@ -776,6 +798,10 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     overtimeEnabled = input.overtime.enabled
     overtimeThresholdHours = input.overtime.weeklyThresholdHours
     overtimeRules = input.overtime.rules.map(OvertimeRuleDraft.init)
+    retainSupplements = input.overtime.retainSupplements
+    premiumBaseMultiplier = input.overtime.premiumBaseMultiplier
+    overtimeBaseRate = input.overtime.baseRate
+    retainedSupplements = input.overtime.retainedSupplements
     taxEnabled = input.taxEnabled
     taxPercentage = input.taxPercentage
     breakEnabled = input.breakEnabled
@@ -818,6 +844,7 @@ extension OnboardingSupplementRule {
     self.toTime = rule.to
     self.type = rule.rate != nil ? .fixed : .percent
     self.value = rule.rate ?? rule.percent ?? 0
+    self.sourceRule = rule
   }
 }
 

@@ -12,6 +12,7 @@ struct CustomSupplementRuleWithId: Identifiable, Equatable {
   var percent: Double?
   /// true = user-added or modified, false/nil = from tariff (predefined)
   var isCustom: Bool
+  var sourceRule: SupplementRule?
 
   /// Initialize from a CustomSupplementRule
   init(from rule: CustomSupplementRule, id: String = UUID().uuidString) {
@@ -21,6 +22,12 @@ struct CustomSupplementRuleWithId: Identifiable, Equatable {
     self.rate = rule.rate
     self.percent = rule.percent
     self.isCustom = rule.isCustom ?? false
+    self.sourceRule = SupplementRule(
+      days: Array(1...7), from: rule.from, to: rule.to, rate: rule.rate, percent: rule.percent,
+      stackingGroup: rule.stackingGroup, dates: rule.dates, excludedDates: rule.excludedDates,
+      shiftStartDates: rule.shiftStartDates, excludedShiftStartDates: rule.excludedShiftStartDates,
+      shiftStartBefore: rule.shiftStartBefore,
+      minimumRate: rule.minimumRate, percentageBaseRate: rule.percentageBaseRate)
   }
 
   /// Initialize with explicit values
@@ -30,7 +37,8 @@ struct CustomSupplementRuleWithId: Identifiable, Equatable {
     to: String,
     rate: Double? = nil,
     percent: Double? = nil,
-    isCustom: Bool = true
+    isCustom: Bool = true,
+    sourceRule: SupplementRule? = nil
   ) {
     self.id = id
     self.from = from
@@ -38,6 +46,7 @@ struct CustomSupplementRuleWithId: Identifiable, Equatable {
     self.rate = rate
     self.percent = percent
     self.isCustom = isCustom
+    self.sourceRule = sourceRule
   }
 
   /// Convert back to CustomSupplementRule for storage
@@ -47,7 +56,13 @@ struct CustomSupplementRuleWithId: Identifiable, Equatable {
       to: to,
       rate: rate,
       percent: percent,
-      isCustom: isCustom
+      isCustom: isCustom,
+      stackingGroup: sourceRule?.stackingGroup,
+      dates: sourceRule?.dates, excludedDates: sourceRule?.excludedDates,
+      shiftStartDates: sourceRule?.shiftStartDates,
+      excludedShiftStartDates: sourceRule?.excludedShiftStartDates,
+      shiftStartBefore: sourceRule?.shiftStartBefore,
+      minimumRate: sourceRule?.minimumRate, percentageBaseRate: sourceRule?.percentageBaseRate
     )
   }
 
@@ -670,6 +685,21 @@ struct SupplementRuleEditorSheet: View {
     isValueInputFocused = false
   }
 
+  private var editedSourceRule: SupplementRule? {
+    guard let rule, let source = rule.sourceRule else { return nil }
+    if rule.rate == (supplementType == .fixed ? value : nil),
+      rule.percent == (supplementType == .percent ? value : nil)
+    {
+      return source
+    }
+    return SupplementRule(
+      days: source.days, from: source.from, to: source.to,
+      stackingGroup: source.stackingGroup, dates: source.dates, excludedDates: source.excludedDates,
+      shiftStartDates: source.shiftStartDates,
+      excludedShiftStartDates: source.excludedShiftStartDates,
+      shiftStartBefore: source.shiftStartBefore)
+  }
+
   private func saveRule() {
     UINotificationFeedbackGenerator().notificationOccurred(.success)
 
@@ -679,7 +709,8 @@ struct SupplementRuleEditorSheet: View {
       to: formatTime(toTime),
       rate: supplementType == .fixed ? value : nil,
       percent: supplementType == .percent ? value : nil,
-      isCustom: true  // Always mark as custom when edited/added
+      isCustom: true,
+      sourceRule: editedSourceRule
     )
 
     onSave(newRule)

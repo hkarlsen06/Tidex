@@ -1,6 +1,8 @@
 # HK/Virke 2026 Backpay Runbook
 
-This runbook covers the one-off HK/Virke 2026 backpay adjustment and the later app-facing tariff-rate update.
+This runbook records the one-off HK/Virke 2026 backpay adjustment and the later app-facing tariff-rate update.
+
+The database commands below describe the Supabase implementation before the Convex cutover. Do not run their apply modes against the retained bridge. Current tariff maintenance uses the reviewed Convex catalogue. Preserve the historical June activation and backpay markers when preparing corrections.
 
 ## Scope
 
@@ -315,4 +317,4 @@ from public.get_tariff_versions('hk_retail')
 limit 1;
 ```
 
-The iOS app fetches tariff data through `get_tariff_versions` / `get_tariff_version_for_date`, so no app release is required for the new rates if the RPC returns the new version correctly.
+The iOS app now fetches tariff data through Convex `tariffs:types` and `tariffs:versions`. SQL RPC changes no longer update its catalogue. New calculation policies require a compatible app build and an explicit catalogue revision; existing wage snapshots keep their saved rates until deliberately updated.

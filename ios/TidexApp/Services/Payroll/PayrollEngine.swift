@@ -521,24 +521,36 @@ struct PayrollEngine {
     var cursor = segment.absoluteStart
     var cursorCumulative = cumulativeMinutes
     var pieces: [OvertimePiece] = []
+    let retainedPeriods = WagePeriodBuilder.buildWagePeriods(
+      startTime: segment.shift.startTime, endTime: segment.shift.endTime,
+      weekday: segment.shiftDayStart.tidexWeekday,
+      baseRate: config.baseRate ?? segment.period.baseRate,
+      rules: segment.shift.shift.custom_supplements?.rules.isEmpty == true
+        ? [] : config.retainedSupplements ?? [], shiftDate: segment.shift.shiftDate)
 
     while cursor < segment.absoluteEnd {
-      let next = nextOvertimeBoundary(
+      var next = nextOvertimeBoundary(
         after: cursor,
         segmentEnd: segment.absoluteEnd,
         config: config,
         cumulativeMinutes: cursorCumulative,
         thresholdMinutes: thresholdMinutes
       )
+      for period in retainedPeriods {
+        for minute in [period.fromMin, period.toMin] {
+          let boundary = segment.shiftDayStart.addingTimeInterval(minute * 60)
+          if boundary > cursor && boundary < next { next = boundary }
+        }
+      }
       let durationMinutes = max(0, next.timeIntervalSince(cursor) / 60)
       guard durationMinutes > 0 else { break }
 
       let (supplementRate, overtimeMinutes) = overtimeRate(
         for: segment,
-        config: config,
         at: cursor,
         isOvertime: cursorCumulative >= thresholdMinutes,
-        durationMinutes: durationMinutes
+        durationMinutes: durationMinutes,
+        retainedPeriods: retainedPeriods
       )
 
       pieces.append(
@@ -566,7 +578,8 @@ struct PayrollEngine {
       period: WagePeriod(
         fromMin: minutesBetween(segment.shiftDayStart, start),
         toMin: minutesBetween(segment.shiftDayStart, end),
-        baseRate: segment.period.baseRate,
+        baseRate: overtimeMinutes > 0
+          ? segment.config?.baseRate ?? segment.period.baseRate : segment.period.baseRate,
         supplementRate: supplementRate,
         isOvertime: overtimeMinutes > 0
       ),
@@ -576,15 +589,24 @@ struct PayrollEngine {
 
   private static func overtimeRate(
     for segment: OvertimeSegment,
-    config: OvertimeConfig,
     at cursor: Date,
     isOvertime: Bool,
-    durationMinutes: Double
+    durationMinutes: Double,
+    retainedPeriods: [WagePeriod]
   ) -> (supplementRate: Double, overtimeMinutes: Double) {
-    if isOvertime,
+    if isOvertime, let config = segment.config,
       let percent = overtimePercent(config: config, at: cursor)
     {
-      return (segment.period.baseRate * percent / 100, durationMinutes)
+      let minute = minutesBetween(segment.shiftDayStart, cursor)
+      let retained =
+        config.retainedSupplements != nil
+        ? retainedPeriods.first { $0.fromMin <= minute && minute < $0.toMin }?.supplementRate ?? 0
+        : config.retainSupplements ? segment.period.supplementRate : 0
+      let baseRate = config.baseRate ?? segment.period.baseRate
+      return (
+        baseRate * (config.premiumBaseMultiplier ?? 1) * percent / 100 + retained,
+        durationMinutes
+      )
     }
     return (segment.period.supplementRate, 0)
   }
@@ -647,6 +669,9 @@ struct PayrollEngine {
   private static func overtimeRuleCanMatch(_ rule: OvertimeRule, at date: Date) -> Bool {
     let day = date.tidexWeekday
     guard rule.days.contains(day) else { return false }
+    let iso = date.toISODateString()
+    if rule.excludedDates?.contains(iso) == true { return false }
+    if let dates = rule.dates { return dates.contains(iso) }
 
     if NorwegianHolidays.isPublicHoliday(date) {
       return rule.appliesOnHolidays

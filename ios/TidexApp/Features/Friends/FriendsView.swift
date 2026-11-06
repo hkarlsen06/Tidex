@@ -129,6 +129,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     .reloadOnChange(
       of: "sharing:friendsBootstrap",
       args: [
+        "payroll_revision": "2026-11",
         "preview_start_date": SharingService.friendsPreviewRange().start,
         "preview_end_date": SharingService.friendsPreviewRange().end,
       ]
@@ -1144,6 +1145,7 @@ private struct SharedShiftsDetailView: View {
     .reloadOnChange(
       of: "sharing:sharedMonth",
       args: [
+        "payroll_revision": "2026-11",
         "owner_id": sharer.id,
         "year": Double(viewModel.committedYear),
         "month": Double(viewModel.committedMonth),

@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Shown when tariff data could not be loaded and the built-in rates are in use.
+/// Shown when no matching tariff data could be loaded.
 struct TariffOfflineHint: View {
   var body: some View {
-    Text(.onboardingWageTariffOffline)
+    Text(.tariffUnavailable)
       .font(.tidexFootnote)
       .foregroundColor(.tidexWarning)
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -23,19 +23,25 @@ struct WageTariffSelector: View {
     if let version = data.currentTariffVersion {
       return TariffLevel.from(tariffVersion: version)
     }
-    return TariffLevel.all
+    return []
   }
 
   var body: some View {
     VStack(spacing: Spacing.md) {
-      Text(.onboardingWageTariffHint)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
+      if data.currentTariffVersion == nil {
+        Text(.onboardingWageTariffHint)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
 
       // Tariff type picker (when multiple types available)
       if !data.availableTariffTypes.isEmpty {
         tariffTypePicker
+      }
+
+      if let version = data.currentTariffVersion {
+        TariffSourceDetails(version: version)
       }
 
       // Tariff level picker
@@ -66,10 +72,11 @@ struct WageTariffSelector: View {
           Button(action: {
             guard tariffType.id != data.selectedTariffTypeId else { return }
             data.selectedTariffTypeId = tariffType.id
+            data.currentTariffVersion = nil
             onTariffTypeChanged(tariffType.id)
           }) {
             HStack {
-              Text(tariffType.display_name)
+              Text(tariffType.displayName)
               if tariffType.id == data.selectedTariffTypeId {
                 Image(systemName: "checkmark")
               }
@@ -117,7 +124,7 @@ struct WageTariffSelector: View {
   }
 
   private var selectedTariffTypeName: String {
-    data.availableTariffTypes.first { $0.id == data.selectedTariffTypeId }?.display_name
+    data.availableTariffTypes.first { $0.id == data.selectedTariffTypeId }?.displayName
       ?? data.selectedTariffTypeId
   }
 
@@ -304,6 +311,7 @@ struct TariffLevelRow: View {
       )
     }
     .buttonStyle(.plain)
+    .accessibilityIdentifier("tariff.category.\(level.level)")
     .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }

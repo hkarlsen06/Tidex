@@ -1,3 +1,5 @@
+import Foundation
+
 /// Builds wage periods by splitting shift time according to supplement rule boundaries
 /// Port of lib/payroll/periods.ts
 struct WagePeriodBuilder {
@@ -22,13 +24,16 @@ struct WagePeriodBuilder {
     endTime: String,
     weekday: Int,
     baseRate: Double,
-    rules: [SupplementRule]
+    rules: [SupplementRule],
+    shiftDate: String? = nil
   ) -> [WagePeriod] {
     guard let (start, end) = shiftMinutes(startTime: startTime, endTime: endTime) else {
       return []
     }
-    let windows = ruleWindows(weekday: weekday, rules: rules)
-      .filter { $0.to > start && $0.from < end }
+    let windows = ruleWindows(
+      weekday: weekday, rules: rules, shiftDate: shiftDate, shiftStartTime: startTime
+    )
+    .filter { $0.to > start && $0.from < end }
 
     // Collect boundary points
     var points = Set<Int>([start, end])
@@ -49,11 +54,12 @@ struct WagePeriodBuilder {
       let a = sorted[i]
       let b = sorted[i + 1]
 
-      // Find highest matching supplement for this period
-      var supplement: Double = 0
+      var groups: [String: Double] = [:]
 
       for window in windows where a >= window.from && b <= window.to {
-        supplement = max(supplement, resolveSupplementRate(rule: window.rule, baseRate: baseRate))
+        let group = window.rule.stackingGroup ?? ""
+        groups[group] = max(
+          groups[group] ?? 0, resolveSupplementRate(rule: window.rule, baseRate: baseRate))
       }
 
       // Convert Int to Double for WagePeriod (supports fractional break deductions)
@@ -62,7 +68,7 @@ struct WagePeriodBuilder {
           fromMin: Double(a),
           toMin: Double(b),
           baseRate: baseRate,
-          supplementRate: supplement
+          supplementRate: groups.values.reduce(0, +)
         ))
     }
 
@@ -75,15 +81,25 @@ struct WagePeriodBuilder {
   }
 
   /// Weekdays identify the day a rule starts. Include overnight rules carried from yesterday.
-  static func ruleWindows(weekday: Int, rules: [SupplementRule]) -> [RuleWindow] {
+  static func ruleWindows(
+    weekday: Int, rules: [SupplementRule], shiftDate: String? = nil,
+    shiftStartTime: String? = nil
+  ) -> [RuleWindow] {
     guard (1...7).contains(weekday) else { return [] }
     return rules.flatMap { rule -> [RuleWindow] in
+      if let limit = rule.shiftStartBefore {
+        guard let shiftStartTime, let start = toMinutes(shiftStartTime),
+          let before = toMinutes(limit), start < before
+        else { return [] }
+      }
       guard let from = toMinutes(rule.from), let to = toMinutes(rule.to), from != to else {
         return []
       }
       return (-1...1).compactMap { dayOffset in
         let ruleWeekday = (weekday - 1 + dayOffset + 7) % 7 + 1
-        guard rule.days.contains(ruleWeekday) else { return nil }
+        guard rule.days.contains(ruleWeekday),
+          ruleMatchesDate(rule, shiftDate: shiftDate, dayOffset: dayOffset)
+        else { return nil }
         let offset = dayOffset * 24 * 60
         return RuleWindow(
           from: from + offset,
@@ -92,6 +108,20 @@ struct WagePeriodBuilder {
         )
       }
     }
+  }
+
+  private static func ruleMatchesDate(
+    _ rule: SupplementRule, shiftDate: String?, dayOffset: Int
+  ) -> Bool {
+    if let required = rule.shiftStartDates, !required.contains(shiftDate ?? "") { return false }
+    if let shiftDate, rule.excludedShiftStartDates?.contains(shiftDate) == true { return false }
+    guard let shiftDate, let date = Date.fromISODateStringUTC(shiftDate) else {
+      return rule.dates == nil
+    }
+    let shifted = date.addingTimeInterval(Double(dayOffset * 24 * 60 * 60))
+    let iso = String(shifted.ISO8601Format().prefix(10))
+    if let dates = rule.dates, !dates.contains(iso) { return false }
+    return !(rule.excludedDates?.contains(iso) ?? false)
   }
 
   // MARK: - Private Helpers
@@ -121,7 +151,10 @@ struct WagePeriodBuilder {
     }
     // If 'percent' is specified, calculate as percentage of base rate
     if let percent = rule.percent, percent.isFinite, percent >= 0 {
-      return (baseRate * percent) / 100.0
+      let basis = rule.percentageBaseRate ?? baseRate
+      let minimum = rule.minimumRate ?? 0
+      guard basis.isFinite, basis >= 0, minimum.isFinite, minimum >= 0 else { return 0 }
+      return max(minimum, (basis * percent) / 100.0)
     }
     return 0
   }

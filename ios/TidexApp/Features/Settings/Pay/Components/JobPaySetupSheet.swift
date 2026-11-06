@@ -193,6 +193,10 @@ struct JobPaySetupSheet: View {
 
   private func submit() async {
     guard !isSaving else { return }
+    guard onboardingData.hasValidWageSelection else {
+      saveError = String(localized: .tariffUnavailable)
+      return
+    }
     isSaving = true
     saveError = nil
 

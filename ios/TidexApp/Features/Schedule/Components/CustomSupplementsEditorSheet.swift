@@ -40,7 +40,8 @@ enum ApplicableSupplements {
     startTime: String,
     endTime: String,
     weekday: Int,
-    rules: [SupplementRule]
+    rules: [SupplementRule],
+    shiftDate: String? = nil
   ) -> [CustomSupplementRuleWithId] {
     guard let (start, end) = WagePeriodBuilder.shiftMinutes(startTime: startTime, endTime: endTime)
     else {
@@ -48,22 +49,30 @@ enum ApplicableSupplements {
     }
     // Clip weekday-specific rules to this occurrence before removing their weekday metadata.
     // Otherwise saving a Sunday all-day rule would also apply it to Saturday evening.
-    let applicable = WagePeriodBuilder.ruleWindows(weekday: weekday, rules: rules)
-      .filter { $0.to > start && $0.from < end }
-      .map { window in
-        CustomSupplementRuleWithId(
-          from: clockTime(max(start, window.from), isEnd: false),
-          to: clockTime(min(end, window.to), isEnd: true),
-          rate: window.rule.rate,
-          percent: window.rule.percent,
-          isCustom: false
-        )
-      }
-    var seen = Set<String>()
+    let applicable = WagePeriodBuilder.ruleWindows(
+      weekday: weekday, rules: rules, shiftDate: shiftDate, shiftStartTime: startTime
+    )
+    .filter { $0.to > start && $0.from < end }
+    .map { window in
+      CustomSupplementRuleWithId(
+        from: clockTime(max(start, window.from), isEnd: false),
+        to: clockTime(min(end, window.to), isEnd: true),
+        rate: window.rule.rate,
+        percent: window.rule.percent,
+        isCustom: false,
+        sourceRule: SupplementRule(
+          days: Array(1...7), from: window.rule.from, to: window.rule.to,
+          stackingGroup: window.rule.stackingGroup, shiftStartBefore: window.rule.shiftStartBefore,
+          minimumRate: window.rule.minimumRate,
+          percentageBaseRate: window.rule.percentageBaseRate)
+      )
+    }
+    var seen: [CustomSupplementRule] = []
     return applicable.filter { rule in
-      let key =
-        "\(rule.from)-\(rule.to)-\(String(describing: rule.rate))-\(String(describing: rule.percent))"
-      return seen.insert(key).inserted
+      let stored = rule.toCustomSupplementRule()
+      guard !seen.contains(stored) else { return false }
+      seen.append(stored)
+      return true
     }
   }
 
@@ -294,7 +303,8 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
         startTime: shift.startTime,
         endTime: shift.endTime,
         weekday: shiftWeekday,
-        rules: tariffRules
+        rules: tariffRules,
+        shiftDate: shift.shiftDate
       )
       nonApplicableRules = []
     }
@@ -432,7 +442,8 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
       startTime: shift.startTime,
       endTime: shift.endTime,
       weekday: shiftWeekday,
-      rules: tariffRules
+      rules: tariffRules,
+      shiftDate: shift.shiftDate
     )
     nonApplicableRules = []
     hadCustomSupplements = false  // Treat as if we never had custom supplements
@@ -462,7 +473,8 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
         startTime: shift.startTime,
         endTime: shift.endTime,
         weekday: shiftWeekday,
-        rules: tariffRules
+        rules: tariffRules,
+        shiftDate: shift.shiftDate
       )
       if rulesMatch(rules, tariffApplicable) {
         onSave(nil)
@@ -491,7 +503,7 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
 
     for (ruleA, ruleB) in zip(sortedA, sortedB) {
       if ruleA.from != ruleB.from || ruleA.to != ruleB.to || ruleA.rate != ruleB.rate
-        || ruleA.percent != ruleB.percent
+        || ruleA.percent != ruleB.percent || ruleA.sourceRule != ruleB.sourceRule
       {
         return false
       }

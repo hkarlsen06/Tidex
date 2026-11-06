@@ -165,6 +165,7 @@ final class SharingService {
     now: Date
   ) async throws -> FriendsTabBootstrapData {
     let params: [String: AnyJSON] = [
+      "payroll_revision": .string("2026-11"),
       "preview_start_date": .string(startDate),
       "preview_end_date": .string(endDate),
     ]
@@ -247,6 +248,7 @@ final class SharingService {
         try Task.checkCancellation()
 
         let params: [String: AnyJSON] = [
+          "payroll_revision": .string("2026-11"),
           "owner_id": .string(ownerId),
           "year": .integer(year),
           "month": .integer(month),
@@ -420,7 +422,12 @@ final class SharingService {
           to: rule.to,
           rate: rule.rate,
           percent: rule.percent,
-          isCustom: rule.isCustom
+          isCustom: rule.isCustom,
+          stackingGroup: rule.stackingGroup, dates: rule.dates, excludedDates: rule.excludedDates,
+          shiftStartDates: rule.shiftStartDates,
+          excludedShiftStartDates: rule.excludedShiftStartDates,
+          shiftStartBefore: rule.shiftStartBefore,
+          minimumRate: rule.minimumRate, percentageBaseRate: rule.percentageBaseRate
         )
       }
     )
@@ -681,7 +688,8 @@ final class SharingService {
   /// Show a previously hidden sharer in the main list.
   func showSharer(ownerId: String) async throws {
     logger.info("Showing sharer \(ownerId)")
-    try await mutate("sharing:updateSharer", ["owner_id": .string(ownerId), "hidden": .bool(false)])
+    try await mutate(
+      "sharing:updateSharer", ["owner_id": .string(ownerId), "hidden": .bool(false)])
     logger.info("Successfully showed sharer")
   }
 

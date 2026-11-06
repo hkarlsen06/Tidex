@@ -1,0 +1,12 @@
+ts	phase	decision	why	evidence	result
+2026-11-06T00:18:16Z	compatibility	Require an explicit catalogue revision in new clients	Older builds cannot interpret additional pay rules	ios/TidexApp/Services/Data/TariffVersionService.swift	implemented
+2026-11-06T00:18:16Z	selection	Remove unrelated HK fallback choices	A missing agreement must not silently become an HK wage	ios/TidexAppTests/TariffVersionServiceTests.swift	implemented
+2026-11-06T00:30:55Z	compatibility	Gate rich snapshot reads and writes by payroll capability	Old clients could otherwise ignore or erase new calculation rules	backend/convex/lib/payrollCompatibility.ts	implemented
+2026-11-06T00:30:55Z	history	Prepare read-only future snapshot proposals	Worker qualifications and historical compensation cannot be inferred from a tariff ID	docs/tariff-audit-2026-11-06.md	implemented
+2026-11-06T00:50:01Z	verification	Verify pay rules and real selection journeys	Rates alone do not prove the rules survive saving and sharing	docs/tariffs/verification.md	50 Swift tests and 37 backend tests passed
+2026-11-06T00:50:01Z	screenshots	Use passing XCUITest journeys after manual menu control failed	The device tool rejected both the container and suggested child touch targets	docs/tariffs/screenshots	Six screenshots retained
+2026-11-06T00:50:01Z	privacy	Create private proposals exclusively with owner-only permissions	A wage proposal must not follow a symlink into a shared or tracked file	backend/scripts/tariff-proposal-file.test.ts	Three privacy regressions passed
+2026-11-06T01:04:47Z	review	Fix all seven confirmed code-review findings	Agreement exceptions changed real hourly pay or blocked rich Friends reads	docs/tariffs/source-interpretations.md	48 choices and 548 categories validated; 47 backend tests passed
+2026-11-06T01:04:47Z	audit	Record the unavailable Claude trail review	The requested provider returned an API rate limit	docs/tariffs/verification.md	No alternate provider substituted
+2026-11-06T01:04:47Z	landing	Use a snapshot baseline for the feature PR	GitHub main is 58 commits behind the implementation baseline; pushing main would deploy unrelated work	git rev-list origin/main..fcc71599	Keep review limited to tariff work and leave production main unchanged
+2026-11-06T01:09:17Z	review	Honor explicitly empty shift supplements during overtime	The final Sol re-check reproduced a removed holiday addition returning during overtime	backend/scripts/payroll-tariff-rules.test.ts	Regression failed at 489.50 before fix and passed at 293.70 afterward in backend

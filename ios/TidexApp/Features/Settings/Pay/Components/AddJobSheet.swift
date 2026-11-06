@@ -425,6 +425,10 @@ extension AddJobSheet {
   private func submit() async {
     guard !isSaving else { return }
     validationError = nil
+    guard onboardingData.hasValidWageSelection else {
+      validationError = String(localized: .tariffUnavailable)
+      return
+    }
     guard let setup = validatedSetup() else { return }
 
     isSaving = true

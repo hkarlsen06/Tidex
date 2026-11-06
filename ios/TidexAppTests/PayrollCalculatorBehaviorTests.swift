@@ -304,6 +304,119 @@ final class PayrollCalculatorBehaviorTests: XCTestCase {
   }
 }
 
+extension PayrollCalculatorBehaviorTests {
+  func testTariffSupplementGroupsAndMinimumsSurviveSharedCalculation() throws {
+    let snapshot = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [
+        SupplementRule(days: [7], from: "21:00", to: "06:00", rate: 28, stackingGroup: "night"),
+        SupplementRule(days: [7], from: "00:00", to: "24:00", rate: 48, stackingGroup: "weekend"),
+        SupplementRule(
+          days: [7], from: "21:00", to: "24:00", percent: 23,
+          stackingGroup: "qualification", minimumRate: 73),
+      ], breakEnabled: false)
+    let row = TestFixtures.shift(
+      shiftDate: "2026-02-08", startTime: "22:00", endTime: "23:00")
+    let owner = PayrollCalculator.computeShift(row, snapshot: snapshot)
+    XCTAssertEqual(owner.supplementPay, 149, accuracy: 0.001)
+    let shared = try sharedCalculation(row: row, snapshot: snapshot)
+    XCTAssertEqual(shared.computed.gross, owner.gross, accuracy: 0.001)
+  }
+
+  func testDatedHolidayEveRuleRetainsItsStartDateAfterMidnight() throws {
+    let snapshot = TestFixtures.wageSnapshot(
+      hourlyWage: 300,
+      supplements: [
+        SupplementRule(
+          days: Array(1...7), from: "21:00", to: "06:00", percent: 100,
+          dates: ["2026-12-24"], percentageBaseRate: 246.22)
+      ], breakEnabled: false)
+    let row = TestFixtures.shift(
+      shiftDate: "2026-12-25", startTime: "02:00", endTime: "03:00")
+    XCTAssertEqual(
+      PayrollCalculator.computeShift(row, snapshot: snapshot).supplementPay, 246.22, accuracy: 0.001
+    )
+    XCTAssertEqual(
+      try sharedCalculation(row: row, snapshot: snapshot).computed.supplementPay,
+      246.22, accuracy: 0.001)
+    let nextDay = TestFixtures.shift(
+      shiftDate: "2026-12-26", startTime: "02:00", endTime: "03:00")
+    XCTAssertEqual(PayrollCalculator.computeShift(nextDay, snapshot: snapshot).supplementPay, 0)
+  }
+
+  func testHolidayPremiumFollowsShiftStartDateInOwnerAndSharedPay() throws {
+    let days = Array(1...7)
+    let snapshot = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [
+        SupplementRule(
+          days: days, from: "00:00", to: "24:00", rate: 20,
+          excludedShiftStartDates: ["2026-05-01"]),
+        SupplementRule(
+          days: days, from: "00:00", to: "24:00", percent: 100,
+          shiftStartDates: ["2026-05-01"]),
+      ], breakEnabled: false)
+    for (date, expected) in [("2026-05-01", 1_600.0), ("2026-04-30", 880.0)] {
+      let row = TestFixtures.shift(shiftDate: date, startTime: "22:00", endTime: "02:00")
+      XCTAssertEqual(
+        PayrollCalculator.computeShift(row, snapshot: snapshot).gross, expected, accuracy: 0.001)
+      XCTAssertEqual(
+        try sharedCalculation(row: row, snapshot: snapshot).computed.gross, expected,
+        accuracy: 0.001)
+    }
+  }
+
+  func testDatedRulesDoNotShiftCalendarDayAcrossAutumnDST() throws {
+    let snapshot = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [
+        SupplementRule(days: [6], from: "22:00", to: "06:00", rate: 70, dates: ["2026-10-24"])
+      ], breakEnabled: false)
+    let row = TestFixtures.shift(
+      shiftDate: "2026-10-25", startTime: "02:00", endTime: "03:00")
+    XCTAssertEqual(PayrollCalculator.computeShift(row, snapshot: snapshot).supplementPay, 70)
+    XCTAssertEqual(try sharedCalculation(row: row, snapshot: snapshot).computed.supplementPay, 70)
+  }
+
+  func testSupplementEditorPreservesSeparateAdditiveRulesWhenSaving() throws {
+    let rules = [
+      SupplementRule(days: [7], from: "21:00", to: "24:00", rate: 20, stackingGroup: "night"),
+      SupplementRule(days: [7], from: "21:00", to: "24:00", rate: 20, stackingGroup: "weekend"),
+    ]
+    let projected = ApplicableSupplements.getApplicableSupplements(
+      startTime: "22:00", endTime: "23:00", weekday: 7, rules: rules,
+      shiftDate: "2026-02-08")
+    XCTAssertEqual(projected.count, 2)
+    let row = TestFixtures.shift(
+      shiftDate: "2026-02-08", startTime: "22:00", endTime: "23:00",
+      customSupplements: CustomSupplementsData(rules: projected.map { $0.toCustomSupplementRule() })
+    )
+    XCTAssertEqual(
+      PayrollCalculator.computeShift(
+        row, snapshot: TestFixtures.wageSnapshot(hourlyWage: 200, breakEnabled: false)
+      ).supplementPay, 40, accuracy: 0.001)
+  }
+
+  private func sharedCalculation(row: ShiftRow, snapshot: WageSnapshot) throws
+    -> SharingComputedShift
+  {
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    let payload = SharingRPCPayloadInput(
+      ownerId: try XCTUnwrap(row.user_id), showEarnings: true,
+      settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)),
+      shifts: [try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode(row))],
+      recurringShifts: [],
+      snapshots: [try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode(snapshot))],
+      jobs: [])
+    return try XCTUnwrap(
+      SharingComputeCore.computeShiftsInRange(
+        payload: payload, startDate: row.shift_date, endDate: row.shift_date, mode: .visible
+      ).first)
+  }
+
+}
+
 private struct HalfCentScenario {
   let rate: Double
   let minutes: Int

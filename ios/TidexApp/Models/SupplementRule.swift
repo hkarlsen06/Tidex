@@ -13,13 +13,35 @@ struct SupplementRule: Codable, Equatable {
   let rate: Double?
   /// Percentage supplement (e.g., 50 for 50% of base rate)
   let percent: Double?
+  let stackingGroup: String?
+  let dates: [String]?
+  let excludedDates: [String]?
+  let shiftStartDates: [String]?
+  let excludedShiftStartDates: [String]?
+  let shiftStartBefore: String?
+  let minimumRate: Double?
+  let percentageBaseRate: Double?
 
-  init(days: [Int], from: String, to: String, rate: Double? = nil, percent: Double? = nil) {
+  init(
+    days: [Int], from: String, to: String, rate: Double? = nil, percent: Double? = nil,
+    stackingGroup: String? = nil, dates: [String]? = nil, excludedDates: [String]? = nil,
+    shiftStartDates: [String]? = nil, excludedShiftStartDates: [String]? = nil,
+    shiftStartBefore: String? = nil,
+    minimumRate: Double? = nil, percentageBaseRate: Double? = nil
+  ) {
     self.days = days
     self.from = from
     self.to = to
     self.rate = rate
     self.percent = percent
+    self.stackingGroup = stackingGroup
+    self.dates = dates
+    self.excludedDates = excludedDates
+    self.shiftStartDates = shiftStartDates
+    self.excludedShiftStartDates = excludedShiftStartDates
+    self.shiftStartBefore = shiftStartBefore
+    self.minimumRate = minimumRate
+    self.percentageBaseRate = percentageBaseRate
   }
 }
 
@@ -34,6 +56,14 @@ struct CustomSupplementRule: Codable, Equatable {
   let percent: Double?
   /// true = user-added, false/nil = from tariff
   let isCustom: Bool?
+  var stackingGroup: String?
+  var dates: [String]?
+  var excludedDates: [String]?
+  var shiftStartDates: [String]?
+  var excludedShiftStartDates: [String]?
+  var shiftStartBefore: String?
+  var minimumRate: Double?
+  var percentageBaseRate: Double?
 }
 
 /// Container for custom supplements on a shift

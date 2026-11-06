@@ -25,15 +25,53 @@ struct OvertimeEditorSection: View {
         thresholdField
 
         ForEach($rules) { $rule in
-          OvertimeRuleRow(rule: $rule) {
-            rules.removeAll { $0.id == rule.id }
+          if rule.dates == nil && rule.excludedDates == nil {
+            OvertimeRuleRow(rule: $rule) {
+              rules.removeAll { $0.id == rule.id }
+            }
           }
         }
+
+        if !calendarRules.isEmpty { calendarRuleDetails }
 
         addRuleButton
       }
     }
     .padding(.horizontal)
+  }
+
+  private var calendarRules: [OvertimeRuleDraft] {
+    rules.filter { $0.dates != nil || $0.excludedDates != nil }
+  }
+
+  private var calendarRuleDetails: some View {
+    DisclosureGroup {
+      ForEach(calendarRules) { rule in
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+          if let dates = rule.dates { Text(verbatim: dateList(dates)) }
+          if let dates = rule.excludedDates {
+            Text(.recurringExclusionsTitle)
+            Text(verbatim: dateList(dates))
+          }
+          Text(
+            verbatim:
+              "\(rule.from) - \(rule.to), +\(rule.percent.formatted(.number.locale(.appLocale)))%")
+        }
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+      }
+    } label: {
+      Text(.tariffCalendarRules)
+        .font(.tidexLabel)
+    }
+    .tint(.tidexBlueText)
+  }
+
+  private func dateList(_ values: [String]) -> String {
+    values.map { value in
+      Date.fromISODateString(value)?.formatted(
+        .dateTime.day().month().year().locale(.appLocale)) ?? value
+    }.joined(separator: ", ")
   }
 
   private var thresholdField: some View {
@@ -133,6 +171,8 @@ private struct OvertimeRuleRow: View {
         }
         Text(dayShortName(day))
           .font(.tidexCaption)
+          .lineLimit(1)
+          .fixedSize(horizontal: true, vertical: false)
       }
       .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
       .frame(minWidth: 30, minHeight: 28)
@@ -215,6 +255,8 @@ struct OvertimeRuleDraft: Identifiable, Equatable {
   var from: String
   var to: String
   var percent: Double
+  var dates: [String]?
+  var excludedDates: [String]?
 
   init(
     id: UUID = UUID(),
@@ -230,6 +272,8 @@ struct OvertimeRuleDraft: Identifiable, Equatable {
     self.from = from
     self.to = to
     self.percent = percent
+    dates = nil
+    excludedDates = nil
   }
 
   init(_ rule: OvertimeRule) {
@@ -239,6 +283,8 @@ struct OvertimeRuleDraft: Identifiable, Equatable {
     from = rule.from
     to = rule.to
     percent = rule.percent
+    dates = rule.dates
+    excludedDates = rule.excludedDates
   }
 
   func toRule() -> OvertimeRule {
@@ -247,7 +293,9 @@ struct OvertimeRuleDraft: Identifiable, Equatable {
       appliesOnHolidays: appliesOnHolidays,
       from: from,
       to: to,
-      percent: percent
+      percent: percent,
+      dates: dates,
+      excludedDates: excludedDates
     )
   }
 }

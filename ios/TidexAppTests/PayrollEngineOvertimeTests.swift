@@ -245,13 +245,14 @@ final class PayrollEngineOvertimeTests: XCTestCase {
     snapshots: [WageSnapshot]? = nil,
     jobs: [Job]? = nil,
     recurring: [RecurringShiftRow] = [],
-    month: Int = 2
+    month: Int = 2,
+    year: Int = 2_026
   ) -> [ShiftWithComputations] {
     let effectiveJobs = jobs ?? [TestFixtures.job(id: "job-a", isDefault: true)]
     let effectiveSnapshots = snapshots ?? [snapshot(jobId: effectiveJobs[0].id)]
     return PayrollEngine.computeShiftsForMonth(
       PayrollEngine.MonthComputationRequest(
-        year: 2_026,
+        year: year,
         month: month,
         shifts: shifts,
         recurring: recurring,
@@ -303,5 +304,285 @@ final class PayrollEngineOvertimeTests: XCTestCase {
       jobId: jobId,
       customSupplements: customSupplements
     )
+  }
+}
+
+extension PayrollEngineOvertimeTests {
+  func testRemovingAllShiftSupplementsAlsoRemovesRetainedOvertimeAdditions() throws {
+    let holiday = SupplementRule(
+      days: Array(1...7), from: "00:00", to: "24:00", percent: 100,
+      dates: ["2027-03-27"])
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 195.8, supplements: [holiday], breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1, rules: OvertimeConfig.seededDefaults.rules,
+        retainedSupplements: [holiday]))
+    try assertOwnerAndSharedPay(
+      rows: [
+        shift(id: "ordinary", date: "2027-03-27", start: "09:00", end: "10:00"),
+        shift(
+          id: "removed", date: "2027-03-27", start: "10:00", end: "11:00",
+          customSupplements: CustomSupplementsData(rules: [])),
+      ],
+      wage: wage, expected: [391.6, 293.7], year: 2_027, month: 3)
+  }
+
+  func testRiksavtalenKeepsOrdinarySupplementsDuringOvertime() throws {
+    let overtime = OvertimeConfig(
+      enabled: true, weeklyThresholdHours: 1, rules: OvertimeConfig.seededDefaults.rules,
+      retainSupplements: true)
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [SupplementRule(days: [1], from: "08:00", to: "10:00", rate: 20)],
+      breakEnabled: false, jobId: "job-a", overtime: overtime)
+    let row = shift(id: "riks", date: "2026-02-02", start: "08:00", end: "10:00")
+    let computed = try XCTUnwrap(compute([row], snapshots: [wage]).first).computed
+    XCTAssertEqual(computed.overtimeMinutes, 60)
+    XCTAssertEqual(computed.gross, 540, accuracy: 0.001)
+
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    let payload = SharingRPCPayloadInput(
+      ownerId: "user-1", showEarnings: true,
+      settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)),
+      shifts: [try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode(row))],
+      recurringShifts: [],
+      snapshots: [try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode(wage))],
+      jobs: [
+        try decoder.decode(
+          SharingRPCJobRow.self,
+          from: encoder.encode(TestFixtures.job(id: "job-a", isDefault: true)))
+      ])
+    let shared = try XCTUnwrap(
+      SharingComputeCore.computeShiftsInRange(
+        payload: payload, startDate: "2026-02-02", endDate: "2026-02-02", mode: .visible
+      ).first)
+    XCTAssertEqual(shared.computed.gross, computed.gross, accuracy: 0.001)
+  }
+
+  func testLegacyOvertimeDecodingKeepsReplacementPolicy() throws {
+    let json = Data(
+      """
+      {"enabled":true,"weeklyThresholdHours":1,"rules":[
+        {"days":[1,2,3,4,5,6,7],"appliesOnHolidays":true,"from":"00:00","to":"24:00","percent":50}
+      ]}
+      """.utf8)
+    let decoded = try JSONDecoder().decode(OvertimeConfig.self, from: json)
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [SupplementRule(days: [1], from: "08:00", to: "10:00", rate: 20)],
+      breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: decoded.enabled, weeklyThresholdHours: decoded.weeklyThresholdHours,
+        rules: OvertimeConfig.seededDefaults.rules, retainSupplements: decoded.retainSupplements))
+    let result = try XCTUnwrap(
+      compute(
+        [shift(id: "legacy", date: "2026-02-02", start: "08:00", end: "10:00")],
+        snapshots: [wage]
+      ).first)
+    XCTAssertEqual(result.computed.gross, 520, accuracy: 0.001)
+  }
+
+  func testOvertimePremiumUsesAgreementDivisorWithoutIncreasingOrdinaryPay() throws {
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 200, breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1, rules: OvertimeConfig.seededDefaults.rules,
+        premiumBaseMultiplier: 1_950.0 / 1_850.0))
+    let result = try XCTUnwrap(
+      compute(
+        [shift(id: "pbl", date: "2026-02-02", start: "08:00", end: "10:00")],
+        snapshots: [wage]
+      ).first)
+    XCTAssertEqual(result.computed.basePay, 400, accuracy: 0.001)
+    XCTAssertEqual(result.computed.supplementPay, 105.41, accuracy: 0.001)
+  }
+
+  func testDatedOvertimePreservesHolidayEveNoonThroughEditingAndSharing() throws {
+    let dates = ["2026-12-24"]
+    let eveRule = OvertimeRule(
+      days: Array(1...7), appliesOnHolidays: true, from: "12:00", to: "24:00",
+      percent: 400.0 / 3.0, dates: dates)
+    let holidayRule = OvertimeRule(
+      days: Array(1...7), appliesOnHolidays: false, from: "00:00", to: "24:00",
+      percent: 400.0 / 3.0, dates: ["2026-12-25"])
+    let overtime = OvertimeConfig(
+      enabled: true, weeklyThresholdHours: 0.5,
+      rules: OvertimeConfig.seededDefaults.rules + [
+        OvertimeRuleDraft(eveRule).toRule(), holidayRule,
+      ])
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [SupplementRule(days: Array(1...7), from: "00:00", to: "24:00", rate: 20)],
+      breakEnabled: false, jobId: "job-a", overtime: overtime)
+    for (date, expected) in [("2026-12-23", 560.0), ("2026-12-24", 726.67), ("2026-12-25", 810.0)] {
+      let row = shift(id: "dated", date: date, start: "11:00", end: "13:00")
+      let result = try XCTUnwrap(compute([row], snapshots: [wage], month: 12).first)
+      XCTAssertEqual(result.computed.gross, expected, accuracy: 0.001)
+      let encoder = JSONEncoder()
+      let decoder = JSONDecoder()
+      let payload = SharingRPCPayloadInput(
+        ownerId: "user-1", showEarnings: true,
+        settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)),
+        shifts: [try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode(row))],
+        recurringShifts: [],
+        snapshots: [try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode(wage))],
+        jobs: [
+          try decoder.decode(
+            SharingRPCJobRow.self,
+            from: encoder.encode(TestFixtures.job(id: "job-a", isDefault: true)))
+        ])
+      let shared = try XCTUnwrap(
+        SharingComputeCore.computeShiftsInRange(
+          payload: payload, startDate: date, endDate: date, mode: .visible
+        ).first)
+      XCTAssertEqual(shared.computed.gross, expected, accuracy: 0.001)
+    }
+  }
+
+}
+
+extension PayrollEngineOvertimeTests {
+  func testHandelRetainsHolidayEvePremiumButRemovesOrdinaryUBDuringOvertime() throws {
+    let holiday = SupplementRule(
+      days: Array(1...7), from: "00:00", to: "24:00", percent: 100,
+      stackingGroup: "holiday", dates: ["2027-03-27"])
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 195.8,
+      supplements: [
+        holiday,
+        SupplementRule(
+          days: Array(1...7), from: "00:00", to: "24:00", rate: 30, stackingGroup: "ordinary"),
+      ],
+      breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1, rules: OvertimeConfig.seededDefaults.rules,
+        retainedSupplements: [holiday]))
+    try assertOwnerAndSharedPay(
+      rows: [
+        shift(id: "ordinary", date: "2027-03-27", start: "09:00", end: "10:00"),
+        shift(id: "overtime", date: "2027-03-27", start: "10:00", end: "11:00"),
+      ],
+      wage: wage, expected: [421.6, 489.5], year: 2_027, month: 3)
+  }
+
+  func testRetainedDatedOvernightRulesSplitIndependentlyOfOrdinaryPeriods() throws {
+    let retained = SupplementRule(
+      days: Array(1...7), from: "23:00", to: "01:00", rate: 100, dates: ["2026-02-02"])
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [SupplementRule(days: Array(1...7), from: "00:00", to: "24:00", rate: 20)],
+      breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1,
+        rules: [
+          OvertimeRule(
+            days: Array(1...7), appliesOnHolidays: false,
+            from: "00:00", to: "24:00", percent: 50),
+          OvertimeRule(
+            days: Array(1...7), appliesOnHolidays: true,
+            from: "00:00", to: "24:00", percent: 50),
+        ],
+        retainedSupplements: [retained]))
+    try assertOwnerAndSharedPay(
+      rows: [shift(id: "overnight", date: "2026-02-02", start: "22:00", end: "02:00")],
+      wage: wage, expected: [1_320])
+  }
+
+  func testCleaningApprenticeOvertimePaysAdultBaseForEntireOvertimeHour() throws {
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 133.08, breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1, rules: OvertimeConfig.seededDefaults.rules,
+        baseRate: 247.29))
+    try assertOwnerAndSharedPay(
+      rows: [
+        shift(id: "ordinary", date: "2026-02-02", start: "08:00", end: "09:00"),
+        shift(id: "overtime", date: "2026-02-02", start: "09:00", end: "10:00"),
+      ],
+      wage: wage, expected: [133.08, 370.94])
+  }
+
+  func testCleaningRetainedPercentageUBUsesAdultOvertimeWage() throws {
+    let holiday = SupplementRule(days: Array(1...7), from: "00:00", to: "24:00", percent: 100)
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 133.08, supplements: [holiday], breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1, rules: OvertimeConfig.seededDefaults.rules,
+        baseRate: 247.29, retainedSupplements: [holiday]))
+    try assertOwnerAndSharedPay(
+      rows: [
+        shift(id: "ordinary", date: "2026-05-01", start: "07:00", end: "08:00"),
+        shift(id: "overtime", date: "2026-05-01", start: "08:00", end: "09:00"),
+      ],
+      wage: wage, expected: [266.16, 741.87], month: 5)
+  }
+
+  func testNightGuardHolidayPayFollowsOriginalStartBeforeSixForWholeShift() throws {
+    let holiday = SupplementRule(
+      days: Array(1...7), from: "00:00", to: "24:00", percent: 100,
+      shiftStartDates: ["2027-01-02"], shiftStartBefore: "06:00")
+    let supplements = [
+      holiday,
+      SupplementRule(
+        days: Array(1...7), from: "21:00", to: "06:00", rate: 28),
+    ]
+    for (start, end, expected) in [
+      ("00:00", "08:00", 3_200.0),
+      ("22:00", "06:00", 1_824.0), ("06:00", "08:00", 400.0),
+    ] {
+      let wage = TestFixtures.wageSnapshot(
+        hourlyWage: 200, supplements: supplements, breakEnabled: false, jobId: "job-a")
+      try assertOwnerAndSharedPay(
+        rows: [shift(id: "guard", date: "2027-01-02", start: start, end: end)],
+        wage: wage, expected: [expected], year: 2_027, month: 1)
+    }
+    let wage = TestFixtures.wageSnapshot(
+      hourlyWage: 200, supplements: supplements, breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1,
+        rules: [
+          OvertimeRule(
+            days: Array(1...7), appliesOnHolidays: false,
+            from: "00:00", to: "24:00", percent: 50),
+          OvertimeRule(
+            days: Array(1...7), appliesOnHolidays: true,
+            from: "00:00", to: "24:00", percent: 50),
+        ],
+        retainSupplements: true, retainedSupplements: [holiday]))
+    try assertOwnerAndSharedPay(
+      rows: [shift(id: "guard", date: "2027-01-02", start: "05:00", end: "08:00")],
+      wage: wage, expected: [1_400], year: 2_027, month: 1)
+  }
+
+  private func assertOwnerAndSharedPay(
+    rows: [ShiftRow], wage: WageSnapshot, expected: [Double], year: Int = 2_026, month: Int = 2
+  ) throws {
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    let restored = try decoder.decode(WageSnapshot.self, from: encoder.encode(wage))
+    let owner = compute(rows, snapshots: [restored], month: month, year: year)
+    let payload = SharingRPCPayloadInput(
+      ownerId: "user-1", showEarnings: true,
+      settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)),
+      shifts: try rows.map {
+        try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode($0))
+      },
+      recurringShifts: [],
+      snapshots: [try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode(restored))],
+      jobs: [
+        try decoder.decode(
+          SharingRPCJobRow.self,
+          from: encoder.encode(TestFixtures.job(id: "job-a", isDefault: true)))
+      ])
+    let shared = SharingComputeCore.computeShiftsInRange(
+      payload: payload, startDate: try XCTUnwrap(rows.map(\.shift_date).min()),
+      endDate: try XCTUnwrap(rows.map(\.shift_date).max()), mode: .visible)
+    for (row, gross) in zip(rows, expected) {
+      XCTAssertEqual(
+        try XCTUnwrap(owner.first { $0.id == row.id }).computed.gross, gross, accuracy: 0.001)
+      XCTAssertEqual(
+        try XCTUnwrap(shared.first { $0.id == row.id }).computed.gross, gross, accuracy: 0.001)
+    }
   }
 }

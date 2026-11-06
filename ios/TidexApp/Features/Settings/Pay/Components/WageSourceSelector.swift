@@ -13,7 +13,7 @@ struct WageSourceSelector: View {
   /// When false, only shows custom wage input (hides tariff toggle)
   /// Used when user's currency is not "kr" (Norwegian krone)
   var showTariffOption: Bool = true
-  /// Optional tariff version to use for rates (when nil, uses static fallback)
+  /// The matching tariff version, when it has been loaded.
   var tariffVersion: TariffVersion?  // swiftlint:disable:this explicit_acl
   /// Preserve a saved rate until the user explicitly selects a tariff rate.
   var savedTariffRate: Double?
@@ -22,12 +22,19 @@ struct WageSourceSelector: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  /// Tariff levels to display - from version if available, otherwise static fallback
+  /// Offer loaded categories, or preserve only the existing saved wage.
   private var tariffLevels: [TariffLevel] {
     if let version = tariffVersion {
       return TariffLevel.from(tariffVersion: version)
     }
-    return TariffLevel.all
+    if let savedTariffRate {
+      return [
+        TariffLevel(
+          level: wageLevel, rate: savedTariffRate,
+          label: String(localized: .settingsPayEditorCurrentWage))
+      ]
+    }
+    return []
   }
 
   /// Get wage rate for a specific level
@@ -36,10 +43,9 @@ struct WageSourceSelector: View {
       return savedTariffRate
     }
     if let version = tariffVersion {
-      return version.rate(forLevel: level) ?? PayrollCalculator.presetWageRates[String(level)]
-        ?? 184.54
+      return version.rate(forLevel: level) ?? 0
     }
-    return PayrollCalculator.presetWageRates[String(level)] ?? 184.54
+    return 0
   }
 
   var body: some View {
@@ -109,7 +115,8 @@ struct WageSourceSelector: View {
     VStack(spacing: Spacing.xs) {
       ForEach(tariffLevels) { level in
         TariffLevelSelectionRow(
-          level: TariffLevel(level: level.level, rate: wageRate(for: level.level)),
+          level: TariffLevel(
+            level: level.level, rate: wageRate(for: level.level), label: level.label),
           isSelected: wageLevel == level.level,
           action: {
             withAnimation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8)) {

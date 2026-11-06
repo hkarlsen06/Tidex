@@ -48,12 +48,6 @@ struct WageScreen: View {
         }
       }
     }
-    .task {
-      // Ensure tariff version is loaded for the selected type
-      if data.currentTariffVersion == nil, data.wageType == .tariff {
-        await loadTariffVersion(for: data.selectedTariffTypeId)
-      }
-    }
     .onChange(of: ConnectivityMonitor.shared.isOnline) { _, isOnline in
       // Reload the tariff lists once the connection is back.
       if isOnline, tariffLoadFailed { Task { await loadTariffData() } }
@@ -186,6 +180,7 @@ struct WageScreen: View {
       OnboardingButton(
         title: isKeyboardVisible
           ? String(localized: .commonDone) : String(localized: .commonContinue),
+        isEnabled: isKeyboardVisible || data.hasValidWageSelection,
         action: {
           if isKeyboardVisible {
             dismissKeyboard()
@@ -296,21 +291,27 @@ struct WageScreen: View {
       // Load latest version for the selected tariff type
       await loadTariffVersion(for: data.selectedTariffTypeId)
     } catch {
-      // Static fallback rates stay in use. The offline hint tells the user why.
       tariffLoadFailed = true
     }
   }
 
   private func loadTariffVersion(for tariffTypeId: String) async {
+    data.currentTariffVersion = nil
     do {
       let version = try await TariffVersionService.shared.getLatestTariffVersion(
         tariffType: tariffTypeId)
+      guard data.selectedTariffTypeId == tariffTypeId else { return }
       await MainActor.run {
         data.currentTariffVersion = version
+        if let version, version.rate(forLevel: data.selectedTariffLevel) == nil,
+          let first = TariffLevel.from(tariffVersion: version).first
+        {
+          data.selectedTariffLevel = first.level
+        }
       }
-      tariffLoadFailed = false
+      tariffLoadFailed = version == nil
     } catch {
-      // Static fallback rates stay in use. The offline hint tells the user why.
+      guard data.selectedTariffTypeId == tariffTypeId else { return }
       tariffLoadFailed = true
     }
   }

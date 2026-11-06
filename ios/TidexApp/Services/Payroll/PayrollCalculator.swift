@@ -76,7 +76,8 @@ struct PayrollCalculator {
       endTime: shift.end_time,
       weekday: weekday,
       baseRate: baseRate,
-      rules: rules
+      rules: rules,
+      shiftDate: shift.shift_date
     )
 
     // Calculate raw duration (durationMinutes is Double for precision)
@@ -262,7 +263,12 @@ struct PayrollCalculator {
           from: rule.from,
           to: rule.to,
           rate: rule.rate,
-          percent: rule.percent
+          percent: rule.percent,
+          stackingGroup: rule.stackingGroup, dates: rule.dates, excludedDates: rule.excludedDates,
+          shiftStartDates: rule.shiftStartDates,
+          excludedShiftStartDates: rule.excludedShiftStartDates,
+          shiftStartBefore: rule.shiftStartBefore,
+          minimumRate: rule.minimumRate, percentageBaseRate: rule.percentageBaseRate
         )
       }
     }

@@ -1,3 +1,19 @@
+import Foundation
+
+struct TariffCategory: Codable, Equatable {
+  let level: Int
+  let labelEn: String
+  let labelNb: String
+
+  var label: String { Locale.appLocale.isNorwegian ? labelNb : labelEn }
+
+  private enum CodingKeys: String, CodingKey {
+    case level
+    case labelEn = "label_en"
+    case labelNb = "label_nb"
+  }
+}
+
 // MARK: - Tariff Type
 
 /// A tariff type representing a specific collective agreement (e.g., "HK Detaljhandel")
@@ -13,6 +29,20 @@ struct TariffType: Codable, Identifiable, Equatable {
   let country: String
   /// Whether this is the default tariff type for new users
   let is_default: Bool
+  var displayNameEnglish: String?
+  var displayNameNorwegian: String?
+
+  var displayName: String {
+    Locale.appLocale.isNorwegian
+      ? displayNameNorwegian ?? display_name : displayNameEnglish ?? display_name
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id, description, country
+    case display_name, is_default  // swiftlint:disable:this identifier_name
+    case displayNameEnglish = "display_name_en"
+    case displayNameNorwegian = "display_name_nb"
+  }
 }
 
 // MARK: - Tariff Version
@@ -34,9 +64,45 @@ struct TariffVersion: Codable, Identifiable, Equatable {
   let supplements: SupplementRulesSnapshot
   /// Overtime rules for this tariff version
   let overtime: OvertimeConfig?
+  var categories: [TariffCategory]?
+  var sourceURLString: String?
+  var verifiedOn: String?
+  var coverageNoteFallback: String?
+  var coverageNoteEnglish: String?
+  var coverageNoteNorwegian: String?
+  var validThrough: String?
+  var legalEffectiveDate: String?
+
+  var coverageNote: String? {
+    Locale.appLocale.isNorwegian
+      ? coverageNoteNorwegian ?? coverageNoteFallback : coverageNoteEnglish ?? coverageNoteFallback
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id, name, rates, supplements, overtime, categories
+    case tariff_type_id, effective_date  // swiftlint:disable:this identifier_name
+    case sourceURLString = "source_url"
+    case verifiedOn = "verified_on"
+    case coverageNoteFallback = "coverage_note"
+    case coverageNoteEnglish = "coverage_note_en"
+    case coverageNoteNorwegian = "coverage_note_nb"
+    case validThrough = "valid_through"
+    case legalEffectiveDate = "legal_effective_date"
+  }
+
+  func isApplicable(on date: String) -> Bool {
+    effective_date <= date && (validThrough.map { date <= $0 } ?? true)
+  }
+
+  var sourceURL: URL? {
+    guard let sourceURLString, let url = URL(string: sourceURLString), url.scheme == "https" else {
+      return nil
+    }
+    return url
+  }
 
   /// Get hourly wage for a specific level
-  /// - Parameter level: The wage level (1-9)
+  /// - Parameter level: The category ID within this agreement.
   /// - Returns: The hourly rate in NOK, or nil if level not found
   func rate(forLevel level: Int) -> Double? {
     rates[String(level)]

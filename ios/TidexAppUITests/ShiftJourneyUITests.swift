@@ -89,6 +89,98 @@ final class ShiftJourneyUITests: XCTestCase {
       "A payment must not create a shift or add worked hours")
   }
 
+  func testTariffSelectionSavesAdditionalSeniorityCategory() {
+    let app = XCUIApplication()
+    app.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-cachedTheme", "dark",
+    ]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "design-review"
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "tariff-catalogue"
+    app.launchEnvironment["TIDEX_TEST_TARIFFS"] = "1"
+    app.launch()
+    let category = app.buttons["tariff.category.7"]
+    XCTAssertTrue(category.waitForExistence(timeout: timeout), app.debugDescription)
+    retainScreenshot(app, name: "tariff-hotel-en-dark")
+    for _ in 0..<5 where !category.isHittable { app.swipeUp() }
+    category.tap()
+    retainScreenshot(app, name: "tariff-seniority-selection")
+    app.buttons["Continue"].tap()
+    let saved = app.staticTexts["tariff.saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: timeout), app.debugDescription)
+    XCTAssertEqual(saved.label, "riksavtalen_hotel|7|218.9")
+  }
+
+  func testSecurityScheduleAndQualificationSaveTheirCombinedRate() {
+    let app = XCUIApplication()
+    launchTariffJourney(app, type: "vekter_355", language: "nb", theme: "light")
+    let category = app.buttons["tariff.category.11"]
+    XCTAssertTrue(category.waitForExistence(timeout: timeout), app.debugDescription)
+    retainScreenshot(app, name: "tariff-security-nb-light")
+    for _ in 0..<6 where !category.isHittable { app.swipeUp() }
+    category.tap()
+    retainScreenshot(app, name: "tariff-security-qualified")
+    app.buttons["Fortsett"].tap()
+    let saved = app.staticTexts["tariff.saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: timeout), app.debugDescription)
+    XCTAssertEqual(saved.label, "vekter_355|11|274.58")
+  }
+
+  func testMunicipalAnnualPayCategorySavesHourlyEquivalentAtLargeText() {
+    let app = XCUIApplication()
+    launchTariffJourney(app, type: "ks_ch4_375", language: "en", theme: "dark", largeText: true)
+    let category = app.buttons["tariff.category.1"]
+    XCTAssertTrue(category.waitForExistence(timeout: timeout), app.debugDescription)
+    for _ in 0..<6 where !category.isHittable { app.swipeUp() }
+    category.tap()
+    retainScreenshot(app, name: "tariff-ks-en-large")
+    app.buttons["Continue"].tap()
+    let saved = app.staticTexts["tariff.saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: timeout), app.debugDescription)
+    XCTAssertTrue(saved.label.hasPrefix("ks_ch4_375|1|"))
+    XCTAssertEqual(
+      Double(saved.label.split(separator: "|").last ?? "") ?? 0, 418_600 / 1_950, accuracy: 0.001)
+  }
+
+  func testDatedOvertimeSurvivesSavingThePayEditor() {
+    let app = XCUIApplication()
+    app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-cachedTheme", "dark"]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "design-review"
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "tariff-overtime-editor"
+    app.launchEnvironment["TIDEX_TEST_TARIFFS"] = "1"
+    app.launch()
+    let rules = app.buttons["Calendar rules from the agreement"]
+    XCTAssertTrue(rules.waitForExistence(timeout: timeout), app.debugDescription)
+    rules.tap()
+    retainScreenshot(app, name: "tariff-calendar-overtime")
+    app.buttons["Save"].tap()
+    let saved = app.staticTexts["tariff.overtime-saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: timeout), app.debugDescription)
+    let parts = saved.label.split(separator: "|")
+    XCTAssertEqual(parts.count, 3)
+    guard parts.count == 3 else { return }
+    XCTAssertEqual(Double(parts[0]) ?? 0, 418_600 / 1_950, accuracy: 0.001)
+    XCTAssertGreaterThan(Int(parts[1]) ?? 0, 0)
+    XCTAssertEqual(Double(parts[2]) ?? 0, 400 / 3, accuracy: 0.001)
+  }
+
+  private func launchTariffJourney(
+    _ app: XCUIApplication, type: String, language: String, theme: String, largeText: Bool = false
+  ) {
+    app.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(\(language))", "-cachedTheme", theme,
+    ]
+    if largeText {
+      app.launchArguments += [
+        "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+      ]
+    }
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "design-review"
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "tariff-catalogue"
+    app.launchEnvironment["TIDEX_TEST_TARIFFS"] = "1"
+    app.launchEnvironment["TIDEX_TEST_TARIFF_TYPE"] = type
+    app.launch()
+  }
+
   private func launchPaymentJourney(_ app: XCUIApplication) {
     app.launchArguments = [
       "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",

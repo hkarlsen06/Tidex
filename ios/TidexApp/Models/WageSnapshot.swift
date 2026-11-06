@@ -22,6 +22,8 @@ struct OvertimeRule: Codable, Equatable {
   let from: String
   let to: String
   let percent: Double
+  var dates: [String]?
+  var excludedDates: [String]?
 }
 
 struct OvertimeConfig: Codable, Equatable {
@@ -30,16 +32,45 @@ struct OvertimeConfig: Codable, Equatable {
 
   let enabled: Bool
   let weeklyThresholdHours: Double
+  let retainSupplements: Bool
+  let premiumBaseMultiplier: Double?
+  let baseRate: Double?
+  let retainedSupplements: [SupplementRule]?
   let rules: [OvertimeRule]
 
   init(
     enabled: Bool = false,
     weeklyThresholdHours: Double = Self.defaultWeeklyThresholdHours,
-    rules: [OvertimeRule] = []
+    rules: [OvertimeRule] = [],
+    retainSupplements: Bool = false,
+    premiumBaseMultiplier: Double? = nil,
+    baseRate: Double? = nil,
+    retainedSupplements: [SupplementRule]? = nil
   ) {
     self.enabled = enabled
     self.weeklyThresholdHours = weeklyThresholdHours
     self.rules = rules
+    self.retainSupplements = retainSupplements
+    self.premiumBaseMultiplier = premiumBaseMultiplier
+    self.baseRate = baseRate
+    self.retainedSupplements = retainedSupplements
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case enabled, weeklyThresholdHours, rules, retainSupplements, premiumBaseMultiplier
+    case baseRate, retainedSupplements
+  }
+
+  init(from decoder: Decoder) throws {
+    let values = try decoder.container(keyedBy: CodingKeys.self)
+    enabled = try values.decode(Bool.self, forKey: .enabled)
+    weeklyThresholdHours = try values.decode(Double.self, forKey: .weeklyThresholdHours)
+    rules = try values.decode([OvertimeRule].self, forKey: .rules)
+    retainSupplements = try values.decodeIfPresent(Bool.self, forKey: .retainSupplements) ?? false
+    premiumBaseMultiplier = try values.decodeIfPresent(Double.self, forKey: .premiumBaseMultiplier)
+    baseRate = try values.decodeIfPresent(Double.self, forKey: .baseRate)
+    retainedSupplements = try values.decodeIfPresent(
+      [SupplementRule].self, forKey: .retainedSupplements)
   }
 
   static let disabled = OvertimeConfig()
@@ -82,6 +113,10 @@ struct OvertimeConfig: Codable, Equatable {
   var runtimeEnabledConfig: OvertimeConfig? {
     guard enabled else { return nil }
     guard weeklyThresholdHours.isFinite, weeklyThresholdHours > 0 else { return nil }
+    if let premiumBaseMultiplier {
+      guard premiumBaseMultiplier.isFinite, premiumBaseMultiplier > 0 else { return nil }
+    }
+    if let baseRate { guard baseRate.isFinite, baseRate > 0 else { return nil } }
     guard rules.allSatisfy(Self.isValidRule) else { return nil }
     guard Self.rulesCoverFullDay(rules, holiday: false) else { return nil }
     guard Self.rulesCoverFullDay(rules, holiday: true) else { return nil }
@@ -128,7 +163,7 @@ struct OvertimeConfig: Codable, Equatable {
   private static func rulesCoverFullDay(_ rules: [OvertimeRule], holiday: Bool) -> Bool {
     for day in 1...7 {
       let intervals = rules.compactMap { rule -> (Int, Int)? in
-        guard rule.days.contains(day) else { return nil }
+        guard rule.dates == nil, rule.days.contains(day) else { return nil }
         if holiday {
           guard rule.appliesOnHolidays else { return nil }
         } else if isHolidayOnlyRule(rule) {

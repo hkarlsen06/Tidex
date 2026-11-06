@@ -434,6 +434,14 @@ struct SharingRPCJobRow: Codable, Equatable, Sendable {
 }
 
 struct SharingRPCSupplementRule: Codable, Equatable, Sendable {
+  var stackingGroup: String?
+  var dates: [String]?
+  var excludedDates: [String]?
+  var shiftStartDates: [String]?
+  var excludedShiftStartDates: [String]?
+  var shiftStartBefore: String?
+  var minimumRate: Double?
+  var percentageBaseRate: Double?
   let days: [Int]
   let from: String
   let to: String
@@ -442,6 +450,14 @@ struct SharingRPCSupplementRule: Codable, Equatable, Sendable {
 }
 
 struct SharingRPCCustomSupplementRule: Codable, Equatable, Sendable {
+  var stackingGroup: String?
+  var dates: [String]?
+  var excludedDates: [String]?
+  var shiftStartDates: [String]?
+  var excludedShiftStartDates: [String]?
+  var shiftStartBefore: String?
+  var minimumRate: Double?
+  var percentageBaseRate: Double?
   let from: String
   let to: String
   let rate: Double?
@@ -454,6 +470,8 @@ struct SharingRPCCustomSupplementRule: Codable, Equatable, Sendable {
     case rate
     case percent
     case isCustom = "is_custom"
+    case stackingGroup, dates, excludedDates, shiftStartDates, excludedShiftStartDates
+    case minimumRate, percentageBaseRate, shiftStartBefore
   }
 }
 
@@ -612,12 +630,18 @@ struct SharingRPCOvertimeRule: Codable, Equatable, Sendable {
   let from: String
   let to: String
   let percent: Double
+  var dates: [String]?
+  var excludedDates: [String]?
 }
 
 struct SharingRPCOvertimeConfig: Codable, Equatable, Sendable {
   let enabled: Bool
   let weeklyThresholdHours: Double
   let rules: [SharingRPCOvertimeRule]
+  var retainSupplements: Bool?
+  var premiumBaseMultiplier: Double?
+  var baseRate: Double?
+  var retainedSupplements: [SharingRPCSupplementRule]?
 
   static let disabled = SharingRPCOvertimeConfig(
     enabled: false,
@@ -1317,6 +1341,7 @@ enum SharingComputeCore {
     let from: Int
     let to: Int
     let rate: Double
+    let group: String
   }
 
   private static func applyOvertime(
@@ -1446,15 +1471,27 @@ enum SharingComputeCore {
     var cursor = segment.absoluteStart
     var cursorCumulative = cumulativeMinutes
     var pieces: [SharingOvertimePiece] = []
+    let retainedPeriods = buildWagePeriods(
+      startTime: segment.shift.startTime, endTime: segment.shift.endTime,
+      weekday: weekday(from: segment.shiftDayStart),
+      baseRate: config.baseRate ?? segment.period.baseRate,
+      rules: segment.shift.customSupplements?.rules.isEmpty == true
+        ? [] : config.retainedSupplements ?? [], shiftDate: segment.shift.shiftDate)
 
     while cursor < segment.absoluteEnd {
-      let next = nextSharingOvertimeBoundary(
+      var next = nextSharingOvertimeBoundary(
         after: cursor,
         segmentEnd: segment.absoluteEnd,
         config: config,
         cumulativeMinutes: cursorCumulative,
         thresholdMinutes: thresholdMinutes
       )
+      for period in retainedPeriods {
+        for minute in [period.fromMin, period.toMin] {
+          let boundary = segment.shiftDayStart.addingTimeInterval(minute * 60)
+          if boundary > cursor && boundary < next { next = boundary }
+        }
+      }
       let durationMinutes = minutesBetween(cursor, next)
       guard durationMinutes > 0 else { break }
 
@@ -1462,8 +1499,17 @@ enum SharingComputeCore {
         cursorCumulative >= thresholdMinutes
         ? sharingOvertimePercent(config: config, at: cursor)
         : nil
+      let minute = minutesBetween(segment.shiftDayStart, cursor)
+      let retained =
+        config.retainedSupplements != nil
+        ? retainedPeriods.first { $0.fromMin <= minute && minute < $0.toMin }?.supplementRate ?? 0
+        : config.retainSupplements == true ? segment.period.supplementRate : 0
+      let baseRate =
+        percent == nil ? segment.period.baseRate : config.baseRate ?? segment.period.baseRate
       let supplementRate =
-        percent.map { segment.period.baseRate * $0 / 100 }
+        percent.map {
+          baseRate * (config.premiumBaseMultiplier ?? 1) * $0 / 100 + retained
+        }
         ?? segment.period.supplementRate
 
       pieces.append(
@@ -1473,7 +1519,7 @@ enum SharingComputeCore {
           period: SharingRPCWagePeriod(
             fromMin: minutesBetween(segment.shiftDayStart, cursor),
             toMin: minutesBetween(segment.shiftDayStart, next),
-            baseRate: segment.period.baseRate,
+            baseRate: baseRate,
             supplementRate: supplementRate,
             isOvertime: percent != nil
           ),
@@ -1519,6 +1565,16 @@ enum SharingComputeCore {
   private static func runtimeOvertimeConfig(_ config: SharingRPCOvertimeConfig?)
     -> SharingRPCOvertimeConfig?
   {
+    if let baseRate = config?.baseRate,
+      !baseRate.isFinite || baseRate <= 0
+    {
+      return nil
+    }
+    if let multiplier = config?.premiumBaseMultiplier,
+      !multiplier.isFinite || multiplier <= 0
+    {
+      return nil
+    }
     guard let config, config.enabled, config.weeklyThresholdHours.isFinite,
       config.weeklyThresholdHours > 0, !config.rules.isEmpty
     else {
@@ -1553,7 +1609,7 @@ enum SharingComputeCore {
   ) -> Bool {
     for day in 1...7 {
       let intervals = rules.compactMap { rule -> (Int, Int)? in
-        guard rule.days.contains(day) else {
+        guard rule.dates == nil, rule.days.contains(day) else {
           return nil
         }
         if holiday {
@@ -1635,6 +1691,13 @@ enum SharingComputeCore {
     at date: Date
   ) -> Bool {
     guard rule.days.contains(weekday(from: date)) else { return false }
+    let components = sharingCalendar.dateComponents([.year, .month, .day], from: date)
+    guard let year = components.year, let month = components.month, let day = components.day else {
+      return false
+    }
+    let iso = String(format: "%04d-%02d-%02d", year, month, day)
+    if rule.excludedDates?.contains(iso) == true { return false }
+    if let dates = rule.dates { return dates.contains(iso) }
     if isNorwegianPublicHoliday(date) {
       return rule.appliesOnHolidays
     }
@@ -1863,7 +1926,8 @@ enum SharingComputeCore {
       endTime: shift.endTime,
       weekday: weekday,
       baseRate: baseRate,
-      rules: rules
+      rules: rules,
+      shiftDate: shift.shiftDate
     )
     let originalPeriods = periods
 
@@ -1974,6 +2038,11 @@ enum SharingComputeCore {
 
       return customSupplements.rules.map { rule in
         SharingRPCSupplementRule(
+          stackingGroup: rule.stackingGroup, dates: rule.dates, excludedDates: rule.excludedDates,
+          shiftStartDates: rule.shiftStartDates,
+          excludedShiftStartDates: rule.excludedShiftStartDates,
+          shiftStartBefore: rule.shiftStartBefore,
+          minimumRate: rule.minimumRate, percentageBaseRate: rule.percentageBaseRate,
           days: Array(1...7),
           from: rule.from,
           to: rule.to,
@@ -2001,26 +2070,40 @@ enum SharingComputeCore {
     endTime: String,
     weekday: Int,
     baseRate: Double,
-    rules: [SharingRPCSupplementRule]
+    rules: [SharingRPCSupplementRule],
+    shiftDate: String
   ) -> [SharingRPCWagePeriod] {
     guard let start = timeToMinutes(startTime), var end = timeToMinutes(endTime) else { return [] }
     if end <= start { end += 24 * 60 }
 
     var windows: [SharingRateWindow] = []
     for rule in rules {
+      if let limit = rule.shiftStartBefore {
+        guard let before = timeToMinutes(limit), start < before else { continue }
+      }
+      if let required = rule.shiftStartDates, !required.contains(shiftDate) { continue }
+      if rule.excludedShiftStartDates?.contains(shiftDate) == true { continue }
       guard let from = timeToMinutes(rule.from), let to = timeToMinutes(rule.to), from != to else {
         continue
       }
       for dayOffset in -1...1 {
         let ruleWeekday = (weekday - 1 + dayOffset + 7) % 7 + 1
         guard rule.days.contains(ruleWeekday) else { continue }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let iso = dateFromISO(shiftDate).flatMap {
+          calendar.date(byAdding: .day, value: dayOffset, to: $0)
+        }.map { isoDateString($0) }
+        if let dates = rule.dates, !dates.contains(iso ?? "") { continue }
+        if let iso, rule.excludedDates?.contains(iso) == true { continue }
         let windowFrom = from + dayOffset * 24 * 60
         let windowTo = to + dayOffset * 24 * 60 + (to < from ? 24 * 60 : 0)
         guard windowTo > start, windowFrom < end else { continue }
         windows.append(
           SharingRateWindow(
             from: windowFrom, to: windowTo,
-            rate: resolveSupplementRate(rule: rule, baseRate: baseRate)))
+            rate: resolveSupplementRate(rule: rule, baseRate: baseRate),
+            group: rule.stackingGroup ?? ""))
       }
     }
     var points = Set([start, end])
@@ -2030,7 +2113,11 @@ enum SharingComputeCore {
     }
     let sorted = points.sorted()
     return zip(sorted, sorted.dropFirst()).map { from, to in
-      let supplement = windows.filter { from >= $0.from && to <= $0.to }.map(\.rate).max() ?? 0
+      var groups: [String: Double] = [:]
+      for window in windows where from >= window.from && to <= window.to {
+        groups[window.group] = max(groups[window.group] ?? 0, window.rate)
+      }
+      let supplement = groups.values.reduce(0, +)
       return SharingRPCWagePeriod(
         fromMin: Double(from), toMin: Double(to), baseRate: baseRate, supplementRate: supplement
       )
@@ -2145,7 +2232,10 @@ enum SharingComputeCore {
     }
 
     if let percent = rule.percent, percent.isFinite, percent >= 0 {
-      return (baseRate * percent) / 100.0
+      let basis = rule.percentageBaseRate ?? baseRate
+      let minimum = rule.minimumRate ?? 0
+      guard basis.isFinite, basis >= 0, minimum.isFinite, minimum >= 0 else { return 0 }
+      return max(minimum, (basis * percent) / 100.0)
     }
 
     return 0
@@ -2666,6 +2756,12 @@ enum FriendsAPIClient {
   private struct BootstrapArgs: Encodable, Sendable {
     let preview_start_date: String
     let preview_end_date: String
+    let payrollRevision = "2026-11"
+
+    enum CodingKeys: String, CodingKey {
+      case preview_start_date, preview_end_date
+      case payrollRevision = "payroll_revision"
+    }
   }
 
   private struct FriendsTabBootstrapRPCResponse: Decodable, Sendable {
@@ -2715,7 +2811,8 @@ enum FriendsAPIClient {
     } catch ConvexAPI.Failure.badResponse(let status) {
       throw FriendsAPIError.httpError(statusCode: status)
     } catch let error as ConvexAPI.Failure {
-      throw FriendsAPIError.networkError(underlying: "\(path) failed: \(error.localizedDescription)")
+      throw FriendsAPIError.networkError(
+        underlying: "\(path) failed: \(error.localizedDescription)")
     } catch let error as DecodingError {
       throw FriendsAPIError.decodingError(underlying: error.localizedDescription)
     } catch {
@@ -3111,7 +3208,8 @@ enum FriendsAPIClient {
         .mutation, "messages:send", args)
     }
 
-    private static func getOrCreateDirectThread(otherUserId: String) async throws -> ShareThreadRow {
+    private static func getOrCreateDirectThread(otherUserId: String) async throws -> ShareThreadRow
+    {
       try await FriendsAPIClient.callConvex(
         .mutation, "threads:getOrCreateDirect", DirectThreadArgs(other_user_id: otherUserId))
     }

@@ -70,26 +70,54 @@ actor TariffVersionService {
 
   nonisolated static let defaultCacheURL: URL? = FileManager.default
     .urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-    .appendingPathComponent("TariffCache.json")
+    .appendingPathComponent("TariffCache-2026-11.json")
+
+  private struct CatalogueArgs: Encodable, Sendable {
+    let catalogueRevision = "2026-11"
+    enum CodingKeys: String, CodingKey { case catalogueRevision = "catalogue_revision" }
+  }
 
   private struct VersionsArgs: Encodable, Sendable {
     let tariffType: String
-    enum CodingKeys: String, CodingKey { case tariffType = "tariff_type" }
+    let catalogueRevision = "2026-11"
+    enum CodingKeys: String, CodingKey {
+      case tariffType = "tariff_type"
+      case catalogueRevision = "catalogue_revision"
+    }
   }
 
   nonisolated static let remoteTypes: FetchTypes = {
-    try await ConvexAPI.app.query("tariffs:types")
+    #if DEBUG
+      if TariffCatalogueFixture.enabled { return try TariffCatalogueFixture.load().types }
+    #endif
+    return try await ConvexAPI.app.query("tariffs:types", CatalogueArgs())
   }
 
   nonisolated static let remoteVersions: FetchVersions = { tariffType in
-    try await ConvexAPI.app.query("tariffs:versions", VersionsArgs(tariffType: tariffType))
+    #if DEBUG
+      if TariffCatalogueFixture.enabled {
+        return try TariffCatalogueFixture.load().versions.filter { $0.tariff_type_id == tariffType }
+          .sorted { $0.effective_date > $1.effective_date }
+      }
+    #endif
+    return try await ConvexAPI.app.query("tariffs:versions", VersionsArgs(tariffType: tariffType))
   }
 
   /// Convex has no lookup by date. The list is small and sorted newest first, so this
   /// picks the newest version that is effective on `date`. ISO dates compare as strings.
   nonisolated static let remoteVersionForDate: FetchVersionForDate = { tariffType, date in
     let versions = try await remoteVersions(tariffType)
-    return versions.filter { $0.effective_date <= date }.max { $0.effective_date < $1.effective_date }
+    return applicableVersion(in: versions, on: date)
+  }
+
+  nonisolated static func applicableVersion(in versions: [TariffVersion], on date: String)
+    -> TariffVersion?
+  {
+    guard
+      let version = versions.filter({ $0.effective_date <= date })
+        .max(by: { $0.effective_date < $1.effective_date }), version.isApplicable(on: date)
+    else { return nil }
+    return version
   }
 
   private func persist() {
@@ -194,7 +222,9 @@ actor TariffVersionService {
     logger.info("Fetching tariff version for \(tariffType) at date \(date)")
 
     do {
-      guard let version = try await fetchVersionForDate(tariffType, date) else {
+      guard let version = try await fetchVersionForDate(tariffType, date),
+        version.tariff_type_id == tariffType, version.isApplicable(on: date)
+      else {
         logger.info("No tariff version found for \(tariffType) at date \(date)")
         return nil
       }
@@ -213,7 +243,7 @@ actor TariffVersionService {
       // Resolve the date from the saved version list. ISO dates compare correctly as strings.
       if let cached = cachedVersions[tariffType] {
         logger.warning("Resolving tariff version for \(date) from saved versions due to error")
-        return cached.filter { $0.effective_date <= date }.max { $0.effective_date < $1.effective_date }
+        return Self.applicableVersion(in: cached, on: date)
       }
 
       throw error
@@ -228,7 +258,8 @@ actor TariffVersionService {
     let versions = try await getTariffVersions(tariffType: tariffType)
 
     // Versions are ordered by effective_date descending, so first is latest
-    guard let latest = versions.first else {
+    let date = Date().toISODateString()
+    guard let latest = Self.applicableVersion(in: versions, on: date) else {
       logger.info("No tariff versions found for \(tariffType)")
       return nil
     }

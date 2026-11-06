@@ -448029,6 +448029,1134 @@
         }
       }
     },
+    "tariff.calendarRules" : {
+      "comment" : "Disclosure for read-only overtime rules with specific calendar dates supplied by the selected agreement.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قواعد التقويم الواردة في الاتفاقية"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Календарни правила от колективния договор"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "চুক্তি অনুযায়ী ক্যালেন্ডারের নিয়ম"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regles de calendari del conveni"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalendářní pravidla z kolektivní smlouvy"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalenderregler fra overenskomsten"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalenderregeln aus dem Tarifvertrag"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ημερολογιακοί κανόνες της συλλογικής σύμβασης"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar rules from the agreement"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reglas de fechas del convenio"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kollektiivlepingu kalendrireeglid"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قوانین تقویمیِ قرارداد جمعی"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Työehtosopimuksen kalenterisäännöt"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mga tuntunin sa petsa mula sa kasunduan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Règles calendaires de la convention collective"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כללי תאריכים מההסכם הקיבוצי"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "समझौते के कैलेंडर नियम"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalendarska pravila iz kolektivnog ugovora"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A kollektív szerződés naptári szabályai"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aturan tanggal dari perjanjian kerja"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dagsetningarreglur úr kjarasamningnum"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regole per le date del contratto collettivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "労働協約の暦日ルール"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단체협약의 날짜별 규칙"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalendorinės taisyklės pagal kolektyvinę sutartį"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalendāra noteikumi no koplīguma"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datoregler fra tariffavtalen"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalenderregels uit de cao"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datoreglar frå tariffavtalen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zasady kalendarzowe z układu zbiorowego"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regras de calendário do acordo coletivo"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reguli calendaristice din contractul colectiv"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Календарные правила из соглашения"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalendárne pravidlá z kolektívnej zmluvy"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koledarska pravila iz kolektivne pogodbe"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalendarska pravila iz kolektivnog ugovora"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalenderregler från kollektivavtalet"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kanuni za kalenda za mkataba"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ஒப்பந்தத்தின் காலண்டர் விதிகள்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กฎวันที่ตามข้อตกลง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sözleşmedeki takvim kuralları"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Календарні правила з колективного договору"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معاہدے کے مطابق کیلنڈر کے قواعد"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quy định theo ngày của thỏa ước lao động"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "协议中的日历规则"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "協議中的日曆規則"
+          }
+        }
+      }
+    },
+    "tariff.publishedDate" : {
+      "comment" : "Label before the legal date of the published pay table, distinct from the date Tidex activates the catalogue correction.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسري الأجور المعلنة اعتبارًا من"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Публикуваните ставки важат от"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "প্রকাশিত মজুরির হার কার্যকর হবে"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les tarifes publicades s'apliquen a partir del"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zveřejněné sazby platí od"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offentliggjorte satser gælder fra"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veröffentlichte Vergütungssätze gelten ab"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Οι δημοσιευμένες αμοιβές ισχύουν από"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Published rates apply from"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las tarifas publicadas se aplican desde"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avaldatud määrad kehtivad alates"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نرخ‌های منتشرشده از تاریخ زیر اعمال می‌شوند"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Julkaistut palkkatasot ovat voimassa alkaen"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ang mga inilathalang rate ay may bisa mula"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les taux publiés s’appliquent à partir du"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התעריפים שפורסמו חלים החל מ־"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्रकाशित दरें इस तारीख से लागू हैं"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objavljene satnice vrijede od"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A közzétett díjtételek ettől érvényesek:"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarif yang diterbitkan berlaku mulai"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Birtir taxtar gilda frá"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le tariffe pubblicate si applicano dal"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公表された賃金単価の適用開始日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공표된 요율 적용 시작일"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paskelbti įkainiai galioja nuo"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publicētās likmes ir spēkā no"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publiserte satser gjelder fra"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gepubliceerde tarieven gelden vanaf"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publiserte satsar gjeld frå"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opublikowane stawki obowiązują od"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As taxas publicadas são válidas a partir de"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifele publicate se aplică de la"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Опубликованные ставки действуют с"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zverejnené sadzby platia od"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objavljene tarifne postavke veljajo od"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objavljene tarife važe od"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publicerade lönesatser gäller från"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viwango vilivyochapishwa vinatumika kuanzia"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "வெளியிடப்பட்ட ஊதிய விகிதங்கள் அமலாகும் தேதி"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัตราค่าจ้างที่ประกาศมีผลตั้งแต่"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayımlanan ücret tarifeleri şu tarihten itibaren geçerlidir"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Опубліковані ставки діють із"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شائع شدہ شرحیں اس تاریخ سے لاگو ہیں"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mức lương đã công bố áp dụng từ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已公布的费率自以下日期起适用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公布費率自以下日期起適用"
+          }
+        }
+      }
+    },
+    "tariff.source" : {
+      "comment" : "Link to the official collective agreement or statutory pay source.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأسعار والاتفاقية الرسمية"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Официални ставки и споразумение"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "সরকারি মজুরির হার ও চুক্তি"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taules salarials i conveni oficials"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oficiální sazby a kolektivní smlouva"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Officielle satser og overenskomst"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offizielle Tarifsätze und Tarifvertrag"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Επίσημες αμοιβές και σύμβαση"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Official rates and agreement"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifas oficiales y convenio"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ametlikud palgamäärad ja leping"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نرخ‌ها و توافق‌نامه رسمی"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viralliset palkkatasot ja työehtosopimus"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opisyal na mga rate at kasunduan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barèmes officiels et convention collective"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תעריפים והסכם רשמיים"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आधिकारिक वेतन दरें और समझौता"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Službene satnice i ugovor"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hivatalos bértételek és megállapodás"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarif dan perjanjian resmi"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opinberir taxtar og samningur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tariffe ufficiali e contratto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公式賃金表と労働協約"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공식 임금 요율 및 협약"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oficialūs įkainiai ir sutartis"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oficiālās likmes un koplīgums"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offisielle satser og avtale"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Officiële tarieven en cao"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offisielle satsar og avtale"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oficjalne stawki i układ zbiorowy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tabelas salariais e acordo oficiais"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarife și contract oficial"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Официальные ставки и соглашение"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oficiálne sadzby a kolektívna zmluva"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uradne tarife in kolektivna pogodba"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zvanične tarife i kolektivni ugovor"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Officiella lönesatser och avtal"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viwango rasmi na makubaliano"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "அதிகாரப்பூர்வ ஊதிய விகிதங்களும் ஒப்பந்தமும்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัตราค่าจ้างและข้อตกลงอย่างเป็นทางการ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resmî ücret tarifeleri ve sözleşme"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Офіційні ставки та угода"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سرکاری اجرت کی شرحیں اور معاہدہ"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mức lương và thỏa ước chính thức"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "官方费率及协议"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "官方費率與協議"
+          }
+        }
+      }
+    },
+    "tariff.unavailable" : {
+      "comment" : "No verified wage category could be loaded for the selected agreement. Custom wage remains available.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معدلات الأجور غير متاحة. اتصل بالإنترنت لتحميلها، أو أدخل أجرك بالساعة."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тарифните ставки не са налични. Свържете се, за да ги заредите, или въведете почасовата си заплата."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "চুক্তিভিত্তিক মজুরির হার পাওয়া যাচ্ছে না। লোড করতে ইন্টারনেটে সংযুক্ত হন, অথবা আপনার ঘণ্টাপ্রতি মজুরি লিখুন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les taules salarials no estan disponibles. Connecta't per carregar-les o introdueix el teu salari per hora."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifní sazby nejsou dostupné. Připojte se k internetu a načtěte je, nebo zadejte svou hodinovou mzdu."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overenskomstsatser er ikke tilgængelige. Opret forbindelse for at hente dem, eller indtast din timeløn."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifsätze sind nicht verfügbar. Stelle eine Verbindung her, um sie zu laden, oder gib deinen Stundenlohn ein."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Οι συλλογικές αμοιβές δεν είναι διαθέσιμες. Συνδεθείτε για να τις φορτώσετε ή εισαγάγετε το ωρομίσθιό σας."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tariff rates are unavailable. Connect to load them, or enter your hourly wage."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las tarifas no están disponibles. Conéctate para cargarlas o introduce tu salario por hora."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palgamäärad pole saadaval. Nende laadimiseks loo ühendus või sisesta oma tunnipalk."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نرخ‌های تعرفه در دسترس نیستند. برای بارگیری آن‌ها به اینترنت وصل شوید یا دستمزد ساعتی خود را وارد کنید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Työehtosopimuksen palkkatasoja ei ole saatavilla. Yhdistä verkkoon ladataksesi ne tai syötä tuntipalkkasi."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hindi available ang mga rate sa kasunduan. Kumonekta para i-load ang mga ito, o ilagay ang iyong orasang sahod."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barèmes conventionnels indisponibles. Connectez-vous pour les charger ou saisissez votre salaire horaire."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תעריפי השכר אינם זמינים. התחברו כדי לטעון אותם, או הזינו שכר שעתי."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वेतन दरें उपलब्ध नहीं हैं। इन्हें लोड करने के लिए इंटरनेट से जुड़ें या अपना प्रति घंटा वेतन दर्ज करें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifne satnice nisu dostupne. Povežite se da ih učitate ili unesite svoju satnicu."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A tarifabérek nem érhetők el. Csatlakozzon a betöltésükhöz, vagy adja meg az órabérét."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarif tidak tersedia. Hubungkan ke internet untuk memuatnya, atau masukkan upah per jam Anda."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taxtar eru ekki tiltækir. Tengstu til að sækja þá eða sláðu inn tímakaupið þitt."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le tariffe contrattuali non sono disponibili. Connettiti per caricarle oppure inserisci la tua paga oraria."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "協約の賃金表を取得できません。接続して読み込むか、時給を入力してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "협약 임금 요율을 사용할 수 없습니다. 연결해 불러오거나 시급을 입력하세요."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifiniai įkainiai nepasiekiami. Prisijunkite, kad juos įkeltumėte, arba įveskite savo valandinį atlygį."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifa likmes nav pieejamas. Pieslēdzieties, lai tās ielādētu, vai ievadiet savu stundas algu."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tariffsatsene er utilgjengelige. Koble til for å laste dem, eller oppgi timelønnen din."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cao-lonen zijn niet beschikbaar. Maak verbinding om ze te laden of voer je uurloon in."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tariffsatsane er ikkje tilgjengelege. Kople til for å laste dei, eller oppgi timeløna di."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stawki układowe są niedostępne. Połącz się, aby je pobrać, lub wpisz swoją stawkę godzinową."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As tabelas salariais estão indisponíveis. Conecte-se para carregá-las ou informe seu salário por hora."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifele nu sunt disponibile. Conectează-te pentru a le încărca sau introdu salariul tău orar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тарифные ставки недоступны. Подключитесь, чтобы загрузить их, или укажите свою почасовую ставку."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifné sadzby nie sú dostupné. Pripojte sa a načítajte ich alebo zadajte svoju hodinovú mzdu."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifne postavke niso na voljo. Povežite se, da jih naložite, ali vnesite svojo urno postavko."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifne stope nisu dostupne. Povežite se da ih učitate ili unesite svoju satnicu."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avtalsenliga lönesatser är inte tillgängliga. Anslut för att ladda dem eller ange din timlön."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viwango vya mishahara havipatikani. Unganisha ili kuvipakia, au weka mshahara wako wa saa."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ஒப்பந்த ஊதிய விகிதங்கள் கிடைக்கவில்லை. அவற்றை ஏற்ற இணையத்துடன் இணைக்கவும் அல்லது உங்கள் மணிநேர ஊதியத்தை உள்ளிடவும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่สามารถโหลดอัตราค่าจ้างตามข้อตกลงได้ เชื่อมต่อเพื่อโหลด หรือกรอกค่าจ้างรายชั่วโมงของคุณ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ücret tarifeleri kullanılamıyor. Yüklemek için internete bağlanın veya saatlik ücretinizi girin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тарифні ставки недоступні. Підключіться, щоб завантажити їх, або введіть свою погодинну оплату."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معاہدے کے تحت اجرت کی شرحیں دستیاب نہیں۔ انہیں لوڈ کرنے کے لیے انٹرنیٹ سے جڑیں، یا اپنی فی گھنٹہ اجرت درج کریں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có mức lương theo thỏa ước. Kết nối để tải hoặc nhập lương theo giờ của bạn."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无法获取协议工资标准。请联网加载，或输入您的时薪。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前無法取得協議工資標準。請連線載入，或輸入您的時薪。"
+          }
+        }
+      }
+    },
     "The form stays filled in after sending, so you can test on yourself first." : {
       "localizations" : {
         "en" : {

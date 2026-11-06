@@ -65,14 +65,22 @@ internal enum SyncConvex {
     let table: String
     let after: Int64
     let limit: Int
+    let payrollRevision = "2026-11"
+
+    enum CodingKeys: String, CodingKey {
+      case table, after, limit
+      case payrollRevision = "payroll_revision"
+    }
   }
 
   private struct InsertArgs: Encodable, Sendable {
     let expectedUserId: String
     let row: [String: AnyJSON]
+    let payrollRevision: String?
 
     enum CodingKeys: String, CodingKey {
       case row
+      case payrollRevision = "payroll_revision"
       case expectedUserId = "expected_user_id"
     }
   }
@@ -84,9 +92,11 @@ internal enum SyncConvex {
     let expectedUserId: String
     let set: [String: AnyJSON]
     let clear: [String]?
+    let payrollRevision: String?
 
     enum CodingKeys: String, CodingKey {
       case id, set, clear
+      case payrollRevision = "payroll_revision"
       case expectedRevision = "expected_revision"
       case expectedUserId = "expected_user_id"
     }
@@ -96,9 +106,11 @@ internal enum SyncConvex {
     let id: String
     let expectedRevision: Int64
     let expectedUserId: String
+    let payrollRevision: String?
 
     enum CodingKeys: String, CodingKey {
       case id
+      case payrollRevision = "payroll_revision"
       case expectedRevision = "expected_revision"
       case expectedUserId = "expected_user_id"
     }
@@ -127,7 +139,8 @@ internal enum SyncConvex {
 
   /// Every row of a table for the signed-in user, deleted rows included. Pages until the server
   /// says it is done, so a table with more than one page of rows is read in full.
-  static func pullAll<Row: Decodable>(_ table: SyncTable, pageSize: Int = 500) async throws -> [Row] {
+  static func pullAll<Row: Decodable>(_ table: SyncTable, pageSize: Int = 500) async throws -> [Row]
+  {
     var rows: [Row] = []
     var cursor: Int64 = 0
     while true {
@@ -150,7 +163,9 @@ internal enum SyncConvex {
     let sent = row.filter { isSent($0.key) && $0.value != .null }
     let reply: WriteReply<Row> = try await ConvexAPI.app.mutation(
       "\(table.convexModule):insert",
-      InsertArgs(expectedUserId: owner.lowercased(), row: sent))
+      InsertArgs(
+        expectedUserId: owner.lowercased(), row: sent, payrollRevision: payrollRevision(for: table))
+    )
     switch (reply.status, reply.row) {
     case ("ok", .some(let saved)): return .ok(saved)
     case ("exists", .some(let existing)): return .exists(existing)
@@ -170,7 +185,8 @@ internal enum SyncConvex {
       expectedRevision: expectedRevision,
       expectedUserId: owner.lowercased(),
       set: columns.filter { $0.value != .null },
-      clear: cleared.isEmpty ? nil : cleared)
+      clear: cleared.isEmpty ? nil : cleared,
+      payrollRevision: payrollRevision(for: table))
     let reply: WriteReply<Row> = try await ConvexAPI.app.mutation(
       "\(table.convexModule):update", args)
     return try outcome(reply)
@@ -182,7 +198,9 @@ internal enum SyncConvex {
   ) async throws -> SyncWriteOutcome<Row> {
     let reply: WriteReply<Row> = try await ConvexAPI.app.mutation(
       "\(table.convexModule):remove",
-      RemoveArgs(id: id, expectedRevision: expectedRevision, expectedUserId: owner.lowercased()))
+      RemoveArgs(
+        id: id, expectedRevision: expectedRevision, expectedUserId: owner.lowercased(),
+        payrollRevision: payrollRevision(for: table)))
     return try outcome(reply)
   }
 
@@ -220,6 +238,13 @@ internal enum SyncConvex {
     case ("ok", .some(let saved)): return .ok(saved)
     case ("conflict", let current): return .conflict(current)
     default: throw unexpected(reply.status)
+    }
+  }
+
+  private static func payrollRevision(for table: SyncTable) -> String? {
+    switch table {
+    case .userSettings, .notificationPreferences: nil
+    default: "2026-11"
     }
   }
 

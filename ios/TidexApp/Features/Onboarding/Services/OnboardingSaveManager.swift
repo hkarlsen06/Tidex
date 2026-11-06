@@ -147,6 +147,11 @@ final class OnboardingSaveManager {
   private func createBaselineSnapshot(userId: String, data: OnboardingData) async throws
     -> WageSnapshot
   {
+    guard data.hasValidWageSelection else {
+      throw NSError(
+        domain: "TariffSelection", code: 1,
+        userInfo: [NSLocalizedDescriptionKey: String(localized: .tariffUnavailable)])
+    }
     if jobsRepository.getActiveJobs(for: userId).isEmpty {
       // Pull first so a job that already exists on the server is reused instead of duplicated.
       _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
@@ -265,6 +270,7 @@ final class OnboardingSaveManager {
       tariffTypeId: data.resolvedTariffTypeId,
       updateTariffTypeId: true,
       supplements: data.resolvedSupplements,
+      overtime: data.resolvedOvertime,
       taxEnabled: data.taxEnabled,
       taxPercentage: data.taxEnabled ? data.taxPercentage : nil,
       updateTaxPercentage: true,

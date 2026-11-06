@@ -29,6 +29,10 @@
     internal var body: some View {
       Group {  // swiftlint:disable:this closure_body_length
         switch screen {
+        case "tariff-overtime-editor":
+          DesignReviewTariffOvertime()
+        case "tariff-catalogue":
+          DesignReviewTariffCatalogue()
         case "screenshot-prompt":
           ScreenshotSharePromptOverlay(onDismiss: {}, onUseShareButton: {})
         case "onboarding":

@@ -20,7 +20,7 @@ final class OnboardingData {
   /// Type of wage: tariff (preset rates) or custom (user-defined)
   var wageType: WageType = .custom
 
-  /// Selected tariff level (1-6 for standard, -1/-2 for under 18)
+  /// Category ID within the selected agreement.
   var selectedTariffLevel: Int = 1
 
   /// Custom hourly wage when using custom wage type
@@ -94,20 +94,29 @@ final class OnboardingData {
 
   /// Resolved hourly wage based on wage type
   /// Returns tariff rate for tariff users, custom rate for custom users
-  /// Uses tariff version rates when available, falls back to hardcoded rates
+  /// A tariff must match the selected agreement and contain the selected category.
   var resolvedHourlyWage: Double {
     switch wageType {
     case .tariff:
-      // Use version-specific rate if available, otherwise fallback to static rates
-      if let version = currentTariffVersion,
+      if let version = currentTariffVersion, version.tariff_type_id == selectedTariffTypeId,
         let rate = version.rate(forLevel: selectedTariffLevel)
       {
         return rate
       }
-      return PayrollCalculator.presetWageRates[String(selectedTariffLevel)] ?? 184.54
+      return 0
 
     case .custom:
       return customHourlyWage
+    }
+  }
+
+  var hasValidWageSelection: Bool {
+    switch wageType {
+    case .custom:
+      return customHourlyWage.isFinite && customHourlyWage > 0
+    case .tariff:
+      return currentTariffVersion?.tariff_type_id == selectedTariffTypeId
+        && resolvedHourlyWage.isFinite && resolvedHourlyWage > 0
     }
   }
 
@@ -143,7 +152,7 @@ final class OnboardingData {
       if let version = currentTariffVersion {
         return version.supplements
       }
-      return SupplementRulesSnapshot(rules: PayrollCalculator.presetSupplementRules)
+      return SupplementRulesSnapshot(rules: [])
 
     case .custom:
       let rules = supplementRules.map { $0.toSupplementRule() }
@@ -154,7 +163,7 @@ final class OnboardingData {
   var resolvedOvertime: OvertimeConfig {
     switch wageType {
     case .tariff:
-      return currentTariffVersion?.effectiveOvertime ?? PayrollCalculator.presetOvertimeConfig
+      return currentTariffVersion?.effectiveOvertime ?? .disabled
 
     case .custom:
       return .disabled
@@ -264,6 +273,7 @@ private struct PersistedSupplementRule: Codable {
   let toTime: String
   let type: String
   let value: Double
+  var sourceRule: SupplementRule?
 
   init(from rule: OnboardingSupplementRule) {
     self.id = rule.id
@@ -272,6 +282,7 @@ private struct PersistedSupplementRule: Codable {
     self.toTime = rule.toTime
     self.type = rule.type.rawValue
     self.value = rule.value
+    self.sourceRule = rule.sourceRule
   }
 
   func toOnboardingSupplementRule() -> OnboardingSupplementRule {
@@ -281,7 +292,8 @@ private struct PersistedSupplementRule: Codable {
       fromTime: fromTime,
       toTime: toTime,
       type: OnboardingSupplementRule.SupplementType(rawValue: type) ?? .fixed,
-      value: value
+      value: value,
+      sourceRule: sourceRule
     )
   }
 }
@@ -296,6 +308,7 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
   var toTime: String  // HH:mm format
   var type: SupplementType
   var value: Double  // Either fixed kr/t or percentage
+  var sourceRule: SupplementRule?
 
   init(
     id: UUID = UUID(),
@@ -303,7 +316,8 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
     fromTime: String = "18:00",
     toTime: String = "21:00",
     type: SupplementType = .fixed,
-    value: Double = 22
+    value: Double = 22,
+    sourceRule: SupplementRule? = nil
   ) {
     self.id = id
     self.days = days
@@ -311,6 +325,7 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
     self.toTime = toTime
     self.type = type
     self.value = value
+    self.sourceRule = sourceRule
   }
 
   enum SupplementType: String, CaseIterable {
@@ -325,7 +340,15 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
       from: fromTime,
       to: toTime,
       rate: type == .fixed ? value : nil,
-      percent: type == .percent ? value : nil
+      percent: type == .percent ? value : nil,
+      stackingGroup: sourceRule?.stackingGroup,
+      dates: sourceRule?.dates,
+      excludedDates: sourceRule?.excludedDates,
+      shiftStartDates: sourceRule?.shiftStartDates,
+      excludedShiftStartDates: sourceRule?.excludedShiftStartDates,
+      shiftStartBefore: sourceRule?.shiftStartBefore,
+      minimumRate: sourceRule?.minimumRate,
+      percentageBaseRate: sourceRule?.percentageBaseRate
     )
   }
 
@@ -387,7 +410,8 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
 struct TariffLevel: Identifiable {
   let level: Int
   let rate: Double
-  var displayName: String { Self.displayName(forLevel: level) }
+  var label: String?
+  var displayName: String { label ?? Self.displayName(forLevel: level) }
 
   var id: Int { level }
 
@@ -402,40 +426,21 @@ struct TariffLevel: Identifiable {
     return "\(formatted) kr\(String(localized: .commonPerHourShort))"
   }
 
-  /// All available tariff levels from PayrollCalculator (fallback for offline)
-  static let all: [Self] = [  // swiftlint:disable:this explicit_acl
-    Self(level: -1, rate: 129.91),  // swiftlint:disable:this no_magic_numbers
-    Self(level: -2, rate: 132.90),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 1, rate: 184.54),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 2, rate: 185.38),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 3, rate: 187.46),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 4, rate: 193.05),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 5, rate: 210.81),  // swiftlint:disable:this no_magic_numbers
-    Self(level: 6, rate: 256.14),  // swiftlint:disable:this no_magic_numbers
-  ]
-
-  /// Display name for a level number: -1 and -2 are the youth rates, the rest are wage levels
   static func displayName(forLevel level: Int) -> String {  // swiftlint:disable:this explicit_acl
-    switch level {
-    case -1:
-      return String(localized: .onboardingWageLevelUnder16)
-    case -2:
-      return "16 - 18"
-    default:
-      return String(localized: .onboardingWageLevel(level))
-    }
+    String(localized: .onboardingWageLevel(level))
   }
 
   /// Build tariff levels dynamically from a TariffVersion
   /// - Parameter tariffVersion: The tariff version containing rates
   /// - Returns: Array of TariffLevel built from version rates
   static func from(tariffVersion: TariffVersion) -> [Self] {  // swiftlint:disable:this explicit_acl
-    // Define the expected order of levels
-    let levelOrder = [-1, -2, 1, 2, 3, 4, 5, 6]
-
-    return levelOrder.compactMap { level in
+    let categories = tariffVersion.categories ?? []
+    let order = categories.map(\.level)
+    let remaining = tariffVersion.availableLevels.filter { !order.contains($0) }
+    return (order + remaining).compactMap { level in
       guard let rate = tariffVersion.rate(forLevel: level) else { return nil }
-      return Self(level: level, rate: rate)
+      let label = categories.first { $0.level == level }?.label
+      return Self(level: level, rate: rate, label: label)
     }
   }
 }
