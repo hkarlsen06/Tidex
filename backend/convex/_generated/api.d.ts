@@ -54,6 +54,7 @@ import type * as lib_tariffCatalogue from "../lib/tariffCatalogue.js";
 import type * as lib_tariffCatalogue_cleaning from "../lib/tariffCatalogue/cleaning.js";
 import type * as lib_tariffCatalogue_existing from "../lib/tariffCatalogue/existing.js";
 import type * as lib_tariffCatalogue_model from "../lib/tariffCatalogue/model.js";
+import type * as lib_tariffCatalogue_presentation from "../lib/tariffCatalogue/presentation.js";
 import type * as lib_tariffCatalogue_publicSector from "../lib/tariffCatalogue/publicSector.js";
 import type * as lib_tariffCatalogue_retail from "../lib/tariffCatalogue/retail.js";
 import type * as lib_tariffCatalogue_statutory from "../lib/tariffCatalogue/statutory.js";
@@ -132,6 +133,7 @@ declare const fullApi: ApiFromModules<{
   "lib/tariffCatalogue/cleaning": typeof lib_tariffCatalogue_cleaning;
   "lib/tariffCatalogue/existing": typeof lib_tariffCatalogue_existing;
   "lib/tariffCatalogue/model": typeof lib_tariffCatalogue_model;
+  "lib/tariffCatalogue/presentation": typeof lib_tariffCatalogue_presentation;
   "lib/tariffCatalogue/publicSector": typeof lib_tariffCatalogue_publicSector;
   "lib/tariffCatalogue/retail": typeof lib_tariffCatalogue_retail;
   "lib/tariffCatalogue/statutory": typeof lib_tariffCatalogue_statutory;

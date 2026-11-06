@@ -4,6 +4,7 @@ import { retailTariffs } from "./tariffCatalogue/retail";
 import { cleaningTariffs } from "./tariffCatalogue/cleaning";
 import { publicSectorTariffs } from "./tariffCatalogue/publicSector";
 import { CATALOGUE_REVISION, validateCatalogue } from "./tariffCatalogue/model";
+import { withPresentation } from "./tariffCatalogue/presentation";
 export { CATALOGUE_REVISION, validateCatalogue } from "./tariffCatalogue/model";
 export type { CatalogueEntry, CatalogueVersion } from "./tariffCatalogue/model";
 
@@ -13,7 +14,7 @@ export const tariffCatalogue = [
   ...cleaningTariffs,
   ...statutoryTariffs,
   ...publicSectorTariffs,
-];
+].map(withPresentation);
 validateCatalogue(tariffCatalogue);
 export const unavailableTariffs = [
   {

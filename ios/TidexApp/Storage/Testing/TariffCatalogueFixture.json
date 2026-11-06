@@ -7,7 +7,22 @@
       "display_name_nb": "Butikk, HK–Virke",
       "description": "Vanlig butikktabell. Tidligere tillegg i 2026 ble håndtert som etterbetaling. Lokal lønn, lærlinger og helligdagsaftener krever arbeidsavtalen din. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": true
+      "is_default": true,
+      "presentation": {
+        "family_id": "hk_retail",
+        "name_en": "Retail, HK–Virke",
+        "name_nb": "Butikk, HK–Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "butikk",
+          "retail",
+          "HK",
+          "Virke",
+          "Landsoverenskomsten"
+        ],
+        "options": [],
+        "category_group": "hk_retail"
+      }
     },
     {
       "id": "bygg_allmenngjort",
@@ -16,7 +31,21 @@
       "display_name_nb": "Bygg, allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "bygg_allmenngjort",
+        "name_en": "Construction, statutory minimum",
+        "name_nb": "Bygg, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "bygg",
+          "construction",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [],
+        "category_group": "bygg_allmenngjort"
+      }
     },
     {
       "id": "renhold_allmenngjort",
@@ -25,7 +54,21 @@
       "display_name_nb": "Renhold, allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Ikke full tariffavtale. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "renhold_allmenngjort",
+        "name_en": "Cleaning, statutory minimum",
+        "name_nb": "Renhold, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [],
+        "category_group": "renhold_allmenngjort"
+      }
     },
     {
       "id": "riksavtalen_hotel",
@@ -34,7 +77,46 @@
       "display_name_nb": "Hotell og restaurant, 37,5 t, ordinært nattarbeid",
       "description": "Fast timelønn og ordinære tillegg. Helligdagsbetaling følger vaktens startdag. Overtid etter arbeidsplan, prosentlønnede servitører og lokale tillegg er ikke inkludert. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "riksavtalen",
+        "name_en": "Hotel and restaurant, Riksavtalen",
+        "name_nb": "Hotell og restaurant, Riksavtalen",
+        "kind": "agreement",
+        "search_terms": [
+          "hotell",
+          "hotel",
+          "restaurant",
+          "servering",
+          "hospitality",
+          "Riksavtalen",
+          "Fellesforbundet",
+          "NHO Reiseliv"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          },
+          {
+            "dimension_id": "night_role",
+            "label_en": "Are you employed as a night guard?",
+            "label_nb": "Er du ansatt som nattevakt?",
+            "help_en": "Standard night premiums still apply when you choose No.",
+            "help_nb": "Ordinære nattillegg er inkludert også når du velger nei.",
+            "value": "other",
+            "value_en": "No",
+            "value_nb": "Nei"
+          }
+        ],
+        "category_group": "riksavtalen"
+      }
     },
     {
       "id": "riksavtalen_guard_375",
@@ -43,7 +125,46 @@
       "display_name_nb": "Hotell og restaurant, 37,5 t, nattevakt",
       "description": "Fast timelønn og ordinære tillegg. Helligdagsbetaling følger vaktens startdag. Overtid etter arbeidsplan, prosentlønnede servitører og lokale tillegg er ikke inkludert. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "riksavtalen",
+        "name_en": "Hotel and restaurant, Riksavtalen",
+        "name_nb": "Hotell og restaurant, Riksavtalen",
+        "kind": "agreement",
+        "search_terms": [
+          "hotell",
+          "hotel",
+          "restaurant",
+          "servering",
+          "hospitality",
+          "Riksavtalen",
+          "Fellesforbundet",
+          "NHO Reiseliv"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          },
+          {
+            "dimension_id": "night_role",
+            "label_en": "Are you employed as a night guard?",
+            "label_nb": "Er du ansatt som nattevakt?",
+            "help_en": "Standard night premiums still apply when you choose No.",
+            "help_nb": "Ordinære nattillegg er inkludert også når du velger nei.",
+            "value": "guard",
+            "value_en": "Yes",
+            "value_nb": "Ja"
+          }
+        ],
+        "category_group": "riksavtalen"
+      }
     },
     {
       "id": "riksavtalen_manual_375",
@@ -52,7 +173,46 @@
       "display_name_nb": "Hotell og restaurant, 37,5 t, nattevakt med avtalt manuelt arbeid",
       "description": "Fast timelønn og ordinære tillegg. Helligdagsbetaling følger vaktens startdag. Overtid etter arbeidsplan, prosentlønnede servitører og lokale tillegg er ikke inkludert. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "riksavtalen",
+        "name_en": "Hotel and restaurant, Riksavtalen",
+        "name_nb": "Hotell og restaurant, Riksavtalen",
+        "kind": "agreement",
+        "search_terms": [
+          "hotell",
+          "hotel",
+          "restaurant",
+          "servering",
+          "hospitality",
+          "Riksavtalen",
+          "Fellesforbundet",
+          "NHO Reiseliv"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          },
+          {
+            "dimension_id": "night_role",
+            "label_en": "Are you employed as a night guard?",
+            "label_nb": "Er du ansatt som nattevakt?",
+            "help_en": "Standard night premiums still apply when you choose No.",
+            "help_nb": "Ordinære nattillegg er inkludert også når du velger nei.",
+            "value": "manual",
+            "value_en": "Yes, with agreed manual work",
+            "value_nb": "Ja, med avtalt manuelt arbeid"
+          }
+        ],
+        "category_group": "riksavtalen"
+      }
     },
     {
       "id": "riksavtalen_other_355",
@@ -61,7 +221,46 @@
       "display_name_nb": "Hotell og restaurant, 35,5 t, ordinært nattarbeid",
       "description": "Fast timelønn og ordinære tillegg. Helligdagsbetaling følger vaktens startdag. Overtid etter arbeidsplan, prosentlønnede servitører og lokale tillegg er ikke inkludert. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "riksavtalen",
+        "name_en": "Hotel and restaurant, Riksavtalen",
+        "name_nb": "Hotell og restaurant, Riksavtalen",
+        "kind": "agreement",
+        "search_terms": [
+          "hotell",
+          "hotel",
+          "restaurant",
+          "servering",
+          "hospitality",
+          "Riksavtalen",
+          "Fellesforbundet",
+          "NHO Reiseliv"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "35.5",
+            "value_en": "35.5 hours",
+            "value_nb": "35,5 timer"
+          },
+          {
+            "dimension_id": "night_role",
+            "label_en": "Are you employed as a night guard?",
+            "label_nb": "Er du ansatt som nattevakt?",
+            "help_en": "Standard night premiums still apply when you choose No.",
+            "help_nb": "Ordinære nattillegg er inkludert også når du velger nei.",
+            "value": "other",
+            "value_en": "No",
+            "value_nb": "Nei"
+          }
+        ],
+        "category_group": "riksavtalen"
+      }
     },
     {
       "id": "riksavtalen_guard_355",
@@ -70,7 +269,46 @@
       "display_name_nb": "Hotell og restaurant, 35,5 t, nattevakt",
       "description": "Fast timelønn og ordinære tillegg. Helligdagsbetaling følger vaktens startdag. Overtid etter arbeidsplan, prosentlønnede servitører og lokale tillegg er ikke inkludert. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "riksavtalen",
+        "name_en": "Hotel and restaurant, Riksavtalen",
+        "name_nb": "Hotell og restaurant, Riksavtalen",
+        "kind": "agreement",
+        "search_terms": [
+          "hotell",
+          "hotel",
+          "restaurant",
+          "servering",
+          "hospitality",
+          "Riksavtalen",
+          "Fellesforbundet",
+          "NHO Reiseliv"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "35.5",
+            "value_en": "35.5 hours",
+            "value_nb": "35,5 timer"
+          },
+          {
+            "dimension_id": "night_role",
+            "label_en": "Are you employed as a night guard?",
+            "label_nb": "Er du ansatt som nattevakt?",
+            "help_en": "Standard night premiums still apply when you choose No.",
+            "help_nb": "Ordinære nattillegg er inkludert også når du velger nei.",
+            "value": "guard",
+            "value_en": "Yes",
+            "value_nb": "Ja"
+          }
+        ],
+        "category_group": "riksavtalen"
+      }
     },
     {
       "id": "riksavtalen_manual_355",
@@ -79,7 +317,46 @@
       "display_name_nb": "Hotell og restaurant, 35,5 t, nattevakt med avtalt manuelt arbeid",
       "description": "Fast timelønn og ordinære tillegg. Helligdagsbetaling følger vaktens startdag. Overtid etter arbeidsplan, prosentlønnede servitører og lokale tillegg er ikke inkludert. Overtid beregnes bare etter uketerskelen.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "riksavtalen",
+        "name_en": "Hotel and restaurant, Riksavtalen",
+        "name_nb": "Hotell og restaurant, Riksavtalen",
+        "kind": "agreement",
+        "search_terms": [
+          "hotell",
+          "hotel",
+          "restaurant",
+          "servering",
+          "hospitality",
+          "Riksavtalen",
+          "Fellesforbundet",
+          "NHO Reiseliv"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "35.5",
+            "value_en": "35.5 hours",
+            "value_nb": "35,5 timer"
+          },
+          {
+            "dimension_id": "night_role",
+            "label_en": "Are you employed as a night guard?",
+            "label_nb": "Er du ansatt som nattevakt?",
+            "help_en": "Standard night premiums still apply when you choose No.",
+            "help_nb": "Ordinære nattillegg er inkludert også når du velger nei.",
+            "value": "manual",
+            "value_en": "Yes, with agreed manual work",
+            "value_nb": "Ja, med avtalt manuelt arbeid"
+          }
+        ],
+        "category_group": "riksavtalen"
+      }
     },
     {
       "id": "vekteroverenskomst",
@@ -88,7 +365,41 @@
       "display_name_nb": "Vekter, 37,5 t",
       "description": "Velg arbeidstidsordningen i avtalen din. Fagbrev er inkludert med 14,50 i fagarbeidersatsene. Lærlinger bruker publiserte satser for 37,5 timer. Overtid etter arbeidsplan, tilkalling samme vakt, tjenestetillegg og kontinuerlig skift må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "security",
+        "name_en": "Security, Vekteroverenskomsten",
+        "name_nb": "Vekteroverenskomsten",
+        "kind": "agreement",
+        "search_terms": [
+          "vekter",
+          "security",
+          "vakt",
+          "NHO",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          }
+        ],
+        "category_group": "security"
+      }
     },
     {
       "id": "vekter_apprentice_375",
@@ -97,7 +408,41 @@
       "display_name_nb": "Vekter, lærlinger, 37,5 t",
       "description": "Lærlingearbeid innenfor opplæringsplanen, med halve tilleggssatser. Arbeid utenfor planen bruker begynnerlønn for voksne. Ukentlig overtid bruker voksen begynnerlønn og fulle tillegg. Andre arbeidsplanendringer må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "security",
+        "name_en": "Security, Vekteroverenskomsten",
+        "name_nb": "Vekteroverenskomsten",
+        "kind": "agreement",
+        "search_terms": [
+          "vekter",
+          "security",
+          "vakt",
+          "NHO",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "apprentice",
+            "value_en": "Apprentice",
+            "value_nb": "Lærling"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          }
+        ],
+        "category_group": "security_apprentice"
+      }
     },
     {
       "id": "vekter_355",
@@ -106,7 +451,41 @@
       "display_name_nb": "Vekter, 35,5 t",
       "description": "Velg arbeidstidsordningen i avtalen din. Fagbrev er inkludert med 14,50 i fagarbeidersatsene. Lærlinger bruker publiserte satser for 37,5 timer. Overtid etter arbeidsplan, tilkalling samme vakt, tjenestetillegg og kontinuerlig skift må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "security",
+        "name_en": "Security, Vekteroverenskomsten",
+        "name_nb": "Vekteroverenskomsten",
+        "kind": "agreement",
+        "search_terms": [
+          "vekter",
+          "security",
+          "vakt",
+          "NHO",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "35.5",
+            "value_en": "35.5 hours",
+            "value_nb": "35,5 timer"
+          }
+        ],
+        "category_group": "security"
+      }
     },
     {
       "id": "vekter_336",
@@ -115,7 +494,41 @@
       "display_name_nb": "Vekter, 33,6 t",
       "description": "Velg arbeidstidsordningen i avtalen din. Fagbrev er inkludert med 14,50 i fagarbeidersatsene. Lærlinger bruker publiserte satser for 37,5 timer. Overtid etter arbeidsplan, tilkalling samme vakt, tjenestetillegg og kontinuerlig skift må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "security",
+        "name_en": "Security, Vekteroverenskomsten",
+        "name_nb": "Vekteroverenskomsten",
+        "kind": "agreement",
+        "search_terms": [
+          "vekter",
+          "security",
+          "vakt",
+          "NHO",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "33.6",
+            "value_en": "33.6 hours",
+            "value_nb": "33,6 timer"
+          }
+        ],
+        "category_group": "security"
+      }
     },
     {
       "id": "handel_nho",
@@ -124,7 +537,22 @@
       "display_name_nb": "Handel, NHO Handelsoverenskomsten",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Bare ukentlig overtid. Overtid etter daglig arbeidsplan og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "handel_nho",
+        "name_en": "Retail, NHO Handelsoverenskomsten",
+        "name_nb": "Handel, NHO Handelsoverenskomsten",
+        "kind": "agreement",
+        "search_terms": [
+          "butikk",
+          "retail",
+          "HK",
+          "NHO",
+          "Handelsoverenskomsten"
+        ],
+        "options": [],
+        "category_group": "handel_nho"
+      }
     },
     {
       "id": "butikk_nho",
@@ -133,7 +561,22 @@
       "display_name_nb": "Butikk, NHO Butikkoverenskomsten",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Bare ukentlig overtid. Overtid etter daglig arbeidsplan og minstebetaling ved tilkalling må tilpasses manuelt. Ferievikarer har ikke UB. Vilkåret om når nattovertid begynner og oppsatte fridager må kontrolleres mot avtalen din.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "butikk_nho",
+        "name_en": "Retail, NHO Butikkoverenskomsten",
+        "name_nb": "Butikk, NHO Butikkoverenskomsten",
+        "kind": "agreement",
+        "search_terms": [
+          "butikk",
+          "retail",
+          "HK",
+          "NHO",
+          "Butikkoverenskomsten"
+        ],
+        "options": [],
+        "category_group": "butikk_nho"
+      }
     },
     {
       "id": "energy_hk_virke",
@@ -142,7 +585,34 @@
       "display_name_nb": "Energistasjon, HK–Virke, 37,5 t",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Bare ukentlig overtid. Overtid etter daglig arbeidsplan og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "energy_hk_virke",
+        "name_en": "Energy stations, HK–Virke",
+        "name_nb": "Energistasjon, HK–Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "energistasjon",
+          "bensinstasjon",
+          "petrol",
+          "energy",
+          "HK",
+          "Virke"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          }
+        ],
+        "category_group": "energy_hk_virke"
+      }
     },
     {
       "id": "energy_hk_virke_355",
@@ -151,7 +621,34 @@
       "display_name_nb": "Energistasjon, HK–Virke, 35,5 t",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Bare ukentlig overtid. Overtid etter daglig arbeidsplan og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "energy_hk_virke",
+        "name_en": "Energy stations, HK–Virke",
+        "name_nb": "Energistasjon, HK–Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "energistasjon",
+          "bensinstasjon",
+          "petrol",
+          "energy",
+          "HK",
+          "Virke"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "35.5",
+            "value_en": "35.5 hours",
+            "value_nb": "35,5 timer"
+          }
+        ],
+        "category_group": "energy_hk_virke"
+      }
     },
     {
       "id": "grossist_virke_1",
@@ -160,7 +657,34 @@
       "display_name_nb": "Lager, Virke, dagarbeid",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Bare ukentlig overtid. Overtid etter daglig arbeidsplan og minstebetaling ved tilkalling må tilpasses manuelt. Tidlig arbeid må være avtalt lokalt. Bedriftstilpasset arbeidstid og grensen på150% for samlet skift/overtid krever lokal avtale.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "grossist_virke",
+        "name_en": "Warehouse, Virke",
+        "name_nb": "Lager, Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "lager",
+          "grossist",
+          "warehouse",
+          "Virke",
+          "Fellesforbundet",
+          "Grossistoverenskomsten"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "day",
+            "value_en": "Day work",
+            "value_nb": "Dagarbeid"
+          }
+        ],
+        "category_group": "grossist_virke"
+      }
     },
     {
       "id": "grossist_virke_2",
@@ -169,7 +693,34 @@
       "display_name_nb": "Lager, Virke, 2-skift",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Bare ukentlig overtid. Overtid etter daglig arbeidsplan og minstebetaling ved tilkalling må tilpasses manuelt. Skiftovertid følger arbeidsplanen og legges inn manuelt. Bedriftstilpasset arbeidstid og grensen på150% for samlet skift/overtid krever lokal avtale.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "grossist_virke",
+        "name_en": "Warehouse, Virke",
+        "name_nb": "Lager, Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "lager",
+          "grossist",
+          "warehouse",
+          "Virke",
+          "Fellesforbundet",
+          "Grossistoverenskomsten"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "two_shift",
+            "value_en": "Two shifts",
+            "value_nb": "2-skift"
+          }
+        ],
+        "category_group": "grossist_virke"
+      }
     },
     {
       "id": "grossist_virke_3",
@@ -178,7 +729,34 @@
       "display_name_nb": "Lager, Virke, 3-skift",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Bare ukentlig overtid. Overtid etter daglig arbeidsplan og minstebetaling ved tilkalling må tilpasses manuelt. Skiftovertid følger arbeidsplanen og legges inn manuelt. Bedriftstilpasset arbeidstid og grensen på150% for samlet skift/overtid krever lokal avtale.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "grossist_virke",
+        "name_en": "Warehouse, Virke",
+        "name_nb": "Lager, Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "lager",
+          "grossist",
+          "warehouse",
+          "Virke",
+          "Fellesforbundet",
+          "Grossistoverenskomsten"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "three_shift",
+            "value_en": "Three shifts",
+            "value_nb": "3-skift"
+          }
+        ],
+        "category_group": "grossist_virke"
+      }
     },
     {
       "id": "cleaning_nho_375",
@@ -187,7 +765,41 @@
       "display_name_nb": "Renhold, NHO, 37,5 t",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Fagbrev er inkludert i fagarbeidersatsene. Redusert uke er omregnet etter avtalen. Bare ukentlig overtid. Daglig arbeidsplan, varslingsrelaterte tillegg, rammetimetall og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "cleaning_nho",
+        "name_en": "Cleaning, NHO",
+        "name_nb": "Renhold, NHO",
+        "kind": "agreement",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "NHO",
+          "Renholdsoverenskomsten",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          }
+        ],
+        "category_group": "cleaning_nho"
+      }
     },
     {
       "id": "cleaning_nho_apprentice",
@@ -196,7 +808,41 @@
       "display_name_nb": "Renhold, NHO, lærlinger, 37,5 t",
       "description": "Publiserte lærlingesatser for 37,5-timersuke. Overtid bruker begynnerlønnen for ufaglærte voksne, med tilhørende tillegg. Arbeidsplan og lokale avtaler må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "cleaning_nho",
+        "name_en": "Cleaning, NHO",
+        "name_nb": "Renhold, NHO",
+        "kind": "agreement",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "NHO",
+          "Renholdsoverenskomsten",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "apprentice",
+            "value_en": "Apprentice",
+            "value_nb": "Lærling"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          }
+        ],
+        "category_group": "cleaning_nho_apprentice"
+      }
     },
     {
       "id": "cleaning_nho_355",
@@ -205,7 +851,41 @@
       "display_name_nb": "Renhold, NHO, 35,5 t",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Fagbrev er inkludert i fagarbeidersatsene. Redusert uke er omregnet etter avtalen. Bare ukentlig overtid. Daglig arbeidsplan, varslingsrelaterte tillegg, rammetimetall og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "cleaning_nho",
+        "name_en": "Cleaning, NHO",
+        "name_nb": "Renhold, NHO",
+        "kind": "agreement",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "NHO",
+          "Renholdsoverenskomsten",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "35.5",
+            "value_en": "35.5 hours",
+            "value_nb": "35,5 timer"
+          }
+        ],
+        "category_group": "cleaning_nho"
+      }
     },
     {
       "id": "cleaning_nho_336",
@@ -214,7 +894,41 @@
       "display_name_nb": "Renhold, NHO, 33,6 t",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Fagbrev er inkludert i fagarbeidersatsene. Redusert uke er omregnet etter avtalen. Bare ukentlig overtid. Daglig arbeidsplan, varslingsrelaterte tillegg, rammetimetall og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "cleaning_nho",
+        "name_en": "Cleaning, NHO",
+        "name_nb": "Renhold, NHO",
+        "kind": "agreement",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "NHO",
+          "Renholdsoverenskomsten",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "33.6",
+            "value_en": "33.6 hours",
+            "value_nb": "33,6 timer"
+          }
+        ],
+        "category_group": "cleaning_nho"
+      }
     },
     {
       "id": "cleaning_virke_375",
@@ -223,7 +937,41 @@
       "display_name_nb": "Renhold, Virke, 37,5 t",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Fagbrev er inkludert i fagarbeidersatsene. Redusert uke er omregnet etter avtalen. Bare ukentlig overtid. Daglig arbeidsplan, varslingsrelaterte tillegg, rammetimetall og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "cleaning_virke",
+        "name_en": "Cleaning, Virke",
+        "name_nb": "Renhold, Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "Virke",
+          "Renholdsoverenskomsten",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          }
+        ],
+        "category_group": "cleaning_virke"
+      }
     },
     {
       "id": "cleaning_virke_apprentice",
@@ -232,7 +980,41 @@
       "display_name_nb": "Renhold, Virke, lærlinger, 37,5 t",
       "description": "Publiserte lærlingesatser for 37,5-timersuke. Overtid bruker begynnerlønnen for ufaglærte voksne, med tilhørende tillegg. Arbeidsplan og lokale avtaler må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "cleaning_virke",
+        "name_en": "Cleaning, Virke",
+        "name_nb": "Renhold, Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "Virke",
+          "Renholdsoverenskomsten",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "apprentice",
+            "value_en": "Apprentice",
+            "value_nb": "Lærling"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          }
+        ],
+        "category_group": "cleaning_virke_apprentice"
+      }
     },
     {
       "id": "cleaning_virke_355",
@@ -241,7 +1023,41 @@
       "display_name_nb": "Renhold, Virke, 35,5 t",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Fagbrev er inkludert i fagarbeidersatsene. Redusert uke er omregnet etter avtalen. Bare ukentlig overtid. Daglig arbeidsplan, varslingsrelaterte tillegg, rammetimetall og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "cleaning_virke",
+        "name_en": "Cleaning, Virke",
+        "name_nb": "Renhold, Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "Virke",
+          "Renholdsoverenskomsten",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "35.5",
+            "value_en": "35.5 hours",
+            "value_nb": "35,5 timer"
+          }
+        ],
+        "category_group": "cleaning_virke"
+      }
     },
     {
       "id": "cleaning_virke_336",
@@ -250,7 +1066,41 @@
       "display_name_nb": "Renhold, Virke, 33,6 t",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Fagbrev er inkludert i fagarbeidersatsene. Redusert uke er omregnet etter avtalen. Bare ukentlig overtid. Daglig arbeidsplan, varslingsrelaterte tillegg, rammetimetall og minstebetaling ved tilkalling må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "cleaning_virke",
+        "name_en": "Cleaning, Virke",
+        "name_nb": "Renhold, Virke",
+        "kind": "agreement",
+        "search_terms": [
+          "renhold",
+          "cleaning",
+          "Virke",
+          "Renholdsoverenskomsten",
+          "Norsk Arbeidsmandsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "employment",
+            "label_en": "Employment",
+            "label_nb": "Ansettelse",
+            "value": "employee",
+            "value_en": "Employee",
+            "value_nb": "Ansatt"
+          },
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "33.6",
+            "value_en": "33.6 hours",
+            "value_nb": "33,6 timer"
+          }
+        ],
+        "category_group": "cleaning_virke"
+      }
     },
     {
       "id": "hospitality_allmenngjort",
@@ -259,7 +1109,24 @@
       "display_name_nb": "Hotell og servering, allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Ingen automatiske kvelds-, natt- eller helgetillegg.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "hospitality_allmenngjort",
+        "name_en": "Hospitality, statutory minimum",
+        "name_nb": "Hotell og servering, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "hotell",
+          "hotel",
+          "restaurant",
+          "servering",
+          "hospitality",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [],
+        "category_group": "hospitality_allmenngjort"
+      }
     },
     {
       "id": "automotive_allmenngjort",
@@ -268,7 +1135,23 @@
       "display_name_nb": "Bilbransjen, allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Gjelder ikke bilsalg, ruteskift eller bensinstasjoner med mindre forskriften særskilt omfatter virksomheten.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "automotive_allmenngjort",
+        "name_en": "Automotive, statutory minimum",
+        "name_nb": "Bilbransjen, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "bil",
+          "verksted",
+          "automotive",
+          "mechanic",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [],
+        "category_group": "automotive_allmenngjort"
+      }
     },
     {
       "id": "freight_allmenngjort",
@@ -277,7 +1160,24 @@
       "display_name_nb": "Godstransport, allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Egentransport er unntatt. Minstebetaling på flerdagsturer og diett må legges inn separat.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "freight_allmenngjort",
+        "name_en": "Road freight, statutory minimum",
+        "name_nb": "Godstransport, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "gods",
+          "transport",
+          "lastebil",
+          "freight",
+          "truck",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [],
+        "category_group": "freight_allmenngjort"
+      }
     },
     {
       "id": "coach_allmenngjort",
@@ -286,7 +1186,23 @@
       "display_name_nb": "Turbuss, allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Rutetransport med konkurranseutsatt løyve er unntatt. Kost og losji kommer i tillegg.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "coach_allmenngjort",
+        "name_en": "Tour coaches, statutory minimum",
+        "name_nb": "Turbuss, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "turbuss",
+          "buss",
+          "coach",
+          "bus",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [],
+        "category_group": "coach_allmenngjort"
+      }
     },
     {
       "id": "agriculture_seasonal_allmenngjort",
@@ -295,7 +1211,38 @@
       "display_name_nb": "Jordbruk, sesonghjelp allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Satsene gjelder ikke under 16 eller over 70 år.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "agriculture_allmenngjort",
+        "name_en": "Agriculture, statutory minimum",
+        "name_nb": "Jordbruk, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "jordbruk",
+          "landbruk",
+          "sesong",
+          "røkter",
+          "avløser",
+          "agriculture",
+          "farm",
+          "seasonal",
+          "animal care",
+          "relief",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_relationship",
+            "label_en": "Work relationship",
+            "label_nb": "Arbeidsforhold",
+            "value": "seasonal",
+            "value_en": "Seasonal help",
+            "value_nb": "Ferie- og innhøstingshjelp"
+          }
+        ],
+        "category_group": "agriculture_seasonal"
+      }
     },
     {
       "id": "agriculture_permanent_allmenngjort",
@@ -304,7 +1251,38 @@
       "display_name_nb": "Jordbruk, fast ansatt allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "agriculture_allmenngjort",
+        "name_en": "Agriculture, statutory minimum",
+        "name_nb": "Jordbruk, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "jordbruk",
+          "landbruk",
+          "sesong",
+          "røkter",
+          "avløser",
+          "agriculture",
+          "farm",
+          "seasonal",
+          "animal care",
+          "relief",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_relationship",
+            "label_en": "Work relationship",
+            "label_nb": "Arbeidsforhold",
+            "value": "permanent",
+            "value_en": "Permanent employee",
+            "value_nb": "Fast ansatt"
+          }
+        ],
+        "category_group": "agriculture_permanent"
+      }
     },
     {
       "id": "agriculture_relief_allmenngjort",
@@ -313,7 +1291,38 @@
       "display_name_nb": "Jordbruk, røkter og avløser i fast turnus",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "agriculture_allmenngjort",
+        "name_en": "Agriculture, statutory minimum",
+        "name_nb": "Jordbruk, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "jordbruk",
+          "landbruk",
+          "sesong",
+          "røkter",
+          "avløser",
+          "agriculture",
+          "farm",
+          "seasonal",
+          "animal care",
+          "relief",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_relationship",
+            "label_en": "Work relationship",
+            "label_nb": "Arbeidsforhold",
+            "value": "animal_care_relief",
+            "value_en": "Animal-care relief in regular rota",
+            "value_nb": "Røkter og avløser i fast turnus"
+          }
+        ],
+        "category_group": "agriculture_permanent"
+      }
     },
     {
       "id": "electrical_allmenngjort_375",
@@ -322,7 +1331,34 @@
       "display_name_nb": "Elektro, 37,5 t allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Petroleumsvirksomhet til havs er unntatt. Velg bare avtalt skiftordning.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "electrical_allmenngjort",
+        "name_en": "Electrical work, statutory minimum",
+        "name_nb": "Elektro, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "elektro",
+          "elektriker",
+          "electrical",
+          "electrician",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "hours_375",
+            "value_en": "37.5-hour full-time week",
+            "value_nb": "37,5-timersuke i full stilling"
+          }
+        ],
+        "category_group": "electrical_allmenngjort"
+      }
     },
     {
       "id": "electrical_allmenngjort_365",
@@ -331,7 +1367,34 @@
       "display_name_nb": "Elektro, 36,5 t allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Petroleumsvirksomhet til havs er unntatt. Velg bare avtalt skiftordning.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "electrical_allmenngjort",
+        "name_en": "Electrical work, statutory minimum",
+        "name_nb": "Elektro, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "elektro",
+          "elektriker",
+          "electrical",
+          "electrician",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "hours_365",
+            "value_en": "36.5-hour full-time week",
+            "value_nb": "36,5-timersuke i full stilling"
+          }
+        ],
+        "category_group": "electrical_allmenngjort"
+      }
     },
     {
       "id": "electrical_allmenngjort_355",
@@ -340,7 +1403,34 @@
       "display_name_nb": "Elektro, 35,5 t allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Petroleumsvirksomhet til havs er unntatt. Velg bare avtalt skiftordning.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "electrical_allmenngjort",
+        "name_en": "Electrical work, statutory minimum",
+        "name_nb": "Elektro, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "elektro",
+          "elektriker",
+          "electrical",
+          "electrician",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "hours_355",
+            "value_en": "35.5-hour full-time week",
+            "value_nb": "35,5-timersuke i full stilling"
+          }
+        ],
+        "category_group": "electrical_allmenngjort"
+      }
     },
     {
       "id": "electrical_allmenngjort_336",
@@ -349,7 +1439,34 @@
       "display_name_nb": "Elektro, 33,6 t allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Petroleumsvirksomhet til havs er unntatt. Velg bare avtalt skiftordning.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "electrical_allmenngjort",
+        "name_en": "Electrical work, statutory minimum",
+        "name_nb": "Elektro, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "elektro",
+          "elektriker",
+          "electrical",
+          "electrician",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "hours_336",
+            "value_en": "33.6-hour full-time week",
+            "value_nb": "33,6-timersuke i full stilling"
+          }
+        ],
+        "category_group": "electrical_allmenngjort"
+      }
     },
     {
       "id": "fish_processing_allmenngjort_1",
@@ -358,7 +1475,34 @@
       "display_name_nb": "Fiskeindustri, dagarbeid",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Ansatte over 17 år med 12 uker i bedriften bruker voksensats. Tidligere forskrift ble opphevet i august. Denne versjonen gjelder fra 6. november, også i Longyearbyen og Ny-Ålesund.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "fish_processing_allmenngjort",
+        "name_en": "Fish processing, statutory minimum",
+        "name_nb": "Fiskeindustri, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "fisk",
+          "fiskeindustri",
+          "fish",
+          "processing",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "day",
+            "value_en": "Day work",
+            "value_nb": "Dagarbeid"
+          }
+        ],
+        "category_group": "fish_processing_allmenngjort"
+      }
     },
     {
       "id": "fish_processing_allmenngjort_2",
@@ -367,7 +1511,34 @@
       "display_name_nb": "Fiskeindustri, 2-skift",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Ansatte over 17 år med 12 uker i bedriften bruker voksensats. Tidligere forskrift ble opphevet i august. Denne versjonen gjelder fra 6. november, også i Longyearbyen og Ny-Ålesund.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "fish_processing_allmenngjort",
+        "name_en": "Fish processing, statutory minimum",
+        "name_nb": "Fiskeindustri, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "fisk",
+          "fiskeindustri",
+          "fish",
+          "processing",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "two_shift",
+            "value_en": "Two shifts",
+            "value_nb": "2-skift"
+          }
+        ],
+        "category_group": "fish_processing_allmenngjort"
+      }
     },
     {
       "id": "fish_processing_allmenngjort_3",
@@ -376,7 +1547,34 @@
       "display_name_nb": "Fiskeindustri, 3-skift",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Ansatte over 17 år med 12 uker i bedriften bruker voksensats. Tidligere forskrift ble opphevet i august. Denne versjonen gjelder fra 6. november, også i Longyearbyen og Ny-Ålesund.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "fish_processing_allmenngjort",
+        "name_en": "Fish processing, statutory minimum",
+        "name_nb": "Fiskeindustri, allmenngjort minstelønn",
+        "kind": "statutory",
+        "search_terms": [
+          "fisk",
+          "fiskeindustri",
+          "fish",
+          "processing",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "three_shift",
+            "value_en": "Three shifts",
+            "value_nb": "3-skift"
+          }
+        ],
+        "category_group": "fish_processing_allmenngjort"
+      }
     },
     {
       "id": "shipyard_allmenngjort",
@@ -385,7 +1583,23 @@
       "display_name_nb": "Skips- og verftsindustri, dagarbeid allmenngjort",
       "description": "Timesats og ordinære tillegg. Kontroller arbeidsavtalen og arbeidstidsordningen din. Lokale tillegg, betalt fravær og utgiftsrefusjon er ikke inkludert. Overtid beregnes bare etter uketerskelen. Daglige grenser og gjennomsnittsberegning krever arbeidsplanen din. Bare dagarbeid. Skifttillegg og overnattingstillegg krever avtalt ordning.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "shipyard_allmenngjort",
+        "name_en": "Shipyards, ordinary day work minimum",
+        "name_nb": "Skips- og verftsindustri, allmenngjort minstelønn for dagarbeid",
+        "kind": "statutory",
+        "search_terms": [
+          "skip",
+          "verft",
+          "ship",
+          "shipyard",
+          "minstelønn",
+          "minimum"
+        ],
+        "options": [],
+        "category_group": "shipyard_allmenngjort"
+      }
     },
     {
       "id": "ks_ch4_375",
@@ -394,7 +1608,33 @@
       "display_name_nb": "Kommune KS, kapittel 4, 37,5 t",
       "description": "Minste årslønn delt på 1950 timer. Ordinære tillegg bruker satsene fra oktober 2026. Gjelder ikke Oslo, undervisning, ledere eller lokale avtaler. Bare ukentlig overtid. Daglig overtid etter arbeidsplan og nattillegg etter 06:00 må tilpasses manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "ks_ch4",
+        "name_en": "Municipal KS, chapter 4",
+        "name_nb": "Kommune KS, kapittel 4",
+        "kind": "agreement",
+        "search_terms": [
+          "kommune",
+          "municipal",
+          "KS",
+          "kapittel 4",
+          "chapter 4"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "37.5",
+            "value_en": "37.5 hours",
+            "value_nb": "37,5 timer"
+          }
+        ],
+        "category_group": "ks_ch4"
+      }
     },
     {
       "id": "ks_ch4_355",
@@ -403,7 +1643,33 @@
       "display_name_nb": "Kommune KS, kapittel 4, 35,5 t",
       "description": "Minste årslønn delt på 1846 timer. Ordinære tillegg bruker satsene fra oktober 2026. Gjelder ikke Oslo, undervisning, ledere eller lokale avtaler. Turnusovertid og nattillegg etter 06:00 krever arbeidsplanen din og må legges inn manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "ks_ch4",
+        "name_en": "Municipal KS, chapter 4",
+        "name_nb": "Kommune KS, kapittel 4",
+        "kind": "agreement",
+        "search_terms": [
+          "kommune",
+          "municipal",
+          "KS",
+          "kapittel 4",
+          "chapter 4"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "35.5",
+            "value_en": "35.5 hours",
+            "value_nb": "35,5 timer"
+          }
+        ],
+        "category_group": "ks_ch4"
+      }
     },
     {
       "id": "ks_ch4_336",
@@ -412,7 +1678,33 @@
       "display_name_nb": "Kommune KS, kapittel 4, 33,6 t",
       "description": "Minste årslønn delt på 1747.2 timer. Ordinære tillegg bruker satsene fra oktober 2026. Gjelder ikke Oslo, undervisning, ledere eller lokale avtaler. Turnusovertid og nattillegg etter 06:00 krever arbeidsplanen din og må legges inn manuelt.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "ks_ch4",
+        "name_en": "Municipal KS, chapter 4",
+        "name_nb": "Kommune KS, kapittel 4",
+        "kind": "agreement",
+        "search_terms": [
+          "kommune",
+          "municipal",
+          "KS",
+          "kapittel 4",
+          "chapter 4"
+        ],
+        "options": [
+          {
+            "dimension_id": "week",
+            "label_en": "Contractual full-time week",
+            "label_nb": "Fulltidsuke etter avtalen",
+            "help_en": "The full-time hours in your agreement, including if you work part-time.",
+            "help_nb": "Timene i en full stilling etter avtalen, også når du jobber deltid.",
+            "value": "33.6",
+            "value_en": "33.6 hours",
+            "value_nb": "33,6 timer"
+          }
+        ],
+        "category_group": "ks_ch4"
+      }
     },
     {
       "id": "pbl_day",
@@ -421,7 +1713,33 @@
       "display_name_nb": "Privat barnehage PBL, dagarbeid",
       "description": "Årslønn omregnet til timelønn, årslønn / 1950. Overtidstillegg bruker årslønn / 1850. Bare ukentlig overtid. Daglig arbeidsplan, minstebetaling ved tilkalling, styrere, ungdom, lærlinger og videreutdanning krever manuelle innstillinger.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "pbl",
+        "name_en": "Private preschool, PBL",
+        "name_nb": "Privat barnehage, PBL",
+        "kind": "agreement",
+        "search_terms": [
+          "barnehage",
+          "preschool",
+          "kindergarten",
+          "PBL",
+          "private barnehagers landsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "day",
+            "value_en": "Day work",
+            "value_nb": "Dagarbeid"
+          }
+        ],
+        "category_group": "pbl"
+      }
     },
     {
       "id": "pbl_rota",
@@ -430,7 +1748,33 @@
       "display_name_nb": "Privat barnehage PBL, turnus",
       "description": "Årslønn omregnet til timelønn, årslønn / 1950. Overtidstillegg bruker årslønn / 1850. Bare ukentlig overtid. Daglig arbeidsplan, minstebetaling ved tilkalling, styrere, ungdom, lærlinger og videreutdanning krever manuelle innstillinger.",
       "country": "NO",
-      "is_default": false
+      "is_default": false,
+      "presentation": {
+        "family_id": "pbl",
+        "name_en": "Private preschool, PBL",
+        "name_nb": "Privat barnehage, PBL",
+        "kind": "agreement",
+        "search_terms": [
+          "barnehage",
+          "preschool",
+          "kindergarten",
+          "PBL",
+          "private barnehagers landsforbund"
+        ],
+        "options": [
+          {
+            "dimension_id": "work_arrangement",
+            "label_en": "Work arrangement",
+            "label_nb": "Arbeidstidsordning",
+            "help_en": "Choose the arrangement in your employment agreement.",
+            "help_nb": "Velg ordningen i arbeidsavtalen din.",
+            "value": "rota",
+            "value_en": "Rota",
+            "value_nb": "Turnus"
+          }
+        ],
+        "category_group": "pbl"
+      }
     }
   ],
   "versions": [

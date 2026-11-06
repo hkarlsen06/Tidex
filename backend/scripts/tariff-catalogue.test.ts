@@ -17,6 +17,7 @@ import type {
 } from "../convex/lib/shared/payroll/types";
 import { buildWagePeriods } from "../convex/lib/shared/payroll/periods";
 import type { CatalogueEntry } from "../convex/lib/tariffCatalogue/model";
+import { withPresentation } from "../convex/lib/tariffCatalogue/presentation";
 
 function entry(id: string): CatalogueEntry {
   const result = tariffCatalogue.find((e) => e.type.id === id);
@@ -235,6 +236,200 @@ describe("reviewed catalogue payroll outcomes", () => {
     );
   });
 });
+describe("agreement selection metadata", () => {
+  test("every published variant can be selected by its family and answers alone", () => {
+    for (const { type } of tariffCatalogue) {
+      const selected = type.presentation;
+      if (!selected) throw new Error(`Missing presentation for ${type.id}`);
+      const matching = tariffCatalogue.filter(({ type: candidate }) => {
+        const presentation = candidate.presentation;
+        return (
+          presentation?.family_id === selected.family_id &&
+          selected.options.every((answer) =>
+            presentation.options.some(
+              (option) =>
+                option.dimension_id === answer.dimension_id &&
+                option.value === answer.value,
+            ),
+          )
+        );
+      });
+      expect(matching.map(({ type }) => type.id)).toEqual([type.id]);
+    }
+  });
+
+  test("hotel workweek and night role remain independent choices within one agreement", () => {
+    const hotel = tariffCatalogue.filter(
+      ({ type }) => type.presentation?.family_id === "riksavtalen",
+    );
+    const weeks = new Set(
+      hotel.flatMap(
+        ({ type }) =>
+          type.presentation?.options
+            .filter((option) => option.dimension_id === "week")
+            .map((option) => option.value) ?? [],
+      ),
+    );
+    for (const week of weeks) {
+      const variants = hotel.filter(({ type }) =>
+        type.presentation?.options.some(
+          (option) => option.dimension_id === "week" && option.value === week,
+        ),
+      );
+      expect(
+        new Set(
+          variants.flatMap(
+            ({ type }) =>
+              type.presentation?.options
+                .filter((option) => option.dimension_id === "night_role")
+                .map((option) => option.value) ?? [],
+          ),
+        ),
+      ).toEqual(new Set(["other", "guard", "manual"]));
+    }
+  });
+
+  test("apprentice selection exposes only the published workweek and changes category meaning", () => {
+    for (const id of [
+      "cleaning_nho_apprentice",
+      "cleaning_virke_apprentice",
+      "vekter_apprentice_375",
+    ]) {
+      const apprentice = entry(id).type.presentation;
+      if (!apprentice) throw new Error(`Missing ${id}`);
+      const family = tariffCatalogue.filter(
+        ({ type }) => type.presentation?.family_id === apprentice.family_id,
+      );
+      const apprenticeOptions = family.filter(({ type }) =>
+        type.presentation?.options.some(
+          (option) =>
+            option.dimension_id === "employment" &&
+            option.value === "apprentice",
+        ),
+      );
+      expect(apprenticeOptions.map(({ type }) => type.id)).toEqual([id]);
+      expect(apprentice.options.map((option) => option.dimension_id)).toEqual([
+        "employment",
+        "week",
+      ]);
+      expect(
+        apprentice.options.find((option) => option.dimension_id === "week")
+          ?.value,
+      ).toBe("37.5");
+      for (const { type } of family.filter(({ type }) => type.id !== id)) {
+        expect(type.presentation?.category_group).not.toBe(
+          apprentice.category_group,
+        );
+      }
+    }
+  });
+
+  test("statutory minima and employer agreements cannot be mistaken for the same agreement", () => {
+    const ids = [
+      "cleaning_nho_375",
+      "cleaning_virke_375",
+      "renhold_allmenngjort",
+    ];
+    expect(
+      new Set(ids.map((id) => entry(id).type.presentation?.family_id)).size,
+    ).toBe(ids.length);
+    expect(entry("renhold_allmenngjort").type.presentation?.kind).toBe(
+      "statutory",
+    );
+    expect(entry("cleaning_nho_375").type.presentation?.kind).toBe("agreement");
+    expect(
+      entry("hospitality_allmenngjort").type.presentation?.family_id,
+    ).not.toBe(entry("riksavtalen_hotel").type.presentation?.family_id);
+  });
+
+  test("agriculture coverage is chosen within one family without reusing seasonal category meanings", () => {
+    const seasonal = entry("agriculture_seasonal_allmenngjort").type
+      .presentation;
+    const permanent = entry("agriculture_permanent_allmenngjort").type
+      .presentation;
+    const relief = entry("agriculture_relief_allmenngjort").type.presentation;
+    expect(seasonal?.family_id).toBe(permanent?.family_id);
+    expect(relief?.family_id).toBe(permanent?.family_id);
+    expect(seasonal?.category_group).not.toBe(permanent?.category_group);
+  });
+
+  test("adding presentation preserves stored identifiers and the complete monetary contract", () => {
+    for (const published of tariffCatalogue) {
+      const unannotated = structuredClone(published);
+      delete unannotated.type.presentation;
+      const before = structuredClone(unannotated);
+      const annotated = withPresentation(unannotated);
+      const { presentation, ...type } = annotated.type;
+      expect(presentation).toBeDefined();
+      expect({ ...annotated, type }).toEqual(before);
+      expect(unannotated).toEqual(before);
+    }
+  });
+
+  test("ambiguous, inconsistent and untranslated selections cannot be published", () => {
+    for (const mutate of [
+      (entries: CatalogueEntry[]) => {
+        delete entries[0].type.presentation;
+      },
+      (entries: CatalogueEntry[]) => {
+        Object.assign(entries[0].type.presentation ?? {}, { kind: "unknown" });
+      },
+      (entries: CatalogueEntry[]) => {
+        Object.assign(entries[0].type.presentation ?? {}, { name_nb: " " });
+      },
+      (entries: CatalogueEntry[]) => {
+        const hotel = entries.find(
+          ({ type }) => type.id === "riksavtalen_guard_375",
+        )?.type.presentation;
+        if (!hotel) throw new Error("Missing hotel");
+        hotel.name_en = "Different family name";
+      },
+      (entries: CatalogueEntry[]) => {
+        const hotel = entries.find(
+          ({ type }) => type.id === "riksavtalen_guard_375",
+        )?.type.presentation;
+        if (!hotel) throw new Error("Missing hotel");
+        hotel.options.reverse();
+      },
+      (entries: CatalogueEntry[]) => {
+        const hotel = entries.find(
+          ({ type }) => type.id === "riksavtalen_hotel",
+        )?.type.presentation;
+        if (!hotel) throw new Error("Missing hotel");
+        hotel.options.push(hotel.options[0]);
+      },
+      (entries: CatalogueEntry[]) => {
+        const hotel = entries.find(
+          ({ type }) => type.id === "riksavtalen_guard_375",
+        )?.type.presentation;
+        const ordinary = entries.find(
+          ({ type }) => type.id === "riksavtalen_hotel",
+        )?.type.presentation;
+        if (!hotel || !ordinary) throw new Error("Missing hotel");
+        hotel.options = ordinary.options;
+      },
+      (entries: CatalogueEntry[]) => {
+        const hotel = entries.find(
+          ({ type }) => type.id === "riksavtalen_guard_375",
+        )?.type.presentation;
+        if (!hotel) throw new Error("Missing hotel");
+        hotel.options[0].value_en = " ";
+      },
+      (entries: CatalogueEntry[]) => {
+        const hotel = entries.find(
+          ({ type }) => type.id === "riksavtalen_guard_375",
+        );
+        if (!hotel) throw new Error("Missing hotel");
+        hotel.version.categories[0].label_nb = "Different category meaning";
+      },
+    ]) {
+      const copy = structuredClone(tariffCatalogue);
+      mutate(copy);
+      expect(() => validateCatalogue(copy)).toThrow();
+    }
+  });
+});
+
 describe("catalogue trust boundaries", () => {
   test("duplicate categories and missing rates cannot be published", () => {
     const duplicate = structuredClone(tariffCatalogue);

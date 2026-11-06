@@ -4,6 +4,7 @@ import type {
   SupplementRule,
 } from "../shared/payroll/types";
 import { getNorwegianHolidays } from "../shared/payroll/norwegianHolidays";
+import { validatePresentations } from "./presentation";
 
 export const CATALOGUE_REVISION = "2026-11";
 export const CHECKED_ON = "2026-11-06";
@@ -23,6 +24,25 @@ export type TariffCategory = {
   level: number;
   label_en: string;
   label_nb: string;
+};
+export type TariffPresentationOption = {
+  dimension_id: string;
+  label_en: string;
+  label_nb: string;
+  help_en?: string;
+  help_nb?: string;
+  value: string;
+  value_en: string;
+  value_nb: string;
+};
+export type TariffPresentation = {
+  family_id: string;
+  name_en: string;
+  name_nb: string;
+  kind: "agreement" | "statutory";
+  search_terms: string[];
+  category_group: string;
+  options: TariffPresentationOption[];
 };
 export type CatalogueVersion = {
   id: string;
@@ -53,6 +73,7 @@ export type CatalogueEntry = {
     description: string;
     country: string;
     is_default: boolean;
+    presentation?: TariffPresentation;
   };
   version: CatalogueVersion;
 };
@@ -237,6 +258,7 @@ function minutes(value: string): number {
     : NaN;
 }
 export function validateCatalogue(entries: CatalogueEntry[]): void {
+  validatePresentations(entries);
   const ids = new Set<string>();
   for (const entry of entries) {
     const { type, version } = entry;
