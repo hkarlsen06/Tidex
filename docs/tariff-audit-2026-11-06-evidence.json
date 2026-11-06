@@ -1,0 +1,612 @@
+{
+  "checked_on": "2026-11-06",
+  "source": "https://convex.tidex.no/api/query",
+  "queries": [
+    "tariffs:types",
+    "tariffs:versions"
+  ],
+  "tariffs": {
+    "hk_retail": {
+      "version_count": 16,
+      "effective_dates": [
+        "2026-06-01",
+        "2025-04-01",
+        "2025-02-01",
+        "2024-04-01",
+        "2024-02-01",
+        "2023-04-01",
+        "2023-02-01",
+        "2022-04-01",
+        "2022-02-01",
+        "2021-04-01",
+        "2021-02-01",
+        "2020-02-01",
+        "2019-04-01",
+        "2019-02-01",
+        "2018-04-01",
+        "2018-02-01"
+      ],
+      "latest": {
+        "effective_date": "2026-06-01",
+        "id": "7bbbb42c-e75d-4675-a740-257cc662082f",
+        "name": "2026 Tariff (June)",
+        "overtime": {
+          "enabled": true,
+          "rules": [
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "08:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0
+              ],
+              "from": "08:00",
+              "percent": 50.0,
+              "to": "21:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0
+              ],
+              "from": "21:00",
+              "percent": 100.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": true,
+              "days": [
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": true,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "24:00"
+            }
+          ],
+          "weeklyThresholdHours": 37.5
+        },
+        "rates": {
+          "-1": 136.41,
+          "-2": 139.4,
+          "1": 195.04,
+          "2": 195.88,
+          "3": 197.96,
+          "4": 203.55,
+          "5": 221.31,
+          "6": 271.64
+        },
+        "supplements": {
+          "rules": [
+            {
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0
+              ],
+              "from": "18:00",
+              "rate": 22.0,
+              "to": "21:00"
+            },
+            {
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0
+              ],
+              "from": "21:00",
+              "rate": 45.0,
+              "to": "24:00"
+            },
+            {
+              "days": [
+                6.0
+              ],
+              "from": "13:00",
+              "rate": 45.0,
+              "to": "15:00"
+            },
+            {
+              "days": [
+                6.0
+              ],
+              "from": "15:00",
+              "rate": 55.0,
+              "to": "18:00"
+            },
+            {
+              "days": [
+                6.0
+              ],
+              "from": "18:00",
+              "rate": 110.0,
+              "to": "24:00"
+            },
+            {
+              "days": [
+                7.0
+              ],
+              "from": "00:00",
+              "rate": 115.0,
+              "to": "24:00"
+            }
+          ]
+        },
+        "tariff_type_id": "hk_retail"
+      }
+    },
+    "bygg_allmenngjort": {
+      "version_count": 2,
+      "effective_dates": [
+        "2025-06-15",
+        "2024-11-01"
+      ],
+      "latest": {
+        "effective_date": "2025-06-15",
+        "id": "7c84d456-240d-4436-a456-4c0d94b6e296",
+        "name": "Bygg minstelønn 2025-06",
+        "overtime": {
+          "enabled": true,
+          "rules": [
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 40.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": true,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 40.0,
+              "to": "24:00"
+            }
+          ],
+          "weeklyThresholdHours": 40.0
+        },
+        "rates": {
+          "-1": 162.44,
+          "1": 239.61,
+          "2": 249.0,
+          "3": 264.32
+        },
+        "supplements": {
+          "meta": {
+            "note": "Overtid/helligdager er prosentbasert og krever egen logikk utenfor supplements."
+          },
+          "rules": []
+        },
+        "tariff_type_id": "bygg_allmenngjort"
+      }
+    },
+    "riksavtalen_hotel": {
+      "version_count": 2,
+      "effective_dates": [
+        "2026-06-01",
+        "2025-04-01"
+      ],
+      "latest": {
+        "effective_date": "2026-06-01",
+        "id": "e183187e-7651-4e49-b08b-eddbdf0f5aad",
+        "name": "Riksavtalen satser 2026 (Juni)",
+        "overtime": {
+          "enabled": true,
+          "rules": [
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "06:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0
+              ],
+              "from": "06:00",
+              "percent": 50.0,
+              "to": "21:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0
+              ],
+              "from": "21:00",
+              "percent": 100.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": true,
+              "days": [
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": true,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "24:00"
+            }
+          ],
+          "weeklyThresholdHours": 37.5
+        },
+        "rates": {
+          "-1": 162.58,
+          "-2": 176.84,
+          "1": 215.29,
+          "2": 232.51,
+          "3": 241.61,
+          "4": 230.29,
+          "5": 247.51,
+          "6": 256.61
+        },
+        "supplements": {
+          "meta": {
+            "note": "Riksavtalen kan ha ulike nattillegg (aktivt nattarbeid vs nattportier). Her modelleres aktivt nattarbeid som flat sats."
+          },
+          "rules": [
+            {
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0
+              ],
+              "from": "17:00",
+              "rate": 16.59,
+              "to": "21:00"
+            },
+            {
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0
+              ],
+              "from": "21:00",
+              "rate": 24.84,
+              "to": "06:00"
+            },
+            {
+              "days": [
+                6.0,
+                7.0
+              ],
+              "from": "00:00",
+              "rate": 31.52,
+              "to": "24:00"
+            }
+          ]
+        },
+        "tariff_type_id": "riksavtalen_hotel"
+      }
+    },
+    "renhold_allmenngjort": {
+      "version_count": 2,
+      "effective_dates": [
+        "2025-06-15",
+        "2024-11-01"
+      ],
+      "latest": {
+        "effective_date": "2025-06-15",
+        "id": "79f80a98-7f74-4b20-a7cd-554d5c072b74",
+        "name": "Renhold minstelønn 2025-06",
+        "overtime": {
+          "enabled": true,
+          "rules": [
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 40.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": true,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 40.0,
+              "to": "24:00"
+            }
+          ],
+          "weeklyThresholdHours": 40.0
+        },
+        "rates": {
+          "-1": 185.55,
+          "1": 236.54
+        },
+        "supplements": {
+          "meta": {
+            "fagbrev_tillegg_per_time": 13.5
+          },
+          "rules": [
+            {
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "21:00",
+              "rate": 29.0,
+              "to": "06:00"
+            }
+          ]
+        },
+        "tariff_type_id": "renhold_allmenngjort"
+      }
+    },
+    "vekteroverenskomst": {
+      "version_count": 3,
+      "effective_dates": [
+        "2026-04-01",
+        "2025-04-01",
+        "2024-04-01"
+      ],
+      "latest": {
+        "effective_date": "2026-04-01",
+        "id": "dfe8115e-af31-46cb-9664-c5cc6367d3bb",
+        "name": "Vekter satser 2026 (April)",
+        "overtime": {
+          "enabled": true,
+          "rules": [
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "06:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0
+              ],
+              "from": "06:00",
+              "percent": 50.0,
+              "to": "21:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0
+              ],
+              "from": "21:00",
+              "percent": 100.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                6.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "06:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                6.0
+              ],
+              "from": "06:00",
+              "percent": 50.0,
+              "to": "12:00"
+            },
+            {
+              "appliesOnHolidays": false,
+              "days": [
+                6.0
+              ],
+              "from": "12:00",
+              "percent": 100.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": true,
+              "days": [
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "24:00"
+            },
+            {
+              "appliesOnHolidays": true,
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "00:00",
+              "percent": 100.0,
+              "to": "24:00"
+            }
+          ],
+          "weeklyThresholdHours": 37.5
+        },
+        "rates": {
+          "1": 246.22,
+          "2": 248.72,
+          "3": 250.92,
+          "4": 251.92,
+          "5": 253.72,
+          "6": 255.72
+        },
+        "supplements": {
+          "meta": {
+            "fagbrev_tillegg_per_time": 14.5
+          },
+          "rules": [
+            {
+              "days": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0
+              ],
+              "from": "21:00",
+              "rate": 28.0,
+              "to": "06:00"
+            },
+            {
+              "days": [
+                6.0
+              ],
+              "from": "18:00",
+              "rate": 48.0,
+              "to": "24:00"
+            },
+            {
+              "days": [
+                7.0
+              ],
+              "from": "00:00",
+              "rate": 48.0,
+              "to": "24:00"
+            },
+            {
+              "days": [
+                1.0
+              ],
+              "from": "00:00",
+              "rate": 48.0,
+              "to": "06:00"
+            }
+          ]
+        },
+        "tariff_type_id": "vekteroverenskomst"
+      }
+    }
+  }
+}
