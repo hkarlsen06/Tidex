@@ -4,6 +4,7 @@ import { query } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
 import { publicRow } from "./lib/syncWrite";
 import { literals } from "./lib/validators";
+import { requirePayrollRevision } from "./lib/payrollCompatibility";
 import { settingsRow } from "./userSettings";
 
 const DEFAULT_PAGE = 500;
@@ -30,8 +31,9 @@ export const pull = query({
     table: literals(...TABLES),
     after: v.number(),
     limit: v.optional(v.number()),
+    payroll_revision: v.optional(v.string()),
   },
-  handler: async (ctx, { table, after, limit }) => {
+  handler: async (ctx, { table, after, limit, payroll_revision }) => {
     const { user } = await requireViewer(ctx);
     const size = Math.min(Math.max(Math.floor(limit ?? DEFAULT_PAGE), 1), MAX_PAGE);
     const rows = await ctx.db
@@ -39,6 +41,7 @@ export const pull = query({
       .withIndex("by_user_revision", (q) => q.eq("user_id", user.id).gt("revision", after))
       .take(size);
 
+    requirePayrollRevision(payroll_revision, rows);
     const page = await Promise.all(
       rows.map((row) =>
         table === "user_settings" ? settingsRow(ctx, row as Doc<"user_settings">) : publicRow(row),

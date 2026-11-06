@@ -1,3 +1,4 @@
+import { requirePayrollRevision } from "./lib/payrollCompatibility";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
@@ -74,6 +75,7 @@ async function sharedSchedule(
   showEarnings: boolean,
   range: { from?: string; to?: string },
   goalMonth?: string,
+  payrollRevision?: string,
 ) {
   const settings = await settingsOf(ctx, ownerId);
   const monthGoal = goalMonth === undefined ? undefined : settings?.monthly_goals_by_month?.[goalMonth];
@@ -203,7 +205,9 @@ async function sharedSchedule(
       return job;
     });
 
-  return { settings: settingsJson, shifts, recurring_shifts: recurring, snapshots, jobs };
+  const payload = { settings: settingsJson, shifts, recurring_shifts: recurring, snapshots, jobs };
+  requirePayrollRevision(payrollRevision, payload);
+  return payload;
 }
 
 /** A user's rows that are not soft-deleted. These tables hold few rows per user. */
@@ -237,8 +241,9 @@ export const friendsBootstrap = query({
   args: {
     preview_start_date: v.optional(v.string()),
     preview_end_date: v.optional(v.string()),
+    payroll_revision: v.optional(v.string()),
   },
-  handler: async (ctx, { preview_start_date, preview_end_date }) => {
+  handler: async (ctx, { preview_start_date, preview_end_date, payroll_revision }) => {
     const { user } = await requireViewer(ctx);
     const { incoming, outgoing } = await sharesWith(ctx, user.id);
     const incomingBy = new Map(incoming.map((s) => [s.owner_id, s]));
@@ -312,7 +317,7 @@ export const friendsBootstrap = query({
         .map(async (s) => ({
           sharer_id: s.owner_id,
           show_earnings: s.show_earnings,
-          ...(await sharedSchedule(ctx, s.owner_id, s.show_earnings, range)),
+          ...(await sharedSchedule(ctx, s.owner_id, s.show_earnings, range, undefined, payroll_revision)),
         })),
     );
 
@@ -328,8 +333,8 @@ export const friendsBootstrap = query({
 
 /** One month of a friend's schedule, padded to whole ISO weeks. Null without a share. */
 export const sharedMonth = query({
-  args: { owner_id: v.string(), year: v.number(), month: v.number() },
-  handler: async (ctx, { owner_id, year, month }) => {
+  args: { owner_id: v.string(), year: v.number(), month: v.number(), payroll_revision: v.optional(v.string()) },
+  handler: async (ctx, { owner_id, year, month, payroll_revision }) => {
     const { user } = await requireViewer(ctx);
     const share = await ctx.db
       .query("shift_shares")
@@ -347,6 +352,7 @@ export const sharedMonth = query({
         share.show_earnings,
         { from: weekStart(first), to: weekEnd(last) },
         first.slice(0, 7),
+        payroll_revision,
       )),
     };
   },

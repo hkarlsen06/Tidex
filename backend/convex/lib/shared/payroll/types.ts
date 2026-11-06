@@ -88,6 +88,14 @@ export type SupplementRule = {
   to: HHMM; // inclusive
   rate?: number; // Fixed NOK per hour supplement (e.g., 22, 45, 110)
   percent?: number; // Percentage supplement (e.g., 50 for 50% supplement)
+  stackingGroup?: string; // Maximum within a group, sum across groups. Missing retains legacy maximum.
+  dates?: string[]; // Restrict rule start days to these ISO dates.
+  excludedDates?: string[];
+  shiftStartDates?: string[];
+  excludedShiftStartDates?: string[];
+  shiftStartBefore?: HHMM;
+  minimumRate?: number; // Floor for a percentage supplement.
+  percentageBaseRate?: number; // Fixed tariff basis instead of the personal hourly wage.
 };
 
 export type BreakMethod =
@@ -171,6 +179,10 @@ export type WageSnapshot = {
 export type OvertimeConfig = {
   enabled: boolean;
   weeklyThresholdHours: number;
+  retainSupplements?: boolean;
+  premiumBaseMultiplier?: number;
+  baseRate?: number;
+  retainedSupplements?: SupplementRule[];
   rules: OvertimeRule[];
 };
 
@@ -180,4 +192,6 @@ export type OvertimeRule = {
   from: HHMM;
   to: HHMM;
   percent: number;
+  dates?: string[];
+  excludedDates?: string[];
 };

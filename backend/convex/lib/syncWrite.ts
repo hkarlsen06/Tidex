@@ -4,6 +4,7 @@ import { type MutationCtx, mutation } from "../_generated/server";
 import schema from "../schema";
 import { requireViewer } from "./auth";
 import { checkColumns } from "./columns";
+import { requireCompatibleJob } from "./payrollCompatibility";
 import { nextRevision } from "./revision";
 
 // Writes for the synced tables keyed by `id`. They keep the contract the app's sync
@@ -91,18 +92,20 @@ export function syncedTable<T extends IdTable>(
     await db(ctx).query(table).withIndex("by_uuid", (q: any) => q.eq("id", id)).unique();
 
   const insert = mutation({
-    args: { row: insertRow, expected_user_id: v.string() },
+    args: { row: insertRow, expected_user_id: v.string(), payroll_revision: v.optional(v.string()) },
     handler: async (
       ctx,
-      { row, expected_user_id }: { row: Record<string, unknown> & { id: string }; expected_user_id: string },
+      { row, expected_user_id, payroll_revision }: { row: Record<string, unknown> & { id: string }; expected_user_id: string; payroll_revision?: string },
     ) => {
       const { user } = await requireViewer(ctx);
       requireExpectedUser(user.id, expected_user_id);
       const existing = await byUuid(ctx, row.id);
       if (existing !== null) {
         if (existing.user_id !== user.id) reject("id_taken");
+        await requireCompatibleJob(ctx, user.id, table, existing, payroll_revision);
         return { status: "exists" as const, row: publicRow(existing) };
       }
+      await requireCompatibleJob(ctx, user.id, table, row, payroll_revision);
       checkColumns(table, row);
       const now = new Date().toISOString();
       const revision = await nextRevision(ctx);
@@ -130,6 +133,7 @@ export function syncedTable<T extends IdTable>(
       expected_user_id: v.string(),
       set: all.omit("id").partial(),
       clear: v.optional(clearable),
+      payroll_revision: v.optional(v.string()),
     },
     handler: async (
       ctx,
@@ -139,15 +143,18 @@ export function syncedTable<T extends IdTable>(
         expected_user_id: string;
         set: Record<string, unknown>;
         clear?: string[];
+        payroll_revision?: string;
       },
     ) => {
       const { user } = await requireViewer(ctx);
       requireExpectedUser(user.id, args.expected_user_id);
       const prev = await byUuid(ctx, args.id);
       if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
+      await requireCompatibleJob(ctx, user.id, table, prev, args.payroll_revision);
       if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
         return { status: "conflict" as const, row: publicRow(prev) };
       }
+      await requireCompatibleJob(ctx, user.id, table, { ...prev, ...args.set }, args.payroll_revision);
       checkColumns(table, args.set);
       const cleared = Object.fromEntries((args.clear ?? []).map((k) => [k, undefined]));
       const revision = await nextRevision(ctx);
@@ -165,12 +172,13 @@ export function syncedTable<T extends IdTable>(
 
   /** Soft delete. The purge job removes the row later. */
   const remove = mutation({
-    args: { id: v.string(), expected_revision: v.number(), expected_user_id: v.string() },
+    args: { id: v.string(), expected_revision: v.number(), expected_user_id: v.string(), payroll_revision: v.optional(v.string()) },
     handler: async (ctx, args) => {
       const { user } = await requireViewer(ctx);
       requireExpectedUser(user.id, args.expected_user_id);
       const prev = await byUuid(ctx, args.id);
       if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
+      await requireCompatibleJob(ctx, user.id, table, prev, args.payroll_revision);
       if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
         return { status: "conflict" as const, row: publicRow(prev) };
       }

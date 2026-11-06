@@ -153,6 +153,7 @@ export function computeShift(
     weekday,
     baseRate,
     rules,
+    s.shift_date,
   );
 
   // duration
@@ -363,25 +364,42 @@ function applyOvertimeToSegment(
 
   const thresholdMinutes = segment.config.weeklyThresholdHours * 60;
   const pieces: OvertimePiece[] = [];
+  const retainedPeriods = buildWagePeriods(
+    segment.shift.start_time, segment.shift.end_time, WEEKDAYS[segment.shiftDayStart.getUTCDay()],
+    segment.config.baseRate ?? segment.period.baseRate,
+    segment.shift.custom_supplements?.rules.length === 0 ? [] : segment.config.retainedSupplements ?? [],
+    segment.shift.shift_date,
+  );
   let cursor = segment.absoluteStart;
   let cursorCumulative = cumulativeMinutes;
 
   while (cursor < segment.absoluteEnd) {
-    const next = nextOvertimeBoundary(
+    let next = nextOvertimeBoundary(
       cursor,
       segment.absoluteEnd,
       segment.config,
       cursorCumulative,
       thresholdMinutes,
     );
+    for (const period of retainedPeriods) {
+      for (const minute of [period.fromMin, period.toMin]) {
+        const boundary = addMinutes(segment.shiftDayStart, minute);
+        if (boundary > cursor && boundary < next) next = boundary;
+      }
+    }
     const durationMinutes = minutesBetween(cursor, next);
     if (durationMinutes <= 0) break;
 
     const isOvertime = cursorCumulative >= thresholdMinutes;
     const percent = isOvertime ? overtimePercent(segment.config, cursor) : null;
+    const minute = minutesBetween(segment.shiftDayStart, cursor);
+    const retained = segment.config.retainedSupplements != null
+      ? retainedPeriods.find((period) => period.fromMin <= minute && minute < period.toMin)?.supplementRate ?? 0
+      : segment.config.retainSupplements ? segment.period.supplementRate : 0;
+    const baseRate = percent == null ? segment.period.baseRate : segment.config.baseRate ?? segment.period.baseRate;
     const supplementRate = percent == null
       ? segment.period.supplementRate
-      : segment.period.baseRate * percent / 100;
+      : baseRate * (segment.config.premiumBaseMultiplier ?? 1) * percent / 100 + retained;
 
     pieces.push({
       shiftId: segment.shift.id,
@@ -389,7 +407,7 @@ function applyOvertimeToSegment(
       period: makePeriod(
         minutesBetween(segment.shiftDayStart, cursor),
         minutesBetween(segment.shiftDayStart, next),
-        segment.period.baseRate,
+        baseRate,
         supplementRate,
         percent != null,
       ),
@@ -487,6 +505,9 @@ function runtimeOvertimeConfig(
   ) {
     return null;
   }
+  if (config.baseRate != null && (!Number.isFinite(config.baseRate) || config.baseRate <= 0)) return null;
+  if (config.premiumBaseMultiplier != null &&
+    (!Number.isFinite(config.premiumBaseMultiplier) || config.premiumBaseMultiplier <= 0)) return null;
   if (!config.rules.length || !config.rules.every(isValidOvertimeRule)) {
     return null;
   }
@@ -512,7 +533,7 @@ function rulesCoverFullDay(rules: OvertimeRule[], holiday: boolean): boolean {
   for (let day = 1; day <= 7; day++) {
     const intervals = rules
       .filter((rule) =>
-        rule.days.includes(day) &&
+        rule.dates == null && rule.days.includes(day) &&
         (holiday ? rule.appliesOnHolidays : !isHolidayOnlyRule(rule))
       )
       .map((rule) =>
@@ -554,6 +575,9 @@ function overtimePercent(config: OvertimeConfig, date: Date): number | null {
 function overtimeRuleCanMatch(rule: OvertimeRule, date: Date): boolean {
   const weekday = WEEKDAYS[date.getUTCDay()];
   if (!rule.days.includes(weekday)) return false;
+  const iso = date.toISOString().slice(0, 10);
+  if (rule.excludedDates?.includes(iso)) return false;
+  if (rule.dates != null) return rule.dates.includes(iso);
   if (isNorwegianPublicHoliday(date)) return rule.appliesOnHolidays;
   return !isHolidayOnlyRule(rule);
 }
