@@ -1,4 +1,4 @@
-import { requirePayrollRevision } from "./lib/payrollCompatibility";
+import { needsReviewedPayroll, PAYROLL_REVISION, requirePayrollRevision } from "./lib/payrollCompatibility";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
@@ -72,7 +72,7 @@ async function pictureUrl(ctx: QueryCtx, settings: Doc<"user_settings"> | null) 
 async function sharedSchedule(
   ctx: QueryCtx,
   ownerId: string,
-  showEarnings: boolean,
+  requestedShowEarnings: boolean,
   range: { from?: string; to?: string },
   goalMonth?: string,
   payrollRevision?: string,
@@ -98,11 +98,13 @@ async function sharedSchedule(
           currency: settings.currency ?? null,
         };
 
-  const shifts = (
+  const checkAllShiftRules = requestedShowEarnings && payrollRevision !== PAYROLL_REVISION;
+  const shiftRows = (
     await ctx.db
       .query("user_shifts")
       .withIndex("by_user_shift_date", (q) => {
         const user = q.eq("user_id", ownerId);
+        if (checkAllShiftRules) return user;
         if (range.from !== undefined && range.to !== undefined) {
           return user.gte("shift_date", range.from).lte("shift_date", range.to);
         }
@@ -118,75 +120,84 @@ async function sharedSchedule(
         a.shift_date.localeCompare(b.shift_date) ||
         a.start_time.localeCompare(b.start_time) ||
         a.id.localeCompare(b.id),
-    )
-    .map((s) => ({
-      id: s.id,
-      user_id: s.user_id,
-      job_id: s.job_id,
-      shift_date: s.shift_date,
-      start_time: s.start_time,
-      end_time: s.end_time,
-      custom_pause_windows: s.custom_pause_windows ?? null,
-      custom_supplements: showEarnings ? (s.custom_supplements ?? null) : null,
-      recurring_id: null,
-      recurring_anchor_weekday: null,
-    }));
+    );
+  const recurringRows = (await liveRows(ctx, "recurring_shifts", ownerId))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const wageRows = (await liveRows(ctx, "wage_snapshots", ownerId))
+    .sort((a, b) => (b.from_date ?? "").localeCompare(a.from_date ?? "") || a.id.localeCompare(b.id));
 
-  const recurring = (await liveRows(ctx, "recurring_shifts", ownerId))
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map((r) => ({
-      id: r.id,
-      user_id: r.user_id,
-      job_id: r.job_id,
-      start_time: r.start_time,
-      end_time: r.end_time,
-      repeat_interval_weeks: r.repeat_interval_weeks,
-      selected_days: r.selected_days,
-      end_condition: r.end_condition ?? null,
-      exclusions: r.exclusions ?? null,
-      date_specific_pause_windows: r.date_specific_pause_windows ?? null,
-      date_specific_supplements: showEarnings ? (r.date_specific_supplements ?? null) : null,
-    }));
+  // Older apps can still show the schedule, but must not calculate these earnings.
+  const showEarnings = requestedShowEarnings && (
+    payrollRevision === PAYROLL_REVISION || !needsReviewedPayroll({
+      snapshots: wageRows,
+      custom_supplements: shiftRows.map((s) => s.custom_supplements),
+      date_specific_supplements: recurringRows.map((r) => r.date_specific_supplements),
+    })
+  );
+  const shifts = shiftRows.filter((s) =>
+    (range.from === undefined || s.shift_date >= range.from) &&
+    (range.to === undefined || s.shift_date <= range.to)
+  ).map((s) => ({
+    id: s.id,
+    user_id: s.user_id,
+    job_id: s.job_id,
+    shift_date: s.shift_date,
+    start_time: s.start_time,
+    end_time: s.end_time,
+    custom_pause_windows: s.custom_pause_windows ?? null,
+    custom_supplements: showEarnings ? (s.custom_supplements ?? null) : null,
+    recurring_id: null,
+    recurring_anchor_weekday: null,
+  }));
 
-  const snapshots = (await liveRows(ctx, "wage_snapshots", ownerId))
-    .sort(
-      (a, b) =>
-        (b.from_date ?? "").localeCompare(a.from_date ?? "") || a.id.localeCompare(b.id),
-    )
-    .map((w) => {
-      const shared = {
-        id: w.id,
-        user_id: w.user_id,
-        job_id: w.job_id,
-        from_date: w.from_date ?? null,
-        break_enabled: w.break_enabled ?? null,
-        break_method: w.break_method ?? null,
-        break_threshold_hours: w.break_threshold_hours ?? null,
-        break_deduction_minutes: w.break_deduction_minutes ?? null,
-        created_at: w.created_at ?? null,
-      };
-      return showEarnings
-        ? {
-            ...shared,
-            hourly_wage: w.hourly_wage,
-            wage_level: w.wage_level ?? null,
-            tariff_type_id: w.tariff_type_id ?? null,
-            supplements: w.supplements,
-            overtime: w.overtime ?? emptyOvertime,
-            tax_enabled: w.tax_enabled ?? null,
-            tax_percentage: w.tax_percentage ?? null,
-          }
-        : {
-            ...shared,
-            hourly_wage: 0,
-            wage_level: null,
-            tariff_type_id: null,
-            supplements: { rules: [] },
-            overtime: emptyOvertime,
-            tax_enabled: false,
-            tax_percentage: 0,
-          };
-    });
+  const recurring = recurringRows.map((r) => ({
+    id: r.id,
+    user_id: r.user_id,
+    job_id: r.job_id,
+    start_time: r.start_time,
+    end_time: r.end_time,
+    repeat_interval_weeks: r.repeat_interval_weeks,
+    selected_days: r.selected_days,
+    end_condition: r.end_condition ?? null,
+    exclusions: r.exclusions ?? null,
+    date_specific_pause_windows: r.date_specific_pause_windows ?? null,
+    date_specific_supplements: showEarnings ? (r.date_specific_supplements ?? null) : null,
+  }));
+
+  const snapshots = wageRows.map((w) => {
+    const shared = {
+      id: w.id,
+      user_id: w.user_id,
+      job_id: w.job_id,
+      from_date: w.from_date ?? null,
+      break_enabled: w.break_enabled ?? null,
+      break_method: w.break_method ?? null,
+      break_threshold_hours: w.break_threshold_hours ?? null,
+      break_deduction_minutes: w.break_deduction_minutes ?? null,
+      created_at: w.created_at ?? null,
+    };
+    return showEarnings
+      ? {
+          ...shared,
+          hourly_wage: w.hourly_wage,
+          wage_level: w.wage_level ?? null,
+          tariff_type_id: w.tariff_type_id ?? null,
+          supplements: w.supplements,
+          overtime: w.overtime ?? emptyOvertime,
+          tax_enabled: w.tax_enabled ?? null,
+          tax_percentage: w.tax_percentage ?? null,
+        }
+      : {
+          ...shared,
+          hourly_wage: 0,
+          wage_level: null,
+          tariff_type_id: null,
+          supplements: { rules: [] },
+          overtime: emptyOvertime,
+          tax_enabled: false,
+          tax_percentage: 0,
+        };
+  });
 
   const jobs = (
     await ctx.db
@@ -205,7 +216,7 @@ async function sharedSchedule(
       return job;
     });
 
-  const payload = { settings: settingsJson, shifts, recurring_shifts: recurring, snapshots, jobs };
+  const payload = { show_earnings: showEarnings, settings: settingsJson, shifts, recurring_shifts: recurring, snapshots, jobs };
   requirePayrollRevision(payrollRevision, payload);
   return payload;
 }
@@ -316,13 +327,13 @@ export const friendsBootstrap = query({
         .sort((a, b) => a.owner_id.localeCompare(b.owner_id))
         .map(async (s) => ({
           sharer_id: s.owner_id,
-          show_earnings: s.show_earnings,
           ...(await sharedSchedule(ctx, s.owner_id, s.show_earnings, range, undefined, payroll_revision)),
         })),
     );
+    const earningsBySharer = new Map(previewPayloads.map((p) => [p.sharer_id, p.show_earnings]));
 
     return {
-      sharers,
+      sharers: sharers.map((s) => ({ ...s, showEarnings: earningsBySharer.get(s.id) ?? false })),
       friends: friendRows.filter((f) => f.blockedBy === undefined).sort(bySortName).map((f) => f.json),
       blockedFriends: friendRows.filter((f) => f.blockedBy === user.id).sort(bySortName).map((f) => f.json),
       capacity: { canAdd: true, currentCount: outgoing.length, limit: 0 },
@@ -345,7 +356,6 @@ export const sharedMonth = query({
     const last = isoDate(Date.UTC(year, month, 0));
     return {
       owner_id,
-      show_earnings: share.show_earnings,
       ...(await sharedSchedule(
         ctx,
         owner_id,
