@@ -156,9 +156,56 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
       reason: .localChange, userId: userId, minimumSyncInterval: 60)
 
     XCTAssertEqual(first, .started(generation: 0))
-    XCTAssertEqual(second, .alreadySyncing)
+    XCTAssertEqual(second, .alreadySyncing(generation: 0))
     let followUp = await store.endSync(success: true, generation: 0)
     XCTAssertEqual(followUp, true, "A local change during a sync queues a follow-up sync")
+  }
+
+  internal func testManualRefreshWaitsForRunningSyncCompletion() async {
+    let store = SyncStateStore()
+    _ = await store.beginSync(reason: .foreground, userId: userId, minimumSyncInterval: 60)
+    let updates = await store.idleUpdates(generation: 0)
+    _ = await store.endSync(success: true, generation: 0)
+    var ready = false
+    for await value in updates { ready = value }
+    XCTAssertTrue(ready)
+    let refresh = await store.beginSync(reason: .manualRefresh, userId: userId, minimumSyncInterval: 60)
+    XCTAssertEqual(refresh, .started(generation: 0))
+  }
+
+  internal func testManualRefreshDoesNotMissCompletionBeforeItStartsWaiting() async {
+    let store = SyncStateStore()
+    _ = await store.beginSync(reason: .foreground, userId: userId, minimumSyncInterval: 60)
+    _ = await store.endSync(success: false, generation: 0)
+    let updates = await store.idleUpdates(generation: 0)
+    var ready = false
+    for await value in updates { ready = value }
+    XCTAssertTrue(ready)
+  }
+
+  internal func testAccountResetStopsWaitingRefreshForPreviousUser() async {
+    let store = SyncStateStore()
+    _ = await store.beginSync(reason: .foreground, userId: userId, minimumSyncInterval: 60)
+    let updates = await store.idleUpdates(generation: 0)
+    await store.reset()
+    var ready = true
+    for await value in updates { ready = value }
+    XCTAssertFalse(ready)
+    let lateUpdates = await store.idleUpdates(generation: 0)
+    for await value in lateUpdates { XCTAssertFalse(value) }
+  }
+
+  internal func testCancelledManualRefreshStopsWaiting() async {
+    let store = SyncStateStore()
+    _ = await store.beginSync(reason: .foreground, userId: userId, minimumSyncInterval: 60)
+    let updates = await store.idleUpdates(generation: 0)
+    let waiter = Task {
+      for await _ in updates { return true }
+      return false
+    }
+    waiter.cancel()
+    let completed = await waiter.value
+    XCTAssertFalse(completed)
   }
 
   /// An account switch resets the store while the old user's sync is still winding down. When
@@ -178,7 +225,7 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     XCTAssertNil(staleEnd)
     let overlapping = await store.beginSync(
       reason: .foreground, userId: "other-user", minimumSyncInterval: 60)
-    XCTAssertEqual(overlapping, .alreadySyncing, "The new user's sync is still running")
+    XCTAssertEqual(overlapping, .alreadySyncing(generation: 1), "The new user's sync is still running")
 
     let end = await store.endSync(success: true, generation: 1)
     XCTAssertNotNil(end, "The new user's own sync ends normally")

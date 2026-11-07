@@ -3,6 +3,7 @@
 // swiftlint:disable:previous blanket_disable_command
 import Foundation
 import Observation
+import Synchronization
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SyncCoordinator")
@@ -20,7 +21,7 @@ internal enum SyncState {
 internal enum SyncStartDecision: Equatable {
   /// The sync may run. It passes `generation` back to `endSync`.
   case started(generation: Int)
-  case alreadySyncing
+  case alreadySyncing(generation: Int)
   case skippedInterval
 }
 
@@ -28,6 +29,7 @@ internal actor SyncStateStore {
   private var syncState: SyncState = .idle
   private var lastAutoSyncAt: Date?
   private var needsFollowUpSync = false
+  private var idleWaiters: [UUID: AsyncStream<Bool>.Continuation] = [:]
   /// Goes up on every reset. A sync that started before the last reset ran for the previous
   /// user, and its `endSync` must not end the sync of the user signed in now.
   private var generation = 0
@@ -40,7 +42,7 @@ internal actor SyncStateStore {
       if reason.shouldQueueFollowUp {
         needsFollowUpSync = true
       }
-      return .alreadySyncing
+      return .alreadySyncing(generation: generation)
 
     case .idle:
       break
@@ -70,6 +72,7 @@ internal actor SyncStateStore {
     lastAutoSyncAt = success ? Date() : nil
     let shouldRunFollowUp = needsFollowUpSync
     needsFollowUpSync = false
+    finishIdleWaiters(ready: true)
     return shouldRunFollowUp
   }
 
@@ -78,6 +81,41 @@ internal actor SyncStateStore {
     syncState = .idle
     lastAutoSyncAt = nil
     needsFollowUpSync = false
+    finishIdleWaiters(ready: false)
+  }
+
+  /// Registration and the idle check share this actor, so completion cannot be missed.
+  internal func idleUpdates(generation expectedGeneration: Int? = nil) -> AsyncStream<Bool> {
+    let id = UUID()
+    return AsyncStream { continuation in
+      guard expectedGeneration == nil || expectedGeneration == self.generation else {
+        continuation.yield(false)
+        continuation.finish()
+        return
+      }
+      guard case .syncing = syncState else {
+        continuation.yield(true)
+        continuation.finish()
+        return
+      }
+      idleWaiters[id] = continuation
+      continuation.onTermination = { [weak self] _ in
+        Task { await self?.removeIdleWaiter(id) }
+      }
+    }
+  }
+
+  private func removeIdleWaiter(_ id: UUID) {
+    idleWaiters.removeValue(forKey: id)
+  }
+
+  private func finishIdleWaiters(ready: Bool) {
+    let waiters = idleWaiters.values
+    idleWaiters.removeAll()
+    for waiter in waiters {
+      waiter.yield(ready)
+      waiter.finish()
+    }
   }
 }
 
@@ -97,30 +135,47 @@ extension SyncReason {
 
 /// Coordinates bidirectional sync between local SwiftData storage and Convex
 /// Implements incremental sync via revision cursors with field-level conflict detection
-/// `@unchecked` is safe because the observable state is only written inside `MainActor.run`,
-/// and the sync state lives in the `SyncStateStore` actor.
-@Observable
-final class SyncCoordinator: @unchecked Sendable {
-  /// Shared instance
+/// UI status is main-actor isolated. Network, merge and encoding work runs outside it.
+final class SyncCoordinator: Sendable {
   static let shared = SyncCoordinator()
 
-  // MARK: - Published State
+  @MainActor @Observable
+  fileprivate final class Status {
+    var isSyncing = false
+    var lastError: String?
+    var conflictCount = 0
+    var lastSyncedAt: Date?
+    var lastSyncAttemptedAt: Date?
 
-  /// Whether a sync is currently in progress
-  private(set) var isSyncing = false
+    nonisolated init() {}
+  }
 
-  /// Last sync error (nil if last sync succeeded)
-  private(set) var lastError: String?
+  private let status = Status()
 
-  /// Number of unresolved conflicts
-  private(set) var conflictCount = 0
+  @MainActor private(set) var isSyncing: Bool {
+    get { status.isSyncing }
+    set { status.isSyncing = newValue }
+  }
 
-  /// When the last successful sync completed
-  private(set) var lastSyncedAt: Date?
+  @MainActor private(set) var lastError: String? {
+    get { status.lastError }
+    set { status.lastError = newValue }
+  }
 
-  // When the last sync attempt started
-  // swiftlint:disable:next type_contents_order
-  internal private(set) var lastSyncAttemptedAt: Date?
+  @MainActor private(set) var conflictCount: Int {
+    get { status.conflictCount }
+    set { status.conflictCount = newValue }
+  }
+
+  @MainActor private(set) var lastSyncedAt: Date? {
+    get { status.lastSyncedAt }
+    set { status.lastSyncedAt = newValue }
+  }
+
+  @MainActor internal private(set) var lastSyncAttemptedAt: Date? {
+    get { status.lastSyncAttemptedAt }
+    set { status.lastSyncAttemptedAt = newValue }
+  }
 
   // MARK: - Configuration
 
@@ -139,31 +194,25 @@ final class SyncCoordinator: @unchecked Sendable {
   /// Sync state for atomic check-and-set operations
   private let stateStore = SyncStateStore()
 
-  /// Guards `isSendingLocale`, which keeps two syncs from sending the app locale at once.
-  private let localeSendLock = NSLock()
-  @ObservationIgnored private var isSendingLocale = false
+  private let isSendingLocale = Mutex(false)
 
-  /// The work of the running sync. `resetForUserChange` cancels it, so a sync for the user who
-  /// signed out stops at its next request instead of sending their rows with the next user's
-  /// token. Guarded by `runningWorkLock`.
-  private let runningWorkLock = NSLock()
-  @ObservationIgnored private var runningWork: Task<SyncResult, Never>?
+  /// Cancelling an account's work prevents its rows using the next account's token.
+  private let runningWork = Mutex<Task<SyncResult, Never>?>(nil)
 
   private init() {}
 
   /// Reset sync state when user changes (e.g., sign out)
   /// Clears the interval guard so the next user's initial sync isn't blocked
+  @MainActor
   func resetForUserChange() async {
-    runningWorkLock.withLock { runningWork }?.cancel()
+    runningWork.withLock { $0 }?.cancel()
     await stateStore.reset()
-    await MainActor.run {
-      isSyncing = false
-      lastError = nil
-      lastSyncedAt = nil
-      lastSyncAttemptedAt = nil
-      conflictCount = 0
-      SyncStatusManager.shared.reset()
-    }
+    isSyncing = false
+    lastError = nil
+    lastSyncedAt = nil
+    lastSyncAttemptedAt = nil
+    conflictCount = 0
+    SyncStatusManager.shared.reset()
     logger.info("Sync state reset for user change")
   }
 
@@ -199,17 +248,15 @@ final class SyncCoordinator: @unchecked Sendable {
   }
 
   private func beginLocaleSend() -> Bool {
-    localeSendLock.lock()
-    defer { localeSendLock.unlock() }
-    if isSendingLocale { return false }
-    isSendingLocale = true
-    return true
+    isSendingLocale.withLock { sending in
+      guard !sending else { return false }
+      sending = true
+      return true
+    }
   }
 
   private func endLocaleSend() {
-    localeSendLock.lock()
-    isSendingLocale = false
-    localeSendLock.unlock()
+    isSendingLocale.withLock { $0 = false }
   }
 
   private func currentAppLocaleMetadataCode() -> String? {
@@ -225,20 +272,27 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // Load persisted sync tracking state for display/debugging.
   // swiftlint:disable:next type_contents_order
+  @MainActor
   internal func loadTrackingState(userId: String) async {
-    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    let storeActor = LocalStore.shared.storeActor
     let state = try? await storeActor.syncStateCopy(userId: userId)
     let conflicts = (try? await storeActor.countConflicts(userId: userId)) ?? 0
     let lastSuccessfulSyncAt = state?.lastSuccessfulSyncAt
     let lastSyncAttemptAt = state?.lastSyncAttemptAt
     let lastSyncError = state?.lastSyncError
 
-    await MainActor.run {
-      lastSyncedAt = lastSuccessfulSyncAt
-      lastSyncAttemptedAt = lastSyncAttemptAt
-      lastError = lastSyncError
-      conflictCount = conflicts
-    }
+    lastSyncedAt = lastSuccessfulSyncAt
+    lastSyncAttemptedAt = lastSyncAttemptAt
+    lastError = lastSyncError
+    conflictCount = conflicts
+  }
+
+  /// Waits for the sync already in progress. Resetting the account cancels the wait.
+  func waitForIdle() async -> Bool {
+    let updates = await stateStore.idleUpdates()
+    var ready = false
+    for await value in updates { ready = value }
+    return ready && !Task.isCancelled
   }
 
   /// Trigger a sync operation
@@ -247,6 +301,7 @@ final class SyncCoordinator: @unchecked Sendable {
   ///   - userId: User ID to sync for
   /// - Returns: Sync result
   @discardableResult
+  @concurrent
   func sync(reason: SyncReason, userId: String) async -> SyncResult {
     await sync(
       reason: reason,
@@ -257,6 +312,7 @@ final class SyncCoordinator: @unchecked Sendable {
   }
 
   @discardableResult
+  @concurrent
   // swiftlint:disable:next cyclomatic_complexity
   func sync(
     reason: SyncReason,
@@ -294,9 +350,7 @@ final class SyncCoordinator: @unchecked Sendable {
       )
     }
 
-    var decision: SyncStartDecision = .alreadySyncing
-    var waitAttempts = 0
-    let maxWaitAttempts = 48  // 12s at 250ms intervals
+    var decision: SyncStartDecision = .alreadySyncing(generation: 0)
 
     syncStartLoop: while true {
       decision = await stateStore.beginSync(
@@ -307,16 +361,12 @@ final class SyncCoordinator: @unchecked Sendable {
 
       // Manual pull-to-refresh should wait for an ongoing sync, then retry.
       // This avoids dismissing the refresh UI immediately when background sync is active.
-      if case .alreadySyncing = decision, reason == .manualRefresh {
-        if waitAttempts >= maxWaitAttempts {
-          logger.warning("Manual refresh timed out waiting for ongoing sync to finish")
-          break syncStartLoop
-        }
-        waitAttempts += 1
+      if case .alreadySyncing(let waitingGeneration) = decision, reason == .manualRefresh {
         logger.info("Manual refresh requested while sync in progress, waiting for idle")
-        do {
-          try await Task.sleep(nanoseconds: 250_000_000)
-        } catch {
+        let updates = await stateStore.idleUpdates(generation: waitingGeneration)
+        var finished = false
+        for await ready in updates { finished = ready }
+        guard finished, !Task.isCancelled else {
           return SyncResult(
             success: false,
             tableResults: [],
@@ -408,10 +458,10 @@ final class SyncCoordinator: @unchecked Sendable {
             updateWidgetStorage: updateWidgetStorage
           )
         }
-        self.runningWorkLock.withLock { self.runningWork = work }
+        self.runningWork.withLock { $0 = work }
         defer {
-          self.runningWorkLock.withLock {
-            if self.runningWork == work { self.runningWork = nil }
+          self.runningWork.withLock { running in
+            if running == work { running = nil }
           }
         }
         return await withTaskCancellationHandler {
@@ -421,7 +471,7 @@ final class SyncCoordinator: @unchecked Sendable {
         }
       }
       group.addTask {
-        try? await Task.sleep(nanoseconds: Self.syncTimeout)
+        try? await Task.sleep(for: .nanoseconds(Int64(Self.syncTimeout)))
         return nil  // timeout signal
       }
       guard let first = await group.next() else {
@@ -533,13 +583,18 @@ final class SyncCoordinator: @unchecked Sendable {
     }
   }
 
-  /// Mutable outcome of the pull phase. It is a class so that a timed out pull keeps the tables
-  /// it finished. `@unchecked` is safe because only the pull task writes it, and `withTimeout`
-  /// returns only after that task ends, since a task group waits for its children even after
-  /// `cancelAll()`.
-  private final class PullPhase: @unchecked Sendable {
-    var tableResults: [TablePullResult] = []
-    var error: Error?
+  /// Keeps completed pull results available when the timeout cancels the remaining tables.
+  private actor PullPhase {
+    private var tableResults: [TablePullResult] = []
+    private var error: Error?
+
+    func append(_ result: TablePullResult) { tableResults.append(result) }
+    func record(_ error: Error) {
+      if self.error == nil { self.error = error }
+    }
+    func snapshot(timedOut: Bool) -> (tableResults: [TablePullResult], error: Error?) {
+      (tableResults, timedOut ? SyncError.pullTimedOut : error)
+    }
   }
 
   /// Time the pull phase gets. The rest of `syncTimeout` is left for the push phase.
@@ -553,7 +608,7 @@ final class SyncCoordinator: @unchecked Sendable {
     await withTaskGroup(of: T?.self) { group in
       group.addTask { await operation() }
       group.addTask {
-        try? await Task.sleep(nanoseconds: nanoseconds)
+        try? await Task.sleep(for: .nanoseconds(Int64(nanoseconds)))
         return nil
       }
       guard let first = await group.next() else { return nil }
@@ -584,10 +639,10 @@ final class SyncCoordinator: @unchecked Sendable {
       if Task.isCancelled { return }
       guard let start = startCursors[table] else { continue }
       do {
-        phase.tableResults.append(try await pullTable(table, userId: userId, after: start))
+        await phase.append(try await pullTable(table, userId: userId, after: start))
       } catch {
         logger.error("Pull of \(table.displayName) failed: \(error.localizedDescription)")
-        if phase.error == nil { phase.error = error }
+        await phase.record(error)
         if Self.isCancellation(error) { return }
         if await Self.isNetworkError(error) { return }
       }
@@ -607,6 +662,7 @@ final class SyncCoordinator: @unchecked Sendable {
 
   // Performs the actual sync work (pull, push, widget update).
   // Extracted so it can be raced against a timeout in `sync()`.
+  @concurrent
   // swiftlint:disable:next cyclomatic_complexity
   private func performSyncWork(
     reason: SyncReason,
@@ -651,16 +707,16 @@ final class SyncCoordinator: @unchecked Sendable {
       try Task.checkCancellation()
       if pullFinished == nil {
         logger.error("Pull timed out, continuing with push")
-        pullPhase.error = SyncError.pullTimedOut
       }
-      let tableResults = pullPhase.tableResults
+      let pullOutcome = await pullPhase.snapshot(timedOut: pullFinished == nil)
+      let tableResults = pullOutcome.tableResults
 
       // Phase 2: Push dirty records to server.
       // Skipped when the pull failed because the device is offline.
       var pushResults: [TablePushResult] = []
       var pushError: Error?
       var isOffline = false
-      if let pullError = pullPhase.error {
+      if let pullError = pullOutcome.error {
         isOffline = await Self.isNetworkError(pullError)
       }
 
@@ -714,7 +770,7 @@ final class SyncCoordinator: @unchecked Sendable {
         NativeWidgetStorage.updateWidgetStorage(for: userId)
       }
 
-      var failure: Error? = pullPhase.error ?? pushError
+      var failure: Error? = pullOutcome.error ?? pushError
       if failure == nil, skippedPushRows > 0 {
         failure = SyncError.rowsNotPushed(count: skippedPushRows)
       }

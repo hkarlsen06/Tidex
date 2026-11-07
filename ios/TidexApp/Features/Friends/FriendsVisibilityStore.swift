@@ -1,8 +1,8 @@
 import Foundation
 
 /// Stores local visibility preferences for friend relationships that are not server-backed.
-/// `@unchecked` is safe because UserDefaults is thread-safe.
-internal final class FriendsVisibilityStore: @unchecked Sendable {
+@MainActor
+internal final class FriendsVisibilityStore {
   internal static let shared: FriendsVisibilityStore = .init()
 
   private let defaults: UserDefaults
