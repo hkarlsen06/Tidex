@@ -946,27 +946,35 @@ final class SharingViewModel: MonthNavigable {
     selectedSharer?.showEarnings ?? false
   }
 
-  /// Total hours for the current month's shifts
-  var totalHours: Double {
-    sharedShifts.reduce(0) { $0 + $1.paidHours }
+  private var paidSharedShifts: [ShiftWithComputations] {
+    ConflictExclusion.partition(shifts: sharedShifts).includedShifts
   }
 
-  /// Total earnings for the current month's shifts (nil if earnings hidden)
-  /// Returns the net earnings (after tax)
+  private var sharedTotals: ShiftTotals {
+    // Shared shifts already carry the effective payout tax, including half tax.
+    PayrollEngine.summarizeShiftTotals(
+      shifts: paidSharedShifts, excludedShiftIds: [], halfTaxMonth: nil, earningsMonth: displayMonth)
+  }
+
+  /// Total paid hours after excluding overlapping shifts.
+  var totalHours: Double {
+    paidSharedShifts.reduce(0) { $0 + $1.paidHours }
+  }
+
+  /// Net earnings, available only when the sharer allows earnings access.
   var totalEarnings: Double? {
     guard showEarnings else { return nil }
-    return sharedShifts.reduce(0) { $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay) }
+    return sharedTotals.net
   }
 
-  /// Gross earnings for the current month's shifts (nil if earnings hidden)
+  /// Gross earnings, available only when the sharer allows earnings access.
   var totalGrossEarnings: Double? {
     guard showEarnings else { return nil }
-    return sharedShifts.reduce(0) { $0 + $1.grossPay }
+    return sharedTotals.gross
   }
 
-  /// Whether any shift in the current month has tax enabled
   var hasTaxEnabled: Bool {
-    sharedShifts.contains(where: \.taxEnabled)
+    paidSharedShifts.contains(where: \.taxEnabled)
   }
 
   /// Shift count for the current month

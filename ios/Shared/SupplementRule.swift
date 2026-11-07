@@ -2,7 +2,7 @@
 
 /// Supplement rule for time-based wage additions
 /// Matches the TypeScript SupplementRule type from lib/payroll/types.ts
-struct SupplementRule: Codable, Equatable {
+struct SupplementRule: Codable, Equatable, Sendable {
   /// Weekdays this rule applies to (1-7 where 1=Monday, 7=Sunday)
   let days: [Int]
   /// Start time (HH:mm) inclusive
@@ -49,7 +49,7 @@ struct SupplementRule: Codable, Equatable {
 
 /// Custom supplement rule saved on a shift (without days field)
 /// Used for shift-specific supplement overrides
-struct CustomSupplementRule: Codable, Equatable {
+struct CustomSupplementRule: Codable, Equatable, Sendable {
   let from: String
   let to: String
   let rate: Double?
@@ -67,12 +67,12 @@ struct CustomSupplementRule: Codable, Equatable {
 }
 
 /// Container for custom supplements on a shift
-struct CustomSupplementsData: Codable, Equatable {
+struct CustomSupplementsData: Codable, Equatable, Sendable {
   let rules: [CustomSupplementRule]
 }
 
 /// Container for supplement rules snapshot
-struct SupplementRulesSnapshot: Codable, Equatable {
+struct SupplementRulesSnapshot: Codable, Equatable, Sendable {
   let rules: [SupplementRule]
 
   init(rules: [SupplementRule]) {
@@ -106,7 +106,7 @@ struct SupplementRulesSnapshot: Codable, Equatable {
 /// A time period with associated wage rates after splitting by supplement rules
 /// Note: fromMin/toMin are Double (not Int) to support exact proportional break deductions
 /// as specified in lib/payroll/breaks.ts (TypeScript uses number which allows fractions)
-struct WagePeriod: Codable, Equatable {
+struct WagePeriod: Codable, Equatable, Sendable {
   /// Start time in minutes from midnight (Double for precision in break deductions)
   let fromMin: Double
   /// End time in minutes from midnight (exclusive, Double for precision)
@@ -131,7 +131,7 @@ struct WagePeriod: Codable, Equatable {
 // MARK: - Break Method
 
 /// Method for applying break deductions
-enum BreakMethod: String, Codable, Equatable, CaseIterable {
+enum BreakMethod: String, Codable, Equatable, CaseIterable, Sendable {
   /// Deduct break proportionally across all periods
   case proportional = "proportional"
   /// Deduct from base/lowest supplement periods first
@@ -151,7 +151,7 @@ enum BreakMethod: String, Codable, Equatable, CaseIterable {
 // MARK: - Break Audit
 
 /// Audit trail for break deduction
-struct BreakAudit: Equatable {
+struct BreakAudit: Equatable, Sendable {
   let method: BreakMethod
   let thresholdHours: Double
   let deductedHours: Double

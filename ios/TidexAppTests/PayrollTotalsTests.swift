@@ -247,3 +247,89 @@ private let sharedTaxScenarios: [SharedTaxScenario] = [
         payPeriod: .biweekly(anchorEnd: "2026-10-31", payoutDelayDays: 0))
     ], "job", nil, 20),
 ]
+
+extension PayrollTotalsTests {
+  func testMissingJobSnapshotFallsBackToDefaultJobBeforeLegacyWagesAndTax() throws {
+    let settings = UserSettings.defaults(for: "user-1")
+    let jobs = [
+      TestFixtures.job(id: "default", isDefault: true), TestFixtures.job(id: "other", isDefault: false),
+    ]
+    let row = TestFixtures.shift(
+      shiftDate: "2026-02-02", startTime: "08:00", endTime: "10:00", jobId: "other")
+    let snapshots = [
+      TestFixtures.wageSnapshot(
+        id: "legacy", hourlyWage: 100, taxEnabled: true, taxPercentage: 10, breakEnabled: false),
+      TestFixtures.wageSnapshot(
+        id: "default", hourlyWage: 200, taxEnabled: true, taxPercentage: 20,
+        breakEnabled: false, jobId: "default"),
+    ]
+    let shared = try XCTUnwrap(sharedShifts(
+      row: row, settings: settings, snapshots: snapshots, jobs: jobs, mode: .visible).first)
+    XCTAssertEqual(shared.computed.gross, 400)
+    XCTAssertEqual(shared.taxPercentage, 20)
+    let owner = try XCTUnwrap(PayrollEngine.computeShiftsForMonth(.init(
+      year: 2_026, month: 2, shifts: [row], recurring: [], snapshots: snapshots, settings: settings, jobs: jobs)).first)
+    XCTAssertEqual(owner.netPay, 320)
+    XCTAssertEqual(owner.calculationContext?.wageSnapshotId, "default")
+  }
+
+  func testLegacyShiftWithoutDefaultUsesFirstActiveJobScheduleAndWage() throws {
+    let job = TestFixtures.job(
+      id: "active", isDefault: false, payrollDay: 25, halfTaxMonth: 2,
+      payPeriod: .monthly(startDay: 16, payoutMonthOffset: 0))
+    let snapshots = [
+      TestFixtures.wageSnapshot(hourlyWage: 100, breakEnabled: false),
+      TestFixtures.wageSnapshot(
+        hourlyWage: 200, taxEnabled: true, taxPercentage: 20, breakEnabled: false, jobId: job.id),
+    ]
+    let owner = try XCTUnwrap(PayrollEngine.computeShiftsForMonth(.init(
+      year: 2_026, month: 2,
+      shifts: [TestFixtures.shift(shiftDate: "2026-02-02", startTime: "08:00", endTime: "10:00")],
+      recurring: [], snapshots: snapshots, settings: nil, jobs: [job])).first)
+    XCTAssertEqual(owner.grossPay, 400)
+    XCTAssertEqual(owner.netPay, 360)
+    XCTAssertEqual(owner.calculationContext?.scheduledPayoutDate, "2026-02-25")
+  }
+
+  func testPayloadHidingEarningsOverridesVisibleModeAndErasesPayMetadata() throws {
+    let snapshot = TestFixtures.wageSnapshot(hourlyWage: 200, taxEnabled: true, taxPercentage: 20)
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    let payload = SharingRPCPayloadInput(
+      ownerId: "user-1", showEarnings: false,
+      settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)),
+      shifts: [try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode(TestFixtures.shift(
+        shiftDate: "2026-02-02", startTime: "08:00", endTime: "10:00")))],
+      recurringShifts: [],
+      snapshots: [try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode(snapshot))], jobs: [])
+    let hidden = try XCTUnwrap(SharingComputeCore.computeMonthShifts(
+      payload: payload, year: 2_026, month: 2, mode: .visible).first)
+    XCTAssertEqual(hidden.computed.paidHours, 2)
+    XCTAssertEqual(hidden.computed.basePay, 0)
+    XCTAssertEqual(hidden.computed.supplementPay, 0)
+    XCTAssertEqual(hidden.computed.gross, 0)
+    XCTAssertTrue(hidden.computed.wagePeriods.isEmpty)
+    XCTAssertTrue(hidden.computed.originalWagePeriods.isEmpty)
+    XCTAssertNil(hidden.customSupplements)
+    XCTAssertNil(hidden.computed.preOvertimeGross)
+    XCTAssertNil(hidden.calculationContext)
+    XCTAssertFalse(hidden.taxEnabled)
+    XCTAssertEqual(hidden.taxPercentage, 0)
+    XCTAssertNil(SharingComputeCore.payoutTaxSettings(
+      year: 2_026, month: 2, settings: payload.settings, snapshots: payload.snapshots,
+      jobs: [], mode: .hidden))
+  }
+}
+
+extension PayrollTotalsTests {
+  func testNegativeBreakThresholdUsesDefaultInsteadOfDeductingFromShortSharedShift() throws {
+    let row = TestFixtures.shift(shiftDate: "2026-02-02", startTime: "08:00", endTime: "10:00")
+    let snapshot = TestFixtures.wageSnapshot(
+      hourlyWage: 200, breakEnabled: true, breakThresholdHours: -1, breakDeductionMinutes: 30)
+    let shared = try XCTUnwrap(sharedShifts(
+      row: row, settings: .defaults(for: "user-1"), snapshots: [snapshot], jobs: [], mode: .visible).first)
+    XCTAssertEqual(shared.computed.gross, 400)
+    XCTAssertEqual(shared.computed.paidHours, 2)
+    XCTAssertEqual(PayrollCalculator.computeShift(row, snapshot: snapshot).gross, 400)
+  }
+}

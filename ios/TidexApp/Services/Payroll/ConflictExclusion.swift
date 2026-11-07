@@ -7,11 +7,7 @@ struct ConflictExclusion {
 
   // MARK: - Public API
 
-  struct ConflictAnalysis {
-    let excludedIds: Set<String>
-    let conflictingIds: Set<String>
-    let conflictDates: Set<String>
-  }
+  typealias ConflictAnalysis = PayrollConflictAnalysis
 
   /// Partition result after applying conflict exclusion.
   struct ShiftPartition {
@@ -26,98 +22,13 @@ struct ConflictExclusion {
   /// - conflictingIds: shifts that overlap with at least one other shift
   /// - conflictDates: ISO dates that contain conflicts
   static func analyze(shifts: [ShiftWithComputations]) -> ConflictAnalysis {
-    var excludedIds = Set<String>()
-    var conflictingIds = Set<String>()
-    var conflictDates = Set<String>()
-
-    // Group shifts by date
-    var shiftsByDate: [String: [ShiftWithComputations]] = [:]
-    for shift in shifts {
-      let isoDate = shift.shiftDate
-      shiftsByDate[isoDate, default: []].append(shift)
-    }
-
-    // For each date with multiple shifts, find overlapping clusters
-    for (date, shiftsOnDate) in shiftsByDate {
-      guard shiftsOnDate.count >= 2 else { continue }
-
-      // For each cluster with 2+ shifts, mark conflicts and exclusions
-      for cluster in overlapClusters(in: shiftsOnDate) {
-        guard cluster.count >= 2 else { continue }
-
-        conflictDates.insert(date)
-        for shift in cluster {
-          conflictingIds.insert(shift.id)
-        }
-
-        // Sort by gross earnings ascending (lowest first).
-        // Keep original order for equal gross values to match web behavior.
-        // Rank by gross before overtime: PayrollEngine decides exclusions before applying it.
-        let sorted = cluster.enumerated().sorted { lhs, rhs in
-          let lhsGross = lhs.element.computed.preOvertimeGross ?? lhs.element.grossPay
-          let rhsGross = rhs.element.computed.preOvertimeGross ?? rhs.element.grossPay
-          if lhsGross != rhsGross {
-            return lhsGross < rhsGross
-          }
-          return lhs.offset < rhs.offset
-        }.map(\.element)
-
-        // Keep only the first (lowest earning) shift, exclude the rest
-        for i in 1..<sorted.count {
-          excludedIds.insert(sorted[i].id)
-        }
-      }
-    }
-
-    return ConflictAnalysis(
-      excludedIds: excludedIds,
-      conflictingIds: conflictingIds,
-      conflictDates: conflictDates
-    )
+    SharingComputeCore.conflictAnalysis(shifts.map(conflictShift))
   }
 
-  /// Group overlapping shifts on one date into clusters using union-find.
-  private static func overlapClusters(in shiftsOnDate: [ShiftWithComputations])
-    -> [[ShiftWithComputations]]
-  {
-    // Use union-find to group overlapping shifts into clusters
-    var parent: [String: String] = [:]
-    for shift in shiftsOnDate {
-      parent[shift.id] = shift.id
-    }
-
-    func find(_ id: String) -> String {
-      guard let currentParent = parent[id] else { return id }
-      if currentParent != id {
-        parent[id] = find(currentParent)
-      }
-      return parent[id] ?? id
-    }
-
-    func union(_ first: String, _ second: String) {
-      let rootA = find(first)
-      let rootB = find(second)
-      if rootA != rootB {
-        parent[rootA] = rootB
-      }
-    }
-
-    // Check all pairs for overlap and union them
-    for first in 0..<shiftsOnDate.count {
-      for second in (first + 1)..<shiftsOnDate.count
-      where shiftsOverlap(shiftsOnDate[first], shiftsOnDate[second]) {
-        union(shiftsOnDate[first].id, shiftsOnDate[second].id)
-      }
-    }
-
-    // Group shifts by their cluster root
-    var clusters: [String: [ShiftWithComputations]] = [:]
-    for shift in shiftsOnDate {
-      let root = find(shift.id)
-      clusters[root, default: []].append(shift)
-    }
-
-    return Array(clusters.values)
+  private static func conflictShift(_ shift: ShiftWithComputations) -> PayrollConflictShift {
+    PayrollConflictShift(
+      id: shift.id, date: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime,
+      gross: shift.computed.preOvertimeGross ?? shift.grossPay)
   }
 
   /// Build a set of shift IDs that should be excluded from earnings totals.
@@ -208,29 +119,8 @@ struct ConflictExclusion {
     return EarningsTotals(net: totalNet, gross: totalGross, hasTaxEnabled: hasTax)
   }
 
-  // MARK: - Private Helpers
-
-  /// Convert HH:mm time string to minutes since midnight
-  private static func timeToMinutes(_ time: String) -> Int {
-    let parts = time.split(separator: ":").compactMap { Int($0) }
-    guard parts.count >= 2 else { return 0 }
-    return parts[0] * 60 + parts[1]
-  }
-
-  /// Check if two shifts overlap in time
-  /// Handles cross-midnight shifts correctly
+  /// Check same-date intervals, including shifts that finish after midnight.
   static func shiftsOverlap(_ a: ShiftWithComputations, _ b: ShiftWithComputations) -> Bool {
-    let startA = timeToMinutes(a.startTime)
-    var endA = timeToMinutes(a.endTime)
-    let startB = timeToMinutes(b.startTime)
-    var endB = timeToMinutes(b.endTime)
-
-    // Handle cross-midnight shifts
-    if endA <= startA { endA += 24 * 60 }
-    if endB <= startB { endB += 24 * 60 }
-
-    // Two intervals [startA, endA) and [startB, endB) overlap if:
-    // startA < endB AND startB < endA
-    return startA < endB && startB < endA
+    conflictShift(a).overlaps(conflictShift(b))
   }
 }

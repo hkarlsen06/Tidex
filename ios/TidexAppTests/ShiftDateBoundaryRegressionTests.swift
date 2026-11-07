@@ -95,3 +95,29 @@ final class ShiftDateBoundaryRegressionTests: XCTestCase {
     XCTAssertEqual(entries.first { $0.id == "baseline" }?.endDate, "2026-02-28")
   }
 }
+
+extension ShiftDateBoundaryRegressionTests {
+  func testSharedRecurringEndWindowIncludesFinalCalendarDayAndPreservesOwnerNotes() throws {
+    for (anchor, condition) in [("2026-02-02", EndCondition.months(value: 1)),
+      ("2025-03-02", EndCondition.years(value: 1))]
+    {
+      let recurring = RecurringShiftRow(
+        id: "weekly", user_id: "user-1", start_time: "08:00", end_time: "10:00",
+        repeat_interval_weeks: 0, selected_days: ["1": anchor], end_condition: condition,
+        exclusions: nil, date_specific_notes: ["2026-03-02": "Private note"])
+      let encoder = JSONEncoder()
+      let decoder = JSONDecoder()
+      let payload = SharingRPCPayloadInput(
+        ownerId: "user-1", showEarnings: true,
+        settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)), shifts: [],
+        recurringShifts: [try decoder.decode(SharingRPCRecurringShiftRow.self, from: encoder.encode(recurring))],
+        snapshots: [], jobs: [])
+      let shared = SharingComputeCore.computeMonthShifts(payload: payload, year: 2_026, month: 3, mode: .visible)
+      XCTAssertEqual(shared.map(\.shiftDate), ["2026-03-02"])
+      let owner = PayrollEngine.computeShiftsForMonth(.init(
+        year: 2_026, month: 3, shifts: [], recurring: [recurring], snapshots: [], settings: nil, jobs: []))
+      XCTAssertEqual(owner.map(\.shiftDate), ["2026-03-02"])
+      XCTAssertEqual(owner.first?.note, "Private note")
+    }
+  }
+}

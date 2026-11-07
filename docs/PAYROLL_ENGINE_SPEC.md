@@ -76,7 +76,7 @@ computeShift(shift, settings, presetRules, snapshot, job?)
 // supabase/functions/_shared/payroll/calc.ts
 ```
 
-The TypeScript `settings` and `job` parameters are compatibility arguments for older call sites. Payroll day, payout date, and tax snapshot selection are resolved by the caller. In the iOS app that is `PayrollEngine`.
+The TypeScript `settings` and `job` parameters are compatibility arguments for older call sites. Payroll day, payout date, and tax snapshot selection are resolved by the caller. On iOS, `SharingComputeCore` resolves those settings. `PayrollEngine` maps the app models into that shared engine.
 
 ---
 
@@ -1991,21 +1991,26 @@ const effectiveTaxPct = 30 / 2; // 15%
 
 ## Appendix: File Location Reference
 
+The app and widget use the same Foundation-only payroll code in `ios/Shared`. The share and Siri extensions also compile that code through their shared messaging dependency. The notification service compiles no payroll code.
+
 | Component/Module | Path Alias | Purpose |
 |------------------|------------|---------|
-| `PayrollEngine` | `ios/TidexApp/Services/Payroll/PayrollEngine.swift` | Month orchestration, payout-date tax lookup, totals |
-| `PayrollCalculator` | `ios/TidexApp/Services/Payroll/PayrollCalculator.swift` | Core per-shift payroll calculation |
-| `WagePeriodBuilder` | `ios/TidexApp/Services/Payroll/WagePeriodBuilder.swift` | Time period construction |
-| `BreakDeduction` | `ios/TidexApp/Services/Payroll/BreakDeduction.swift` | Automatic break deduction logic |
+| `SharingComputeCore` | `ios/Shared/FriendsAPIClient.swift` | Payroll, overtime, payout-date tax lookup, recurrence, and conflict selection |
+| `PayrollEngine` | `ios/TidexApp/Services/Payroll/PayrollEngine.swift` | App model adapter and monthly totals |
+| `PayrollCalculator` | `ios/TidexApp/Services/Payroll/PayrollCalculator.swift` | App adapter for per-shift pay and rounding |
+| `WagePeriodBuilder` | `ios/Shared/WagePeriodBuilder.swift` | Time period construction |
+| `BreakDeduction` | `ios/Shared/BreakDeduction.swift` | Automatic break deduction logic |
 | `PayrollAdjustmentCalculator` | `ios/TidexApp/Services/Payroll/PayrollAdjustmentCalculator.swift` | Payout-level adjustment totals |
 | `ConflictExclusion` | `ios/TidexApp/Services/Payroll/ConflictExclusion.swift` | Overlap cluster exclusion |
-| `RecurringShiftGenerator` | `ios/TidexApp/Services/Payroll/RecurringShiftGenerator.swift` | Virtual shift generation |
+| `RecurringShiftGenerator` | `ios/TidexApp/Services/Payroll/RecurringShiftGenerator.swift` | App adapter for shared virtual shift generation |
+| `PayoutSchedule` | `ios/Shared/PayPeriod.swift` | Per-job payout dates |
+| `NorwegianHolidays` | `ios/Shared/NorwegianHolidays.swift` | Holiday dates and Easter calculation |
 | `MonthlyPayrollReadService` | `ios/TidexApp/Services/Payroll/MonthlyPayrollReadService.swift` | Local-first payroll input loading |
 | `PayrollDateAdjuster` | `ios/TidexApp/Shared/Utilities/PayrollDateAdjuster.swift` | Display payroll date adjustment |
-| `computeShift` | `supabase/functions/_shared/payroll/calc.ts` | Shared TypeScript per-shift calculation |
-| `buildWagePeriods` | `supabase/functions/_shared/payroll/periods.ts` | Shared TypeScript period construction |
-| `applyBreakDeduction` | `supabase/functions/_shared/payroll/breaks.ts` | Shared TypeScript break deduction |
-| `applyCustomPauseWindowClipping` | `supabase/functions/_shared/payroll/pause-windows.ts` | Exact pause-window clipping |
+| `computeShift` | `backend/convex/lib/shared/payroll/calc.ts` | Shared TypeScript per-shift calculation |
+| `buildWagePeriods` | `backend/convex/lib/shared/payroll/periods.ts` | Shared TypeScript period construction |
+| `applyBreakDeduction` | `backend/convex/lib/shared/payroll/breaks.ts` | Shared TypeScript break deduction |
+| `applyCustomPauseWindowClipping` | `backend/convex/lib/shared/payroll/pause-windows.ts` | Exact pause-window clipping |
 | `payroll_adjustments` SQL | `supabase/migrations/20260514000516_add_payroll_adjustments.sql` | Manual payout corrections |
 | Public docs page | `marketing/app/docs/payroll/page.tsx` | Public rendered payroll documentation |
 

@@ -62,6 +62,9 @@ final class LocalSharedShift {
   /// Gross pay in NOK
   var gross: Double
 
+  /// Preserve the conflict winner when overtime raises its earnings above an excluded shift.
+  var preOvertimeGross: Double?
+
   /// Break method raw value
   var breakMethodRaw: String?
 
@@ -153,6 +156,7 @@ final class LocalSharedShift {
     basePay: Double,
     supplementPay: Double,
     gross: Double,
+    preOvertimeGross: Double? = nil,
     breakMethodRaw: String? = nil,
     breakThresholdHours: Double? = nil,
     breakDeductedHours: Double? = nil,
@@ -181,6 +185,7 @@ final class LocalSharedShift {
     self.basePay = basePay
     self.supplementPay = supplementPay
     self.gross = gross
+    self.preOvertimeGross = preOvertimeGross
     self.breakMethodRaw = breakMethodRaw
     self.breakThresholdHours = breakThresholdHours
     self.breakDeductedHours = breakDeductedHours
@@ -230,6 +235,7 @@ final class LocalSharedShift {
       basePay: apiShift.computed.basePay,
       supplementPay: apiShift.computed.supplementPay,
       gross: apiShift.computed.gross,
+      preOvertimeGross: showEarnings ? apiShift.computed.preOvertimeGross : nil,
       breakMethodRaw: apiShift.computed.breakAudit.method.rawValue,
       breakThresholdHours: apiShift.computed.breakAudit.thresholdHours,
       breakDeductedHours: apiShift.computed.breakAudit.deductedHours,
@@ -298,7 +304,8 @@ extension LocalSharedShift {
       gross: gross,
       wagePeriods: [],
       originalWagePeriods: [],
-      breakAudit: storedBreakAudit
+      breakAudit: storedBreakAudit,
+      preOvertimeGross: preOvertimeGross
     )
 
     return ShiftWithComputations(

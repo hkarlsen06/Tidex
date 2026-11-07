@@ -1,13 +1,6 @@
 import Foundation
 
-/// Centralized payroll computation service
-/// Mirrors Next.js lib/services/shifts.ts
-///
-/// This service encapsulates the complete payroll computation workflow:
-/// - Per-shift payout date calculation for accurate tax lookup
-/// - Half-tax month application (Norwegian tax benefit)
-/// - Conflict exclusion for overlapping shifts
-/// - Monthly totals summarization
+/// Maps app models to the shared payroll engine and summarizes monthly totals.
 struct PayrollEngine {
   struct MonthComputationRequest {
     let year: Int
@@ -40,700 +33,136 @@ struct PayrollEngine {
     }
   }
 
-  private struct ComputationContext {
-    let fallbackPayrollDay: Int
-    let fallbackHalfTaxMonth: Int?
-    let jobsById: [String: Job]
-    let defaultJobId: String?
-    let snapshotsByJobId: [String?: [WageSnapshot]]
-    let legacyNilJobSnapshots: [WageSnapshot]
-  }
-
-  /// Extract payout month (1-12) from a shift date
-  /// Payout month = earnings month + 1
-  static func payoutMonth(from shiftDate: String) -> Int {
-    let components = shiftDate.split(separator: "-")
-    guard components.count >= 2,
-      let shiftMonth = Int(components[1]),
-      (1...12).contains(shiftMonth)
-    else {
-      return 1
-    }
-    return shiftMonth >= 12 ? 1 : shiftMonth + 1
-  }
-
-  // MARK: - Shift Computation
-
-  /// Compute all shifts with payroll for a given month
-  /// - Parameters:
-  ///   - year: Target year
-  ///   - month: Target month (1-12)
-  ///   - shifts: Regular shifts from database (may include out-of-month shifts for calendar display)
-  ///   - recurring: Recurring shift patterns
-  ///   - snapshots: Wage snapshots for lookup
-  ///   - settings: User settings (for payroll_day)
-  ///   - visibleRange: Optional visible date range for generating virtual shifts (includes out-of-month padding)
-  /// - Returns: Array of computed shifts with correct tax settings
+  /// The shared Foundation-only core owns pay math for the app and extensions.
   static func computeShiftsForMonth(_ request: MonthComputationRequest) -> [ShiftWithComputations] {
-    var result: [ShiftWithComputations] = []
-    let fallbackPayrollDay = request.settings?.effectivePayrollDay ?? 1
-    let snapshotsByJobId = Dictionary(grouping: request.snapshots, by: { $0.job_id })
-    let context = ComputationContext(
-      fallbackPayrollDay: fallbackPayrollDay,
-      fallbackHalfTaxMonth: request.settings?.half_tax_month,
-      jobsById: Dictionary(uniqueKeysWithValues: request.jobs.map { ($0.id, $0) }),
-      defaultJobId: request.jobs.first(where: \.is_default)?.id,
-      snapshotsByJobId: snapshotsByJobId,
-      legacyNilJobSnapshots: snapshotsByJobId[nil] ?? []
-    )
-
-    // Use visible range if provided, otherwise just the target month
-    let startDate =
-      request.visibleRange?.start.toISODateString()
-      ?? Date.firstDayOfMonth(year: request.year, month: request.month)
-    let endDate =
-      request.visibleRange?.end.toISODateString()
-      ?? Date.lastDayOfMonth(year: request.year, month: request.month)
-
-    // Process regular shifts
-    for shift in request.shifts {
-      let computed = computeShiftWithTax(
-        shift: shift,
-        allSnapshots: request.snapshots,
-        context: context
-      )
-      result.append(computed)
+    let ownerId = request.settings?.user_id ?? ""
+    let payload = SharingRPCPayloadInput(
+      ownerId: ownerId, showEarnings: true,
+      settings: SharingRPCUserSettings(
+        userId: ownerId, monthlyGoal: nil, monthlyGoalsByMonth: nil, defaultShiftsView: nil,
+        profilePictureUrl: nil, payrollDay: request.settings?.payroll_day, theme: nil,
+        calendarAnimationStyle: nil, halfTaxMonth: request.settings?.half_tax_month, currency: nil),
+      shifts: request.shifts.map(sharingShift),
+      recurringShifts: request.recurring.map(sharingRecurring),
+      snapshots: request.snapshots.map(sharingSnapshot), jobs: request.jobs.map(sharingJob))
+    let computed = SharingComputeCore.computeShiftsInRange(
+      payload: payload,
+      startDate: request.visibleRange?.start.toISODateString()
+        ?? SharingComputeCore.monthStart(year: request.year, month: request.month),
+      endDate: request.visibleRange?.end.toISODateString()
+        ?? SharingComputeCore.monthEnd(year: request.year, month: request.month),
+      mode: .visible)
+    let originals = Dictionary(request.shifts.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+    let recurringById = Dictionary(
+      request.recurring.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+    return computed.map { value in
+      let row = originals[value.id]
+        ?? value.recurringId.flatMap { recurringById[$0] }?.makeVirtualShift(
+          date: value.shiftDate, weekday: value.recurringAnchorWeekday ?? 0, id: value.id)
+        ?? ShiftRow(
+          id: value.id, user_id: value.userId, job_id: value.jobId,
+          shift_date: value.shiftDate, start_time: value.startTime, end_time: value.endTime,
+          custom_pause_windows: value.customPauseWindows, custom_supplements: nil)
+      return ShiftWithComputations(
+        shift: row, computed: appComputed(value.computed, id: value.id),
+        taxEnabled: value.taxEnabled,
+        taxPercentage: value.calculationContext?.savedTaxPercentage ?? value.taxPercentage,
+        calculationContext: value.calculationContext.map {
+          ShiftCalculationContext(
+            wageSnapshotId: $0.wageSnapshotId, taxSnapshotId: $0.taxSnapshotId,
+            scheduledPayoutDate: $0.scheduledPayoutDate, effectiveTaxPercentage: value.taxPercentage,
+            halfTaxApplied: $0.halfTaxApplied)
+        })
     }
-
-    appendVirtualShifts(to: &result, request: request, context: context)
-
-    // Conflict-excluded shifts are not paid, so their hours must not count toward overtime.
-    // Decide exclusions in output order so later partitions keep the same shifts.
-    let ordered = result.sorted(by: isInOutputOrder)
-    let excludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: ordered)
-    let overtimeAdjusted =
-      applyOvertime(
-        to: ordered.filter { !excludedIds.contains($0.id) },
-        allSnapshots: request.snapshots,
-        context: context
-      ) + ordered.filter { excludedIds.contains($0.id) }
-
-    return
-      overtimeAdjusted
-      .filter { $0.shiftDate >= startDate && $0.shiftDate <= endDate }
-      .sorted(by: isInOutputOrder)
   }
 
-  /// Adds virtual shifts generated from recurring patterns to `result`.
-  private static func appendVirtualShifts(
-    to result: inout [ShiftWithComputations],
-    request: MonthComputationRequest,
-    context: ComputationContext
-  ) {
-    // Recurring hours outside the visible dates still contribute to weekly overtime.
-    let outputWindow =
-      request.visibleRange.map {
-        PayrollReadWindow(startDate: $0.start, endDate: $0.end)
-      } ?? PayrollReadWindow.month(year: request.year, month: request.month)
-    let overtimeWindow = outputWindow.expandedForOvertime
-    let computationStartDate = overtimeWindow.startDate.toISODateString()
-    let computationEndDate = overtimeWindow.endDate.toISODateString()
-    let monthsToGenerate = getMonthsInRange(
-      startDate: computationStartDate, endDate: computationEndDate)
+  static func sharingShift(_ shift: ShiftRow) -> SharingRPCShiftRow {
+    SharingRPCShiftRow(
+      id: shift.id, userId: shift.user_id ?? "", jobId: shift.job_id,
+      shiftDate: shift.shift_date, startTime: shift.start_time, endTime: shift.end_time,
+      customPauseWindows: shift.custom_pause_windows,
+      customSupplements: shift.custom_supplements.map(sharingCustomSupplements),
+      recurringId: shift.recurring_id, recurringAnchorWeekday: shift.recurring_anchor_weekday)
+  }
 
-    for recurringShift in request.recurring {
-      for (genYear, genMonth) in monthsToGenerate {
-        let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-          year: genYear,
-          month: genMonth,
-          recurring: recurringShift
-        )
+  private static func sharingCustomSupplements(_ custom: CustomSupplementsData)
+    -> SharingRPCCustomSupplements
+  {
+    SharingRPCCustomSupplements(rules: custom.rules.map {
+      SharingRPCCustomSupplementRule(
+        stackingGroup: $0.stackingGroup, dates: $0.dates, excludedDates: $0.excludedDates,
+        shiftStartDates: $0.shiftStartDates, excludedShiftStartDates: $0.excludedShiftStartDates,
+        shiftStartBefore: $0.shiftStartBefore, minimumRate: $0.minimumRate,
+        percentageBaseRate: $0.percentageBaseRate,
+        from: $0.from, to: $0.to, rate: $0.rate, percent: $0.percent, isCustom: $0.isCustom)
+    })
+  }
 
-        for virtual in virtualShifts {
-          guard virtual.date >= computationStartDate, virtual.date <= computationEndDate else {
-            continue
-          }
+  static func sharingRule(_ rule: SupplementRule) -> SharingRPCSupplementRule {
+    SharingRPCSupplementRule(
+      stackingGroup: rule.stackingGroup, dates: rule.dates, excludedDates: rule.excludedDates,
+      shiftStartDates: rule.shiftStartDates, excludedShiftStartDates: rule.excludedShiftStartDates,
+      shiftStartBefore: rule.shiftStartBefore, minimumRate: rule.minimumRate,
+      percentageBaseRate: rule.percentageBaseRate,
+      days: rule.days, from: rule.from, to: rule.to, rate: rule.rate, percent: rule.percent)
+  }
 
-          // Skip if we already added this virtual shift (from another month generation)
-          let virtualId = "virtual-\(recurringShift.id)-\(virtual.date)"
-          if result.contains(where: { $0.id == virtualId }) { continue }
+  static func sharingOvertime(_ config: OvertimeConfig) -> SharingRPCOvertimeConfig {
+    SharingRPCOvertimeConfig(
+      enabled: config.enabled, weeklyThresholdHours: config.weeklyThresholdHours,
+      rules: config.rules.map {
+        SharingRPCOvertimeRule(
+          days: $0.days, appliesOnHolidays: $0.appliesOnHolidays, from: $0.from, to: $0.to,
+          percent: $0.percent, dates: $0.dates, excludedDates: $0.excludedDates)
+      }, retainSupplements: config.retainSupplements, premiumBaseMultiplier: config.premiumBaseMultiplier,
+      baseRate: config.baseRate, retainedSupplements: config.retainedSupplements?.map(sharingRule))
+  }
 
-          // Create virtual shift row
-          let virtualRow = recurringShift.makeVirtualShift(
-            date: virtual.date,
-            weekday: virtual.weekday,
-            id: virtualId
-          )
+  static func sharingSnapshot(_ snapshot: WageSnapshot) -> SharingRPCWageSnapshot {
+    SharingRPCWageSnapshot(
+      id: snapshot.id, userId: snapshot.user_id, jobId: snapshot.job_id,
+      fromDate: snapshot.from_date, hourlyWage: snapshot.hourly_wage,
+      wageLevel: snapshot.wage_level, tariffTypeId: snapshot.tariff_type_id,
+      supplements: SharingRPCSupplementRulesSnapshot(rules: snapshot.supplements.rules.map(sharingRule)),
+      overtime: sharingOvertime(snapshot.overtime),
+      taxEnabled: snapshot.tax_enabled, taxPercentage: snapshot.tax_percentage,
+      breakEnabled: snapshot.break_enabled, breakMethod: snapshot.break_method,
+      breakThresholdHours: snapshot.break_threshold_hours,
+      breakDeductionMinutes: snapshot.break_deduction_minutes)
+  }
 
-          let computed = computeShiftWithTax(
-            shift: virtualRow,
-            allSnapshots: request.snapshots,
-            context: context
-          )
-          result.append(computed)
+  private static func sharingJob(_ job: Job) -> SharingRPCJobRow {
+    SharingRPCJobRow(
+      id: job.id, userId: job.user_id, name: job.name, color: job.color,
+      currency: job.currency, isDefault: job.is_default, sortOrder: job.sort_order,
+      payrollDay: job.payroll_day, payPeriod: job.pay_period, halfTaxMonth: job.half_tax_month,
+      monthlyGoal: job.monthly_goal.map(Double.init), archivedAt: job.archived_at,
+      deletedAt: job.deleted_at, createdAt: job.created_at, updatedAt: job.updated_at)
+  }
+
+  static func sharingRecurring(_ recurring: RecurringShiftRow) -> SharingRPCRecurringShiftRow {
+    SharingRPCRecurringShiftRow(
+      id: recurring.id, userId: recurring.user_id, jobId: recurring.job_id,
+      startTime: recurring.start_time, endTime: recurring.end_time,
+      repeatIntervalWeeks: recurring.repeat_interval_weeks, selectedDays: recurring.selected_days,
+      endCondition: recurring.end_condition.map {
+        switch $0 {
+        case .months(let value): .months(value: value)
+        case .years(let value): .years(value: value)
+        case .endDate(let date): .endDate(date: date)
         }
-      }
-    }
+      }, exclusions: recurring.exclusions,
+      dateSpecificPauseWindows: recurring.date_specific_pause_windows,
+      dateSpecificSupplements: recurring.date_specific_supplements?.mapValues(sharingCustomSupplements))
   }
 
-  private static func isInOutputOrder(
-    _ lhs: ShiftWithComputations,
-    _ rhs: ShiftWithComputations
-  ) -> Bool {
-    if lhs.shiftDate != rhs.shiftDate {
-      return lhs.shiftDate < rhs.shiftDate
-    }
-    if lhs.startTime != rhs.startTime {
-      return lhs.startTime < rhs.startTime
-    }
-    return lhs.id < rhs.id
-  }
-
-  /// Get all (year, month) pairs that fall within a date range
-  private static func getMonthsInRange(startDate: String, endDate: String) -> [(Int, Int)] {
-    let startComponents = startDate.split(separator: "-")
-    let endComponents = endDate.split(separator: "-")
-
-    guard startComponents.count >= 2, endComponents.count >= 2,
-      let startYear = Int(startComponents[0]),
-      let startMonth = Int(startComponents[1]),
-      let endYear = Int(endComponents[0]),
-      let endMonth = Int(endComponents[1])
-    else {
-      return []
-    }
-
-    var months: [(Int, Int)] = []
-    var year = startYear
-    var month = startMonth
-
-    while year < endYear || (year == endYear && month <= endMonth) {
-      months.append((year, month))
-      month += 1
-      if month > 12 {
-        month = 1
-        year += 1
-      }
-    }
-
-    return months
-  }
-
-  /// Compute a single shift with correct tax settings based on payout date
-  /// - Parameters:
-  ///   - shift: The shift to compute
-  ///   - allSnapshots: All wage snapshots for lookup
-  ///   - payrollDay: User's payroll day
-  /// - Returns: Shift with computations and correct tax settings
-  private static func computeShiftWithTax(
-    shift: ShiftRow,
-    allSnapshots: [WageSnapshot],
-    context: ComputationContext
-  ) -> ShiftWithComputations {
-    let effectiveJobId = shift.job_id ?? context.defaultJobId
-    let job = effectiveJobId.flatMap { context.jobsById[$0] }
-    let schedule = PayoutSchedule(job: job, fallbackPayrollDay: context.fallbackPayrollDay)
-
-    let scopedSnapshots = snapshotsForJob(
-      jobId: effectiveJobId,
-      allSnapshots: allSnapshots,
-      snapshotsByJobId: context.snapshotsByJobId,
-      legacyNilJobSnapshots: context.legacyNilJobSnapshots,
-      defaultJobId: context.defaultJobId
-    )
-
-    // 1. Calculate payout date for this specific shift from the job's pay period
-    let payoutDate = schedule.payoutDate(for: shift.shift_date)
-
-    // 2. Look up wage/supplement snapshot for SHIFT date (determines wage rate & supplements)
-    let wageSnapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: scopedSnapshots)
-
-    // 3. Look up tax snapshot for PAYOUT date (determines tax settings)
-    let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: scopedSnapshots)
-
-    // 4. Compute payroll with wage snapshot
-    let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
-
-    let halfTaxMonth = job.map(\.half_tax_month) ?? context.fallbackHalfTaxMonth
-    let month =
-      PayPeriodCalendar.components(payoutDate)?.month ?? payoutMonth(from: shift.shift_date)
-    let taxSettings = PayoutTaxSettings(
-      enabled: taxSnapshot?.effectiveTaxEnabled ?? false,
-      percentage: taxSnapshot?.effectiveTaxPercentage ?? 0
-    ).adjusted(payoutMonth: month, halfTaxMonth: halfTaxMonth)
-
-    // 5. Return with tax settings from payout snapshot
-    return ShiftWithComputations(
-      shift: shift,
-      computed: computed,
-      taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
-      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0,
-      calculationContext: ShiftCalculationContext(
-        wageSnapshotId: wageSnapshot?.id,
-        taxSnapshotId: taxSnapshot?.id,
-        scheduledPayoutDate: payoutDate,
-        effectiveTaxPercentage: taxSettings.percentage,
-        halfTaxApplied: taxSettings.enabled && halfTaxMonth == month
-      )
-    )
-  }
-
-  private struct OvertimeSegment {
-    let shift: ShiftWithComputations
-    let period: WagePeriod
-    let absoluteStart: Date
-    let absoluteEnd: Date
-    let shiftDayStart: Date
-    let jobId: String?
-    let snapshot: WageSnapshot?
-    let config: OvertimeConfig?
-  }
-
-  private struct OvertimePiece {
-    let shiftId: String
-    let start: Date
-    let period: WagePeriod
-    let overtimeMinutes: Double
-  }
-
-  private struct OvertimeGroupKey: Hashable {
-    let jobId: String
-    let weekStart: String
-  }
-
-  private static func applyOvertime(
-    to shifts: [ShiftWithComputations],
-    allSnapshots: [WageSnapshot],
-    context: ComputationContext
-  ) -> [ShiftWithComputations] {
-    guard !shifts.isEmpty else { return shifts }
-
-    let (grouped, fallbackPiecesByShift) = overtimeSegments(
-      for: shifts,
-      allSnapshots: allSnapshots,
-      context: context
-    )
-    let piecesByShift = overtimePiecesByShift(grouped: grouped)
-
-    return shifts.map { shift in
-      let pieces = piecesByShift[shift.id] ?? fallbackPiecesByShift[shift.id] ?? []
-      guard !pieces.isEmpty else { return shift }
-      return replacingPeriods(of: shift, with: pieces)
-    }
-  }
-
-  private static func overtimeSegments(
-    for shifts: [ShiftWithComputations],
-    allSnapshots: [WageSnapshot],
-    context: ComputationContext
-  ) -> (
-    grouped: [OvertimeGroupKey: [OvertimeSegment]],
-    fallbackPieces: [String: [OvertimePiece]]
-  ) {
-    var grouped: [OvertimeGroupKey: [OvertimeSegment]] = [:]
-    var fallbackPiecesByShift: [String: [OvertimePiece]] = [:]
-
-    for shift in shifts {
-      let keyedSegments = overtimeSegments(for: shift, allSnapshots: allSnapshots, context: context)
-      for (key, segment) in keyedSegments {
-        grouped[key, default: []].append(segment)
-        fallbackPiecesByShift[shift.id, default: []].append(
-          OvertimePiece(
-            shiftId: shift.id,
-            start: segment.absoluteStart,
-            period: segment.period,
-            overtimeMinutes: 0
-          ))
-      }
-    }
-
-    return (grouped, fallbackPiecesByShift)
-  }
-
-  private static func snapshotForOvertime(
-    of shift: ShiftWithComputations,
-    jobId: String?,
-    allSnapshots: [WageSnapshot],
-    context: ComputationContext
-  ) -> WageSnapshot? {
-    let scopedSnapshots = snapshotsForJob(
-      jobId: jobId,
-      allSnapshots: allSnapshots,
-      snapshotsByJobId: context.snapshotsByJobId,
-      legacyNilJobSnapshots: context.legacyNilJobSnapshots,
-      defaultJobId: context.defaultJobId
-    )
-    return SnapshotsService.snapshotForDate(shift.shiftDate, from: scopedSnapshots)
-  }
-
-  private static func overtimeSegments(
-    for shift: ShiftWithComputations,
-    allSnapshots: [WageSnapshot],
-    context: ComputationContext
-  ) -> [(key: OvertimeGroupKey, segment: OvertimeSegment)] {
-    let effectiveJobId = shift.shift.job_id ?? context.defaultJobId
-    let snapshot = snapshotForOvertime(
-      of: shift, jobId: effectiveJobId, allSnapshots: allSnapshots, context: context)
-    let config = snapshot?.overtime.runtimeEnabledConfig
-
-    guard let shiftDayStart = Date.fromISODateString(shift.shiftDate) else {
-      return []
-    }
-
-    var result: [(key: OvertimeGroupKey, segment: OvertimeSegment)] = []
-    for period in shift.computed.wagePeriods {
-      let absoluteStart = shiftDayStart.addingTimeInterval(period.fromMin * 60)
-      let absoluteEnd = shiftDayStart.addingTimeInterval(period.toMin * 60)
-      guard absoluteEnd > absoluteStart else { continue }
-
-      for (partStart, partEnd) in splitByISOWeek(start: absoluteStart, end: absoluteEnd) {
-        let key = OvertimeGroupKey(
-          jobId: effectiveJobId ?? "__nil__",
-          weekStart: isoWeekStart(for: partStart).toISODateString()
-        )
-        let partPeriod = WagePeriod(
-          fromMin: minutesBetween(shiftDayStart, partStart),
-          toMin: minutesBetween(shiftDayStart, partEnd),
-          baseRate: period.baseRate,
-          supplementRate: period.supplementRate
-        )
-        let segment = OvertimeSegment(
-          shift: shift,
-          period: partPeriod,
-          absoluteStart: partStart,
-          absoluteEnd: partEnd,
-          shiftDayStart: shiftDayStart,
-          jobId: effectiveJobId,
-          snapshot: snapshot,
-          config: config
-        )
-        result.append((key, segment))
-      }
-    }
-    return result
-  }
-
-  private static func overtimePiecesByShift(
-    grouped: [OvertimeGroupKey: [OvertimeSegment]]
-  ) -> [String: [OvertimePiece]] {
-    var piecesByShift: [String: [OvertimePiece]] = [:]
-
-    for key in grouped.keys {
-      var cumulativeMinutes: Double = 0
-      let segments = (grouped[key] ?? []).sorted {
-        if $0.absoluteStart != $1.absoluteStart {
-          return $0.absoluteStart < $1.absoluteStart
-        }
-        return $0.shift.id < $1.shift.id
-      }
-
-      for segment in segments {
-        let result = applyOvertime(to: segment, cumulativeMinutes: cumulativeMinutes)
-        cumulativeMinutes += segment.period.durationMinutes
-        for piece in result {
-          piecesByShift[piece.shiftId, default: []].append(piece)
-        }
-      }
-    }
-
-    return piecesByShift
-  }
-
-  private static func replacingPeriods(
-    of shift: ShiftWithComputations,
-    with pieces: [OvertimePiece]
-  ) -> ShiftWithComputations {
-    let sortedPieces = pieces.sorted {
-      if $0.start != $1.start {
-        return $0.start < $1.start
-      }
-      return $0.period.fromMin < $1.period.fromMin
-    }
-    let periods = mergeAdjacentPeriods(sortedPieces.map(\.period))
-    let overtimeMinutes = sortedPieces.reduce(0.0) { $0 + $1.overtimeMinutes }
-    var computed = PayrollCalculator.replacingWagePeriods(
-      in: shift.computed,
-      with: periods,
-      overtimeMinutes: overtimeMinutes
-    )
-    if overtimeMinutes > 0 {
-      computed.preOvertimeGross = shift.computed.gross
-    }
-    return ShiftWithComputations(
-      shift: shift.shift,
-      computed: computed,
-      taxEnabled: shift.taxEnabled,
-      taxPercentage: shift.taxPercentage,
-      calculationContext: shift.calculationContext
-    )
-  }
-
-  private static func applyOvertime(
-    to segment: OvertimeSegment,
-    cumulativeMinutes: Double
-  ) -> [OvertimePiece] {
-    guard let config = segment.config else {
-      return [
-        OvertimePiece(
-          shiftId: segment.shift.id,
-          start: segment.absoluteStart,
-          period: segment.period,
-          overtimeMinutes: 0,
-        )
-      ]
-    }
-
-    let thresholdMinutes = config.weeklyThresholdHours * 60
-    var cursor = segment.absoluteStart
-    var cursorCumulative = cumulativeMinutes
-    var pieces: [OvertimePiece] = []
-    let retainedPeriods = WagePeriodBuilder.buildWagePeriods(
-      startTime: segment.shift.startTime, endTime: segment.shift.endTime,
-      weekday: segment.shiftDayStart.tidexWeekday,
-      baseRate: config.baseRate ?? segment.period.baseRate,
-      rules: segment.shift.shift.custom_supplements?.rules.isEmpty == true
-        ? [] : config.retainedSupplements ?? [], shiftDate: segment.shift.shiftDate)
-
-    while cursor < segment.absoluteEnd {
-      var next = nextOvertimeBoundary(
-        after: cursor,
-        segmentEnd: segment.absoluteEnd,
-        config: config,
-        cumulativeMinutes: cursorCumulative,
-        thresholdMinutes: thresholdMinutes
-      )
-      for period in retainedPeriods {
-        for minute in [period.fromMin, period.toMin] {
-          let boundary = segment.shiftDayStart.addingTimeInterval(minute * 60)
-          if boundary > cursor && boundary < next { next = boundary }
-        }
-      }
-      let durationMinutes = max(0, next.timeIntervalSince(cursor) / 60)
-      guard durationMinutes > 0 else { break }
-
-      let (supplementRate, overtimeMinutes) = overtimeRate(
-        for: segment,
-        at: cursor,
-        isOvertime: cursorCumulative >= thresholdMinutes,
-        durationMinutes: durationMinutes,
-        retainedPeriods: retainedPeriods
-      )
-
-      pieces.append(
-        overtimePiece(
-          for: segment, from: cursor, to: next,
-          supplementRate: supplementRate, overtimeMinutes: overtimeMinutes))
-
-      cursorCumulative += durationMinutes
-      cursor = next
-    }
-
-    return pieces
-  }
-
-  private static func overtimePiece(
-    for segment: OvertimeSegment,
-    from start: Date,
-    to end: Date,
-    supplementRate: Double,
-    overtimeMinutes: Double
-  ) -> OvertimePiece {
-    OvertimePiece(
-      shiftId: segment.shift.id,
-      start: start,
-      period: WagePeriod(
-        fromMin: minutesBetween(segment.shiftDayStart, start),
-        toMin: minutesBetween(segment.shiftDayStart, end),
-        baseRate: overtimeMinutes > 0
-          ? segment.config?.baseRate ?? segment.period.baseRate : segment.period.baseRate,
-        supplementRate: supplementRate,
-        isOvertime: overtimeMinutes > 0
-      ),
-      overtimeMinutes: overtimeMinutes
-    )
-  }
-
-  private static func overtimeRate(
-    for segment: OvertimeSegment,
-    at cursor: Date,
-    isOvertime: Bool,
-    durationMinutes: Double,
-    retainedPeriods: [WagePeriod]
-  ) -> (supplementRate: Double, overtimeMinutes: Double) {
-    if isOvertime, let config = segment.config,
-      let percent = overtimePercent(config: config, at: cursor)
-    {
-      let minute = minutesBetween(segment.shiftDayStart, cursor)
-      let retained =
-        config.retainedSupplements != nil
-        ? retainedPeriods.first { $0.fromMin <= minute && minute < $0.toMin }?.supplementRate ?? 0
-        : config.retainSupplements ? segment.period.supplementRate : 0
-      let baseRate = config.baseRate ?? segment.period.baseRate
-      return (
-        baseRate * (config.premiumBaseMultiplier ?? 1) * percent / 100 + retained,
-        durationMinutes
-      )
-    }
-    return (segment.period.supplementRate, 0)
-  }
-
-  private static func nextOvertimeBoundary(
-    after date: Date,
-    segmentEnd: Date,
-    config: OvertimeConfig,
-    cumulativeMinutes: Double,
-    thresholdMinutes: Double
-  ) -> Date {
-    var boundary = segmentEnd
-    let dayStart = startOfDay(for: date)
-
-    if let nextDay = calendar.date(byAdding: .day, value: 1, to: dayStart), nextDay > date {
-      boundary = min(boundary, nextDay)
-    }
-
-    if cumulativeMinutes < thresholdMinutes {
-      let minutesUntilThreshold = thresholdMinutes - cumulativeMinutes
-      let thresholdDate = date.addingTimeInterval(minutesUntilThreshold * 60)
-      if thresholdDate > date {
-        boundary = min(boundary, thresholdDate)
-      }
-    }
-
-    let minuteOfDay = minutesBetween(dayStart, date)
-    for rule in config.rules where overtimeRuleCanMatch(rule, at: date) {
-      guard let from = OvertimeConfig.timeToMinutes(rule.from),
-        let to = OvertimeConfig.timeToMinutes(rule.to)
-      else {
-        continue
-      }
-      for value in [Double(from), Double(to)] where value > minuteOfDay {
-        let candidate = dayStart.addingTimeInterval(value * 60)
-        if candidate > date {
-          boundary = min(boundary, candidate)
-        }
-      }
-    }
-
-    return boundary
-  }
-
-  private static func overtimePercent(config: OvertimeConfig, at date: Date) -> Double? {
-    let minute = minutesBetween(startOfDay(for: date), date)
-    return config.rules.compactMap { rule -> Double? in
-      guard overtimeRuleCanMatch(rule, at: date),
-        let from = OvertimeConfig.timeToMinutes(rule.from),
-        let to = OvertimeConfig.timeToMinutes(rule.to),
-        minute >= Double(from),
-        minute < Double(to)
-      else {
-        return nil
-      }
-      return rule.percent
-    }.max()
-  }
-
-  private static func overtimeRuleCanMatch(_ rule: OvertimeRule, at date: Date) -> Bool {
-    let day = date.tidexWeekday
-    guard rule.days.contains(day) else { return false }
-    let iso = date.toISODateString()
-    if rule.excludedDates?.contains(iso) == true { return false }
-    if let dates = rule.dates { return dates.contains(iso) }
-
-    if NorwegianHolidays.isPublicHoliday(date) {
-      return rule.appliesOnHolidays
-    }
-
-    let holidayOnly = rule.appliesOnHolidays && Set(rule.days) == Set(1...7)
-    return !holidayOnly
-  }
-
-  private static func splitByISOWeek(start: Date, end: Date) -> [(Date, Date)] {
-    var result: [(Date, Date)] = []
-    var cursor = start
-
-    while cursor < end {
-      let weekStart = isoWeekStart(for: cursor)
-      let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) ?? end
-      let partEnd = min(end, weekEnd)
-      result.append((cursor, partEnd))
-      cursor = partEnd
-    }
-
-    return result
-  }
-
-  private static func isoWeekStart(for date: Date) -> Date {
-    isoCalendar.dateInterval(of: .weekOfYear, for: date)?.start ?? startOfDay(for: date)
-  }
-
-  private static func startOfDay(for date: Date) -> Date {
-    calendar.startOfDay(for: date)
-  }
-
-  private static func minutesBetween(_ start: Date, _ end: Date) -> Double {
-    end.timeIntervalSince(start) / 60
-  }
-
-  private static func mergeAdjacentPeriods(_ periods: [WagePeriod]) -> [WagePeriod] {
-    var merged: [WagePeriod] = []
-
-    for period in periods where period.toMin > period.fromMin {
-      if let last = merged.last,
-        abs(last.toMin - period.fromMin) < 0.0001,
-        last.baseRate == period.baseRate,
-        last.supplementRate == period.supplementRate,
-        last.isOvertime == period.isOvertime
-      {
-        merged[merged.count - 1] = WagePeriod(
-          fromMin: last.fromMin,
-          toMin: period.toMin,
-          baseRate: last.baseRate,
-          supplementRate: last.supplementRate,
-          isOvertime: last.isOvertime
-        )
-      } else {
-        merged.append(period)
-      }
-    }
-
-    return merged
-  }
-
-  private static let calendar: Calendar = {
-    var value = Calendar(identifier: .gregorian)
-    value.timeZone = Date.localTimeZone
-    return value
-  }()
-
-  private static let isoCalendar: Calendar = {
-    var value = Calendar(identifier: .iso8601)
-    value.timeZone = Date.localTimeZone
-    return value
-  }()
-
-  /// Resolve snapshot scope for a shift's job.
-  /// During rollout, nil-job snapshots are treated as default-job snapshots only.
-  private static func snapshotsForJob(
-    jobId: String?,
-    allSnapshots: [WageSnapshot],
-    snapshotsByJobId: [String?: [WageSnapshot]],
-    legacyNilJobSnapshots: [WageSnapshot],
-    defaultJobId: String?
-  ) -> [WageSnapshot] {
-    guard let jobId else {
-      return legacyNilJobSnapshots.isEmpty ? allSnapshots : legacyNilJobSnapshots
-    }
-
-    if let scoped = snapshotsByJobId[jobId], !scoped.isEmpty {
-      return scoped
-    }
-
-    if let defaultJobId, let defaultScoped = snapshotsByJobId[defaultJobId], !defaultScoped.isEmpty
-    {
-      return defaultScoped
-    }
-
-    return legacyNilJobSnapshots.isEmpty ? allSnapshots : legacyNilJobSnapshots
+  static func appComputed(_ computed: SharingComputedShiftComputed, id: String) -> ShiftComputed {
+    ShiftComputed(
+      id: id, durationHours: computed.durationHours, paidHours: computed.paidHours,
+      basePay: computed.basePay, supplementPay: computed.supplementPay, gross: computed.gross,
+      wagePeriods: computed.wagePeriods, originalWagePeriods: computed.originalWagePeriods,
+      breakAudit: computed.breakAudit, overtimeApplied: computed.overtimeApplied,
+      overtimeMinutes: computed.overtimeMinutes, preOvertimeGross: computed.preOvertimeGross)
   }
 
   // MARK: - Monthly Totals

@@ -48,6 +48,7 @@ struct SharedShiftComputed: Codable, Equatable {
   let breakAudit: SharedBreakAudit
   let overtimeApplied: Bool
   let overtimeMinutes: Double
+  let preOvertimeGross: Double?
 
   init(
     id: String,
@@ -60,7 +61,8 @@ struct SharedShiftComputed: Codable, Equatable {
     originalWagePeriods: [WagePeriod]? = nil,
     breakAudit: SharedBreakAudit,
     overtimeApplied: Bool = false,
-    overtimeMinutes: Double = 0
+    overtimeMinutes: Double = 0,
+    preOvertimeGross: Double? = nil
   ) {
     self.id = id
     self.durationHours = durationHours
@@ -73,6 +75,7 @@ struct SharedShiftComputed: Codable, Equatable {
     self.breakAudit = breakAudit
     self.overtimeApplied = overtimeApplied
     self.overtimeMinutes = overtimeMinutes
+    self.preOvertimeGross = preOvertimeGross
   }
 
   private enum CodingKeys: String, CodingKey {
@@ -87,6 +90,7 @@ struct SharedShiftComputed: Codable, Equatable {
     case breakAudit
     case overtimeApplied
     case overtimeMinutes
+    case preOvertimeGross
   }
 
   init(from decoder: Decoder) throws {
@@ -103,6 +107,7 @@ struct SharedShiftComputed: Codable, Equatable {
     breakAudit = try container.decode(SharedBreakAudit.self, forKey: .breakAudit)
     overtimeApplied = try container.decodeIfPresent(Bool.self, forKey: .overtimeApplied) ?? false
     overtimeMinutes = try container.decodeIfPresent(Double.self, forKey: .overtimeMinutes) ?? 0
+    preOvertimeGross = try container.decodeIfPresent(Double.self, forKey: .preOvertimeGross)
   }
 }
 
@@ -181,7 +186,8 @@ extension SharedShiftData {
         notes: computed.breakAudit.notes
       ),
       overtimeApplied: computed.overtimeApplied,
-      overtimeMinutes: computed.overtimeMinutes
+      overtimeMinutes: computed.overtimeMinutes,
+      preOvertimeGross: computed.preOvertimeGross
     )
 
     return ShiftWithComputations(

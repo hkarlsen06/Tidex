@@ -401,7 +401,8 @@ final class SharingService {
           notes: shift.computed.breakAudit.notes
         ),
         overtimeApplied: shift.computed.overtimeApplied,
-        overtimeMinutes: shift.computed.overtimeMinutes
+        overtimeMinutes: shift.computed.overtimeMinutes,
+        preOvertimeGross: shift.computed.preOvertimeGross
       ),
       tax_enabled: shift.taxEnabled,
       tax_percentage: shift.taxPercentage,
@@ -447,7 +448,7 @@ final class SharingService {
     }
   }
 
-  private nonisolated static func computeSharedShiftsResponseOffMain(
+  nonisolated static func computeSharedShiftsResponseOffMain(
     payloadRow: SharingRPCMonthPayloadRow,
     year: Int,
     month: Int

@@ -50,13 +50,13 @@ struct WagePeriodBuilder {
     var result: [WagePeriod] = []
 
     // Build periods between consecutive boundary points
-    for i in 0..<(sorted.count - 1) {
-      let a = sorted[i]
-      let b = sorted[i + 1]
+    for index in 0..<(sorted.count - 1) {
+      let start = sorted[index]
+      let end = sorted[index + 1]
 
       var groups: [String: Double] = [:]
 
-      for window in windows where a >= window.from && b <= window.to {
+      for window in windows where start >= window.from && end <= window.to {
         let group = window.rule.stackingGroup ?? ""
         groups[group] = max(
           groups[group] ?? 0, resolveSupplementRate(rule: window.rule, baseRate: baseRate))
@@ -65,8 +65,8 @@ struct WagePeriodBuilder {
       // Convert Int to Double for WagePeriod (supports fractional break deductions)
       result.append(
         WagePeriod(
-          fromMin: Double(a),
-          toMin: Double(b),
+          fromMin: Double(start),
+          toMin: Double(end),
           baseRate: baseRate,
           supplementRate: groups.values.reduce(0, +)
         ))
@@ -115,13 +115,24 @@ struct WagePeriodBuilder {
   ) -> Bool {
     if let required = rule.shiftStartDates, !required.contains(shiftDate ?? "") { return false }
     if let shiftDate, rule.excludedShiftStartDates?.contains(shiftDate) == true { return false }
-    guard let shiftDate, let date = Date.fromISODateStringUTC(shiftDate) else {
+    guard let shiftDate, let date = isoDateFormatter.date(from: shiftDate) else {
       return rule.dates == nil
     }
     let shifted = date.addingTimeInterval(Double(dayOffset * 24 * 60 * 60))
     let iso = String(shifted.ISO8601Format().prefix(10))
     if let dates = rule.dates, !dates.contains(iso) { return false }
     return !(rule.excludedDates?.contains(iso) ?? false)
+  }
+
+  private static var isoDateFormatter: ISO8601DateFormatter {
+    let key = "tidex.payroll.isoDateUTC"
+    let cache = Thread.current.threadDictionary
+    if let formatter = cache[key] as? ISO8601DateFormatter { return formatter }
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withFullDate]
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    cache[key] = formatter
+    return formatter
   }
 
   // MARK: - Private Helpers

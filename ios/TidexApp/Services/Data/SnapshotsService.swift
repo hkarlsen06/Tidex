@@ -66,28 +66,7 @@ final class SnapshotsService {
   nonisolated static func snapshotForDate(_ date: String, from snapshots: [WageSnapshot])
     -> WageSnapshot?
   {
-    var baseline: WageSnapshot?
-    var result: WageSnapshot?
-    var latestDate = ""
-
-    for snapshot in snapshots {
-      guard let fromDate = snapshot.from_date else {
-        if baseline == nil {
-          baseline = snapshot
-        }
-        continue
-      }
-
-      // Equal dates keep the last input entry, matching the previous stable sort
-      // followed by a search for the rightmost applicable snapshot.
-      if fromDate <= date, fromDate >= latestDate {
-        result = snapshot
-        latestDate = fromDate
-      }
-    }
-
-    // Use dated snapshot if found, otherwise fall back to baseline
-    return result ?? baseline
+    SharingComputeCore.snapshotForDate(date, from: snapshots, effectiveFrom: \.from_date)
   }
 
   /// Batch lookup for multiple dates
