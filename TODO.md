@@ -4,6 +4,43 @@
 - [ ] Drop `user_settings.ai_data_sharing_enabled` and `user_settings.wagey_showcase_seen` once iOS 2.7.1 and older are retired. Those builds still write both columns when they push settings, so dropping them earlier breaks their settings sync. The app stopped using them in the release after 2.7.1.
 - [ ] Remove the server paywall plumbing once pre-3.0.0 iOS builds are retired: `get_my_entitlement`, `user_entitlements`, `get_paywall_config` + `internal.paywall_config`, `profiles.before_paywall`, and (after 2026-10-18) `apple-server-notifications` with `_shared/deno-signed-data-verifier.ts`, `@apple/app-store-server-library`, `get_or_create_app_account_token`, `internal.app_account_tokens`, `internal.apple_notifications` and `internal.apple_orphan_notifications`.
 
+## Convex runtime follow-up, November 7, 2026
+
+The hosted backend and dashboard now use `precompiled-2026-11-06-a7376b7`
+with packaged jemalloc. Authentication, live writes and subscriptions, file
+backups, rollback rehearsals and restarts passed. Upstream marks this build as
+a prerelease. See [the runtime procedure](backend/ops/convex-runtime/README.md).
+
+- [ ] Observe Tidex on `one-s` for at least 48 hours of normal traffic and backup
+  cycles. Record working memory excluding inactive file cache, process RSS,
+  container and host swap, memory-limit/OOM events, CPU and request errors.
+  Check whether memory settles after bursts. The immediate post-restart snapshot
+  does not establish long-term retention or production capacity.
+- [ ] Verify ordinary APNs notifications and Live Activity start, update and end
+  delivery on the developer's own device after the runtime upgrade. Cover
+  foreground, background and terminated-app behavior. Backend subscription tests
+  did not verify phone delivery; do not use customer accounts for test messages.
+- [ ] Reproduce simultaneous `devices:registerPush` and
+  `devices:registerLiveActivityDevice` calls on an isolated copy, then reduce
+  contention in `backend/convex/devices.ts`. A post-upgrade burst exhausted retries
+  for seven calls before both tokens persisted. Verify that reconnect bursts
+  complete both registrations without retry exhaustion and preserve older iOS
+  clients' contracts.
+- [ ] Trace the `usage_tracking` message `Failed to find component path despite
+  thresholds being exceeded` to the operation that emits it and check for an
+  upstream fix. It appeared around successful exports and exists in the old
+  source too. Its lack of application impact is inferred from source and the
+  passing checks, rather than a dedicated telemetry test.
+- [ ] Review a stable successor to `a7376b7` when available. Rehearse the candidate
+  and recovery with the pinned image procedure before replacing the prerelease.
+  Restore a matching data/object checkpoint for rollback; do not downgrade an
+  upgraded database in place.
+- [ ] Set retention for the shared `/srv/convex-runtime/checkpoints` directory,
+  old runtime images and offsite `convex-upgrades/` copies after the observation
+  period. These upgrade copies currently have no automatic pruning. Preserve
+  verified recovery data, source and manifests for both apps, and obtain approval
+  before deleting retained data.
+
 ## iOS 27 foreground-auth lifecycle false positive
 
 Observed on 2026-07-21 with Tidex 2.6.1 (`20260721.0003`) on iOS 27.0: the main app refreshed an existing Supabase session and emitted `session_fetch_failed` plus `foreground_session_failed` while the user was actively using another app. The same resident Tidex process had not relaunched. Treat `UIApplication.didBecomeActiveNotification` and `UIApplication.shared.applicationState == .active` as insufficient evidence that a Tidex scene is genuinely foreground-active.
