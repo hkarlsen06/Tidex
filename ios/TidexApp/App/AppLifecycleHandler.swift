@@ -1,7 +1,7 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable anonymous_argument_in_multiline_closure conditional_returns_on_newline explicit_acl
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable explicit_top_level_acl explicit_type_interface file_types_order no_direct_print no_empty_block
+// swiftlint:disable explicit_top_level_acl explicit_type_interface file_types_order no_empty_block
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_magic_numbers prefixed_toplevel_constant required_deinit
 import Foundation
@@ -103,12 +103,12 @@ final class AppLifecycleHandler {
       return
     }
 
-    print("[AppLifecycleHandler] Received Universal Link: \(url)")
+    logger.info("Received universal link: \(url.absoluteString, privacy: .private)")
     handleDeepLink(url)
   }
 
   private func handleDeepLink(_ url: URL) {
-    print("[AppLifecycleHandler] Received deep link: \(url)")
+    logger.info("Received deep link: \(url.absoluteString, privacy: .private)")
     Task { @MainActor in
       AppCoordinator.shared.handleDeepLink(url)
     }

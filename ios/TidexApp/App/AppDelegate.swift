@@ -3,7 +3,7 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable discouraged_optional_collection explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable file_length function_body_length line_length multiline_arguments_brackets no_direct_print
+// swiftlint:disable file_length function_body_length line_length multiline_arguments_brackets
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_empty_block no_grouping_extension no_magic_numbers pattern_matching_keywords
 // swiftlint:disable:next blanket_disable_command
@@ -540,7 +540,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         pushType: .token
       )
       LiveActivityPushTokenService.shared.observe(activity, locallyStarted: true)
-    } catch {}
+    } catch {
+      launchLog.error("Failed to start Live Activity: \(error.localizedDescription, privacy: .private)")
+    }
   }
 
   func applicationWillTerminate(_: UIApplication) {
@@ -596,7 +598,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func application(
     _: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error
   ) {
-    print("[APNs] Failed to register: \(error)")
+    launchLog.error("[APNs] Failed to register: \(error.localizedDescription, privacy: .private)")
     Task { @MainActor in
       PushNotificationManager.shared.apnsRegistrationFailed(error)
     }
@@ -640,7 +642,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // causing the admin to receive the target user's notifications.
     let isImpersonating = await MainActor.run { ImpersonationManager.shared.isImpersonating }
     guard !isImpersonating else {
-      print("[APNs] Skipping registration during impersonation")
+      launchLog.debug("[APNs] Skipping registration during impersonation")
       return
     }
 
@@ -670,7 +672,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       // Push tokens are user-scoped server records. If APNs returns a token
       // while the app is signed out, keep the cached token and retry after login.
       guard await AuthSessionManager.shared.getSessionIfAvailable() != nil else {
-        print("[APNs] Skipping token registration because no authenticated session is available")
+        launchLog.debug("[APNs] Skipping token registration because no authenticated session is available")
         return
       }
 
@@ -694,16 +696,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
           PushNotificationManager.shared.registrationSucceeded()
         }
       } else {
-        print("[APNs] Registration did not succeed")
+        launchLog.error("[APNs] Registration did not succeed")
         await MainActor.run {
           PushNotificationManager.shared.serverRegistrationFailed(
             "Registration failed", underlying: nil)
         }
       }
     } catch let error where isAPNsRegistrationCancellation(error) {
-      print("[APNs] Token registration cancelled")
+      launchLog.debug("[APNs] Token registration cancelled")
     } catch {
-      print("[APNs] Failed to register token: \(error)")
+      launchLog.error("[APNs] Failed to register token: \(error.localizedDescription, privacy: .private)")
       await MainActor.run {
         PushNotificationManager.shared.serverRegistrationFailed(
           error.localizedDescription,
@@ -752,7 +754,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       _ = try await ConvexAPI.app.mutation(
         "devices:unregisterPush", Args(deviceToken: token), as: ConvexAPI.Ignored.self)
     } catch {
-      print("[APNs] Failed to unregister token: \(error)")
+      launchLog.error("[APNs] Failed to unregister token: \(error.localizedDescription, privacy: .private)")
     }
   }
 
