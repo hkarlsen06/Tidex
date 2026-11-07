@@ -27,6 +27,10 @@ Paths are under `ios/TidexApp/` unless they start with `ios/`.
 - `Storage/Testing/DesignReviewView.swift` holds the design-review screens. None of them shows a chat thread, the composer or the attachment drawer.
 - After a build, SwiftPM checkouts are at `~/Library/Developer/Xcode/DerivedData/Tidex-*/SourcePackages/checkouts/`. Don't `find /` for them. If that folder is empty, read the Chat fork in `../Chat`.
 
+## Local storage
+
+`Storage/LocalStoreSchema.swift` defines `SchemaV1` and `LocalStoreMigrationPlan`. Before changing a persisted model, preserve the released model definitions under their versioned schema, add `SchemaV2`, and append a V1-to-V2 migration stage to the plan. Keep V1's entity names and stored properties unchanged. Every persisted schema change needs a version and stage, including additive fields, renames, type or optionality changes, constraints and relationships. Use a lightweight stage when SwiftData can preserve the data itself, and a custom stage when values need conversion or backfilling. Test an on-disk upgrade with dirty rows, pending deletes and queued messages. A failed store must stay on disk, with editing and sync blocked until it opens again.
+
 ## Project file
 
 All app and extension folders are synchronized groups, so adding or deleting a Swift file there needs no `project.pbxproj` edit. `TidexAppTests` and `TidexAppUITests` are the exceptions. A new test file needs a `PBXBuildFile`, a `PBXFileReference`, a group child and a Sources entry in `ios/Tidex.xcodeproj/project.pbxproj`. Copy the pattern of an existing test file. A file without them never compiles or runs, and nothing warns you. Seven test files sat outside the target from September to October 2026. This prints any test file missing from the target:
