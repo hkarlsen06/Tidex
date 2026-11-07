@@ -128,7 +128,7 @@ final class ProfileSettingsViewModel {
       if ErrorTranslations.isOffline(error) {
         loadOfflineProfileFallback()
       } else {
-        errorMessage = String(localized: .profileErrorsLoadFailed)
+        errorMessage = ErrorTranslations.translate(error, fallback: .profileErrorsLoadFailed)
       }
     }
 
@@ -213,7 +213,7 @@ final class ProfileSettingsViewModel {
       }
 
     } catch {
-      errorMessage = String(localized: .profileErrorsSaveFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .profileErrorsSaveFailed)
     }
 
     isSavingName = false
@@ -272,22 +272,10 @@ final class ProfileSettingsViewModel {
         "sharing:setMyUsername", UsernameArgs(username: normalizedUsername))
       username = saved ?? ""
       originalUsername = username
-    } catch let failure as ConvexAPI.Failure {
-      switch failure.code {
-      case "username_taken":
-        setUsernameError(String(localized: .profileErrorsUsernameTaken))
-
-      case "username_blocked":
-        setUsernameError(String(localized: .profileErrorsNameSafetyFilter))
-
-      case "username_invalid":
-        setUsernameError(String(localized: .profileErrorsUsernameInvalid))
-
-      default:
-        setUsernameError(String(localized: .profileErrorsUsernameSaveFailed))
-      }
     } catch {
-      setUsernameError(String(localized: .profileErrorsUsernameSaveFailed))
+      if let message = ErrorTranslations.translate(error, fallback: .profileErrorsUsernameSaveFailed) {
+        setUsernameError(message)
+      }
     }
 
     isSavingUsername = false
@@ -449,7 +437,7 @@ extension ProfileSettingsViewModel {
 
       Haptics.play(.success)
     } catch {
-      errorMessage = String(localized: .profileErrorsUploadFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .profileErrorsUploadFailed)
       Haptics.play(.error)
     }
   }
@@ -477,7 +465,7 @@ extension ProfileSettingsViewModel {
 
       Haptics.play(.success)
     } catch {
-      errorMessage = String(localized: .profileErrorsSaveFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .profileErrorsSaveFailed)
       Haptics.play(.error)
     }
   }
@@ -528,7 +516,7 @@ extension ProfileSettingsViewModel {
       }
 
     } catch {
-      errorMessage = String(localized: .profileDangerZoneDeleteAccountErrorsDeleteFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .profileDangerZoneDeleteAccountErrorsDeleteFailed)
       Haptics.play(.error)
       isDeletingAccount = false
     }

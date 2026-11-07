@@ -185,7 +185,7 @@ internal final class AppearanceSettingsViewModel {
         AppearanceSettingsConstants.logger.error(
           "Failed to save theme: \(error.localizedDescription)"
         )
-        errorMessage = "Failed to save theme preference"
+        errorMessage = ErrorTranslations.translate(error)
       }
     }
   }
@@ -212,7 +212,7 @@ internal final class AppearanceSettingsViewModel {
         AppearanceSettingsConstants.logger.error(
           "Failed to save calendar content color style: \(error.localizedDescription)"
         )
-        errorMessage = String(localized: .appearanceCalendarContentColorSaveError)
+        errorMessage = ErrorTranslations.translate(error, fallback: .appearanceCalendarContentColorSaveError)
       }
     }
   }
@@ -243,7 +243,7 @@ internal final class AppearanceSettingsViewModel {
         AppearanceSettingsConstants.logger.error(
           "Failed to save dashboard clock button visibility: \(error.localizedDescription)"
         )
-        errorMessage = "Failed to save dashboard preference"
+        errorMessage = ErrorTranslations.translate(error)
       }
     }
   }
@@ -269,7 +269,7 @@ internal final class AppearanceSettingsViewModel {
         AppearanceSettingsConstants.logger.error(
           "Failed to save default startup tab: \(error.localizedDescription)"
         )
-        errorMessage = "Failed to save startup tab preference"
+        errorMessage = ErrorTranslations.translate(error)
       }
     }
   }

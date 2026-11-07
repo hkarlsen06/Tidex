@@ -166,7 +166,7 @@ final class SignupViewModel {
         fieldErrors.otp = String(localized: .signupVerifyErrorsInvalidCode)
         Haptics.play(.error)
       } else if AuthService.isRateLimited(error) {
-        errorMessage = String(localized: .signupVerifyErrorsTooManyRequests)
+        errorMessage = ErrorTranslations.translate(error, fallback: .signupVerifyErrorsTooManyRequests)
       } else {
         handleError(error)
       }
@@ -188,7 +188,7 @@ final class SignupViewModel {
       startResendCooldown()
     } catch {
       if AuthService.isRateLimited(error) {
-        errorMessage = String(localized: .signupVerifyErrorsTooManyRequests)
+        errorMessage = ErrorTranslations.translate(error, fallback: .signupVerifyErrorsTooManyRequests)
         startResendCooldown()
       } else {
         handleError(error)

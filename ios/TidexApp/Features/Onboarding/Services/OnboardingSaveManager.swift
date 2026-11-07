@@ -124,8 +124,10 @@ final class OnboardingSaveManager {
       logger.info("Onboarding save completed successfully")
 
     } catch {
+      guard let message = ErrorTranslations.translate(error, fallback: .onboardingSuccessErrorMessage)
+      else { return }
       status = .error
-      errorMessage = String(localized: .onboardingSuccessErrorMessage)
+      errorMessage = message
       logger.error("Failed to save onboarding data: \(error.localizedDescription)")
     }
   }

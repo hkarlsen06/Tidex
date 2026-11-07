@@ -153,7 +153,7 @@ final class PaySettingsViewModel {
       logger.info("Loaded \(self.snapshots.count) snapshots for pay settings")
     } catch {
       logger.error("Failed to load pay settings: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorLoadFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsPayErrorLoadFailed)
     }
 
     isLoading = false
@@ -360,7 +360,7 @@ extension PaySettingsViewModel {
       Haptics.play(.success)
     } catch {
       logger.error("Failed to set selected job as default: \(error.localizedDescription)")
-      errorMessage = error.localizedDescription
+      errorMessage = ErrorTranslations.translate(error)
     }
   }
 
@@ -391,7 +391,7 @@ extension PaySettingsViewModel {
       return true
     } catch {
       logger.error("Failed to archive selected job: \(error.localizedDescription)")
-      errorMessage = error.localizedDescription
+      errorMessage = ErrorTranslations.translate(error)
       return false
     }
   }
@@ -420,7 +420,7 @@ extension PaySettingsViewModel {
       return true
     } catch {
       logger.error("Failed to complete job pay setup: \(error.localizedDescription)")
-      errorMessage = error.localizedDescription
+      errorMessage = ErrorTranslations.translate(error)
       return false
     }
   }
@@ -454,7 +454,7 @@ extension PaySettingsViewModel {
       return true
     } catch {
       logger.error("Failed to update selected job metadata: \(error.localizedDescription)")
-      errorMessage = error.localizedDescription
+      errorMessage = ErrorTranslations.translate(error)
       return false
     }
   }
@@ -488,7 +488,7 @@ extension PaySettingsViewModel {
       Haptics.play(.success)
     } catch {
       logger.error("Failed to update selected job currency: \(error.localizedDescription)")
-      errorMessage = error.localizedDescription
+      errorMessage = ErrorTranslations.translate(error)
     }
   }
 
@@ -586,7 +586,7 @@ extension PaySettingsViewModel {
       return true
     } catch {
       logger.error("Failed to create snapshot: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorCreateFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsPayErrorCreateFailed)
       return false
     }
   }
@@ -643,7 +643,7 @@ extension PaySettingsViewModel {
       return true
     } catch {
       logger.error("Failed to update snapshot: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorUpdateFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsPayErrorUpdateFailed)
       return false
     }
   }
@@ -679,7 +679,7 @@ extension PaySettingsViewModel {
       logger.info("Deleted wage snapshot: \(snapshot.id)")
     } catch {
       logger.error("Failed to delete snapshot: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorDeleteFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsPayErrorDeleteFailed)
     }
 
     showingDeleteConfirmation = false
@@ -763,7 +763,7 @@ extension PaySettingsViewModel {
       logger.info("Updated payroll day to: \(value)")
     } catch {
       logger.error("Failed to update payroll day: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorSaveFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsPayErrorSaveFailed)
     }
   }
 
@@ -790,7 +790,7 @@ extension PaySettingsViewModel {
       logger.info("Updated half tax month to: \(value ?? 0)")
     } catch {
       logger.error("Failed to update half tax month: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorSaveFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsPayErrorSaveFailed)
     }
   }
 
@@ -816,7 +816,7 @@ extension PaySettingsViewModel {
       logger.info("Updated pay period")
     } catch {
       logger.error("Failed to update pay period: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorSaveFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsPayErrorSaveFailed)
     }
   }
 

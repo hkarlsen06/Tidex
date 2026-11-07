@@ -234,7 +234,7 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
 
     } catch {
       kLogger.error("Export failed: \(error.localizedDescription)")
-      errorMessage = error.localizedDescription
+      errorMessage = ErrorTranslations.translate(error)
     }
   }
 

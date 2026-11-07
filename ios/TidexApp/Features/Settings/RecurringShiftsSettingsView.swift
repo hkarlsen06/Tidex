@@ -132,7 +132,7 @@ struct RecurringShiftsSettingsView: View {
       recurringShifts = sortRecurringShifts(shifts)
     } catch {
       logger.error("Failed to load recurring shifts settings: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsRecurringShiftsLoadFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsRecurringShiftsLoadFailed)
     }
 
     isLoading = false
@@ -170,7 +170,7 @@ struct RecurringShiftsSettingsView: View {
       Haptics.play(.success)
     } catch {
       logger.error("Failed to update recurring shift from settings: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsRecurringShiftsSaveFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsRecurringShiftsSaveFailed)
     }
   }
 
@@ -182,7 +182,7 @@ struct RecurringShiftsSettingsView: View {
       Haptics.play(.success)
     } catch {
       logger.error("Failed to delete recurring shift from settings: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsRecurringShiftsDeleteFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .settingsRecurringShiftsDeleteFailed)
     }
   }
 

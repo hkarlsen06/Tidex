@@ -387,8 +387,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           } else if let data = viewModel.dashboardData {
             // Keep loaded content visible when a later refresh fails
             cardContent(data: data)
-          } else if let error = viewModel.error {
-            errorView(error: error)
+          } else if let error = viewModel.error, let message = ErrorTranslations.translate(error) {
+            errorView(message: message)
           } else {
             // Show skeleton cards with shimmer while loading or waiting for sync
             // This provides a consistent visual preview of the layout
@@ -1694,7 +1694,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   // MARK: - Error View
 
   @ViewBuilder
-  private func errorView(error: Error) -> some View {
+  private func errorView(message: String) -> some View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: errorIconSize))
@@ -1705,7 +1705,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
 
-      Text(error.localizedDescription)
+      Text(message)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)

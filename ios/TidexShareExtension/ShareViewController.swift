@@ -10,6 +10,7 @@ import Observation
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import os
 
 final class ShareViewController: UIViewController {
   private let viewModel = ShareExtensionViewModel()
@@ -86,7 +87,15 @@ private final class ShareExtensionViewModel {
         errorMessage = String(localized: .shareErrorNoRecipients)
       }
     } catch {
-      errorMessage = error.localizedDescription
+      Logger(subsystem: "no.tidex.app", category: "ShareExtension")
+        .error("Share operation failed: \(error.localizedDescription, privacy: .private)")
+      if !Task.isCancelled, !UserFacingError.isCancellation(error),
+        let loadingError = error as? ShareLoadingError
+      {
+        errorMessage = loadingError.errorDescription
+      } else {
+        errorMessage = UserFacingError.message(for: error)
+      }
     }
 
     isLoading = false
@@ -107,7 +116,15 @@ private final class ShareExtensionViewModel {
 
       extensionContext?.completeRequest(returningItems: nil)
     } catch {
-      errorMessage = error.localizedDescription
+      Logger(subsystem: "no.tidex.app", category: "ShareExtension")
+        .error("Share operation failed: \(error.localizedDescription, privacy: .private)")
+      if !Task.isCancelled, !UserFacingError.isCancellation(error),
+        let loadingError = error as? ShareLoadingError
+      {
+        errorMessage = loadingError.errorDescription
+      } else {
+        errorMessage = UserFacingError.message(for: error)
+      }
       isSending = false
     }
   }

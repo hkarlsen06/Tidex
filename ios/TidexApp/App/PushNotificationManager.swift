@@ -99,7 +99,8 @@ final class PushNotificationManager {
     if isTransientNetworkError(error) {
       return
     }
-    registrationState = .apnsFailed(error.localizedDescription)
+    guard let message = ErrorTranslations.translate(error) else { return }
+    registrationState = .apnsFailed(message)
   }
 
   /// Called when server API registration fails
@@ -110,7 +111,12 @@ final class PushNotificationManager {
     if messageLooksTransientNetworkFailure(message) {
       return
     }
-    registrationState = .serverFailed(message)
+    if let error {
+      guard let message = ErrorTranslations.translate(error) else { return }
+      registrationState = .serverFailed(message)
+    } else {
+      registrationState = .serverFailed(String(localized: .commonErrorGeneric))
+    }
   }
 
   /// Called when user dismisses the failure alert

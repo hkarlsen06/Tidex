@@ -186,7 +186,7 @@ final class ResetPasswordViewModel {
       successMessage = String(localized: .resetPasswordSuccessOtpResent)
     } catch {
       if AuthService.isRateLimited(error) {
-        errorMessage = String(localized: .signupVerifyErrorsTooManyRequests)
+        errorMessage = ErrorTranslations.translate(error, fallback: .signupVerifyErrorsTooManyRequests)
       } else {
         handleError(error)
       }

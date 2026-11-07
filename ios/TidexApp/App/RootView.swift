@@ -413,7 +413,7 @@ struct LoadingView: View {
         do {
           viewModel = try await makeViewModel(for: configuration.scenario)
         } catch {
-          errorMessage = error.localizedDescription
+          errorMessage = ErrorTranslations.translate(error)
         }
       }
     }

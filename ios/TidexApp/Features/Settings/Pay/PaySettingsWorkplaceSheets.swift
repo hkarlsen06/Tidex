@@ -118,7 +118,7 @@ struct EditWorkplaceSheet: View {
 
     if didSave {
       dismiss()
-    } else {
+    } else if !Task.isCancelled {
       saveError = String(localized: .settingsPayErrorSaveFailed)
     }
   }

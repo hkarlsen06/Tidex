@@ -123,7 +123,7 @@ final class ManageSharingViewModel {
         await loadLocalVisibilityPreferencesIfPossible()
       } else {
         logger.error("Failed to load friends (SharingServiceError): \(error)")
-        errorMessage = String(localized: .sharingErrorLoadFriends)
+        errorMessage = ErrorTranslations.translate(error, fallback: .sharingErrorLoadFriends)
       }
     } catch  where ErrorTranslations.isOffline(error) {
       logger.info("Using existing sharing management state while offline")
@@ -131,7 +131,7 @@ final class ManageSharingViewModel {
       await loadLocalVisibilityPreferencesIfPossible()
     } catch {
       logger.error("Failed to load friends: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorLoadFriends)
+      errorMessage = ErrorTranslations.translate(error, fallback: .sharingErrorLoadFriends)
     }
 
     isLoading = false
@@ -160,7 +160,7 @@ final class ManageSharingViewModel {
       logger.error("Failed to reconcile friends after action: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorLoadFriends)
+        fallback: .sharingErrorLoadFriends
       )
     }
   }
@@ -196,12 +196,12 @@ final class ManageSharingViewModel {
       return true
     } catch let error as SharingServiceError {
       logger.error("Failed to add friend: \(error.localizedDescription)")
-      addError = userFacingActionError(for: error, fallback: error.localizedDescription)
+      addError = userFacingActionError(for: error, fallback: .sharingErrorAddFriend)
     } catch {
       logger.error("Failed to add friend: \(error.localizedDescription)")
       addError = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorAddFriend)
+        fallback: .sharingErrorAddFriend
       )
     }
 
@@ -239,7 +239,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to toggle earnings: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorUpdateSettings)
+        fallback: .sharingErrorUpdateSettings
       )
       Haptics.play(.error)
     }
@@ -283,7 +283,7 @@ extension ManageSharingViewModel {
         logger.error("Failed to toggle hidden: \(error.localizedDescription)")
         errorMessage = userFacingActionError(
           for: error,
-          fallback: String(localized: .sharingErrorUpdateSettings)
+          fallback: .sharingErrorUpdateSettings
         )
         Haptics.play(.error)
       }
@@ -315,7 +315,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to toggle outgoing-only hidden: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorUpdateSettings)
+        fallback: .sharingErrorUpdateSettings
       )
       Haptics.play(.error)
     }
@@ -364,7 +364,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to toggle muted: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorUpdateNotifications)
+        fallback: .sharingErrorUpdateNotifications
       )
       Haptics.play(.error)
     }
@@ -406,7 +406,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to toggle owner_muted: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorUpdateNotifications)
+        fallback: .sharingErrorUpdateNotifications
       )
       Haptics.play(.error)
     }
@@ -453,7 +453,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to remove share: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorRemoveShare)
+        fallback: .sharingErrorRemoveShare
       )
       Haptics.play(.error)
     }
@@ -499,7 +499,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to remove sharer: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorRemovePerson)
+        fallback: .sharingErrorRemovePerson
       )
       Haptics.play(.error)
     }
@@ -560,7 +560,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to share back: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorShareBack)
+        fallback: .sharingErrorShareBack
       )
     }
 
@@ -604,7 +604,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to block friend: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorUpdateSettings)
+        fallback: .sharingErrorUpdateSettings
       )
       Haptics.play(.error)
     }
@@ -633,7 +633,7 @@ extension ManageSharingViewModel {
       logger.error("Failed to unblock friend: \(error.localizedDescription)")
       errorMessage = userFacingActionError(
         for: error,
-        fallback: String(localized: .sharingErrorUpdateSettings)
+        fallback: .sharingErrorUpdateSettings
       )
       Haptics.play(.error)
     }
@@ -701,12 +701,13 @@ extension ManageSharingViewModel {
     hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
   }
 
-  private func userFacingActionError(for error: Error, fallback: String) -> String {
+  private func userFacingActionError(for error: Error, fallback: LocalizedStringResource) -> String? {
+    guard !Task.isCancelled, !ErrorTranslations.isCancellation(error) else { return nil }
     if ErrorTranslations.isOffline(error) {
       areServerActionsUnavailable = true
       return String(localized: .sharingOfflineActionFailed)
     }
 
-    return fallback
+    return ErrorTranslations.translate(error, fallback: fallback)
   }
 }

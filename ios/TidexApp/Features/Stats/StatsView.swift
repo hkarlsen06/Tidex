@@ -62,8 +62,10 @@ struct StatsView: View {
       Group {
         if shouldShowWorkSetupRequiredPlaceholder {
           WorkSetupRequiredPlaceholder()
-        } else if let error = viewModel.error, viewModel.stats == nil {
-          errorView(error: error)
+        } else if let error = viewModel.error, viewModel.stats == nil,
+          let message = ErrorTranslations.translate(error)
+        {
+          errorView(message: message)
         } else if !hasAnyShifts {
           FirstShiftEmptyState {
             coordinator.pendingDeepLink = .addShift(mode: nil, date: nil)
@@ -399,14 +401,14 @@ struct StatsView: View {
   // MARK: - Error View
 
   @ViewBuilder
-  private func errorView(error _: Error) -> some View {
+  private func errorView(message: String) -> some View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: errorIconSize))
         .foregroundColor(.tidexTextMuted)
         .accessibilityHidden(true)
 
-      Text(.statsErrorsCouldNotUpdate)
+      Text(message)
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
@@ -428,7 +430,7 @@ struct StatsView: View {
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding()
-    .announcesToVoiceOver(String(localized: .statsErrorsCouldNotUpdate))
+    .announcesToVoiceOver(message)
   }
 }
 

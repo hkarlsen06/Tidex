@@ -64,7 +64,7 @@ internal final class CalendarImportModel {
     } catch {
       // The link is a personal token, so it stays out of the log.
       kLogger.error("Calendar feed fetch failed: \(error.localizedDescription)")
-      errorMessage = String(localized: .calendarImportErrorFetchFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .calendarImportErrorFetchFailed)
     }
   }
 
@@ -97,7 +97,7 @@ internal final class CalendarImportModel {
       Haptics.playShiftCreationSuccess()
     } catch {
       kLogger.error("Calendar import stopped: \(error.localizedDescription)")
-      errorMessage = error.localizedDescription
+      errorMessage = ErrorTranslations.translate(error)
       Haptics.play(.error)
     }
     if !createdDates.isEmpty {

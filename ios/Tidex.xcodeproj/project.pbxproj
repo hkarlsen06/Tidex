@@ -316,6 +316,7 @@
 				StoredMonthlyTotals.swift,
 				StoredShift.swift,
 				SupplementRule.swift,
+				UserFacingError.swift,
 				WagePeriodBuilder.swift,
 				WidgetAppGroup.swift,
 				WidgetSharer.swift,

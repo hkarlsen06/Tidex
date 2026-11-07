@@ -2669,6 +2669,8 @@ enum FriendsAPIClient {
       case .query: return try await SharedAuthToken.convex.query(path, args)
       case .mutation: return try await SharedAuthToken.convex.mutation(path, args)
       }
+    } catch where UserFacingError.isCancellation(error) {
+      throw error
     } catch let error as FriendsAPIError {
       throw error
     } catch ConvexAPI.Failure.notSignedIn {
@@ -2694,6 +2696,7 @@ enum FriendsAPIClient {
     } catch let error as FriendsAPIError {
       throw error
     } catch {
+      if UserFacingError.isCancellation(error) { throw error }
       throw FriendsAPIError.transportError(error)
     }
   }
@@ -3149,6 +3152,8 @@ enum FriendsAPIClient {
           throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
         }
         return try JSONDecoder().decode(UploadReply.self, from: data).storageId
+      } catch where UserFacingError.isCancellation(error) {
+        throw error
       } catch let error as FriendsAPIError {
         throw error
       } catch let error as DecodingError {

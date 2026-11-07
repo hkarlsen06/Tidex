@@ -746,7 +746,7 @@ internal final class AddShiftViewModel {
       return true
     } catch {
       kLogger.error("Failed to create configured job from Add Shift: \(error.localizedDescription)")
-      self.error = error.localizedDescription
+      self.error = ErrorTranslations.translate(error)
       return false
     }
   }
@@ -772,7 +772,7 @@ internal final class AddShiftViewModel {
       return createdJob
     } catch {
       kLogger.error("Failed to create basic job from Add Shift: \(error.localizedDescription)")
-      self.error = error.localizedDescription
+      self.error = ErrorTranslations.translate(error)
       return nil
     }
   }
@@ -819,7 +819,7 @@ internal final class AddShiftViewModel {
       return true
     } catch {
       kLogger.error("Failed to complete Add Shift pay setup: \(error.localizedDescription)")
-      self.error = error.localizedDescription
+      self.error = ErrorTranslations.translate(error)
       return false
     }
   }
@@ -1515,10 +1515,11 @@ internal final class AddShiftViewModel {
       await finishSingleSubmission(createdDates: createdDates, userId: userId)
     } catch {
       kLogger.error("Failed to create shifts: \(error.localizedDescription)")
-      self.error =
+      self.error = ErrorTranslations.translate(error).map { message in
         createdDates.isEmpty
-        ? error.localizedDescription
-        : String(localized: .addShiftSinglePartialSave) + "\n" + error.localizedDescription
+          ? message
+          : String(localized: .addShiftSinglePartialSave) + "\n" + message
+      }
       Haptics.play(.error)
     }
   }
@@ -1540,7 +1541,7 @@ internal final class AddShiftViewModel {
     do {
       return try AppCoordinator.shared.requireUserId()
     } catch {
-      self.error = error.localizedDescription
+      self.error = ErrorTranslations.translate(error)
       return nil
     }
   }
@@ -1642,7 +1643,7 @@ internal final class AddShiftViewModel {
         hasReminders: notificationMinutesArray != nil, userId: userId)
     } catch {
       kLogger.error("Failed to create event: \(error.localizedDescription)")
-      self.error = error.localizedDescription
+      self.error = ErrorTranslations.translate(error)
       Haptics.play(.error)
     }
 
@@ -1778,7 +1779,7 @@ internal final class AddShiftViewModel {
       await finishRecurringSubmission(conflicts: conflicts, userId: userId)
     } catch {
       kLogger.error("Failed to create recurring shift: \(error.localizedDescription)")
-      self.error = error.localizedDescription
+      self.error = ErrorTranslations.translate(error)
       Haptics.play(.error)
     }
 

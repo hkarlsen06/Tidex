@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import os
 
 enum SharingDeepLinkNavigationPathResolver {
   static func shouldPreserveExistingPath(
@@ -614,10 +615,9 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       }
     } catch {
       activeChatHighlightUserId = nil
-      chatOpenErrorMessage =
-        error.localizedDescription.isEmpty
-        ? String(localized: .friendsChatOpenFailed)
-        : error.localizedDescription
+      Logger(subsystem: "com.tidex.app", category: "FriendsView")
+        .error("Failed to open chat: \(error.localizedDescription, privacy: .private)")
+      chatOpenErrorMessage = ErrorTranslations.translate(error)
     }
   }
 
@@ -697,10 +697,9 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       return
     } catch {
       activeChatHighlightUserId = nil
-      chatOpenErrorMessage =
-        error.localizedDescription.isEmpty
-        ? String(localized: .friendsChatOpenFailed)
-        : error.localizedDescription
+      Logger(subsystem: "com.tidex.app", category: "FriendsView")
+        .error("Failed to open chat: \(error.localizedDescription, privacy: .private)")
+      chatOpenErrorMessage = ErrorTranslations.translate(error)
     }
   }
 

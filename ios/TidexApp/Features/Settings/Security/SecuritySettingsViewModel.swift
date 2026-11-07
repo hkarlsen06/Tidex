@@ -61,7 +61,7 @@ final class SecuritySettingsViewModel {
         isOfflineLimited = true
         if let user = Clerk.shared.user { apply(user) }
       } else {
-        errorMessage = String(localized: .securityErrorsLoadFailed)
+        errorMessage = ErrorTranslations.translate(error, fallback: .securityErrorsLoadFailed)
       }
     }
 
@@ -177,7 +177,7 @@ final class SecuritySettingsViewModel {
       logger.debug("User cancelled \(provider) linking")
     } catch {
       logger.error("Failed to link \(provider): \(error)")
-      errorMessage = String(localized: .securityConnectionsErrorsLinkFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .securityConnectionsErrorsLinkFailed)
     }
 
     isConnectingProvider = false
@@ -208,7 +208,7 @@ final class SecuritySettingsViewModel {
 
     } catch {
       logger.error("Failed to unlink \(provider): \(error)")
-      errorMessage = String(localized: .securityConnectionsErrorsUnlinkFailed)
+      errorMessage = ErrorTranslations.translate(error, fallback: .securityConnectionsErrorsUnlinkFailed)
     }
 
     isConnectingProvider = false

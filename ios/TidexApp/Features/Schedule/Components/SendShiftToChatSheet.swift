@@ -249,21 +249,10 @@ private final class SendAttachmentToChatViewModel {
     }
   }
 
-  /// Local errors and `FriendsAPIError` already have localized descriptions. Server and
-  /// transport errors don't, so they map to fixed copy.
-  private func userMessage(for error: Error) -> String {
-    if ErrorTranslations.isOffline(error) {
-      return ErrorTranslations.offlineMessage
-    }
-
-    switch error {
-    case FriendsMessagingServiceError.httpError, FriendsMessagingServiceError.networkError:
-      return String(localized: .commonErrorGeneric)
-
-    default:
-      return error.localizedDescription
-    }
+  private func userMessage(for error: Error) -> String? {
+    ErrorTranslations.translate(error)
   }
+
 }
 
 struct SendAttachmentToChatSheet: View {

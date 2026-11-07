@@ -133,7 +133,7 @@ internal final class FeedbackSettingsViewModel {
         feedbackHistory = []
         isOfflineUnavailable = true
       } else {
-        errorMessage = String(localized: .commonErrorNotAuthenticated)
+        errorMessage = ErrorTranslations.translate(error, fallback: .commonErrorNotAuthenticated)
       }
     }
 

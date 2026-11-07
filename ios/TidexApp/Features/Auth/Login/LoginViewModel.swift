@@ -182,7 +182,7 @@ final class LoginViewModel {
       successMessage = String(localized: .signupVerifyResendSent)
     } catch {
       if AuthService.isRateLimited(error) {
-        errorMessage = String(localized: .signupVerifyErrorsTooManyRequests)
+        errorMessage = ErrorTranslations.translate(error, fallback: .signupVerifyErrorsTooManyRequests)
       } else {
         handleError(error)
       }

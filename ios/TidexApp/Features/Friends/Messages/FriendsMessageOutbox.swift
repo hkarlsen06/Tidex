@@ -126,7 +126,9 @@ final class FriendsMessageOutbox {
         let disposition = await recordFailure(error, for: message, userId: userId)
         // Offline, or another account is signed in now and the messages left are not theirs.
         // Either way the remaining messages would fail the same way.
-        if Self.isConnectivityError(error) || Self.isWrongUser(error) {
+        if ErrorTranslations.isCancellation(error)
+          || Self.isConnectivityError(error) || Self.isWrongUser(error)
+        {
           notifyThreadUpdated(message.threadId)
           return
         }
@@ -191,7 +193,7 @@ final class FriendsMessageOutbox {
 
   /// Decides whether a failed send stays queued and counts the attempt.
   func disposition(for error: Error, messageId: String) -> Disposition {
-    if Self.isConnectivityError(error) {
+    if ErrorTranslations.isCancellation(error) || Self.isConnectivityError(error) {
       return .queue
     }
     if Self.isDefinitiveFailure(error) {
@@ -214,7 +216,7 @@ final class FriendsMessageOutbox {
   func recordFailure(_ error: Error, for message: FriendMessage, userId: String) async
     -> Disposition
   {
-    if Self.isWrongUser(error) { return .queue }
+    if ErrorTranslations.isCancellation(error) || Self.isWrongUser(error) { return .queue }
     let outcome = disposition(for: error, messageId: message.id)
     await repository.updateMessageSendState(
       messageId: message.id,

@@ -346,7 +346,7 @@ final class AuthService: EmailAuthProviding {
 extension AuthService {
   /// True when the person closed the Apple sheet or the Google web sheet.
   nonisolated static func isCancellation(_ error: Error) -> Bool {
-    if error is CancellationError { return true }
+    if ErrorTranslations.isCancellation(error) { return true }
     if let error = error as? ASWebAuthenticationSessionError {
       return error.code == .canceledLogin
     }
@@ -388,14 +388,19 @@ extension AuthService {
 
   /// The text to show for a failed auth call. Clerk's known codes get the app's own copy.
   @MainActor
-  static func message(for error: Error) -> String {
+  static func message(for error: Error) -> String? {
+    guard !Task.isCancelled, !isCancellation(error) else { return nil }
+    if let appleError = error as? AppleAuthError {
+      if case .failed = appleError { return String(localized: .commonErrorGeneric) }
+      return appleError.errorDescription
+    }
     guard let clerkError = error as? ClerkAPIError else {
       return ErrorTranslations.translate(error)
     }
     if let known = messages[clerkError.code] {
       return String(localized: known)
     }
-    return clerkError.errorDescription ?? ErrorTranslations.translate(error)
+    return ErrorTranslations.translate(error)
   }
 }
 

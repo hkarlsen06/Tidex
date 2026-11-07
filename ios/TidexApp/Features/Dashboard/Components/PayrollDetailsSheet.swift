@@ -1261,7 +1261,7 @@ struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_l
       } catch {
         await MainActor.run {
           isSaving = false
-          errorMessage = String(localized: .dashboardPayrollDetailsAdjustmentSaveFailed)
+          errorMessage = ErrorTranslations.translate(error, fallback: .dashboardPayrollDetailsAdjustmentSaveFailed)
         }
       }
     }
@@ -1282,7 +1282,7 @@ struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_l
       } catch {
         await MainActor.run {
           isSaving = false
-          errorMessage = String(localized: .dashboardPayrollDetailsAdjustmentSaveFailed)
+          errorMessage = ErrorTranslations.translate(error, fallback: .dashboardPayrollDetailsAdjustmentSaveFailed)
         }
       }
     }

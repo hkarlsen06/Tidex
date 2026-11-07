@@ -23,6 +23,7 @@ struct ConvexAPI: Sendable {
       return nil
     }
 
+    /// Diagnostic detail for logs and admin screens. Present errors through UserFacingError.
     var errorDescription: String? {
       switch self {
       case .server(_, let message): message

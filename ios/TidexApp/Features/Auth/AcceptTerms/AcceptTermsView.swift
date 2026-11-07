@@ -230,7 +230,7 @@ internal struct AcceptTermsView: View {
         }
       } catch {
         await MainActor.run {
-          self.error = String(localized: .acceptTermsErrorsUpdateFailed)
+          self.error = ErrorTranslations.translate(error, fallback: .acceptTermsErrorsUpdateFailed)
           isProcessing = false
         }
         kAcceptTermsLogger.error("Failed to update terms acceptance: \(error.localizedDescription)")

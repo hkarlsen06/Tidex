@@ -752,15 +752,7 @@ extension SettingsView {
   }
 
   private func presentPayChooserError(_ error: Error) {
-    // Only JobsRepositoryError has localized text. Server and system errors don't.
-    let message: String
-    if error is JobsRepositoryError {
-      message = error.localizedDescription
-    } else if ErrorTranslations.isOffline(error) {
-      message = ErrorTranslations.offlineMessage
-    } else {
-      message = String(localized: .commonErrorGeneric)
-    }
+    guard let message = ErrorTranslations.translate(error) else { return }
     presentPayChooserError(message, title: (error as? JobsRepositoryError)?.alertTitle)
   }
 

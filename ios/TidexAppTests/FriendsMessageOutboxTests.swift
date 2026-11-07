@@ -107,6 +107,34 @@ final class FriendsMessageOutboxTests: XCTestCase {
     XCTAssertEqual(service.sentClientIds.count, 5)
   }
 
+  func testCancelledSendsStayQueuedAndCanBeSentLater() async throws {
+    let cancellations: [Error] = [
+      CancellationError(), URLError(.cancelled),
+      FriendsMessagingServiceError.networkError(underlying: URLError(.cancelled)),
+    ]
+    for cancellation in cancellations {
+      let repository = try makeRepository()
+      let service = OutboxStubService()
+      service.sendError = cancellation
+      let outbox = makeOutbox(service: service, repository: repository)
+      await queue(makeMessage(id: "local-a1", threadId: "thread-a", second: 1), in: repository)
+
+      for _ in 0...FriendsMessageOutbox.maxUnclassifiedAttempts {
+        await outbox.drain(userId: viewerId)
+      }
+
+      let queued = try XCTUnwrap(repository.getMessage(id: "local-a1", viewerUserId: viewerId))
+      XCTAssertEqual(queued.sendState, .sending)
+      XCTAssertNil(queued.failureMessage)
+
+      service.sendError = nil
+      await outbox.drain(userId: viewerId)
+      XCTAssertEqual(
+        repository.getMessages(threadId: "thread-a", viewerUserId: viewerId).map(\.sendState), [.sent])
+      XCTAssertTrue(repository.getQueuedMessages(viewerUserId: viewerId).isEmpty)
+    }
+  }
+
   func testServerRejectionFailsImmediately() async throws {
     let repository = try makeRepository()
     let service = OutboxStubService()

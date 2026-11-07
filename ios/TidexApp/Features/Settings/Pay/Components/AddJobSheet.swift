@@ -361,7 +361,7 @@ extension AddJobSheet {
     isSaving = false
 
     guard let createdJob else {
-      showSaveError = true
+      showSaveError = !Task.isCancelled
       return
     }
 
@@ -447,7 +447,7 @@ extension AddJobSheet {
 
     if didSave {
       dismiss()
-    } else {
+    } else if !Task.isCancelled {
       showSaveError = true
     }
   }

@@ -298,8 +298,10 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   private var mainContentLayer: some View {
     if shouldShowWorkSetupRequiredPlaceholder {
       WorkSetupRequiredPlaceholder()
-    } else if let error = viewModel.error, viewModel.shifts.isEmpty {
-      errorView(error: error)
+    } else if let error = viewModel.error, viewModel.shifts.isEmpty,
+      let message = ErrorTranslations.translate(error)
+    {
+      errorView(message: message)
     } else {
       // Unified content view - handles both empty and populated states
       // This ensures StaggeredCardsContainer persists across month changes
@@ -2174,7 +2176,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   // MARK: - Error View
 
   @ViewBuilder
-  private func errorView(error: Error) -> some View {
+  private func errorView(message: String) -> some View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: errorIconSize))
@@ -2185,11 +2187,11 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
 
-      Text(error.localizedDescription)
+      Text(message)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)
-        .announcesToVoiceOver(error.localizedDescription)
+        .announcesToVoiceOver(message)
 
       Button {
         Task { await viewModel.loadShifts() }

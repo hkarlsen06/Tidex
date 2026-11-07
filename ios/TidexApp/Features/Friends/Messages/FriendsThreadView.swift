@@ -2,6 +2,7 @@ import ExyteChat
 import Photos
 import SwiftUI
 import UIKit
+import os
 
 struct FriendsThreadView: View {
   private static let bottomMessageComposerClearance: CGFloat = 14
@@ -1411,9 +1412,11 @@ struct FriendsThreadView: View {
         alertState = AlertState(title: String(localized: .friendsChatReportSubmitted))
       } catch {
         self.pendingReportTarget = nil
+        Logger(subsystem: "com.tidex.app", category: "FriendsThreadView")
+          .error("Failed to report message: \(error.localizedDescription, privacy: .private)")
+        guard let message = ErrorTranslations.translate(error) else { return }
         alertState = AlertState(
-          title: String(localized: .friendsChatReportFailed),
-          message: error.localizedDescription
+          title: String(localized: .friendsChatReportFailed), message: message
         )
       }
     }
@@ -1426,9 +1429,11 @@ struct FriendsThreadView: View {
         showBlockConfirmation = false
       } catch {
         showBlockConfirmation = false
+        Logger(subsystem: "com.tidex.app", category: "FriendsThreadView")
+          .error("Failed to block user: \(error.localizedDescription, privacy: .private)")
+        guard let message = ErrorTranslations.translate(error) else { return }
         alertState = AlertState(
-          title: String(localized: .friendsChatBlockUser),
-          message: error.localizedDescription
+          title: String(localized: .friendsChatBlockUser), message: message
         )
       }
     }

@@ -1,130 +1,81 @@
 import Foundation
 
-/// Translates Supabase error messages into the app's language
-/// Mirrors the web app's lib/errors/translate.ts
+/// Maps service errors to the shared presentation policy without exposing server text.
 enum ErrorTranslations {
-
-  // MARK: - Translation Dictionary
-
-  /// Supabase error messages (English) mapped to catalog strings
-  private static let translations: [String: LocalizedStringResource] = [
-    // Authentication errors
-    "Invalid login credentials": .authErrorInvalidLoginCredentials,
-    "Email not confirmed": .authErrorEmailNotConfirmed,
-    "User already registered": .authErrorUserAlreadyRegistered,
-    "Password should be at least 6 characters": .authErrorPasswordMin6,
-    "Password should be at least 8 characters": .authErrorPasswordMin8,
-    "New password should be different from the old password.": .authErrorPasswordSameAsOld,
-    "Unable to validate email address: invalid format": .authErrorInvalidEmailFormat,
-    "Invalid email": .authErrorInvalidEmail,
-    "Signup requires a valid password": .authErrorSignupRequiresPassword,
-    "For security purposes, you can only request this once every 60 seconds":
-      .authErrorRequestRateLimited,
-    "User not found": .authErrorUserNotFound,
-    "Invalid refresh token": .authErrorInvalidRefreshToken,
-    "Token has expired or is invalid": .authErrorTokenExpiredOrInvalid,
-    "Email link is invalid or has expired": .authErrorEmailLinkInvalid,
-    "Database error saving new user": .authErrorDatabaseSavingUser,
-    "Failed to fetch": .authErrorServerUnreachable,
-    "Network request failed": .authErrorNetworkRequestFailed,
-    "Event not found. Please refresh and try again.": .authErrorEventNotFound,
-    "Invalid event date range": .authErrorInvalidEventDateRange,
-
-    // Phone-related errors
-    "Invalid phone number": .authErrorInvalidPhone,
-    "Phone not confirmed": .authErrorPhoneNotConfirmed,
-    "SMS OTP has expired": .authErrorSmsCodeExpired,
-    "Invalid OTP": .authErrorInvalidCode,
-    "OTP expired": .authErrorCodeExpired,
-    "Token expired": .authErrorCodeExpired,
-    "Phone number already in use": .authErrorPhoneInUse,
-    "A user with this phone number has already been registered":
-      .authErrorPhoneRegisteredToOtherAccount,
-    "A user with this email address has already been registered":
-      .authErrorEmailRegisteredToOtherAccount,
-    "Unable to send SMS": .authErrorSmsSendFailed,
-    "SMS rate limit exceeded": .authErrorSmsRateLimited,
-    "Error sending confirmation OTP to provider": .authErrorVerificationCodeSendFailed,
-    "Authenticate More information: https://www.twilio.com/docs/errors/20003":
-      .authErrorSmsProviderRejected,
-    "Signups not allowed for otp": .authErrorSignupRequired,
-    "Signups not allowed": .authErrorSignupRequired,
-
-    // Reauthentication errors
-    "Reauthentication not valid": .authErrorReauthCodeInvalid,
-    "Reauthentication required": .authErrorReauthRequired,
-    "Invalid nonce": .authErrorReauthCodeInvalidOrExpired,
-    "Nonce has expired": .authErrorReauthCodeExpired,
-
-    // MFA errors
-    "Invalid TOTP code": .authErrorInvalidCode,
-    "MFA verification failed": .authErrorMfaVerificationFailed,
-  ]
-
-  // MARK: - Translation Function
-
-  /// Translate a Supabase error message into the app's language
-  /// Falls back to original message if no translation is found
-  /// - Parameter message: The error message to translate
-  /// - Returns: The translated message, or the original if no translation exists
-  static func translate(_ message: String) -> String {
-    if message.contains("webauthn_verification_failed")
-      || message.contains("Credential verification failed")
-    {
-      return String(localized: .loginPasskeyErrorsVerificationFailed)
-    }
-
-    if message.contains("Error sending confirmation OTP to provider")
-      || message.contains("twilio.com/docs/errors/20003")
-      || message.contains("sms_send_failed")
-    {
-      return String(localized: .authErrorVerificationCodeSendFailed)
-    }
-
-    // Check for exact match
-    if let translated = translations[message] {
-      return String(localized: translated)
-    }
-
-    // Check for partial matches
-    for (english, translated) in translations where message.contains(english) {
-      return message.replacingOccurrences(of: english, with: String(localized: translated))
-    }
-
-    // Return original message if no translation found
-    return message
-  }
-
-  /// Translate an Error to a user-friendly localized message.
-  /// Network failures get localized copy instead of the system-language URLError text.
-  /// - Parameter error: The error to translate
-  /// - Returns: A translated error message
+  /// Nil means the operation was cancelled and no error should be presented.
   @MainActor
-  static func translate(_ error: Error) -> String {
-    if isOffline(error) {
-      return offlineMessage
+  static func translate(_ error: Error, fallback: LocalizedStringResource? = nil) -> String? {
+    guard !Task.isCancelled, !isCancellation(error) else { return nil }
+    if isOffline(error) { return offlineMessage }
+
+    switch error {
+    case SharingServiceError.networkError(let underlying),
+      SharingServiceError.decodingError(let underlying),
+      FriendsMessagingServiceError.networkError(let underlying),
+      FriendsMessagingServiceError.decodingError(let underlying),
+      TariffVersionServiceError.networkError(let underlying),
+      ShiftsError.dataLoadFailed(let underlying),
+      DashboardError.dataLoadFailed(let underlying),
+      SharingError.loadFailed(let underlying),
+      StatsServiceError.computationFailed(let underlying):
+      return translate(underlying, fallback: fallback)
+
+    case SharingServiceError.httpError(let status, _),
+      FriendsMessagingServiceError.httpError(let status, _):
+      return UserFacingError.message(
+        for: ConvexAPI.Failure.badResponse(status: status), fallback: fallback)
+
+    default:
+      return localMessage(for: error) ?? UserFacingError.message(for: error, fallback: fallback)
     }
-    return translate(error.localizedDescription)
   }
 
-  /// Localized copy for a request that failed because the device can't reach the server.
+  /// Only these local errors contain catalog copy. Never trust arbitrary LocalizedError text.
+  private static func localMessage(for error: Error) -> String? {
+    switch error {
+    case is JobsRepositoryError, is ShiftSaveError, is CalendarSubscriptionStoreError,
+      is AuthSessionManagerError, is AuthError, is AppCoordinator.UserIdError, is SharingServiceError,
+      is FriendsMessagingServiceError, is TariffVersionServiceError, is ShiftsError,
+      is DashboardError, is SharingError, is StatsServiceError, is ExportError:
+      return (error as? LocalizedError)?.errorDescription
+    default:
+      return nil
+    }
+  }
+
   static var offlineMessage: String {
     String(localized: .dataExportErrorNetwork)
   }
 
-  /// True when the request failed because the device is offline or can't reach the server.
-  /// Unwraps the service error wrappers, then defers to `AuthSessionManager`.
+  static func isCancellation(_ error: Error) -> Bool {
+    if UserFacingError.isCancellation(error) { return true }
+    switch error {
+    case SharingServiceError.networkError(let underlying),
+      SharingServiceError.decodingError(let underlying),
+      FriendsMessagingServiceError.networkError(let underlying),
+      FriendsMessagingServiceError.decodingError(let underlying),
+      TariffVersionServiceError.networkError(let underlying),
+      ShiftsError.dataLoadFailed(let underlying),
+      DashboardError.dataLoadFailed(let underlying),
+      SharingError.loadFailed(let underlying),
+      StatsServiceError.computationFailed(let underlying):
+      return isCancellation(underlying)
+    default:
+      return false
+    }
+  }
+
   @MainActor
   static func isOffline(_ error: Error) -> Bool {
     switch error {
     case SharingServiceError.networkError(let underlying),
       SharingServiceError.decodingError(let underlying),
-      FriendsMessagingServiceError.networkError(let underlying):
+      FriendsMessagingServiceError.networkError(let underlying),
+      FriendsMessagingServiceError.decodingError(let underlying),
+      TariffVersionServiceError.networkError(let underlying):
       return isOffline(underlying)
-
     case FriendsAPIError.offline:
       return true
-
     default:
       return AuthSessionManager.shared.isTransientSessionResolutionError(error)
     }

@@ -74,8 +74,8 @@ struct FriendsComposerShiftCalendarPicker: View {
       if viewModel.isLoading {
         ProgressView()
           .controlSize(.large)
-      } else if let error = viewModel.error {
-        errorState(error)
+      } else if let error = viewModel.error, let message = ErrorTranslations.translate(error) {
+        errorState(message)
       } else {
         emptyState
       }
@@ -140,7 +140,7 @@ struct FriendsComposerShiftCalendarPicker: View {
     .padding(Spacing.lg)
   }
 
-  private func errorState(_ error: Error) -> some View {
+  private func errorState(_ message: String) -> some View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.largeTitle)
@@ -149,7 +149,7 @@ struct FriendsComposerShiftCalendarPicker: View {
       Text(.shiftsLoadError)
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
-      Text(error.localizedDescription)
+      Text(message)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)

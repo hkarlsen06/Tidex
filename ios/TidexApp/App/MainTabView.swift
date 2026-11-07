@@ -129,7 +129,7 @@ struct MainTabView: View {
               do {
                 try await impersonationManager.stopImpersonation()
               } catch {
-                stopImpersonationError = error.localizedDescription
+                stopImpersonationError = ErrorTranslations.translate(error)
               }
             }
           )

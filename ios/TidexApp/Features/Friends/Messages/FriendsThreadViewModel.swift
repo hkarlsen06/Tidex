@@ -526,10 +526,12 @@ internal final class FriendsThreadViewModel {
       sendErrorMessage = nil
       return .shiftSnapshot(draft)
     } catch {
+      kThreadLogger.error("Failed to build shift snapshot: \(error.localizedDescription)")
+      if ErrorTranslations.isCancellation(error) || Task.isCancelled { return nil }
       sendErrorMessage =
         isConnectivityError(error)
         ? shiftSnapshotOfflineUnavailableMessage
-        : error.localizedDescription
+        : ErrorTranslations.translate(error)
       return nil
     }
   }
@@ -815,7 +817,7 @@ internal final class FriendsThreadViewModel {
           messageId: optimisticMessage.id,
           viewerUserId: viewerUserId,
           sendState: .sending,
-          failureMessage: waitingForNetworkMessage
+          failureMessage: ErrorTranslations.isCancellation(error) ? nil : waitingForNetworkMessage
         )
         sendErrorMessage = nil
       } else {
@@ -828,6 +830,7 @@ internal final class FriendsThreadViewModel {
           sendErrorMessage = isMessageBodyTooLongError(error) ? nil : sendMessageFailedMessage
         }
       }
+      if ErrorTranslations.isCancellation(error) || Task.isCancelled { sendErrorMessage = nil }
       loadFromCache()
       kThreadLogger.error("Failed to send thread message: \(error.localizedDescription)")
       return shouldQueue
@@ -881,8 +884,7 @@ internal final class FriendsThreadViewModel {
       }
       await restoreComposerSnapshot(cancelledComposerSnapshot)
       loadFromCache()
-      sendErrorMessage =
-        isConnectivityError(error) ? serverActionOfflineMessage : deleteMessageFailedMessage
+      sendErrorMessage = ErrorTranslations.translate(error, fallback: .friendsChatDeleteFailed)
       Haptics.play(.error)
       kThreadLogger.error("Failed to delete message: \(error.localizedDescription)")
     }
@@ -952,10 +954,7 @@ internal final class FriendsThreadViewModel {
       Haptics.play(.light)
     } catch {
       await repository.saveMessages([originalMessage], in: route.threadId, for: viewerUserId)
-      sendErrorMessage =
-        isConnectivityError(error)
-        ? serverActionOfflineMessage
-        : String(localized: .friendsChatReactionFailed)
+      sendErrorMessage = ErrorTranslations.translate(error, fallback: .friendsChatReactionFailed)
       Haptics.play(.error)
       kThreadLogger.error("Failed to toggle reaction: \(error.localizedDescription)")
     }
@@ -1513,6 +1512,7 @@ internal final class FriendsThreadViewModel {
         : (isSafetyFilterError(error)
           ? messageBlockedBySafetyFilterMessage
           : (isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage))
+      if ErrorTranslations.isCancellation(error) || Task.isCancelled { sendErrorMessage = nil }
       Haptics.play(.error)
       kThreadLogger.error("Failed to edit message: \(error.localizedDescription)")
       return false
@@ -1868,10 +1868,6 @@ internal final class FriendsThreadViewModel {
 
   private var editMessageFailedMessage: String {
     String(localized: .friendsChatEditFailed)
-  }
-
-  private var deleteMessageFailedMessage: String {
-    String(localized: .friendsChatDeleteFailed)
   }
 
   private func canSendShiftSnapshotAttachments(_ attachments: [FriendsComposerAttachmentDraft])
