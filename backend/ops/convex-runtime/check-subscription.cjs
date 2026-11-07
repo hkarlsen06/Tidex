@@ -27,7 +27,7 @@ async function main() {
   };
   const mutate = async (path, args) => {
     const actingAs = Buffer.from(JSON.stringify(input.identity)).toString('base64');
-    const response = await fetch(input.url + '/api/mutation', {
+    const response = await fetch((input.mutationUrl ?? input.url) + '/api/mutation', {
       method: 'POST', headers: { Authorization: `Convex ${input.key}:${actingAs}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ path, args, format: 'json' }), signal: AbortSignal.timeout(15000),
     });
@@ -48,7 +48,8 @@ async function main() {
       try {
         await waitFor(() => current.jobs >= created.row.revision);
       } finally {
-        await mutate('jobs:remove', { id: row.id, expected_revision: created.row.revision, expected_user_id: input.userId });
+        const removed = await mutate('jobs:remove', { id: row.id, expected_revision: created.row.revision, expected_user_id: input.userId });
+        if (removed.status !== 'ok') throw new Error('Temporary job cleanup failed');
       }
     } else {
       const original = current.lock_screen_detail_level;
@@ -57,7 +58,9 @@ async function main() {
         await mutate('identity:set_lock_screen_detail_level', { p_level: changed });
         await waitFor(() => current.lock_screen_detail_level === changed);
       } finally {
-        await mutate('identity:set_lock_screen_detail_level', { p_level: original });
+        const restored = await mutate('identity:set_lock_screen_detail_level', { p_level: original });
+        if (restored.lock_screen_detail_level !== original) throw new Error('Preference restoration failed');
+        await waitFor(() => current.lock_screen_detail_level === original);
       }
     }
     console.log(JSON.stringify({ initial_received: true, mutation_observed: true }));

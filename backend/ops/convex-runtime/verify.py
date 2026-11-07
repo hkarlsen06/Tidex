@@ -4,7 +4,7 @@ import argparse,hashlib,json,pathlib,subprocess,urllib.request,urllib.error,urll
 from rehearse import api,check,table,PROJECTS
 PORTS={'paeonia':3210,'tidex':3220}
 
-def real_auth(project,url,key):
+def real_auth(project,url,key,write_user_id=None):
  local_url='http://127.0.0.1:'+str(PORTS[project])
  variables=api(local_url,key,'_system/cli/queryEnvironmentVariables',{})
  secret=next(v['value'] for v in variables if v['name']=='CLERK_SECRET_KEY')
@@ -13,6 +13,7 @@ def real_auth(project,url,key):
  else:
   active={m['user_id'] for m in table(local_url,key,'couple_members') if m['status']=='active'}
   users=[u for u in users if u['id'] in active]
+ if write_user_id is not None:users=[u for u in users if u['id']==write_user_id]
  headers={'Authorization':'Bearer '+secret,'User-Agent':'Tidex-Health/1.0','Content-Type':'application/json'}
  for user in users:
   if not user.get('clerk_user_id'):continue
@@ -30,10 +31,13 @@ def real_auth(project,url,key):
    request=urllib.request.Request(url+'/api/query',data=json.dumps({'path':path,'args':{},'format':'json'}).encode(),headers={'Authorization':'Bearer '+token,'Content-Type':'application/json','User-Agent':'Tidex-Health/1.0'})
    result=json.load(urllib.request.urlopen(request,timeout=15))
    assert result['status']=='success','Real Clerk JWT was refused'
-   socket_input={'project':project,'url':url,'jwt':token,'readOnly':True}
+   socket_input={'project':project,'url':url,'jwt':token,'readOnly':write_user_id is None}
+   if write_user_id is not None:
+    socket_input.update({'mutationUrl':local_url,'key':key,'userId':user['id'],'identity':{'subject':user['clerk_user_id'],'issuer':'https://runtime-test.invalid','tokenIdentifier':'https://runtime-test.invalid|'+user['clerk_user_id']}})
    socket_result=json.loads(subprocess.check_output(['node',str(pathlib.Path(__file__).parent/'check-subscription.cjs')],input=json.dumps(socket_input),text=True,stderr=subprocess.DEVNULL,timeout=40))
    assert socket_result['initial_received'],'Real JWT subscription did not arrive'
-   return {'real_jwt_accepted':True,'query':path,'real_jwt_subscription_received':True}
+   if write_user_id is not None:assert socket_result['mutation_observed'],'Production write was not observed'
+   return {'real_jwt_accepted':True,'query':path,'real_jwt_subscription_received':True,'write_observed':socket_result['mutation_observed']}
  raise RuntimeError('No existing operator session available for a real JWT check')
 
 def verify(project,manifest,identity=True):

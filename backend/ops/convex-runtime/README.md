@@ -105,5 +105,11 @@ On one-s, `sudo python3 /srv/convex-runtime/source/object-storage.test.py` verif
 that recovery restores deleted and modified objects across five private test
 buckets while retaining extra objects. It uses only a temporary localhost S3 server.
 
+Live verification is read-only by default. With explicit authorization,
+`verify.real_auth(project, public_url, key, write_user_id=operator_id)` also verifies
+a temporary job or reversible preference change for that specific operator/test
+account. JWT subscriptions use the public URL; admin mutations remain on localhost.
+The test removes its job or restores its preference before completing.
+
 Runtime and storage compatibility are checked by the isolated rehearsals and actual
 post-upgrade exports. These changes do not change iOS code or require an Xcode build.
