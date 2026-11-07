@@ -110,6 +110,11 @@ and R2, and the watchdog checks it. Deploy from `backend/` on `main`
 with `bun run deploy`, which reads the URL and admin key from the
 gitignored `backend/.env.production`.
 
+For hosted Convex runtime upgrades, allocator changes, or rollback, read
+[the runtime upgrade procedure](backend/ops/convex-runtime/README.md). Production
+uses the pinned November 6, 2026 release with packaged jemalloc. Keep its build
+source and image manifest in recovery config archives.
+
 The dev deployment runs on the Mac under colima, from `backend/dev/compose.yml`
 on `127.0.0.1:3210` (dashboard on 6791). Start it with `colima start` and
 `docker compose -f dev/compose.yml --env-file dev/.env up -d` from `backend/`.

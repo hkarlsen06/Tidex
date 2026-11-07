@@ -1,0 +1,23 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE} AS stock
+ARG REVISION
+ARG BACKEND_SHA256
+COPY convex-local-backend /convex/convex-local-backend
+COPY run_backend.sh read_credentials.sh generate_admin_key.sh /convex/
+COPY LICENSE.md /usr/share/doc/convex/LICENSE.md
+RUN echo "${BACKEND_SHA256}  /convex/convex-local-backend" | sha256sum -c - \
+    && chmod 755 /convex/convex-local-backend /convex/*.sh
+LABEL org.opencontainers.image.revision=${REVISION}
+LABEL org.opencontainers.image.source=https://github.com/convex/convex-backend
+
+FROM stock AS jemalloc
+ARG JEMALLOC_SHA256
+COPY jemalloc.deb /tmp/jemalloc.deb
+RUN echo "${JEMALLOC_SHA256}  /tmp/jemalloc.deb" | sha256sum -c - \
+    && dpkg-deb -x /tmp/jemalloc.deb /tmp/allocator \
+    && cp /tmp/allocator/usr/lib/*/libjemalloc.so.2 /usr/local/lib/libjemalloc.so.2 \
+    && mkdir -p /usr/share/doc/libjemalloc2 \
+    && cp /tmp/allocator/usr/share/doc/libjemalloc2/copyright /usr/share/doc/libjemalloc2/ \
+    && rm -rf /tmp/jemalloc.deb /tmp/allocator
+ENV LD_PRELOAD=/usr/local/lib/libjemalloc.so.2
+ENV MALLOC_CONF=background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:1000

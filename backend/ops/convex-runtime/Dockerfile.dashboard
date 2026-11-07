@@ -1,0 +1,15 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+ARG REVISION
+LABEL org.opencontainers.image.revision=${REVISION}
+LABEL org.opencontainers.image.source=https://github.com/convex/convex-backend
+RUN groupadd --gid 1001 dashboard \
+    && useradd --uid 1001 --gid dashboard --no-create-home --shell /usr/sbin/nologin dashboard
+COPY dashboard/ /app/dashboard/
+COPY dashboard-server.mjs /app/server.mjs
+COPY LICENSE.md /usr/share/doc/convex/LICENSE.md
+WORKDIR /app
+USER dashboard
+ENV PORT=6791
+EXPOSE 6791
+ENTRYPOINT ["node", "/app/server.mjs"]

@@ -1,5 +1,6 @@
 # Local dev deployment of the Tidex Convex backend, run under colima on the Mac.
-# Same images as /srv/tidex/convex on one-s. Data lives in the tidex-convex-dev-data
+# Separately pinned from production; hosted runtime upgrades live in ops/convex-runtime/.
+# Data lives in the tidex-convex-dev-data
 # volume. Start with `docker compose -f dev/compose.yml up -d` from backend/.
 name: tidex-convex-dev
 services:
