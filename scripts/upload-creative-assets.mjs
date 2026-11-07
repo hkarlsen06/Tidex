@@ -1,147 +1,85 @@
 #!/usr/bin/env node
-// Upload the product page header and search result creative assets from render-creative-assets.mjs to an
-// App Store version through the App Asset Library API. fastlane deliver has no support for these assets.
-// Each image is reserved, uploaded, committed and placed on the version localization for its locale.
-// A localization that already has a placement of that type is skipped, so the script is safe to rerun.
-//
-// Usage: node scripts/upload-creative-assets.mjs [--dry-run] [--version 3.0.1] [assets-dir]
-// Defaults upload ios/ASConnectScreenshots/<version>/creative to the version in ios/Version.xcconfig.
-// Reads ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH from ios/fastlane/.env, like the Fastfile.
-import { createPrivateKey, sign } from 'node:crypto';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { cp, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { assertEditable, checkPNG, config, releaseVersion, resolveVersion, root, versionLocalizations, withAsc } from './lib/app-store-connect.mjs';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { values: flags, positionals } = parseArgs({
-  options: { 'dry-run': { type: 'boolean' }, version: { type: 'string' } }, allowPositionals: true,
-});
-const version = flags.version ?? readFileSync(path.join(root, 'ios/Version.xcconfig'), 'utf8')
-  .match(/^MARKETING_VERSION = (\S+)/m)[1];
-const assets = path.resolve(positionals[0] ?? path.join(root, 'ios/ASConnectScreenshots', version, 'creative'));
-const TYPES = { 'header.png': 'PRODUCT_PAGE_HEADER_ASSET', 'search.png': 'APP_STORE_SEARCH_RESULTS_ASSET' };
-const GROUP = 'DEFAULT_PROFILE';
-
-const envFile = path.join(root, 'ios/fastlane/.env');
-const env = Object.fromEntries(readFileSync(envFile, 'utf8').split('\n').filter(line => /^\w+=/.test(line))
-  .map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1).replace(/^["']|["']$/g, '')]));
-// When the secrets folder moves, the key is still next to fastlane.env even if ASC_KEY_PATH is stale.
-const keyPath = [env.ASC_KEY_PATH, path.join(path.dirname(realpathSync(envFile)), path.basename(env.ASC_KEY_PATH))]
-  .find(file => existsSync(file));
-if (!keyPath) throw new Error(`App Store Connect API key not found at ${env.ASC_KEY_PATH}`);
-const key = createPrivateKey(readFileSync(keyPath));
-
-const token = () => {
-  const part = value => Buffer.from(JSON.stringify(value)).toString('base64url');
-  const now = Math.floor(Date.now() / 1000);
-  const unsigned = `${part({ alg: 'ES256', kid: env.ASC_KEY_ID, typ: 'JWT' })}.`
-    + part({ iss: env.ASC_ISSUER_ID, iat: now, exp: now + 1200, aud: 'appstoreconnect-v1' });
-  return `${unsigned}.${sign('sha256', Buffer.from(unsigned), { key, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
+const types = {
+  'header.png': { placement: 'PRODUCT_PAGE_HEADER_ASSET', size: [3840, 1646] },
+  'search.png': { placement: 'APP_STORE_SEARCH_RESULTS_ASSET', size: [3840, 2560] },
 };
 
-async function api(method, route, data) {
-  const response = await fetch(`https://api.appstoreconnect.apple.com/${route}`, {
-    method,
-    headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
-    body: data && JSON.stringify({ data }),
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`${method} ${route} returned ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-const [app] = (await api('GET', 'v1/apps?filter[bundleId]=no.tidex.app')).data;
-const [appVersion] = (await api('GET', `v1/apps/${app.id}/appStoreVersions?filter[versionString]=${version}&filter[platform]=IOS`)).data;
-if (!appVersion) throw new Error(`App Store Connect has no iOS version ${version}`);
-const library = (await api('GET', `v1/apps/${app.id}/assetLibrary`)).data.id;
-const localizations = Object.fromEntries((await api('GET',
-  `v1/appStoreVersions/${appVersion.id}/appStoreVersionLocalizations?limit=200`)).data.map(l => [l.attributes.locale, l.id]));
-
-const jobs = [];
-for (const locale of (await readdir(assets, { withFileTypes: true })).filter(e => e.isDirectory()).map(e => e.name)) {
-  if (!localizations[locale]) throw new Error(`Version ${version} has no ${locale} localization`);
-  for (const [file, placementType] of Object.entries(TYPES)) {
-    const placed = await api('GET', `v1/appStoreVersionLocalizations/${localizations[locale]}/placements`
-      + `?filter[placementType]=${placementType}&filter[placementGroup]=${GROUP}`);
-    if (placed.data.length) console.log(`${locale} ${file}: already placed, skipping`);
-    else jobs.push({ locale, file, placementType, localization: localizations[locale] });
+async function main() {
+  const { values: flags, positionals } = parseArgs({ options: {
+    apply: { type: 'boolean' }, 'dry-run': { type: 'boolean' }, version: { type: 'string' },
+    locales: { type: 'string' }, help: { type: 'boolean' },
+  }, allowPositionals: true });
+  if (flags.help) {
+    console.log('Usage: bun run screenshots:creative:upload [--version VERSION] [--locales en-US,no] [--apply] [assets-dir]\nDefaults to a read-only dry run. Existing header and search placements are preserved.');
+    return;
   }
-}
-console.log(`${jobs.length} assets to upload to ${version}${flags['dry-run'] ? ' (dry run, nothing uploaded)' : ''}`);
-if (flags['dry-run']) process.exit(0);
-
-async function upload({ locale, file }) {
-  const filePath = path.join(assets, locale, file);
-  const fileSize = (await stat(filePath)).size;
-  const referenceName = `Creative ${version} ${locale} ${file}`;
-  // Reuse an image a previous, interrupted run uploaded; drop one whose upload never finished.
-  const existing = (await api('GET', `v1/appAssetLibraries/${library}/images`
-    + `?filter[referenceName]=${encodeURIComponent(referenceName)}`)).data;
-  for (const image of existing.filter(i => ['AWAITING_UPLOAD', 'FAILED'].includes(i.attributes.state))) {
-    await api('DELETE', `v1/appAssetLibraryImages/${image.id}`);
-  }
-  const reusable = existing.find(i => !['AWAITING_UPLOAD', 'FAILED'].includes(i.attributes.state)
-    && i.attributes.fileSize === fileSize);
-  if (reusable) return reusable.id;
-
-  const image = (await api('POST', 'v1/appAssetLibraryImages', {
-    type: 'appAssetLibraryImages',
-    attributes: { fileName: `${path.basename(file, '.png')}-${locale}.png`, fileSize, category: 'CREATIVE_ASSETS', referenceName },
-    relationships: { assetLibrary: { data: { type: 'appAssetLibraries', id: library } } },
-  })).data;
-  const bytes = await readFile(filePath);
-  await Promise.all(image.attributes.uploadOperations.map(async ({ method, url, offset, length, requestHeaders }) => {
-    const response = await fetch(url, {
-      method,
-      headers: Object.fromEntries(requestHeaders.map(h => [h.name, h.value])),
-      body: bytes.subarray(offset, offset + length),
-    });
-    if (!response.ok) throw new Error(`Uploading ${locale}/${file} returned ${response.status}: ${await response.text()}`);
-  }));
-  await api('PATCH', `v1/appAssetLibraryImages/${image.id}`,
-    { type: 'appAssetLibraryImages', id: image.id, attributes: { uploaded: true } });
-  return image.id;
-}
-
-async function waitForProcessing(id, label) {
-  for (let attempt = 0; attempt < 120; attempt++) {
-    const { state, stateDetails } = (await api('GET', `v1/appAssetLibraryImages/${id}`)).data.attributes;
-    if (state === 'FAILED') throw new Error(`${label} failed processing: ${JSON.stringify(stateDetails)}`);
-    if (state !== 'AWAITING_UPLOAD' && state !== 'UPLOAD_COMPLETE') return;
-    await sleep(5000);
-  }
-  throw new Error(`${label} was still processing after 10 minutes`);
-}
-
-const failures = [];
-const queue = [...jobs];
-await Promise.all(Array.from({ length: 6 }, async () => {
-  for (let job; (job = queue.shift());) {
-    const label = `${job.locale} ${job.file}`;
-    try {
-      const image = await upload(job);
-      await waitForProcessing(image, label);
-      await api('POST', 'v1/appAssetLibraryPlacements', {
-        type: 'appAssetLibraryPlacements',
-        attributes: { placementType: job.placementType, placementGroup: GROUP },
-        relationships: {
-          image: { data: { type: 'appAssetLibraryImages', id: image } },
-          appStoreVersionLocalization: { data: { type: 'appStoreVersionLocalizations', id: job.localization } },
-        },
-      });
-      console.log(`${label}: placed`);
-    } catch (error) {
-      failures.push(label);
-      console.error(`${label}: ${error.message}`);
+  if (positionals.length > 1 || (flags.apply && flags['dry-run'])) throw new Error('Pass one assets directory and choose --apply or --dry-run');
+  const version = flags.version ?? await releaseVersion();
+  if (!/^\d+(?:\.\d+){1,2}$/.test(version)) throw new Error(`Invalid version: ${version}`);
+  const assets = path.resolve(positionals[0] ?? path.join(root, 'ios/ASConnectScreenshots', version, 'creative'));
+  const available = (await readdir(assets, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
+  const locales = flags.locales?.split(',') ?? available;
+  if (!locales.length || new Set(locales).size !== locales.length || locales.some(locale => !available.includes(locale))) throw new Error('Select unique locales with local creative artwork');
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'tidex-creative-'));
+  try {
+    const files = [];
+    for (const locale of locales) for (const [name, type] of Object.entries(types)) {
+      const source = path.join(assets, locale, name);
+      const file = path.join(temporary, `${locale}-${name}`);
+      await cp(source, file);
+      await checkPNG(file, [type.size]);
+      const digest = createHash('sha256').update(await readFile(file)).digest('hex');
+      files.push({ locale, name, type: type.placement, file, reference: `Tidex ${version} ${locale} ${name} ${digest}` });
     }
+    await withAsc(async asc => {
+      const remote = await resolveVersion(asc, version);
+      if (flags.apply) assertEditable(remote);
+      const localizations = await versionLocalizations(asc, remote.id);
+      const library = (await asc(['asset-library', 'view', '--app', config.appId])).data.id;
+      const jobs = [];
+      // Resolve every locale, placement and reusable image before uploading anything.
+      for (const locale of locales) {
+        const localization = localizations.get(locale);
+        if (!localization) throw new Error(`Version ${version} has no ${locale} localization`);
+        const placed = await asc(['localizations', 'placements', 'list', '--localization-id', localization,
+          '--placement-group', 'DEFAULT_PROFILE', '--placement-type', Object.values(types).map(type => type.placement).join(','), '--paginate']);
+        for (const item of files.filter(file => file.locale === locale)) {
+          if (placed.data.some(placement => placement.attributes.placementType === item.type)) {
+            console.log(`${locale} ${item.name}: already placed, skipping`);
+            continue;
+          }
+          const existing = await asc(['asset-library', 'images', 'list', '--library-id', library, '--reference-name', item.reference, '--paginate']);
+          const reusable = existing.data.find(image => image.attributes.imageAsset?.width > 0
+            && !['AWAITING_UPLOAD', 'UPLOAD_COMPLETE', 'FAILED'].includes(image.attributes.state));
+          if (existing.data.length && !reusable) throw new Error(`${locale} ${item.name}: previous upload is not ready. Inspect image ${existing.data[0].id} with asc before retrying.`);
+          jobs.push({ ...item, localization, image: reusable?.id });
+        }
+      }
+      console.log(JSON.stringify({ version, dryRun: !flags.apply, jobs: jobs.map(({ locale, name, image }) => ({ locale, file: name, reuseImage: image ?? null })) }));
+      if (!flags.apply) return;
+      for (const job of jobs) {
+        let image = job.image;
+        if (!image) {
+          const receipt = await asc(['asset-library', 'images', 'upload', '--library-id', library, '--file', job.file,
+            '--category', 'CREATIVE_ASSETS', '--reference-name', job.reference]);
+          console.log(JSON.stringify(receipt));
+          if (!receipt.ready || !receipt.imageId) throw new Error(`${job.locale} ${job.name}: image did not finish processing`);
+          image = receipt.imageId;
+        }
+        console.log(JSON.stringify(await asc(['localizations', 'placements', 'create', '--localization-id', job.localization,
+          '--image-id', image, '--placement-type', job.type, '--placement-group', 'DEFAULT_PROFILE'])));
+      }
+    }, { readOnly: !flags.apply });
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
   }
-}));
-if (failures.length) {
-  console.error(`${failures.length} of ${jobs.length} failed. Rerun to retry them: ${failures.join(', ')}`);
-  process.exit(1);
 }
-console.log(`Placed ${jobs.length} creative assets on ${version}`);
+
+main().catch(error => { console.error(error.message); process.exitCode = 1; });

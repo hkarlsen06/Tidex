@@ -1,8 +1,0 @@
-- iPhone Duo için düzenler iyileştirildi; buna karşılama, takvimler, vardiya düzenleme ve büyük metin de dahil.
-- Çalışma saati eklemeden, vardiya olarak girilen ödemeler için ücret ayarlama önerileri eklendi.
-- Bir sonraki vardiyanız, çalıştığınız saatler, kazançlarınız ve arkadaşlarınızın paylaştığı vardiyalar için Siri yanıtları eklendi.
-- Vardiya eklemek, taşımak veya uzatmak ve çıkış incelemesini açmak için Siri eylemleri eklendi.
-- Vardiyalar ve işler için Spotlight araması eklendi.
-- iOS 27'de Siri ile mesaj gönderme ve taslak oluşturma desteği eklendi.
-- Kısmi saat girişlerinin güvenilir şekilde tamamlanması ve klavye ya da düzen değiştiğinde düzenlemelerin korunması için zaman girişi düzeltildi.
-- Sohbet kaydırması düzeltildi; böylece mesajlara atlamalar kesintiye uğramıyor.

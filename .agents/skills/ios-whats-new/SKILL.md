@@ -1,6 +1,6 @@
 ---
 name: ios-whats-new
-description: Write evidence-based Tidex iOS App Store release notes in English and Norwegian Bokmal, update metadata, and regenerate local Fastlane files.
+description: Write evidence-based Tidex iOS App Store release notes in English and Norwegian Bokmal, update the source, and regenerate asc metadata JSON.
 ---
 
 # iOS What's New
@@ -62,7 +62,7 @@ Modify only:
 - `metadata.en.release_notes`
 - `metadata.nb.release_notes`
 
-Do not rewrite unrelated metadata fields. Then run `pnpm --dir ios generate-metadata` to regenerate local Fastlane metadata, inspect the generated diff, and verify that changes match the requested release notes. Do not upload metadata unless explicitly requested.
+Do not rewrite unrelated metadata fields. Then run `bun run --cwd ios generate-metadata` and `bun run app-store:validate`. Inspect `ios/app-store/metadata/version/<version>/` and verify that the generated changes match the requested release notes. The version comes from `ios/Version.xcconfig`. See [App Store Connect](../../../ios/app-store/README.md) for upload commands. Upload metadata only when explicitly requested.
 
 ## Final Response
 

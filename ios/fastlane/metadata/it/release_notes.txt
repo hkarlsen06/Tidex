@@ -1,8 +1,0 @@
-- Layout migliorati per iPhone Duo, inclusi onboarding, calendari, modifica dei turni e testo grande.
-- Aggiunti suggerimenti di adeguamento della retribuzione per i pagamenti inseriti come turni, senza aggiungere ore lavorate.
-- Aggiunte risposte di Siri sul tuo prossimo turno, sulle ore lavorate, sui guadagni e sui turni condivisi dagli amici.
-- Aggiunte azioni di Siri per aggiungere, spostare o prolungare i turni e aprire la revisione prima del timbro di uscita.
-- Aggiunta la ricerca Spotlight per turni e lavori.
-- Aggiunto il supporto di Siri per inviare e scrivere bozze di messaggi su iOS 27.
-- Corretta l'immissione degli orari, così gli orari parziali vengono completati in modo affidabile e le modifiche vengono mantenute quando cambiano la tastiera o il layout.
-- Corretto lo scorrimento della chat, così i salti ai messaggi non vengono interrotti.

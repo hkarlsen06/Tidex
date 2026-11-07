@@ -1,8 +1,0 @@
-- Vylepšené rozvržení pro iPhone Duo, včetně úvodního nastavení, kalendářů, úprav směn a velkého textu.
-- Přidána doporučení k úpravě mzdy pro platby zadané jako směny, aniž by se přidaly odpracované hodiny.
-- Přidány odpovědi Siri o vaší příští směně, odpracovaných hodinách, výdělku a směnách sdílených přáteli.
-- Přidány akce Siri pro přidání, přesunutí nebo prodloužení směn a otevření kontroly před odhlášením z práce.
-- Přidáno vyhledávání směn a zaměstnání ve Spotlightu.
-- Přidána podpora Siri pro odesílání a rozepsání zpráv v iOS 27.
-- Opraveno zadávání času, aby se neúplné časy spolehlivě doplňovaly a úpravy zůstaly zachovány při změně klávesnice nebo rozvržení.
-- Opraveno posouvání chatu, aby přeskoky na zprávy nebyly přerušovány.

@@ -1,8 +1,0 @@
-- Parannettuja asetteluja iPhone Duolle, mukaan lukien käyttöönotto, kalenterit, vuorojen muokkaus ja suuri teksti.
-- Lisätty palkankorjausehdotuksia maksuille, jotka on merkitty vuoroiksi, lisäämättä tehtyjä työtunteja.
-- Lisätty Siri-vastaukset seuraavasta vuorostasi, tehdyistä työtunneista, ansioista ja ystävien jakamista vuoroista.
-- Lisätty Siri-toiminnot vuorojen lisäämiseen, siirtämiseen ja pidentämiseen sekä ulosleimauksen tarkistuksen avaamiseen.
-- Lisätty Spotlight-haku vuoroille ja työpaikoille.
-- Lisätty Siri-tuki viestien lähettämiseen ja luonnosteluun iOS 27:ssä.
-- Korjattu ajan syöttö niin, että keskeneräiset kellonajat täydentyvät luotettavasti ja muokkaukset säilyvät, kun näppäimistö tai asettelu muuttuu.
-- Korjattu chatin vieritys niin, että siirtymät viesteihin eivät keskeydy.

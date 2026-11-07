@@ -12,8 +12,10 @@
     "generate-metadata": "bun Scripts/generate-appstore-metadata.mjs",
     "generate-metadata:force": "bun Scripts/generate-appstore-metadata.mjs --force",
     "generate-metadata:source-only": "bun Scripts/generate-appstore-metadata.mjs --source-only",
-    "validate-metadata": "bun Scripts/generate-appstore-metadata.mjs --validate-only",
-    "upload-metadata": "PATH=/opt/homebrew/opt/ruby@3.4/bin:$PATH BUNDLE_PATH=Vendor/bundle bundle exec fastlane ios upload_metadata"
+    "validate-metadata": "bun Scripts/generate-appstore-metadata.mjs --validate-only && node ../scripts/app-store.mjs validate",
+    "upload-metadata": "node ../scripts/app-store.mjs metadata",
+    "upload-review-metadata": "node ../scripts/app-store.mjs review-metadata",
+    "upload-screenshots": "node ../scripts/app-store.mjs screenshots"
   },
   "keywords": [],
   "author": "",

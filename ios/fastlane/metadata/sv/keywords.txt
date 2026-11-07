@@ -1,1 +1,0 @@
-lön,jobb,timmar,tid,schema,intäkt,kalkylator,övertid,lönebesked,kalender,planerare,logg

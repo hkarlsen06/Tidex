@@ -1,8 +1,0 @@
-- Poboljšani rasporedi za iPhone Duo, uključujući uvodno postavljanje, kalendare, uređivanje smjena i veliki tekst.
-- Dodani su prijedlozi za prilagodbu plaće za isplate unesene kao smjene, bez dodavanja odrađenih sati.
-- Dodani su Siri odgovori za vašu sljedeću smjenu, odrađene sate, zaradu i smjene koje su prijatelji podijelili s vama.
-- Dodane su Siri radnje za dodavanje, premještanje ili produljenje smjena te otvaranje pregleda prije odjave s posla.
-- Dodano je Spotlight pretraživanje smjena i poslova.
-- Dodana je Siri podrška za slanje i sastavljanje poruka na iOS-u 27.
-- Ispravljen je unos vremena tako da se djelomično unesena vremena pouzdano dovršavaju, a izmjene se čuvaju kada se tipkovnica ili raspored promijene.
-- Ispravljeno je pomicanje u chatu tako da skokovi na poruke ne budu prekinuti.

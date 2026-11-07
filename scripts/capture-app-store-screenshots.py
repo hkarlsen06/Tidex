@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Capture App Store PNGs using the real UI and offline fixtures.
 
-iPhone captures cover every App Store locale in ios/fastlane/metadata and feed the 3D renderer.
+iPhone captures cover every App Store locale in ios/app-store/metadata/app-info and feed the 3D renderer.
 iPad captures cover en-US and no and feed the flat renderer.
 Duo captures use both displays, saving raw PNGs in duo/<locale>/ and finished artwork in 3d-duo/<locale>/.
 
@@ -204,7 +204,7 @@ def capture_duo(device, agent_device, output, locales):
             for source in (staging / locale).glob("Duo-*.png"):
                 shutil.copyfile(source, destination / source.name)
     print(f"Duo artwork ready in {output / '3d-duo'}. Raw captures are in {output / 'duo'}.\n"
-          "Fastlane 2.240.1 does not recognize Duo sizes; upload these through App Store Connect.",
+          "Preview uploads with bun run app-store screenshots --device duo. Add --apply to upload.",
           flush=True)
 
 
@@ -233,8 +233,7 @@ def main():
                         (ROOT / "ios/Version.xcconfig").read_text(), re.MULTILINE).group(1)
     output = args.output or ROOT / "ios/ASConnectScreenshots" / version
     raw = output / "raw-dark"
-    available = sorted(path.name for path in (ROOT / "ios/fastlane/metadata").iterdir()
-                       if path.is_dir() and path.name != "review_information")
+    available = sorted(path.stem for path in (ROOT / "ios/app-store/metadata/app-info").glob("*.json"))
     locales = list(dict.fromkeys(args.locales or available))
     if set(locales) - set(available):
         parser.error(f"Unknown App Store locales: {sorted(set(locales) - set(available))}")

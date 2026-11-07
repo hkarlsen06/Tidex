@@ -1,8 +1,0 @@
-- Forbedret visningen på iPhone Duo, blant annet i velkomstskjermene, kalenderen og vaktredigeringen, også med stor tekst.
-- Lagt til forslag om lønnsjustering når en utbetaling registreres som en vakt, uten å legge til arbeidstimer.
-- Lagt til Siri-svar om neste vakt, arbeidstimer, lønn og vakter som venner deler med deg.
-- Lagt til Siri-handlinger for å legge til, flytte eller forlenge vakter og åpne gjennomgangen før utstempling.
-- Lagt til søk etter vakter og jobber i Spotlight.
-- Lagt til støtte for å sende og kladde meldinger med Siri på iOS 27.
-- Rettet tidsfeltene slik at ufullstendige klokkeslett fylles ut og endringer bevares når tastaturet eller visningen endres.
-- Rettet rulling i chatten slik at hopp til meldinger ikke avbrytes.

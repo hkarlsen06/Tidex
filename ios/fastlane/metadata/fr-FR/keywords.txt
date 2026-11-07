@@ -1,1 +1,0 @@
-salaire,travail,heures,temps,planning,gains,calculateur,overtime,paie,calendrier,agenda,services

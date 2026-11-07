@@ -243,7 +243,7 @@ final class TidexAppUITests: XCTestCase {
     }
   }
 
-  // Keys match ios/fastlane/metadata. ar_SA and th_TH keep their Islamic and Buddhist default calendars.
+  // Keys match ios/app-store/metadata/app-info. ar_SA and th_TH keep their Islamic and Buddhist default calendars.
   // Wage plus supplement is a multiple of 5, so the net amounts (112 hours at 20% tax) are whole.
   private static let screenshotLocales: [ScreenshotLocale] = [
     .init(

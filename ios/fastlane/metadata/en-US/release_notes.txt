@@ -1,8 +1,0 @@
-- Improved layouts for iPhone Duo, including onboarding, calendars, shift editing and large text.
-- Added wage adjustment suggestions for payments entered as shifts, without adding worked hours.
-- Added Siri answers for your next shift, hours worked, earnings and friends' shared shifts.
-- Added Siri actions to add, move or extend shifts and open the clock-out review.
-- Added Spotlight search for shifts and jobs.
-- Added Siri support for sending and drafting messages on iOS 27.
-- Fixed time entry so partial times complete reliably and edits are preserved when the keyboard or layout changes.
-- Fixed chat scrolling so jumps to messages are not interrupted.

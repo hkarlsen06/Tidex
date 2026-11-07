@@ -3,7 +3,7 @@
 /**
  * App Store Metadata Generator
  *
- * Generates localized .txt files for Fastlane deliver from a structured JSON source.
+ * Generates native asc metadata JSON from a structured JSON source.
  * Reads supported locales from the Xcode project file (knownRegions).
  * For source locales (en, nb), writes directly from the source JSON.
  * For other locales, translates in parallel using OpenAI Responses API.
@@ -21,6 +21,7 @@ import { fileURLToPath } from "url";
 import { config } from "dotenv";
 import cliProgress from "cli-progress";
 import pLimit from "p-limit";
+import { seedVersionMetadata } from "./appstore-metadata-files.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,7 +35,15 @@ const OPENAI_REASONING_EFFORT = "low";
 // Paths
 const XCODE_PROJECT_PATH = path.join(__dirname, "../Tidex.xcodeproj/project.pbxproj");
 const METADATA_SOURCE_PATH = path.join(__dirname, "appstore-metadata-source.json");
-const METADATA_OUTPUT_PATH = path.join(__dirname, "../fastlane/metadata");
+const METADATA_OUTPUT_PATH = path.join(__dirname, "../app-store/metadata");
+const versionConfig = await fs.readFile(path.join(__dirname, "../Version.xcconfig"), "utf8");
+const VERSION = versionConfig.match(/^MARKETING_VERSION\s*=\s*(\S+)/m)?.[1];
+if (!/^\d+(?:\.\d+){1,2}$/.test(VERSION ?? "")) throw new Error("MARKETING_VERSION must be a numeric App Store version");
+const APP_INFO_FIELDS = { name: "name", subtitle: "subtitle" };
+const VERSION_FIELDS = {
+  description: "description", keywords: "keywords", promotional_text: "promotionalText",
+  release_notes: "whatsNew",
+};
 
 // Parse command line args
 const args = process.argv.slice(2);
@@ -47,7 +56,7 @@ const SOURCE_LOCALES = ["en", "nb"];
 const PRIMARY_LOCALE = "en";
 
 // App Store Connect folder name mapping
-// Maps Xcode locale codes to Fastlane/ASC folder names
+// Maps Xcode locale codes to App Store Connect locales
 const ASC_FOLDER_MAP = {
   en: "en-US",
   "en-GB": "en-GB",
@@ -227,19 +236,23 @@ function validateMetadata(metadata, locale, fields = FIELDS) {
  * Read existing translated field values from disk for a locale
  */
 async function readExistingFields(folderName, fields) {
-  const localeDir = path.join(METADATA_OUTPUT_PATH, folderName);
   const existing = {};
-
-  for (const field of fields) {
-    try {
-      const content = await fs.readFile(path.join(localeDir, `${field}.txt`), "utf-8");
-      existing[field] = content.trim();
-    } catch {
-      // Field doesn't exist yet
+  for (const [scope, mapping] of [["app-info", APP_INFO_FIELDS], [`version/${VERSION}`, VERSION_FIELDS]]) {
+    const data = await readMetadataJSON(path.join(METADATA_OUTPUT_PATH, scope, `${folderName}.json`));
+    for (const field of fields) {
+      if (field in mapping && mapping[field] in data) existing[field] = data[mapping[field]];
     }
   }
-
   return existing;
+}
+
+async function readMetadataJSON(file) {
+  try {
+    return JSON.parse(await fs.readFile(file, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") return {};
+    throw error;
+  }
 }
 
 /**
@@ -247,15 +260,14 @@ async function readExistingFields(folderName, fields) {
  * Only writes fields present in the metadata object (skips missing keys)
  */
 async function writeMetadataFiles(folderName, metadata) {
-  const localeDir = path.join(METADATA_OUTPUT_PATH, folderName);
-
-  await fs.mkdir(localeDir, { recursive: true });
-
-  for (const field of FIELDS) {
-    if (!(field in metadata)) continue;
-    const filePath = path.join(localeDir, `${field}.txt`);
-    const content = metadata[field] || "";
-    await fs.writeFile(filePath, content + "\n", "utf-8");
+  for (const [scope, mapping] of [["app-info", APP_INFO_FIELDS], [`version/${VERSION}`, VERSION_FIELDS]]) {
+    const file = path.join(METADATA_OUTPUT_PATH, scope, `${folderName}.json`);
+    const data = await readMetadataJSON(file);
+    for (const [field, key] of Object.entries(mapping)) {
+      if (field in metadata) data[key] = metadata[field] || "";
+    }
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, JSON.stringify(data, null, 2) + "\n", "utf8");
   }
 }
 
@@ -491,10 +503,9 @@ async function processLocale(locale, folderName, sourceMetadata, norwegianMetada
     // Set app name — use "Tidex" unless it's taken on this locale's App Store
     if (NAME_TAKEN_LOCALES.has(locale)) {
       try {
-        const existing = await fs.readFile(
-          path.join(METADATA_OUTPUT_PATH, folderName, "name.txt"), "utf-8"
-        );
-        translated.name = existing.trim();
+        const existing = await readExistingFields(folderName, ["name"]);
+        if (!existing.name) throw new Error("Missing localized app name");
+        translated.name = existing.name;
       } catch {
         const nameResult = await translateMetadata(
           sourceMetadata, norwegianMetadata, locale, languageName, ["name"]
@@ -558,6 +569,9 @@ async function main() {
     console.log("Validation only mode - skipping file generation");
     return;
   }
+
+  const seededFrom = await seedVersionMetadata(METADATA_OUTPUT_PATH, VERSION);
+  if (seededFrom) console.log(`Preserved translations and URLs from ${seededFrom} for ${VERSION}\n`);
 
   // Write source locale metadata
   console.log("Writing source locale metadata...");

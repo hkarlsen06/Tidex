@@ -1,1 +1,0 @@
-fizetés,munka,órák,idő,műszak,beosztás,kereset,kalkulátor,túlóra,bérjegyzék,naptár,napló

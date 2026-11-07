@@ -1,8 +1,0 @@
-- Mise en page améliorée sur iPhone Duo, notamment pour l’onboarding, les calendriers, la modification des shifts et le texte en grande taille.
-- Ajout de suggestions d’ajustement du salaire lorsque des paiements sont saisis comme des shifts, sans ajouter d’heures travaillées.
-- Ajout de réponses Siri concernant votre prochain shift, vos heures travaillées, vos revenus et les shifts partagés par vos amis.
-- Ajout d’actions Siri pour ajouter, déplacer ou prolonger des shifts et ouvrir la revue avant le pointage de sortie.
-- Ajout de la recherche Spotlight pour les shifts et les emplois.
-- Ajout de la prise en charge de Siri pour envoyer et rédiger des messages sur iOS 27.
-- Correction de la saisie de l’heure afin que les heures partielles soient complétées de manière fiable et que les modifications soient conservées lorsque le clavier ou la mise en page change.
-- Correction du défilement du chat afin que les sauts vers les messages ne soient pas interrompus.

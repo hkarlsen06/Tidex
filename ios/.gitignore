@@ -2,16 +2,12 @@
 DerivedData
 xcuserdata
 
-# Fastlane
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/test_output
-
 # Environment files
 .env
 .env.local
 .env.local.sh
 
-# Ruby
+# Retired Ruby installation caches, retained locally during the asc migration
+/fastlane/
 Vendor/bundle
 .bundle

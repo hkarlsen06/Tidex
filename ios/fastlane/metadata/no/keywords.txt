@@ -1,1 +1,0 @@
-timer,arbeid,timeplan,inntekt,skift,jobb,penger,overtid,timeliste,arbeidstid,timelønn,timeseddel

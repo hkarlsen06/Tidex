@@ -1,8 +1,0 @@
-- Förbättrade layouter för iPhone Duo, inklusive introduktionen, kalendrar, skiftredigering och stor text.
-- Lade till förslag om lönejustering för utbetalningar som registreras som skift, utan att lägga till arbetade timmar.
-- Lade till Siri-svar för ditt nästa skift, arbetade timmar, lön och vänners delade skift.
-- Lade till Siri-åtgärder för att lägga till, flytta eller förlänga skift och öppna granskningen före utstämpling.
-- Lade till Spotlight-sökning för skift och jobb.
-- Lade till Siri-stöd för att skicka och utforma meddelanden på iOS 27.
-- Åtgärdade tidsinmatningen så att ofullständiga tider kompletteras korrekt och ändringar bevaras när tangentbordet eller layouten ändras.
-- Åtgärdade rullningen i chatten så att hopp till meddelanden inte avbryts.

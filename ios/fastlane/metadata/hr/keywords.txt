@@ -1,1 +1,0 @@
-plaća,posao,sati,vrijeme,raspored,zarada,kalkulator,prekovremeni,platna-lista,kalendar,planer,smjene

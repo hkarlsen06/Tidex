@@ -1,8 +1,0 @@
-- Aspecte îmbunătățite pentru iPhone Duo, inclusiv în ecranele de introducere, calendare, editarea turelor și pentru text mare.
-- Au fost adăugate sugestii de ajustare a salariului pentru plățile introduse ca ture, fără a adăuga ore lucrate.
-- Au fost adăugate răspunsuri Siri despre următoarea tură, orele lucrate, câștiguri și turele partajate de prieteni.
-- Au fost adăugate acțiuni Siri pentru a adăuga, muta sau prelungi ture și pentru a deschide revizuirea de la ieșirea din tură.
-- A fost adăugată căutarea în Spotlight pentru ture și locuri de muncă.
-- A fost adăugat suport Siri pentru trimiterea și redactarea mesajelor pe iOS 27.
-- A fost corectată introducerea orei, astfel încât orele parțiale să fie completate corect, iar modificările să fie păstrate când tastatura sau aspectul se schimbă.
-- A fost corectată derularea în chat, astfel încât salturile la mesaje să nu fie întrerupte.

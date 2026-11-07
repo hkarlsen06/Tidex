@@ -1,1 +1,0 @@
-stipendio,lavoro,ore,turni,guadagni,calcolo,straordinari,bustapaga,calendario,agenda,registro

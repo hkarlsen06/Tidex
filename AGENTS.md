@@ -115,7 +115,7 @@ on `127.0.0.1:3210` (dashboard on 6791). Start it with `colima start` and
 `docker compose -f dev/compose.yml --env-file dev/.env up -d` from `backend/`.
 The gitignored `backend/.env.local` points at it, so `bunx convex dev` never
 touches production. It trusts the development Clerk instance. The development
-Clerk secret key is in `Secrets/Tidex/clerk-dev.env` next to `fastlane.env`.
+Clerk secret key is in `Secrets/Tidex/clerk-dev.env` next to `asc.env`.
 Convex publishes its images under `ghcr.io/convex/`. The old
 `ghcr.io/get-convex/` path refuses pulls.
 
@@ -181,26 +181,21 @@ Use these skills for specialized tasks:
 
 For native work, follow [ios/AGENTS.md](ios/AGENTS.md). Read [localization](ios/docs/AGENT_LOCALIZATION.md) when changing UI strings or catalogs and [verification](ios/docs/AGENT_VERIFICATION.md) when building or testing.
 
-## App Store Connect / Fastlane Access
+## App Store Connect access
 
-On Hjalmar's Mac, the existing Fastlane API configuration is saved in
-`/Users/hkarlsen06/Documents/Privat/Utviklernøkler/Secrets/Tidex/fastlane.env` (`ASC_KEY_ID`,
-`ASC_ISSUER_ID`, `ASC_KEY_PATH`). `ios/fastlane/.env` is an ignored symlink
-to that file, which Fastlane loads automatically. In a fresh checkout,
-recreate the symlink or load the existing configuration before asking for
-credentials. Keep the configuration and private key out of Git.
+Tidex uses the pinned `asc` CLI for metadata, screenshot and creative-asset uploads.
+Read [the workflow](ios/app-store/README.md) before changing or uploading App Store
+assets. `bun run app-store` provides read-only plans by default. Apply with `--apply`
+only when uploading is authorized. Native commands use `bun run asc <command>` and
+accept `--read-only` for diagnostics. Build and test through the shared Xcode wrappers.
 
-Use Homebrew Ruby at `/opt/homebrew/opt/ruby@3.4/bin`; the system Ruby is
-too old for the installed bundle. From the repository root, bundled commands
-use `BUNDLE_GEMFILE=ios/Gemfile BUNDLE_PATH=Vendor/bundle`.
+The ignored `ios/app-store/.env` symlink points to
+`/Users/hkarlsen06/Documents/Privat/Utviklernøkler/Secrets/Tidex/asc.env`, with
+`ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_PRIVATE_KEY_PATH`. Recreate it or load the
+existing credentials before asking for keys. Keep credentials outside Git.
 
-The upload lane in `ios/fastlane/Fastfile` copies screenshots from
-`ios/ASConnectScreenshots/<version>/3d/<locale>/` without converting them.
-For raw App Store Connect API calls, Spaceship paths need the `v1/` or `v2/`
-prefix and Spaceship can retry for minutes, so curl with the API key JWT is
-faster (use `curl -g` for `[]` in queries). Screenshot sets can all report
-`COMPLETE` while a few are stuck. Adding the version to a review submission
-returns the stuck screenshot IDs in its error.
+Screenshot sets can all report `COMPLETE` while individual images are stuck.
+Inspect image delivery states as well as set summaries before submitting.
 
 ## Local Chat Package Workflow
 
