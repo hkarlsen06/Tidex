@@ -70,6 +70,8 @@ struct SettingsView: View {
   /// Navigation path for settings subviews
   @State private var navigationPath = NavigationPath()
   @State private var didApplyInitialDestination = false
+  @State private var pendingPayChooser = false
+  @State private var isVisible = false
 
   private let jobsRepository = JobsRepository.shared
   private let settingsRepository = SettingsRepository.shared
@@ -199,7 +201,14 @@ struct SettingsView: View {
         await completePaySetup(for: job, input: input)
       }
     }
+    .task(id: pendingPayChooser && isVisible) {
+      guard pendingPayChooser, isVisible else { return }
+      await openPaySettings()
+      pendingPayChooser = false
+    }
+    .onDisappear { isVisible = false }
     .onAppear {
+      isVisible = true
       applyInitialDestinationIfNeeded()
       applyTabRequestIfNeeded()
     }
@@ -477,14 +486,7 @@ extension SettingsView {
       if let jobId {
         navigationPath.append(SettingsDestination.pay(jobId: jobId))
       } else if !presentsPayChooserDirectly {
-        // This deep link can arrive while MainTabView is still switching to the Profile
-        // tab (and possibly dismissing an unrelated sheet), which owns that transition.
-        // There's no local dismiss/completion to hook into, so wait it out before
-        // presenting the chooser sheet on top.
-        Task {
-          try? await Task.sleep(nanoseconds: 350_000_000)
-          await openPaySettings()
-        }
+        pendingPayChooser = true
       }
 
     default:

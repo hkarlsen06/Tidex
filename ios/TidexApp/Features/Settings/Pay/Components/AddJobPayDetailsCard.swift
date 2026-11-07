@@ -69,6 +69,7 @@ struct AddJobPayDetailsCard: View {
       .keyboardType(.numberPad)
       .multilineTextAlignment(.center)
       .focused(isPaydayInputFocused)
+      .onAppear { isPaydayInputFocused.wrappedValue = true }
       .frame(maxWidth: .infinity, minHeight: 44)
       .background(Color.tidexBlue.opacity(0.15))
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
@@ -96,9 +97,6 @@ struct AddJobPayDetailsCard: View {
     Button(action: {
       paydayInputText = isCustomPayday ? "\(payrollDay)" : ""
       showingPaydayInput = true
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        isPaydayInputFocused.wrappedValue = true
-      }
     }) {
       HStack(spacing: Spacing.xxs) {
         Image(systemName: "pencil")

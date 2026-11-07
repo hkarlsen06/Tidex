@@ -418,7 +418,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     highlightClearTask?.cancel()
     highlightClearTask = Task { @MainActor in
       do {
-        try await Task.sleep(nanoseconds: UInt64(Self.highlightDuration * 1_000_000_000))
+        try await Task.sleep(for: .seconds(Self.highlightDuration))
       } catch {
         return
       }

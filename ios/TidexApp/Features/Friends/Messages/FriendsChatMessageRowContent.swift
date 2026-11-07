@@ -1072,25 +1072,17 @@ struct FriendsChatMessageRowContent: View {
       velocity: value.velocity.width
     )
 
-    withAnimation(.easeOut(duration: Self.replySwipeResetAnimationDuration)) {
-      replySwipeOffset = 0
-    }
-
-    DispatchQueue.main.asyncAfter(deadline: .now() + Self.replySwipeResetAnimationDuration) {
-      if activeReplySwipePayloadId == id {
-        activeReplySwipePayloadId = nil
-      }
-    }
-
-    guard outcome == .trigger, let onReplySwipe else {
-      return
-    }
-
-    Haptics.play(.medium)
-    DispatchQueue.main.asyncAfter(
-      deadline: .now() + Self.replySwipeResetAnimationDuration + 0.04
+    withAnimation(
+      .easeOut(duration: Self.replySwipeResetAnimationDuration), completionCriteria: .removed
     ) {
-      onReplySwipe()
+      replySwipeOffset = 0
+    } completion: {
+      guard activeReplySwipePayloadId == id else { return }
+      activeReplySwipePayloadId = nil
+      if outcome == .trigger, let onReplySwipe {
+        Haptics.play(.medium)
+        onReplySwipe()
+      }
     }
   }
 

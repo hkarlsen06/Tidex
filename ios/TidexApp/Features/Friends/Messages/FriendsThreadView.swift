@@ -218,6 +218,11 @@ struct FriendsThreadView: View {
       .task {
         await viewModel.loadIfNeeded()
       }
+      .task(id: highlightedMessageId) {
+        guard let messageId = highlightedMessageId else { return }
+        do { try await Task.sleep(for: .milliseconds(1_200)) } catch { return }
+        if highlightedMessageId == messageId { highlightedMessageId = nil }
+      }
       .task(id: route.navigationRequestId) {
         await handleRouteNavigationIfNeeded()
       }
@@ -1393,13 +1398,6 @@ struct FriendsThreadView: View {
 
   private func flashHighlightedMessage(_ messageId: String) {
     highlightedMessageId = messageId
-
-    Task { @MainActor in
-      try? await Task.sleep(nanoseconds: 1_200_000_000)
-      if highlightedMessageId == messageId {
-        highlightedMessageId = nil
-      }
-    }
   }
 
   private func submitReport(reason: FriendAbuseReportReason) {
@@ -1458,7 +1456,7 @@ struct FriendsThreadView: View {
           showScreenshotNotifiedIcon = true
         }
         Haptics.play(.success)
-        try? await Task.sleep(for: .seconds(0.3))
+        do { try await Task.sleep(for: .seconds(0.3)) } catch { return }
         if !reduceMotion {
           screenshotBellShakeTrigger.toggle()
         }
@@ -1469,12 +1467,10 @@ struct FriendsThreadView: View {
   }
 
   private func dismissScreenshotBubble() {
-    withAnimation(.easeOut(duration: 0.2)) {
+    withAnimation(.easeOut(duration: 0.2), completionCriteria: .removed) {
       showScreenshotBubble = false
-    }
-
-    Task {
-      try? await Task.sleep(for: .seconds(0.3))
+    } completion: {
+      guard !showScreenshotBubble else { return }
       showScreenshotNotifiedIcon = false
       screenshotBellShakeTrigger = false
     }

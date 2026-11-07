@@ -65,13 +65,14 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
       }
       .scrollsOnOverflow()
     }
-    .onAppear {
+    .task(id: saveStatus) {
       startAnimations()
+      guard saveStatus == .idle || saveStatus == .success else { return }
+      do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+      Haptics.play(.success)
     }
     .onChange(of: saveStatus) { _, newStatus in
-      if newStatus == .success {
-        startAnimations()
-      } else if newStatus == .error {
+      if newStatus == .error {
         withAnimation(.easeOut(duration: 0.2)) {
           contentVisible = true
         }
@@ -345,11 +346,6 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
       // Settle to normal scale
       withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8).delay(0.4)) {
         checkmarkScale = 1.0
-      }
-
-      // Success haptic
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-        Haptics.play(.success)
       }
     }
 

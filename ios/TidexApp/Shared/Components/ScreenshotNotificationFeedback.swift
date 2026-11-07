@@ -29,19 +29,17 @@ final class ScreenshotNotificationFeedback {
       showsNotifiedIcon = true
     }
     Haptics.play(.success)
-    try? await Task.sleep(for: .seconds(0.3))
+    do { try await Task.sleep(for: .seconds(0.3)) } catch { return }
     if !UIAccessibility.isReduceMotionEnabled {
       bellShakeTrigger.toggle()
     }
   }
 
   func dismiss() {
-    withAnimation(.easeOut(duration: 0.2)) {
+    withAnimation(.easeOut(duration: 0.2), completionCriteria: .removed) {
       showsBubble = false
-    }
-
-    Task { @MainActor in
-      try? await Task.sleep(for: .seconds(0.3))
+    } completion: {
+      guard !self.showsBubble else { return }
       self.showsNotifiedIcon = false
       self.bellShakeTrigger = false
     }

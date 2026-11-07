@@ -1043,28 +1043,25 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     highlightedShiftIds = []
     deepLinkAction = .open  // Reset to default
 
-    // Small delay to allow view to stabilize after month navigation
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-      Haptics.play(.selection)
+    Haptics.play(.selection)
 
-      // Only open sheets when action is .open (default behavior from notifications)
-      // When action is .highlight (from widgets), show visual highlight instead
-      if action == .highlight {
-        kLogger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
-        showDeepLinkHighlights(for: [dateISO], shiftIds: shiftIds)
-        return
-      }
+    // Only open sheets when action is .open (default behavior from notifications)
+    // When action is .highlight (from widgets), show visual highlight instead
+    if action == .highlight {
+      kLogger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
+      showDeepLinkHighlights(for: [dateISO], shiftIds: shiftIds)
+      return
+    }
 
-      if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
-        // Single shift - open shift details directly
-        selectedShift = shift
-      } else {
-        // Multiple shifts - open day sheet
-        presentDaySheet(
-          dateISO: dateISO,
-          items: shiftsOnDate.map { DayPresentationItem.shift($0) }
-        )
-      }
+    if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
+      // Single shift - open shift details directly
+      selectedShift = shift
+    } else {
+      // Multiple shifts - open day sheet
+      presentDaySheet(
+        dateISO: dateISO,
+        items: shiftsOnDate.map { DayPresentationItem.shift($0) }
+      )
     }
   }
 
@@ -1081,7 +1078,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
     deepLinkHighlightClearTask = Task { @MainActor in
       do {
-        try await Task.sleep(nanoseconds: 8_000_000_000)
+        try await Task.sleep(for: .seconds(8))
       } catch {
         return
       }

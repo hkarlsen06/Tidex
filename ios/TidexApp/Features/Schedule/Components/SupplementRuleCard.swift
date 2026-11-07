@@ -575,6 +575,7 @@ struct SupplementRuleEditorSheet: View {
       .keyboardType(.decimalPad)
       .multilineTextAlignment(.leading)
       .focused($isValueInputFocused)
+      .onAppear { isValueInputFocused = true }
       .frame(minWidth: 80)
       .padding(.horizontal, Spacing.xxs)
       .padding(.vertical, Spacing.micro)
@@ -607,9 +608,6 @@ struct SupplementRuleEditorSheet: View {
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
       valueInputText = formatValueWithDecimals(value)
       showingValueInput = true
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        isValueInputFocused = true
-      }
     } label: {
       Text(formatValueWithDecimals(value))
         .font(.tidexLargeTitle)

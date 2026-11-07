@@ -604,10 +604,9 @@ struct AnimatedMonthHeader: View {
       return
     }
     // Bounce animation on tap
-    withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
+    withAnimation(.spring(response: 0.15, dampingFraction: 0.5), completionCriteria: .logicallyComplete) {
       monthScale = 0.95
-    }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+    } completion: {
       withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
         monthScale = 1.0
       }
@@ -628,10 +627,9 @@ struct AnimatedMonthHeader: View {
     }
 
     // Bounce animation
-    withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
+    withAnimation(.spring(response: 0.15, dampingFraction: 0.5), completionCriteria: .logicallyComplete) {
       monthScale = 0.95
-    }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+    } completion: {
       withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
         monthScale = 1.0
       }

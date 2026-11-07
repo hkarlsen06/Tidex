@@ -2577,7 +2577,7 @@ internal final class AddShiftViewModel {
     // Schedule new save with debounce delay
     draftSaveTask = Task { [weak self] in
       do {
-        try await Task.sleep(nanoseconds: Self.draftSaveDebounceDelay)
+        try await Task.sleep(for: .nanoseconds(Int64(Self.draftSaveDebounceDelay)))
 
         // Check if cancelled during sleep
         guard !Task.isCancelled else {
@@ -2841,7 +2841,7 @@ internal final class AddShiftViewModel {
     // Schedule new update with adaptive delay
     previewUpdateTask = Task { [weak self] in
       do {
-        try await Task.sleep(nanoseconds: delay)
+        try await Task.sleep(for: .nanoseconds(Int64(delay)))
 
         // Check if cancelled during sleep
         guard !Task.isCancelled else {

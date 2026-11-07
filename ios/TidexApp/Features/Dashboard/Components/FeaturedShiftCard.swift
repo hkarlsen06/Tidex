@@ -366,16 +366,20 @@ private struct LiveTypingDots: View {
       }
     }
     .frame(width: 14, alignment: .leading)  // swiftlint:disable:this no_magic_numbers
-    .task {
+    .task(id: reduceMotion) {
       guard !reduceMotion else { return }  // swiftlint:disable:this conditional_returns_on_newline
       while !Task.isCancelled {
         for index in 0..<3 {  // swiftlint:disable:this no_magic_numbers
           activeDotIndex = index
-          try? await Task.sleep(for: .milliseconds(170))  // swiftlint:disable:this no_magic_numbers
+          do {
+            try await Task.sleep(for: .milliseconds(170))  // swiftlint:disable:this no_magic_numbers
+          } catch { return }
         }
         activeDotIndex = nil
         // Deliberate gap after each full wave to make the indicator feel less frantic.
-        try? await Task.sleep(for: .milliseconds(520))  // swiftlint:disable:this no_magic_numbers
+        do {
+          try await Task.sleep(for: .milliseconds(520))  // swiftlint:disable:this no_magic_numbers
+        } catch { return }
       }
     }
   }

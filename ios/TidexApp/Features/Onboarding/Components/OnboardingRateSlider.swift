@@ -323,9 +323,6 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       Haptics.play(.light)
       inputText = formatValueWithDecimals(value)
       showingCustomInput = true
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        isInputFocused = true
-      }
     }) {
       Text(text)
         .font(.tidexLargeTitle)
@@ -347,9 +344,6 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       Haptics.play(.light)
       inputText = formatValueWithDecimals(value)
       showingCustomInput = true
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        isInputFocused = true
-      }
     }) {
       Text(text)
         .font(.tidexScreenTitle)
@@ -376,6 +370,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
         .keyboardType(.decimalPad)
         .multilineTextAlignment(.trailing)
         .focused($isInputFocused)
+        .onAppear { isInputFocused = true }
         .accessibilityLabel(Text(.onboardingSliderLabel))
         .frame(width: compactInputWidth)
         .padding(.horizontal, Spacing.xxs)
@@ -406,6 +401,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
         .keyboardType(.decimalPad)
         .multilineTextAlignment(.leading)
         .focused($isInputFocused)
+        .onAppear { isInputFocused = true }
         .accessibilityLabel(Text(.onboardingSliderLabel))
         .frame(width: fullInputWidth)
         .padding(.horizontal, Spacing.xxxs)

@@ -124,7 +124,7 @@ final class ShiftCompletionCelebrationManager {
       let current = month ?? Date.currentYearMonth()
 
       guard
-        let data = await LocalCelebrationData.loadWithRetry(userId: userIdSnapshot, month: current)
+        let data = await LocalCelebrationData.loadAfterSync(userId: userIdSnapshot, month: current)
       else { return }
 
       let input = data.celebrationInput(userId: userIdSnapshot, month: current)
@@ -382,26 +382,12 @@ private struct LocalCelebrationData {
     )
   }
 
-  static func loadWithRetry(
+  static func loadAfterSync(
     userId: String, month: (year: Int, month: Int)
   ) async -> LocalCelebrationData? {
-    let maxAttempts = 5
-    let retryDelayNs: UInt64 = 300_000_000
-    var data: LocalCelebrationData?
-
-    for attempt in 1...maxAttempts {
-      if Task.isCancelled { break }
-      data = await MainActor.run { load(userId: userId, month: month) }
-
-      if data != nil {
-        break
-      }
-
-      if attempt < maxAttempts {
-        try? await Task.sleep(nanoseconds: retryDelayNs)
-      }
-    }
-    return data
+    if let data = await load(userId: userId, month: month) { return data }
+    guard await SyncCoordinator.shared.waitForIdle() else { return nil }
+    return await load(userId: userId, month: month)
   }
 
   func celebrationInput(userId: String, month: (year: Int, month: Int)) -> CelebrationInput {

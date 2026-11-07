@@ -305,6 +305,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       .keyboardType(.decimalPad)
       .multilineTextAlignment(.leading)
       .focused($isTaxInputFocused)
+      .onAppear { isTaxInputFocused = true }
       .accessibilityLabel(Text(.onboardingSettingsTaxPercentage))
       .frame(width: taxInputWidth)
       .padding(.horizontal, Spacing.xxs)
@@ -337,9 +338,6 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       Haptics.play(.light)
       taxInputText = formatTaxValue(data.taxPercentage)
       showingTaxInput = true
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        isTaxInputFocused = true
-      }
     }) {
       taxValueLabel
     }
@@ -461,6 +459,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         .keyboardType(.numberPad)
         .multilineTextAlignment(.center)
         .focused($isPaydayInputFocused)
+        .onAppear { isPaydayInputFocused = true }
         .accessibilityLabel(Text(.onboardingSettingsPaydayTitle))
         .frame(width: paydayInputWidth)
         .frame(minHeight: 44)
@@ -494,9 +493,6 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       Haptics.play(.light)
       paydayInputText = isCustomDay ? "\(data.payrollDay)" : ""
       showingPaydayInput = true
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        isPaydayInputFocused = true
-      }
     }) {
       HStack(spacing: Spacing.xxs) {
         Image(systemName: "pencil")

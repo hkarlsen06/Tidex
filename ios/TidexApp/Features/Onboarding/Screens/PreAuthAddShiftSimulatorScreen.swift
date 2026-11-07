@@ -111,8 +111,17 @@ struct PreAuthAddShiftSimulatorScreen: View {
       guard !isPreloaded else { return }
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(viewModel.currency)
       scheduleFocusRelaxIfNeeded()
-      DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-        triggerHintShimmer()
+    }
+    .task {
+      guard !isPreloaded else { return }
+      do { try await Task.sleep(for: .seconds(1)) } catch { return }
+      triggerHintShimmer()
+    }
+    .task(id: focusRelaxToken) {
+      guard !isPreloaded, focusStage == .add else { return }
+      do { try await Task.sleep(for: .seconds(1.4)) } catch { return }
+      withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) {
+        relaxFocusInAddStage = true
       }
     }
     .onChange(of: focusStage) { _, _ in
@@ -184,17 +193,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
 
   private func scheduleFocusRelaxIfNeeded() {
     focusRelaxToken += 1
-    let currentToken = focusRelaxToken
     relaxFocusInAddStage = false
-
-    guard focusStage == .add else { return }
-
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
-      guard currentToken == focusRelaxToken, focusStage == .add else { return }
-      withAnimation(.easeOut(duration: 0.28)) {
-        relaxFocusInAddStage = true
-      }
-    }
   }
 }
 

@@ -124,11 +124,7 @@ struct ScreenshotSharePromptOverlay: View {
       // Use share button - primary action
       Button {
         Haptics.play(.medium)
-        dismiss()
-        // Small delay to let the overlay dismiss first
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-          onUseShareButton()
-        }
+        dismiss(then: onUseShareButton)
       } label: {
         Text(.screenshotShareUseButton)
           .font(.tidexHeadline)
@@ -203,11 +199,16 @@ struct ScreenshotSharePromptOverlay: View {
     }
   }
 
-  private func dismiss() {
-    showContent = false
-    dragOffset = 0
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+  private func dismiss(then action: (() -> Void)? = nil) {
+    withAnimation(
+      reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
+      completionCriteria: .removed
+    ) {
+      showContent = false
+      dragOffset = 0
+    } completion: {
       onDismiss()
+      action?()
     }
   }
 }

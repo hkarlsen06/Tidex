@@ -126,6 +126,7 @@ struct SupplementValueSection: View {
       .keyboardType(.decimalPad)
       .multilineTextAlignment(.leading)
       .focused($isValueInputFocused)
+      .onAppear { isValueInputFocused = true }
       .accessibilityLabel(Text(.onboardingSupplementsValueLabel))
       .frame(width: inputWidth)
       .padding(.horizontal, Spacing.xxs)
@@ -158,9 +159,6 @@ struct SupplementValueSection: View {
       Haptics.play(.light)
       valueInputText = formatValueWithDecimals(rule.value)
       showingValueInput = true
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        isValueInputFocused = true
-      }
     }) {
       Text(formatValueWithDecimals(rule.value))
         .font(.tidexLargeTitle)

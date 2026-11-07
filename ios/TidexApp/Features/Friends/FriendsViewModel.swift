@@ -299,28 +299,30 @@ final class SharingViewModel: MonthNavigable {
     monthContext.goToCurrentMonth()
   }
 
-  /// Wait for sharers to be loaded (used for deep link handling)
-  /// Returns when sharers are loaded or timeout is reached (3 seconds max)
+  /// Deep links share the initial load, including its empty and failure outcomes.
   func waitForSharersLoaded() async {
-    // If already loaded, return immediately
-    // swiftlint:disable:next conditional_returns_on_newline
-    guard sharers.isEmpty, hiddenSharers.isEmpty else { return }
-
-    // Poll every 100ms until sharers are loaded (max 3 seconds)
-    // We need to wait for loading to START and then COMPLETE
-    let maxAttempts = 30
-    for _ in 0..<maxAttempts {
-      try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
-      if !sharers.isEmpty || !hiddenSharers.isEmpty {
-        return
-      }
-    }
+    guard !hasFinishedInitialSharersLoad else { return }
+    await loadSharers()
   }
 
   // MARK: - Public Methods
 
+  @ObservationIgnored private var sharersLoadTask: Task<Void, Never>?
+
   /// Load initial Friends tab data through the consolidated bootstrap RPC.
   func loadSharers(forceRefreshPreviews: Bool = false) async {
+    if let sharersLoadTask {
+      await sharersLoadTask.value
+      return
+    }
+    let task = Task { await performSharersLoad(forceRefreshPreviews: forceRefreshPreviews) }
+    sharersLoadTask = task
+    defer { sharersLoadTask = nil }
+    await task.value
+  }
+
+  // swiftlint:disable:next cyclomatic_complexity function_body_length
+  private func performSharersLoad(forceRefreshPreviews: Bool) async {
     _ = forceRefreshPreviews
     error = nil
 
@@ -596,23 +598,14 @@ final class SharingViewModel: MonthNavigable {
       } else {
         await loadSharers(forceRefreshPreviews: true)
       }
+      let elapsedMs = (DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
+      if elapsedMs < minimumDurationMs {
+        try? await Task.sleep(for: .milliseconds(Int64(minimumDurationMs - elapsedMs)))
+      }
     }
 
     // Wait for the task to complete, ignoring any cancellation of our parent task
     _ = await refreshTask.result
-
-    // Calculate elapsed time and wait for minimum duration
-    // Use DispatchQueue.asyncAfter which is not cancelled by SwiftUI's .refreshable
-    let elapsedMs = (DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
-    let remainingMs = minimumDurationMs > elapsedMs ? minimumDurationMs - elapsedMs : 0
-
-    if remainingMs > 0 {
-      await withCheckedContinuation { continuation in
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(remainingMs))) {
-          continuation.resume()
-        }
-      }
-    }
 
     isRefreshing = false
   }

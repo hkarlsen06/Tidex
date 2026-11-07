@@ -8,7 +8,6 @@ struct OnboardingHintShimmerText: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var shimmerStartDate: Date?
   @State private var isShimmerActive = false
-  @State private var cycleToken = 0
   @ScaledMetric(relativeTo: .footnote) private var basePointSize: CGFloat = 13
 
   private let shimmerDuration = PreAuthSimulatorAnimationTiming.hintSweepDuration
@@ -24,11 +23,11 @@ struct OnboardingHintShimmerText: View {
         shimmerText(staticText)
       }
     }
-    .onChange(of: trigger) { _, _ in
-      runShimmerCycle()
+    .task(id: trigger) {
+      guard trigger > 0 else { return }
+      await runShimmerCycle()
     }
     .onDisappear {
-      cycleToken += 1
       isShimmerActive = false
       shimmerStartDate = nil
     }
@@ -93,19 +92,17 @@ struct OnboardingHintShimmerText: View {
     return attributed
   }
 
-  private func runShimmerCycle() {
+  private func runShimmerCycle() async {
     // The per-frame font sweep is motion, so Reduce Motion keeps the static hint.
     guard !reduceMotion else { return }
-    cycleToken += 1
-    let token = cycleToken
     shimmerStartDate = Date()
     isShimmerActive = true
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + shimmerDuration + shimmerCleanupDelay) {
-      guard token == cycleToken else { return }
-      isShimmerActive = false
-      shimmerStartDate = nil
-    }
+    do {
+      try await Task.sleep(for: .seconds(shimmerDuration + shimmerCleanupDelay))
+    } catch { return }
+    isShimmerActive = false
+    shimmerStartDate = nil
   }
 }
 
@@ -136,8 +133,6 @@ struct TotalsFocusSweepIndicator: View {
   let reduceMotion: Bool
   let trackWidth: CGFloat
 
-  @State private var cycleToken = 0
-  @State private var hasPlayedCurrentActivation = false
   @State private var leadingProgress: CGFloat = 0
   @State private var trailingProgress: CGFloat = 0
   @State private var indicatorOpacity: CGFloat = 0
@@ -163,71 +158,46 @@ struct TotalsFocusSweepIndicator: View {
       .opacity(indicatorOpacity)
       .allowsHitTesting(false)
       .accessibilityHidden(true)
-      .onAppear {
-        syncAnimationState()
-      }
-      .onChange(of: isActive) { _, _ in
-        syncAnimationState()
-      }
-      .onDisappear {
-        cycleToken += 1
+      .task(id: isActive) {
+        await syncAnimationState()
       }
   }
 
-  private func syncAnimationState() {
-    cycleToken += 1
-    let token = cycleToken
-
+  private func syncAnimationState() async {
     if !isActive {
       withAnimation(.easeOut(duration: 0.2)) {
         leadingProgress = 0
         trailingProgress = 0
         indicatorOpacity = 0
       }
-      hasPlayedCurrentActivation = false
       return
     }
-
-    guard !hasPlayedCurrentActivation else { return }
 
     leadingProgress = 0
     trailingProgress = 0
     indicatorOpacity = 0
 
-    hasPlayedCurrentActivation = true
-
-    runSingleCycle(token: token)
+    await runSingleCycle()
   }
 
-  private func runSingleCycle(token: Int) {
-    guard token == cycleToken, isActive else { return }
-
-    DispatchQueue.main.asyncAfter(deadline: .now() + startDelay) {
-      guard token == cycleToken, isActive else { return }
-
-      guard !reduceMotion else {
-        indicatorOpacity = 1
-        return
-      }
-
+  private func runSingleCycle() async {
+    do { try await Task.sleep(for: .seconds(startDelay)) } catch { return }
+    guard !reduceMotion else {
       indicatorOpacity = 1
-      withAnimation(.easeInOut(duration: expandDuration)) {
-        trailingProgress = 1
-      }
+      return
+    }
 
-      DispatchQueue.main.asyncAfter(deadline: .now() + expandDuration) {
-        guard token == cycleToken, isActive else { return }
-        withAnimation(.easeInOut(duration: collapseDuration)) {
-          leadingProgress = 1
-        }
-      }
-
-      DispatchQueue.main.asyncAfter(deadline: .now() + expandDuration + collapseDuration) {
-        guard token == cycleToken, isActive else { return }
-        withAnimation(.easeOut(duration: fadeOutDuration)) {
-          indicatorOpacity = 0
-        }
-      }
+    indicatorOpacity = 1
+    withAnimation(.easeInOut(duration: expandDuration)) {
+      trailingProgress = 1
+    }
+    do { try await Task.sleep(for: .seconds(expandDuration)) } catch { return }
+    withAnimation(.easeInOut(duration: collapseDuration)) {
+      leadingProgress = 1
+    }
+    do { try await Task.sleep(for: .seconds(collapseDuration)) } catch { return }
+    withAnimation(.easeOut(duration: fadeOutDuration)) {
+      indicatorOpacity = 0
     }
   }
 }

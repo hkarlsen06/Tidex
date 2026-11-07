@@ -23,6 +23,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   // Track background task to ensure proper cleanup
   // This prevents "Background task still not ended after expiration handlers were called" warning
   private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+  private var backgroundCleanupTask: Task<Void, Never>?
 
   // App Group identifier for shared storage
   private let appGroupId = "group.no.tidex.app"
@@ -126,22 +127,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   }
 
+  /// ActivityKit reports terminal state even when the ended activity remains in `activities`.
+  /// Bound the wait so an unresponsive system service cannot hold maintenance open.
   @MainActor
-  private func waitForLiveActivityListToClear(
-    maxAttempts: Int = 4,
-    delayNanoseconds: UInt64 = 300_000_000
-  ) async -> Bool {
-    for attempt in 0..<maxAttempts {
-      if nonTerminalLiveActivities().isEmpty {
-        return true
+  private func waitForLiveActivityToEnd(id: String) async {
+    guard let activity = Activity<ShiftActivityAttributes>.activities.first(where: { $0.id == id }),
+      !isTerminalLiveActivityState(activity.activityState)
+    else { return }
+    // ActivityKit marks the iterator Sendable, but not the activity or sequence.
+    let updates = activity.activityStateUpdates.makeAsyncIterator()
+    await withTaskGroup(of: Void.self) { group in
+      group.addTask {
+        while let state = await updates.next() {
+          if state == .ended || state == .dismissed { return }
+        }
       }
-
-      // Wait for ActivityKit to clear ended activities from its in-memory list.
-      guard attempt < maxAttempts - 1 else { break }
-      try? await Task.sleep(nanoseconds: delayNanoseconds)
+      group.addTask {
+        try? await Task.sleep(for: .seconds(2))
+      }
+      await group.next()
+      group.cancelAll()
     }
-
-    return nonTerminalLiveActivities().isEmpty
   }
 
   private func sharedUserDefaults() -> UserDefaults? {
@@ -248,22 +254,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     // First, end any Live Activities for shifts that are no longer ongoing
-    let endedAnyStaleActivities = await endStaleActivities()
+    _ = await endStaleActivities()
 
     // Check if there's already an active activity
     let remainingActivities = Activity<ShiftActivityAttributes>.activities.filter {
       !isTerminalLiveActivityState($0.activityState)
     }
     guard remainingActivities.isEmpty else {
-      // Some ended activities can persist briefly in ActivityKit's in-memory list.
-      // Queue one more pass so we can start the replacement activity once the list clears.
-      if endedAnyStaleActivities {
-        liveActivityMaintenancePending = true
-        Task { [weak self] in
-          try? await Task.sleep(nanoseconds: 300_000_000)
-          self?.checkAndStartLiveActivityIfNeeded()
-        }
-      }
       return
     }
 
@@ -333,6 +330,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       if shouldEnd {
         endedAny = true
         await Activity<ShiftActivityAttributes>.endImmediately(id: activity.id)
+        await waitForLiveActivityToEnd(id: activity.id)
       }
     }
 
@@ -350,15 +348,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
       for activity in matchingActivities {
         await Activity<ShiftActivityAttributes>.endImmediately(id: activity.id)
+        await self?.waitForLiveActivityToEnd(id: activity.id)
       }
 
       // Re-check immediately so replacement activities can start without waiting
       // for another foreground/sync trigger.
       self?.checkAndStartLiveActivityIfNeeded()
-      Task { [weak self] in
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        self?.checkAndStartLiveActivityIfNeeded()
-      }
     }
   }
 
@@ -368,7 +363,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     guard !activities.isEmpty else { return }
 
     for activity in activities {
+      let id = activity.id
       await activity.end(nil, dismissalPolicy: .immediate)
+      await waitForLiveActivityToEnd(id: id)
     }
 
     liveActivityMaintenancePending = false
@@ -389,7 +386,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // Ensure stale/previous activities do not block starting a fresh temporary clock activity.
     await endAllLiveActivities(reason: "starting temporary clock activity")
-    guard await waitForLiveActivityListToClear() else {
+    guard nonTerminalLiveActivities().isEmpty else {
       return
     }
 
@@ -436,7 +433,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         guard attempt < maxAttempts else {
           return
         }
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        // Activity.request can still reject immediately after an end. No rejection-ready event exists.
+        do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
       }
     }
   }
@@ -567,13 +565,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // Give a moment to flush pending operations, then end the task
     // This prevents the task from running indefinitely
-    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+    backgroundCleanupTask = Task { @MainActor [weak self] in
+      do { try await Task.sleep(for: .seconds(2)) } catch { return }
       self?.endBackgroundTaskIfNeeded()
     }
   }
 
   /// Ends any active background task to prevent iOS termination warning
   func endBackgroundTaskIfNeeded() {
+    backgroundCleanupTask?.cancel()
+    backgroundCleanupTask = nil
     if backgroundTaskID != .invalid {
       UIApplication.shared.endBackgroundTask(backgroundTaskID)
       backgroundTaskID = .invalid

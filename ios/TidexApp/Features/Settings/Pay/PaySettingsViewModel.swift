@@ -731,7 +731,7 @@ extension PaySettingsViewModel {
 
     payrollDaySaveTask = Task {
       do {
-        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second debounce
+        try await Task.sleep(for: .seconds(1))  // 1 second debounce
         guard !Task.isCancelled else { return }
 
         await savePayrollDay(value)

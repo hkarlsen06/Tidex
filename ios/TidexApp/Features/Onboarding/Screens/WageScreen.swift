@@ -107,8 +107,8 @@ struct WageScreen: View {
         }
       }
       .scrollDismissesKeyboard(.interactively)
-      .onChange(of: isKeyboardVisible) { _, visible in
-        guard visible, data.wageType == .custom else { return }
+      .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+        guard data.wageType == .custom else { return }
         scrollCustomWageInputIntoView(scrollProxy)
       }
     }
@@ -209,10 +209,8 @@ struct WageScreen: View {
   }
 
   private func scrollCustomWageInputIntoView(_ scrollProxy: ScrollViewProxy) {
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-      withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
-        scrollProxy.scrollTo(ScrollTarget.customWageContent, anchor: .bottom)
-      }
+    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
+      scrollProxy.scrollTo(ScrollTarget.customWageContent, anchor: .bottom)
     }
   }
 

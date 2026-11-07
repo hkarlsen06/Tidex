@@ -95,7 +95,7 @@ extension View {
         }
       }
       .pullToRefresh {
-        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        try? await Task.sleep(for: .milliseconds(1_500))
         refreshCount += 1
       }
     }

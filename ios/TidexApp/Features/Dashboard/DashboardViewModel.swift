@@ -2591,7 +2591,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
   /// Reload dashboard from local data without triggering sync
   /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
   /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
-  func reloadFromLocal(  // swiftlint:disable:this explicit_acl function_body_length type_contents_order
+  func reloadFromLocal(  // swiftlint:disable:this explicit_acl type_contents_order
     showLoadingState: Bool = true
   ) async {
     guard isActiveTabVisible else {
@@ -2641,11 +2641,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     localDataNeedsReload = false
     displayedMonthLoadPending = false
 
-    // Prefetch neighboring months after launch animations settle
-    Task {
-      try? await Task.sleep(nanoseconds: 1_200_000_000)  // swiftlint:disable:this no_magic_numbers
-      prefetchNeighboringMonths()
-    }
+    prefetchNeighboringMonths()
 
     logger.info("✅ Dashboard reloaded from local")
   }
@@ -2686,35 +2682,11 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
       await loadDashboardDependencies(for: userId)
       logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
 
-      // Check if we have any data to show
-      // Note: Empty shifts is OK, but missing settings means we can't compute payroll
-      if self.settings == nil, expectedDisplayYM == nil {
-        // No settings yet - retry multiple times with delays
-        // This handles the race condition where sync completes but data isn't readable yet
-        for attempt in 1...5 {  // swiftlint:disable:this no_magic_numbers
-          logger.info("📭 No local settings yet - retry \(attempt)/5 in 400ms (userId: \(userId))")
-
-          do {
-            try await Task.sleep(nanoseconds: 400_000_000)  // 400ms // swiftlint:disable:this no_magic_numbers
-          } catch {
-            // Sleep was cancelled - exit retry loop
-            logger.info("⏭️ Retry sleep cancelled")
-            break
-          }
-
-          // Retry loading through the shared monthly payroll read path
-          await loadDashboardDependencies(for: userId, forceReload: true)
-          if settings != nil {
-            logger.info("📋 Settings found on retry \(attempt)")
-            break
-          }
-        }
-      }
-
+      // Sync completion reloads the local read model once settings have been saved.
       guard self.settings != nil else {
         if expectedDisplayYM == nil {
-          // Still no settings after all retries - this is a real error
-          logger.error("❌ No settings after retries - cannot load dashboard")
+          // The initial-sync and sync-summary handlers retry after settings are saved.
+          logger.error("❌ No local settings - cannot load dashboard")
           self.error = DashboardError.noLocalData
         } else {
           logger.info("📭 No local settings yet - waiting for sync")

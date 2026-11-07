@@ -73,7 +73,7 @@ final class AppleAuthProvider: NSObject {
 
         self.timeoutTask = Task { [weak self] in
           do {
-            try await Task.sleep(nanoseconds: Self.requestTimeout)
+            try await Task.sleep(for: .nanoseconds(Int64(Self.requestTimeout)))
           } catch {
             return
           }

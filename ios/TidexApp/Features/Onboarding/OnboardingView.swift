@@ -62,6 +62,11 @@ struct OnboardingView: View {
           )
       }
     }
+    .task(id: isCompletingPreAuth) {
+      guard isCompletingPreAuth else { return }
+      do { try await Task.sleep(for: .seconds(completionHandoffDelay)) } catch { return }
+      onNavigateToSignup()
+    }
     .onAppear {
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(preAuthCurrency)
       shouldPreloadSimulatorScreen = currentPage < simulatorPage
@@ -95,10 +100,6 @@ struct OnboardingView: View {
     }
 
     isCompletingPreAuth = true
-
-    DispatchQueue.main.asyncAfter(deadline: .now() + completionHandoffDelay) {
-      onNavigateToSignup()
-    }
   }
 }
 

@@ -681,7 +681,7 @@ struct EventDetailsSheet: View {
     reminderAutosaveTask?.cancel()
     reminderAutosaveTask = Task {
       do {
-        try await Task.sleep(nanoseconds: inlineReminderSaveDelayNanoseconds)
+        try await Task.sleep(for: .nanoseconds(Int64(inlineReminderSaveDelayNanoseconds)))
         guard !Task.isCancelled else { return }
         await saveChanges(dismissOnSuccess: false, usesInlineHandler: true)
       } catch {

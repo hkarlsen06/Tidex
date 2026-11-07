@@ -275,7 +275,7 @@ final class AppCoordinator {
   /// there is genuinely no session.
   private func setupMaxLoadingTimeout() {
     runTrackedTask { [weak self] in
-      try? await Task.sleep(nanoseconds: Self.maxLoadingTimeout)
+      try? await Task.sleep(for: .nanoseconds(Int64(Self.maxLoadingTimeout)))
       guard let self, !Task.isCancelled, appState == .loading else { return }
       // Not tracked, for the reason in leaveLoadingAfterTimeout.
       Task { @MainActor [weak self] in await self?.leaveLoadingAfterTimeout() }
@@ -465,7 +465,7 @@ final class AppCoordinator {
         return true
       }
       group.addTask {
-        try? await Task.sleep(nanoseconds: Self.authCheckTimeout)
+        try? await Task.sleep(for: .nanoseconds(Int64(Self.authCheckTimeout)))
         return false
       }
       let result = await group.next() ?? false

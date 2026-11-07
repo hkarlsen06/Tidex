@@ -153,6 +153,8 @@ struct FriendsThreadComposerHostedView: View {
   @State private var isSubmitting = false
   @State private var composerFocusTrigger = 0
   @State private var isComposerFocused = false
+  @State private var awaitingPickerDismissal = false
+  @State private var restoreFocusAfterPickerDismissal = false
 
   private let attachmentCollapseCharacterThreshold = 18
 
@@ -215,6 +217,16 @@ struct FriendsThreadComposerHostedView: View {
       // A thumbnail removed or a message sent also clears the photo's checkmark.
       deselectUnstagedPhotos(in: stagedAttachments)
     }
+    .onChange(of: attachmentController.isShowingCamera || attachmentController.isShowingShiftCalendar) { _, shown in
+      if shown { awaitingPickerDismissal = true }
+    }
+    .onChange(of: attachmentController.isShowingPhotoLibrary) { _, shown in
+      if shown {
+        awaitingPickerDismissal = true
+      } else {
+        attachmentPickerDidDismiss()
+      }
+    }
     .photosPicker(
       isPresented: $attachmentController.isShowingPhotoLibrary,
       selection: $selectedPhotoItems,
@@ -222,7 +234,9 @@ struct FriendsThreadComposerHostedView: View {
       matching: .images,
       photoLibrary: .shared()
     )
-    .fullScreenCover(isPresented: $attachmentController.isShowingCamera) {
+    .fullScreenCover(
+      isPresented: $attachmentController.isShowingCamera, onDismiss: attachmentPickerDidDismiss
+    ) {
       CameraPicker { image in
         Task {
           await handleCapturedImage(image)
@@ -230,7 +244,9 @@ struct FriendsThreadComposerHostedView: View {
       }
       .ignoresSafeArea()
     }
-    .sheet(isPresented: $attachmentController.isShowingShiftCalendar) {
+    .sheet(
+      isPresented: $attachmentController.isShowingShiftCalendar, onDismiss: attachmentPickerDidDismiss
+    ) {
       FriendsComposerShiftCalendarPicker { shift in
         await handleShiftSelection(shift)
       }
@@ -653,12 +669,18 @@ extension FriendsThreadComposerHostedView {
 
   private func restoreComposerFocusIfNeeded(_ shouldRestoreFocus: Bool) {
     guard shouldRestoreFocus else { return }
-    DispatchQueue.main.async {
+    if awaitingPickerDismissal {
+      restoreFocusAfterPickerDismissal = true
+    } else {
       composerFocusTrigger += 1
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-      composerFocusTrigger += 1
-    }
+  }
+
+  private func attachmentPickerDidDismiss() {
+    awaitingPickerDismissal = false
+    guard restoreFocusAfterPickerDismissal else { return }
+    restoreFocusAfterPickerDismissal = false
+    composerFocusTrigger += 1
   }
 
   private func toggleAttachmentDrawer() {
