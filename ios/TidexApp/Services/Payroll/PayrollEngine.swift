@@ -49,40 +49,6 @@ struct PayrollEngine {
     let legacyNilJobSnapshots: [WageSnapshot]
   }
 
-  // MARK: - Payout Date Calculation
-
-  /// Calculate payout date for a shift (shift month + 1)
-  /// Tax settings are based on when you receive the money (payout month)
-  /// - Parameters:
-  ///   - shiftDate: ISO date string (YYYY-MM-DD) of the shift
-  ///   - payrollDay: Day of month for payroll (1-31)
-  /// - Returns: ISO date string (YYYY-MM-DD) of the payout date
-  static func calculatePayoutDate(shiftDate: String, payrollDay: Int) -> String {
-    let components = shiftDate.split(separator: "-")
-    guard components.count >= 2,
-      let shiftYear = Int(components[0]),
-      let shiftMonth = Int(components[1]),
-      (1...12).contains(shiftMonth)
-    else {
-      // Fallback: return a default payout date
-      return shiftDate
-    }
-
-    var payoutYear = shiftYear
-    var payoutMonth = shiftMonth + 1
-
-    if payoutMonth > 12 {
-      payoutMonth = 1
-      payoutYear += 1
-    }
-
-    // Handle edge case: payroll_day exceeds days in payout month
-    let daysInPayoutMonth = Date.daysInMonth(year: payoutYear, month: payoutMonth)
-    let effectivePayrollDay = min(max(payrollDay, 1), daysInPayoutMonth)
-
-    return String(format: "%04d-%02d-%02d", payoutYear, payoutMonth, effectivePayrollDay)
-  }
-
   /// Extract payout month (1-12) from a shift date
   /// Payout month = earnings month + 1
   static func payoutMonth(from shiftDate: String) -> Int {

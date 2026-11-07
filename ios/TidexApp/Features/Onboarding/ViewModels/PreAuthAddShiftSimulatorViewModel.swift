@@ -202,10 +202,7 @@ final class PreAuthAddShiftSimulatorViewModel: AddShiftCalendarViewModeling {
   private func computeEarningsForDate(_ dateISO: String) -> CalendarEarningsData? {
     let wageSnapshot = SnapshotsService.snapshotForDate(dateISO, from: snapshots)
 
-    let payoutDate = PayrollEngine.calculatePayoutDate(
-      shiftDate: dateISO,
-      payrollDay: payrollDay
-    )
+    let payoutDate = PayoutSchedule(period: .calendarMonth, payrollDay: payrollDay).payoutDate(for: dateISO)
     let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: snapshots)
 
     let shift = ShiftRow(
@@ -342,8 +339,7 @@ extension PreAuthAddShiftSimulatorViewModel {
       let wageSnapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: snapshots)
       let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 
-      let payoutDate = PayrollEngine.calculatePayoutDate(
-        shiftDate: shift.shift_date, payrollDay: payrollDay)
+      let payoutDate = PayoutSchedule(period: .calendarMonth, payrollDay: payrollDay).payoutDate(for: shift.shift_date)
       let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: snapshots)
       let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
 

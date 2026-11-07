@@ -3,11 +3,8 @@ import XCTest
 @testable import Tidex
 
 final class PayrollEngineDateLogicTests: XCTestCase {
-  func testCalculatePayoutDateClampsToMonthEnd() {
-    let payoutDate = PayrollEngine.calculatePayoutDate(
-      shiftDate: "2026-01-15",
-      payrollDay: 31
-    )
+  func testPayoutScheduleClampsToMonthEnd() {
+    let payoutDate = PayoutSchedule(period: .calendarMonth, payrollDay: 31).payoutDate(for: "2026-01-15")
 
     XCTAssertEqual(payoutDate, "2026-02-28")
   }
@@ -54,11 +51,8 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertTrue(date.toISODateString().hasPrefix("2026-09"))
   }
 
-  func testCalculatePayoutDateRollsOverYearBoundary() {
-    let payoutDate = PayrollEngine.calculatePayoutDate(
-      shiftDate: "2026-12-10",
-      payrollDay: 15
-    )
+  func testPayoutScheduleRollsOverYearBoundary() {
+    let payoutDate = PayoutSchedule(period: .calendarMonth, payrollDay: 15).payoutDate(for: "2026-12-10")
 
     XCTAssertEqual(payoutDate, "2027-01-15")
   }
