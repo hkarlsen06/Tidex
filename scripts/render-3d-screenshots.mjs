@@ -75,13 +75,15 @@ for (const locale of locales.length ? locales : Object.keys(config.panels)) {
   try {
     const count = config.panels[locale].length;
     const files = {};
-    for (const { screen } of config.phones) {
-      files[screen] = config.capture.replaceAll('{locale}', locale).replaceAll('{screen}', screen);
+    for (const phone of config.phones) {
+      const { screen } = phone;
+      files[screen] = (phone.capture ?? config.capture).replaceAll('{locale}', locale).replaceAll('{screen}', screen);
       const bytes = await readFile(path.join(captures, files[screen]));
-      const width = config.device?.captureWidth ?? W, height = config.device?.captureHeight ?? H;
+      const device = phone.device ?? config.device;
+      const width = device?.captureWidth ?? W, height = device?.captureHeight ?? H;
       const actual = [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
       if (!(actual[0] === width && actual[1] === height)
-          && !(config.device && actual[0] === height && actual[1] === width)) {
+          && !(device && actual[0] === height && actual[1] === width)) {
         throw new Error(`Wrong capture size: ${files[screen]} (${actual.join('x')})`);
       }
     }
@@ -90,8 +92,17 @@ for (const locale of locales.length ? locales : Object.keys(config.panels)) {
       width: W * count, height: H, html: page(locale, strip), captures,
       font: path.resolve(path.dirname(configPath), config.font),
     });
-    await tab.evaluate(renderPhones, { phones: strip.phones, finish: config.finish, W, H, captures: files,
-      device: config.device, textFontSize: config.text?.fontSize });
+    const groups = new Map();
+    for (const phone of strip.phones) {
+      const device = phone.device ?? config.device;
+      const key = JSON.stringify(device);
+      if (!groups.has(key)) groups.set(key, { device, phones: [] });
+      groups.get(key).phones.push(phone);
+    }
+    for (const group of groups.values()) {
+      await tab.evaluate(renderPhones, { ...group, finish: config.finish, W, H, captures: files,
+        textFontSize: config.text?.fontSize });
+    }
 
     const folder = path.join(output, locale);
     await mkdir(folder, { recursive: true });

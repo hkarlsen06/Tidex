@@ -52,7 +52,7 @@ bun run app-store screenshots --device ipad
 bun run app-store screenshots
 ```
 
-The last command checks all three families. Each family must have artwork. iPhone images come from `ASConnectScreenshots/<version>/3d/<locale>/iPhone-*.png`, iPad images from `<version>/<locale>/iPad-*.png`, and Duo images from `<version>/3d-duo/<locale>/Duo-*.png`. Expected counts are five for iPhone, five for iPad, and ten for Duo. Contact sheets and raw captures are excluded.
+The last command checks all three families. Each family must have artwork. iPhone images come from `ASConnectScreenshots/<version>/3d/<locale>/iPhone-*.png`, iPad images from `<version>/<locale>/iPad-*.png`, and Duo images from `<version>/3d-duo/<locale>/Duo-*.png`. Each current gallery has five images. Duo requires the ordered story `Duo-01.png` through `Duo-05.png`, all at 2853 x 2007, with closed and open devices inside the same canvas shape. Contact sheets and raw captures are excluded. The story length is an editorial choice; Apple allows up to ten Duo images.
 
 By default, uploads skip existing matching files. Add `--replace` to replace only the selected device sets in the selected languages. Other device sets and languages remain untouched. Every selected set is planned before the first write. A multi-set upload is not atomic, so keep partial receipts after a failure and rerun or inspect them before replacing again.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Finish both Duo screenshot sets using the iPhone renderer, copy and brand styling.
+// Render one ordered Duo story, with closed and open devices on consistent canvases.
 // Usage: node scripts/render-duo-screenshots.mjs [captures-dir] [output-dir] [locale ...]
 import { readFile, readdir, mkdir, mkdtemp, cp, rename, rm, stat } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
@@ -12,9 +12,10 @@ const version = (await readFile(path.join(root, 'ios/Version.xcconfig'), 'utf8')
 const [capturesArg, outputArg, ...localeArgs] = process.argv.slice(2);
 const captures = path.resolve(capturesArg ?? path.join(root, 'ios/ASConnectScreenshots', version, 'duo'));
 const output = path.resolve(outputArg ?? path.join(root, 'ios/ASConnectScreenshots', version, '3d-duo'));
-const locales = localeArgs.length ? [...new Set(localeArgs)]
-  : (await readdir(captures, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
+const available = (await readdir(captures, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
+const locales = localeArgs.length ? [...new Set(localeArgs)] : available;
 if (!locales.length) throw new Error(`No Duo capture locales in ${captures}`);
+if (locales.some(locale => !available.includes(locale))) throw new Error('Select locale directories present in the Duo captures');
 
 await mkdir(path.dirname(output), { recursive: true });
 const staging = await mkdtemp(path.join(path.dirname(output), '.duo-artwork-'));
@@ -28,13 +29,17 @@ try {
   });
   if (existing) await cp(output, rendered, { recursive: true });
   else await mkdir(rendered);
-  for (const display of ['outer', 'inner']) {
-    const result = spawnSync(process.execPath, [path.join(root, 'scripts/render-3d-screenshots.mjs'),
-      path.join(root, `scripts/assets/app-store/tidex-duo-${display}-3d.json`), captures, rendered, ...locales],
-    { stdio: 'inherit' });
-    if (result.error) throw result.error;
-    if (result.status !== 0) throw new Error(`Duo ${display} artwork failed; previous artwork was preserved`);
+  for (const locale of locales) {
+    await rm(path.join(rendered, locale), { recursive: true, force: true });
+    for (const display of ['inner', 'outer']) {
+      await rm(path.join(rendered, `${locale}-Duo-${display}-preview.png`), { force: true });
+    }
   }
+  const result = spawnSync(process.execPath, [path.join(root, 'scripts/render-3d-screenshots.mjs'),
+    path.join(root, 'scripts/assets/app-store/tidex-duo-3d.json'), captures, rendered, ...locales],
+  { stdio: 'inherit' });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error('Duo story artwork failed; previous artwork was preserved');
   if (existing) await rename(output, previous);
   try {
     await rename(rendered, output);

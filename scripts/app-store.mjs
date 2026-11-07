@@ -18,7 +18,7 @@ No command submits for review or releases the app.`;
 const devices = {
   iphone: { folder: '3d', prefix: 'iPhone-', count: 5, slot: 'IPHONE_67', sizes: [[1320, 2868]] },
   ipad: { folder: '', prefix: 'iPad-', count: 5, slot: 'IPAD_PRO_3GEN_129', sizes: [[2064, 2752], [2752, 2064]] },
-  duo: { folder: '3d-duo', prefix: 'Duo-', count: 10, slot: 'IPHONE_DUO', sizes: [[1398, 2034], [2034, 1398], [2007, 2853], [2853, 2007]] },
+  duo: { folder: '3d-duo', prefix: 'Duo-', count: 5, slot: 'IPHONE_DUO', sizes: [[2853, 2007]] },
 };
 
 async function localeFiles(folder) {
@@ -64,9 +64,8 @@ async function screenshotJobs(assets, device, locales, temporary) {
       const source = path.join(directory, locale);
       const files = (await readdir(source)).filter(file => file.startsWith(spec.prefix) && file.endsWith('.png')).sort();
       if (files.length !== spec.count) throw new Error(`Expected ${spec.count} ${name} screenshots for ${locale}, found ${files.length}`);
-      if (name === 'duo' && ['inner', 'outer'].some(display =>
-        [1, 2, 3, 4, 5].some(index => !files.includes(`Duo-${display}-0${index}.png`)))) {
-        throw new Error(`Duo artwork for ${locale} must contain all five inner and five outer images`);
+      if (name === 'duo' && [1, 2, 3, 4, 5].some(index => !files.includes(`Duo-0${index}.png`))) {
+        throw new Error(`Duo artwork for ${locale} must contain the ordered story Duo-01.png through Duo-05.png`);
       }
       const staged = path.join(temporary, name, locale);
       await mkdir(staged, { recursive: true });
