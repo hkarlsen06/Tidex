@@ -1,0 +1,11 @@
+[xcode-test-agent] build started; heartbeat every 20s
+[xcode-test-agent] alive: build still running (20s elapsed)
+[xcode-test-agent] tests started; heartbeat every 20s
+[xcode-test-agent] resetting Shared iPhone: uninstalling no.tidex.app
+STATUS: SUCCESS
+SCHEME: App
+DESTINATION: platform=iOS Simulator,name=Shared iPhone
+TESTS: total=22 failed=0
+
+
+SUMMARY: SUCCESS queued=0s compiled=34s tested=15s simulator="Shared iPhone"

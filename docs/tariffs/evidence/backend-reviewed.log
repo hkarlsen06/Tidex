@@ -1,0 +1,66 @@
+bun test v1.3.14 (0d9b296a)
+
+backend/scripts/payroll-compatibility.test.ts:
+(pass) older clients keep access to legacy wage snapshots [1.03ms]
+(pass) older clients cannot receive richer pay rules through sync or sharing [0.66ms]
+
+backend/scripts/clerk-user-import.test.ts:
+(pass) an Apple user without email gets one stable Clerk account without an invented address or password [3.00ms]
+(pass) a phone-only or unconfirmed email account does not gain an imported login [0.12ms]
+(pass) a verified identity address is imported without promoting the unconfirmed account address [0.09ms]
+(pass) malformed Clerk user data cannot produce an account mapping [0.04ms]
+
+backend/scripts/tariff-proposal-file.test.ts:
+(pass) a private proposal is readable only by its owner and never overwrites a file [4.37ms]
+(pass) a private proposal cannot follow a directory symlink outside tmp [0.38ms]
+(pass) a private proposal cannot overwrite a symlink target [0.53ms]
+
+backend/scripts/payroll-tariff-rules.test.ts:
+(pass) reviewed tariff rules preserve legacy payroll > old snapshots keep replacing UB during overtime [1.52ms]
+(pass) reviewed tariff rules preserve legacy payroll > Riksavtalen retains UB without applying overtime percentage to UB [0.12ms]
+(pass) reviewed tariff rules preserve legacy payroll > premium divisor changes only the overtime supplement basis [0.11ms]
+(pass) reviewed tariff rules preserve legacy payroll > an invalid premium divisor disables invalid overtime rather than emitting NaN [0.03ms]
+(pass) reviewed tariff rules preserve legacy payroll > legacy overlapping rules still select the highest rate [0.04ms]
+(pass) reviewed tariff rules preserve legacy payroll > overlapping windows in one explicit group are not paid twice [0.02ms]
+(pass) reviewed tariff rules preserve legacy payroll > KS-style percentage minimum and security fixed basis use the proper wage [0.03ms]
+(pass) reviewed tariff rules preserve legacy payroll > dated holiday-eve rules carry into the following morning only once [0.04ms]
+(pass) reviewed tariff rules preserve legacy payroll > holiday exclusions replace ordinary UB without affecting nearby weekdays [0.04ms]
+(pass) reviewed tariff rules preserve legacy payroll > Riksavtalen holiday premium follows the shift start date [0.05ms]
+(pass) reviewed tariff rules preserve legacy payroll > date anchors remain calendar dates through DST weekends [0.02ms]
+(pass) reviewed tariff rules preserve legacy payroll > dated overtime splits holiday-eve noon and does not leak to other dates [0.31ms]
+(pass) overtime agreement exceptions > explicitly removing all shift supplements also removes retained overtime additions [0.23ms]
+(pass) overtime agreement exceptions > Handel holiday-eve premium survives overtime while ordinary UB stops [0.17ms]
+(pass) overtime agreement exceptions > retained dated overnight rules split even when absent from ordinary periods [0.12ms]
+(pass) overtime agreement exceptions > cleaning apprentice overtime pays the adult base for the entire overtime hour [0.10ms]
+(pass) overtime agreement exceptions > cleaning retained percentage UB uses the adult overtime wage [0.12ms]
+(pass) overtime agreement exceptions > Riks night guards retain whole-shift holiday pay only for starts before six [0.18ms]
+
+backend/scripts/notification-presentation.test.ts:
+(pass) an extension failure displays no other account's message, badge, or action [0.03ms]
+
+backend/scripts/tariff-catalogue.test.ts:
+(pass) reviewed catalogue payroll outcomes > cleaning apprentices receive the adult unskilled wage for overtime hours [0.63ms]
+(pass) reviewed catalogue payroll outcomes > Handel retains holiday-eve pay during overtime but ordinary UB stops [0.23ms]
+(pass) reviewed catalogue payroll outcomes > security apprentices receive half adult supplements within their training plan [0.28ms]
+(pass) reviewed catalogue payroll outcomes > energy holiday-eve pay begins at fifteen and morning overtime switches at six [0.13ms]
+(pass) reviewed catalogue payroll outcomes > Riks night guards starting after holiday midnight keep premium through the whole shift [0.04ms]
+(pass) reviewed catalogue payroll outcomes > Riksavtalen evening and night boundaries use the correct role [0.06ms]
+(pass) reviewed catalogue payroll outcomes > Riksavtalen holiday premium follows the shift start across midnight [0.03ms]
+(pass) reviewed catalogue payroll outcomes > security night and weekend payments coexist and qualification is in base pay [0.12ms]
+(pass) reviewed catalogue payroll outcomes > security retains night and weekend entitlements during their applicable overtime [0.48ms]
+(pass) reviewed catalogue payroll outcomes > cleaning night entitlement continues during premium hours [0.11ms]
+(pass) reviewed catalogue payroll outcomes > KS and PBL holiday-eve overtime uses1331/3 instead of the weekday premium [0.19ms]
+(pass) reviewed catalogue payroll outcomes > statutory hospitality does not inherit Riksavtalen UB [0.01ms]
+(pass) reviewed catalogue payroll outcomes > retail agreements have distinct Saturday payments [0.04ms]
+(pass) reviewed catalogue payroll outcomes > KS uses October supplement floors and annual salary conversion [0.04ms]
+(pass) reviewed catalogue payroll outcomes > PBL converts each published annual salary without assuming a KS table [0.01ms]
+(pass) catalogue trust boundaries > duplicate categories and missing rates cannot be published [3.50ms]
+(pass) catalogue trust boundaries > invalid money, times and provenance dates cannot be published [2.88ms]
+(pass) catalogue trust boundaries > unknown revisions fail instead of returning another agreement [0.03ms]
+(pass) catalogue trust boundaries > overdue source reviews are visible and do not invent new rates [0.11ms]
+(pass) catalogue trust boundaries > UI fixture is exactly the reviewed export [6.08ms]
+
+ 48 pass
+ 0 fail
+ 128 expect() calls
+Ran 48 tests across 6 files. [217.00ms]

@@ -1,0 +1,67 @@
+{
+  "evidence_recorded_at": "2026-11-07T00:06:14.867481+00:00",
+  "historical_reviewed_deployment": {
+    "deployed_at": "2026-11-06T11:52:58.526522+00:00",
+    "commit": "095ebaa3423ce3a482bc28df90d2807fb8053f45",
+    "url": "https://convex.tidex.no",
+    "reviewed_choices": 48,
+    "categories": 548,
+    "legacy_choices": 5,
+    "healthcheck": "passed",
+    "backup": "/srv/tidex/convex-backups/export-20261106-115102.zip",
+    "offsite": "synced",
+    "snapshot_migration": false
+  },
+  "grouping_deployment": {
+    "record_type": "reconstructed from retained artifacts",
+    "backend_commit": "d0c7bf9e",
+    "ui_commit": "2cd85fa4",
+    "deployment_log": "deploy-grouping.log",
+    "backup_log": "backup-grouping.log",
+    "backup_path": "/srv/tidex/convex-backups/export-20261106-123606.zip",
+    "exact_deployment_time_recorded": false
+  },
+  "device": {
+    "record_type": "filtered historical device evidence, not a new phone read",
+    "install_outcome": "success",
+    "install_source_sha256": "faba99514d50a16071722de05a00b3da6e4c2d918d27a2d0b5607edff5133cb6",
+    "installed_app_readback_source_sha256": "4b74d6c394d5fe8675932ff60b46991d53d27d3f014a7bdc476f64edc23dbc9f",
+    "data_integrity_content_comparison_performed": false,
+    "installed_app": {
+      "name": "Tidex",
+      "bundleIdentifier": "no.tidex.app",
+      "version": "3.1.1",
+      "bundleVersion": "20261106.1337"
+    }
+  },
+  "fresh_public_probe": {
+    "checked_at": "2026-11-07T00:05:06.690Z",
+    "deployment_url": "https://convex.tidex.no",
+    "reviewed_configurations": 48,
+    "families": 21,
+    "legacy_entries": 5
+  },
+  "node_config_read": {
+    "checked_at": "2026-11-07T00:04:01.984Z",
+    "deployment_url": "https://convex.tidex.no",
+    "convex_cli_version": "1.47.0",
+    "remote_node_version": null,
+    "remote_node_field_present": true,
+    "local_node_version_configured": false,
+    "null_versus_undefined_triggers_cli_heading": true,
+    "source_scans": [
+      {
+        "revision": "095ebaa3423ce3a482bc28df90d2807fb8053f45",
+        "node_action_modules": []
+      },
+      {
+        "revision": "d0c7bf9e07ae595595f74a0cb505ce0530c6c5a5",
+        "node_action_modules": []
+      },
+      {
+        "revision": "4b97e4d9aa1895430b7c29b79005d198381dd92d",
+        "node_action_modules": []
+      }
+    ]
+  }
+}

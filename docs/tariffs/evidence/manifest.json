@@ -1,0 +1,101 @@
+{
+  "recorded_at": "2026-11-07T00:06:14.867481+00:00",
+  "artifacts": [
+    {
+      "file": "backend-initial.log",
+      "source": "tidex-tariff-backend-tests.log",
+      "sha256": "dc818e9ced529712c4c9ef4a015f363b05bf1295dac38cd380ed204141b677e2"
+    },
+    {
+      "file": "backend-reviewed.log",
+      "source": "tidex-tariff-backend-final.log",
+      "sha256": "1ef030a2c304eaf1de2d43c7120ed5ff2332dcbab4dc4a3d65c64f525d2af80b"
+    },
+    {
+      "file": "backend-grouped.log",
+      "source": "tidex-grouped-tariffs-backend-final.log",
+      "sha256": "da75447470b5e3d75aa463666be5cd981cbac090c8e41e6eaa12795a2435a88b"
+    },
+    {
+      "file": "backend-postmerge.log",
+      "source": "tidex-tariff-audit-current-backend.log",
+      "sha256": "768c8165a908a8cb8c7c6e393953bed1d5a9c1871591266d9f9da1562270891a"
+    },
+    {
+      "file": "swift-initial.log",
+      "source": "tidex-tariff-final-tests.json.log",
+      "sha256": "d63bb6f7b503774ec2832b809c5639cfe5f69ed8dbfee8222564afd8f65c1005"
+    },
+    {
+      "file": "swift-calendar.log",
+      "source": "tidex-tariff-calendar-ui-retry.log",
+      "sha256": "f7380b9862e7a93be847ff39231568941c4a2a28e29fbc5ffc9e2b422229aaa5"
+    },
+    {
+      "file": "swift-overtime.log",
+      "source": "tidex-tariff-final-removed-ub-swift.log",
+      "sha256": "b74370e3996df02df8a83b629009a007cbed6c301edb10e36d7a35fb2abc784b"
+    },
+    {
+      "file": "swift-conflict-and-ui.log",
+      "source": "tidex-tariff-final-ui-and-conflict.log",
+      "sha256": "5d9de4728f961dc125677080e5b69c26f74f79a44145cbbd69805a508f850f9f"
+    },
+    {
+      "file": "swift-grouped-model.log",
+      "source": "tidex-grouped-tariff-model-simulator-tests.log",
+      "sha256": "2b65336f62007c5d5e036125c70fd6bbe6bdc663c1de8761098c7c1baf707de0"
+    },
+    {
+      "file": "swift-grouped-ui.log",
+      "source": "tidex-grouped-tariffs-ui-coverage-final.log",
+      "sha256": "a15451102e404056788a2370111e215deb72b44d3f8b4806a5b9ce93e6cfe96c"
+    },
+    {
+      "file": "deploy-reviewed.log",
+      "source": "tidex-tariff-production-deploy.log",
+      "sha256": "baf3648cf5ad1fa180baf90cd595d184fc0e17df5c05c65342c8b1db3953e094"
+    },
+    {
+      "file": "deploy-grouping.log",
+      "source": "tidex-grouped-tariffs-production-deploy.log",
+      "sha256": "ce37ba2be87e3574fea6e123600324b63225c627dcf077b3baea0dcf3708fb0e"
+    },
+    {
+      "file": "dry-run-reviewed.log",
+      "source": "tidex-tariff-production-dry-run.log",
+      "sha256": "47af01eb2cd9f64e8fc5dca4552d4dd27b9d5e532cc32bc6e3576b4b1c8a90d9",
+      "source_sha256": "7237dfe5939eb80db38bf7dc7c8ca0e0070528ec5a4009d191a26b8068756093",
+      "normalization": "Removed spaces and tabs at line ends only."
+    },
+    {
+      "file": "dry-run-grouping.log",
+      "source": "tidex-grouped-tariffs-production-dry-run.log",
+      "sha256": "47af01eb2cd9f64e8fc5dca4552d4dd27b9d5e532cc32bc6e3576b4b1c8a90d9",
+      "source_sha256": "7237dfe5939eb80db38bf7dc7c8ca0e0070528ec5a4009d191a26b8068756093",
+      "normalization": "Removed spaces and tabs at line ends only."
+    },
+    {
+      "file": "backup-reviewed.log",
+      "source": "tidex-tariff-before-deploy-backup.log",
+      "sha256": "0046e0c28f304a5937f2a00cf16a0ad3fdda3edb90b5c1895078e5f96f0b8937"
+    },
+    {
+      "file": "backup-grouping.log",
+      "source": "tidex-grouped-tariffs-before-deploy-backup.log",
+      "sha256": "b3a9ff3e7b91f54dde63406c25abfdda29258d683f9ff015c24c79be5b54d4e1"
+    },
+    {
+      "file": "receipts.json",
+      "sha256": "2977d977272e90f3ba0193649c8a61ec6aec419fe5de302cb2c69ecc40178209",
+      "source": "filtered/reconstructed evidence, see receipts.json"
+    }
+  ],
+  "review": {
+    "file": "decision-trail-review.md",
+    "sha256": "a5633ba20e10a3d0b1e4e473c5120f4f15d98adedb84b897ffa2e47df8862ad6",
+    "model": "claude-sonnet-5-5",
+    "completed_at": "2026-11-07T00:00:59.662Z",
+    "thread_link": "<t3-thread://v2/09971d3d-c5db-41d3-9195-0da10b9dcb79/thread:delegated-task:command%3Amcp%3A3ac87020-bae6-46ae-8afc-3f6ad24dcc63%3Adelegate-task%3A4d84dcbb-a381-4ef6-83f4-af64afcd386b>"
+  }
+}

@@ -1,15 +1,17 @@
 # Tariff implementation verification
 
-Checked 6 November 2026 on `feat/tariff-catalogue-and-payroll`.
+Implementation checked 6 November 2026 on `feat/tariff-catalogue-and-payroll`. The audit follow-up was checked on 7 November after integration into local `main`. Historical results below are grouped by phase, not cumulative current totals.
 
-## Automated results
+[Retained test and deployment evidence](evidence/README.md) and [the delayed audit disposition](audit-followup.md) record the later checks and limitations. The current backend suite passed 61 tests on 7 November.
+
+## Initial reviewed-catalogue results
 
 | Check | Result |
 | --- | --- |
 | `bun run --cwd backend typecheck` | Passed |
 | `bun test backend/scripts` | 48 tests passed, zero failures |
 | `bun backend/scripts/tariffs.ts validate` | 48 choices and 548 categories validated |
-| Focused payroll and tariff service tests | 47 tests passed, zero failures, Shared iPhone |
+| Focused payroll and tariff service tests | Worker reported 47 passing tests on Shared iPhone; that raw log is not retained in this evidence set |
 | Final `PayrollEngineOvertimeTests` recheck | 22 tests passed, including the new override regression, zero failures |
 | `PayrollEngineConflictOvertimeTests` and all `ShiftJourneyUITests` | Eight tests passed, zero failures, Shared iPhone |
 | `swiftlint --quiet` | No errors. Existing file, type, and closure size warnings remain. |
@@ -17,7 +19,7 @@ Checked 6 November 2026 on `feat/tariff-catalogue-and-payroll`.
 | `bun run ios:l10n:audit` | Passed with the repository's unused-key report |
 | `git diff --check` | Passed |
 
-The final 47-test payroll run compiled in 42 seconds and tested in 14 seconds. It included `PayrollCalculatorBehaviorTests`, `PayrollEngineOvertimeTests`, and `TariffVersionServiceTests`. The eight conflict and UI tests compiled in 14 seconds and tested in 136 seconds. The final review added one overtime override regression. The focused overtime class was rerun after that fix, compiling in 34 seconds and testing in 15 seconds. The dated editor screenshot journey also passed again against the final catalogue export. Across these runs, 56 distinct Swift tests passed.
+The worker reported that the 47-test payroll run compiled in 42 seconds and tested in 14 seconds. It included `PayrollCalculatorBehaviorTests`, `PayrollEngineOvertimeTests`, and `TariffVersionServiceTests`. The eight conflict and UI tests compiled in 14 seconds and tested in 136 seconds. The final review added one overtime override regression. The focused overtime class was rerun after that fix, compiling in 34 seconds and testing in 15 seconds. The dated editor screenshot journey also passed again against the final catalogue export. The reported aggregate was 56 distinct Swift tests. Retained logs independently show the earlier 49-test run, the additional calendar test, the 22-test overtime recheck and the eight conflict/UI tests. See the evidence index for overlap and provenance.
 
 The new tests cover pay outcomes, date decoding, preservation of rule metadata, legacy behavior, offline agreement matching, extra categories, and saving a real pay editor with dated overtime rules. Existing shift and payment journeys also passed. No new test files were added to the Xcode project.
 
@@ -25,7 +27,7 @@ Cold Harbor compiled successfully but was locked when Xcode tried to launch test
 
 The additional pay-editor fixture initially rendered an empty group before its loading task could run. The test failed on the missing editor. Giving the loading state a real progress view fixed the fixture, and the same test passed without weaker assertions.
 
-## Local and production reads
+## Pre-deployment local and production reads
 
 After the final catalogue corrections, the local Convex deployment at `http://127.0.0.1:3210` was updated with the branch's functions. Actual HTTP queries verified:
 
@@ -35,7 +37,7 @@ After the final catalogue corrections, the local Convex deployment at `http://12
 - An unknown catalogue revision is rejected.
 - Public access to the internal maintenance inventory is rejected.
 
-The public production catalogue comparison completed with 48 differences and `writes: 0`. No production functions were deployed, no user wage inventory was read, and no production data changed. Internal wage inventory requires the exact App Review account UUID as an exclusion. That account was not identified during this task.
+During the pre-deployment implementation phase, the public production catalogue comparison completed with 48 differences and `writes: 0`. At that checkpoint, no production functions had been deployed and no production data had changed. The user later requested the matching backend for the installed phone build, which led to the deployments recorded below. No user wage inventory was read. Internal wage inventory requires the exact App Review account UUID as an exclusion. That account was not identified during this task.
 
 Private proposal files are created exclusively with owner-only permissions. Tests prove that reruns do not overwrite an existing file, directory symlinks cannot redirect output outside temporary storage, and file symlinks cannot overwrite another target.
 
@@ -54,7 +56,7 @@ Screenshots use public tariff data in debug fixtures and production UI component
 
 ## Rollout limits
 
-Deploy the backend before releasing the new client. New clients request `catalogue_revision: 2026-11` and send `payroll_revision: 2026-11` through sync and earnings sharing. Rich rows are rejected for older readers and writers, including writes to a job whose wage snapshots need the newer engine. Legacy-only jobs keep their existing API contract. An older device may need an app update after another device saves reviewed rules for the same job.
+Deploy the backend before releasing the new client. New clients request `catalogue_revision: 2026-11` and send `payroll_revision: 2026-11` through sync and earnings sharing. Sync and writes reject rich rows for older payroll clients, including writes to a job whose wage snapshots need the newer engine. After the `4b97e4d9` compatibility fix, Friends and schedules remain available to those clients while incompatible earnings and pay rules are withheld. Legacy-only jobs keep their API contract. An older device may still need an app update to sync a job after another device saves reviewed rules.
 
 Existing snapshots are not migrated automatically. The maintenance command produces a private, revision-checked proposal. Historical compensation requires a separate approved transaction and a review of the settlement's exclusions.
 
@@ -64,7 +66,7 @@ Existing snapshots are not migrated automatically. The maintenance command produ
 
 The Sol review identified seven confirmed issues. The fixes separate apprentice pay rules, retain Handel holiday-eve pay during overtime, halve security apprentice additions, correct energy-station time boundaries, apply the Riksavtalen night-guard holiday exception, remove a teaching-only KS salary band, and send the payroll capability through both Friends realtime subscriptions. Backend regression examples now cover these monetary outcomes. A second Sol review found that an explicitly empty per-shift supplement override could restore a removed addition during overtime. The new regression reproduced 489.50 instead of 293.70 before the fix. All three engines now honor that empty override.
 
-The separate Claude decision-trail review failed with `Claude API rate limit reached. Try again later.` It did not complete, and no alternate provider was substituted.
+The initial Claude decision-trail review was blocked by a provider usage limit on 6 November. No alternate provider was substituted. T3 automatically resumed the same task on 7 November, and Claude Sonnet 5.5 completed it. Its six flags and their evidence-based disposition are retained in [the follow-up](audit-followup.md).
 
 ## CI toolchain correction
 
@@ -90,4 +92,4 @@ The independent native-screen review found that collapsing all agreement details
 
 The final ten-journey UI run compiled in 57 seconds and tested in 232 seconds, with zero failures. Together with the 17 model and service tests, this follow-up verifies 27 distinct Swift tests. The physical-device build also passed in 79 seconds. [The manual-overtime coverage screenshot](screenshots/tariff-manual-overtime-coverage.png) shows the visible calculation limit.
 
-The guided-selection backend metadata was deployed after a fresh backup and offsite sync. Live verification returned 48 configurations, 21 families and five legacy entries; the production health check passed. Cold Harbor was updated in place to build `20261106.1337`, and its installed version was read back successfully. Existing app data was preserved.
+The guided-selection backend metadata was deployed after a fresh backup and offsite sync. Live verification returned 48 configurations, 21 families and five legacy entries; the production health check passed. Cold Harbor was updated in place to build `20261106.1337`, and its installed version was read back successfully. The app was installed in place without an uninstall or data-clear command. No content-level before/after integrity comparison was performed.

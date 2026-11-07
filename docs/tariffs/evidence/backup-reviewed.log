@@ -1,0 +1,9 @@
+- Creating snapshot export
+
+✔ Created snapshot export at timestamp 1793965863114969908
+✔ Export is available at https://dashboard.convex.dev/settings/snapshots
+- Downloading snapshot export to /srv/tidex/convex-backups/export-20261106-115102.zip
+
+✔ Downloaded snapshot export to /srv/tidex/convex-backups/export-20261106-115102.zip
+offsite: synced to r2:tidex-supabase-backups/tidex-convex/
+OK tidex-convex export=42M config=4.0K

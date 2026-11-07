@@ -1,0 +1,6 @@
+[xcode-test-agent] build started; heartbeat every 20s
+[xcode-test-agent] alive: build still running (20s elapsed)
+[xcode-test-agent] tests started; heartbeat every 20s
+[xcode-test-agent] resetting Shared iPhone: uninstalling no.tidex.app
+[xcode-test-agent] alive: tests still running (20s elapsed)
+{"status": "SUCCESS", "scheme": "App", "destination": "platform=iOS Simulator,name=Shared iPhone", "tests_count": 1, "tests_failed": 0, "warnings": [], "errors": [], "test_failures": [], "log_path": "/var/folders/9j/7d72xt915393rwfg7fzyvv5r0000gn/T//tidex-test-log.bM0omL", "result_bundle_path": "/var/folders/9j/7d72xt915393rwfg7fzyvv5r0000gn/T//tidex-test-1793925928-71830.xcresult", "queued": 1, "compiled": 31, "tested": 23, "simulator": "Shared iPhone"}

@@ -1,0 +1,12 @@
+[xcode-test-agent] build started; heartbeat every 20s
+[xcode-test-agent] alive: build still running (21s elapsed)
+[xcode-test-agent] alive: build still running (41s elapsed)
+[xcode-test-agent] tests started; heartbeat every 20s
+[xcode-test-agent] resetting Shared iPhone: uninstalling no.tidex.app
+[xcode-test-agent] alive: tests still running (20s elapsed)
+[xcode-test-agent] alive: tests still running (40s elapsed)
+[xcode-test-agent] alive: tests still running (60s elapsed)
+[xcode-test-agent] alive: tests still running (80s elapsed)
+[xcode-test-agent] alive: tests still running (100s elapsed)
+[xcode-test-agent] alive: tests still running (120s elapsed)
+{"status": "SUCCESS", "scheme": "App", "destination": "platform=iOS Simulator,name=Shared iPhone", "tests_count": 49, "tests_failed": 0, "warnings": ["ShiftJourneyUITests.testPaymentSuggestionCancelPreservesShiftAndSaveLeavesDayWithoutHours(): Invalid frame dimension (negative or non-finite)."], "errors": [], "test_failures": [], "log_path": "/var/folders/9j/7d72xt915393rwfg7fzyvv5r0000gn/T//tidex-test-log.TxcvOK", "result_bundle_path": "/var/folders/9j/7d72xt915393rwfg7fzyvv5r0000gn/T//tidex-test-1793925560-66485.xcresult", "queued": 0, "compiled": 46, "tested": 128, "simulator": "Shared iPhone"}
