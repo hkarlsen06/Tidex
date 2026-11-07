@@ -281,7 +281,7 @@ final class EventReminderScheduler {
 
     let formatter = DateFormatter()
     formatter.locale = eventReminderAppLocale()
-    formatter.dateFormat = "EEEE d MMMM"
+    formatter.setLocalizedDateFormatFromTemplate("EEEE d MMMM")
 
     let text = formatter.string(from: eventDate)
     return text.prefix(1).uppercased() + text.dropFirst()

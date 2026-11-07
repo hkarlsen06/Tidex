@@ -42,10 +42,8 @@ struct ShareableShiftCard: View {
 
   private var formattedHours: String {
     let hoursLabel = String(localized: .commonHours)
-    let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: Locale.appLocale)
-    let hoursValue =
-      formatter.string(from: NSNumber(value: shift.paidHours))
-      ?? String(format: "%.2f", shift.paidHours)
+    let hoursValue = shift.paidHours.formatted(
+      .number.precision(.fractionLength(2)).locale(.appLocale))
     return "\(hoursValue) \(hoursLabel)"
   }
 

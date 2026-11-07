@@ -86,7 +86,8 @@ struct CustomSupplementRuleWithId: Identifiable, Equatable {
       return "\(Int(pct))%"
     }
     if let r = rate {
-      let formatted = r == floor(r) ? String(format: "%.0f", r) : String(format: "%.1f", r)
+      let formatted = r.formatted(
+        .number.precision(.fractionLength(r == floor(r) ? 0 : 1)).locale(.appLocale))
       return "\(formatted) \(currencyConfig.value)\(String(localized: .commonPerHourShort))"
     }
     return "-"

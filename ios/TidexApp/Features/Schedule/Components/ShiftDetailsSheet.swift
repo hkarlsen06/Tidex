@@ -276,10 +276,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   private var formattedHours: String {
     let hoursLabel = String(localized: .commonHours)
-    let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: Locale.appLocale)
-    let hoursValue =
-      formatter.string(for: shift.paidHours)
-      ?? String(format: "%.2f", shift.paidHours)
+    let hoursValue = shift.paidHours.formatted(
+      .number.precision(.fractionLength(2)).locale(.appLocale))
     return "\(hoursValue) \(hoursLabel)"
   }
 

@@ -1148,8 +1148,8 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
 
     let calendar = Calendar.gregorianCurrent
     let monthFormatter = DateFormatter()
-    monthFormatter.dateFormat = "MMM"
     monthFormatter.locale = locale
+    monthFormatter.setLocalizedDateFormatFromTemplate("LLL")
 
     let isFirstOfMonth = calendar.component(.day, from: fromDate) == 1
     let isSameMonth = calendar.isDate(fromDate, equalTo: toDate, toGranularity: .month)

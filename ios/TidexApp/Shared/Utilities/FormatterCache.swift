@@ -66,7 +66,7 @@ enum FormatterCache {
     )
   }
 
-  static func monthNameFormatter(locale: Locale = .current) -> DateFormatter {
+  static func monthNameFormatter(locale: Locale = .appLocale) -> DateFormatter {
     cached("tidex.monthNameFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
@@ -74,7 +74,7 @@ enum FormatterCache {
       // Islamic calendar must still show the same month names as Gregorian, since
       // pay periods and shift dates are computed on the Gregorian calendar.
       formatter.calendar = .gregorianCurrent
-      formatter.dateFormat = "MMMM"
+      formatter.setLocalizedDateFormatFromTemplate("LLLL")
       return formatter
     }
   }
@@ -90,23 +90,23 @@ enum FormatterCache {
     }
   }
 
-  static func weekdayFormatter(locale: Locale = .current) -> DateFormatter {
+  static func weekdayFormatter(locale: Locale = .appLocale) -> DateFormatter {
     cached("tidex.weekdayFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
       // Gregorian for the same reason as monthNameFormatter above.
       formatter.calendar = .gregorianCurrent
-      formatter.dateFormat = "EEEE"
+      formatter.setLocalizedDateFormatFromTemplate("EEEE")
       return formatter
     }
   }
 
-  static func shortWeekdayFormatter(locale: Locale = .current) -> DateFormatter {
+  static func shortWeekdayFormatter(locale: Locale = .appLocale) -> DateFormatter {
     cached("tidex.shortWeekdayFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
       formatter.calendar = .gregorianCurrent
-      formatter.dateFormat = "EEE"
+      formatter.setLocalizedDateFormatFromTemplate("EEE")
       return formatter
     }
   }
@@ -122,12 +122,12 @@ enum FormatterCache {
     }
   }
 
-  static func abbreviatedMonthDayFormatter(locale: Locale = .current) -> DateFormatter {
+  static func abbreviatedMonthDayFormatter(locale: Locale = .appLocale) -> DateFormatter {
     cached("tidex.abbreviatedMonthDayFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
       formatter.calendar = .gregorianCurrent
-      formatter.dateFormat = "MMM d"
+      formatter.setLocalizedDateFormatFromTemplate("MMM d")
       return formatter
     }
   }

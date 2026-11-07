@@ -196,8 +196,7 @@ struct DayShiftsSheet: View {
   }
 
   private func formattedHours(_ hours: Double) -> String {
-    let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: Locale.appLocale)
-    return formatter.string(from: NSNumber(value: hours)) ?? String(format: "%.2f", hours)
+    hours.formatted(.number.precision(.fractionLength(2)).locale(.appLocale))
   }
 
   private func formatCurrency(_ amount: Double) -> String {

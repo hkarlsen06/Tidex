@@ -536,7 +536,8 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     guard let date = Date.fromISODateString(isoDate) else { return isoDate }
 
     let displayFormatter = DateFormatter()
-    displayFormatter.dateFormat = "MMMM yyyy"
+    displayFormatter.locale = .appLocale
+    displayFormatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
     return displayFormatter.string(from: date)
   }
 

@@ -33,9 +33,7 @@ enum ShiftCardFormatter {
 
   static func formattedHours(_ hours: Double, locale: Locale) -> String {
     let hoursLabel = String(localized: .commonHoursShort)
-    let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: locale)
-    let formattedHours =
-      formatter.string(from: NSNumber(value: hours)) ?? String(format: "%.2f", hours)
+    let formattedHours = hours.formatted(.number.precision(.fractionLength(2)).locale(locale))
     return "\(formattedHours) \(hoursLabel)"
   }
 

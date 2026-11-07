@@ -344,7 +344,7 @@ final class ShiftReminderScheduler {
     // Format as weekday + date
     let displayFormatter = DateFormatter()
     displayFormatter.locale = appLocale()
-    displayFormatter.dateFormat = "EEEE d MMMM"  // e.g., "onsdag 15 januar"
+    displayFormatter.setLocalizedDateFormatFromTemplate("EEEE d MMMM")
 
     var text = displayFormatter.string(from: shiftDate)
     // Capitalize first letter

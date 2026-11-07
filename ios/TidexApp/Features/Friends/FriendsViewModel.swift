@@ -168,8 +168,7 @@ final class SharingViewModel: MonthNavigable {
 
   /// Computed month name for immediate display (uses committed state for stability)
   var displayMonthName: String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "MMMM"
+    let formatter = FormatterCache.monthNameFormatter(locale: .appLocale)
     var components = DateComponents()
     components.year = committedYear
     components.month = committedMonth
