@@ -3,7 +3,7 @@
 
 iPhone captures cover every App Store locale in ios/fastlane/metadata and feed the 3D renderer.
 iPad captures cover en-US and no and feed the flat renderer.
-Duo captures use both displays and save native PNGs in duo/<locale>/ for App Store Connect.
+Duo captures use both displays, saving raw PNGs in duo/<locale>/ and finished artwork in 3d-duo/<locale>/.
 
 Run from the repository root: python3 scripts/capture-app-store-screenshots.py
 Use --iphone / --ipad to select existing simulator UUIDs explicitly. iPhone locales are split
@@ -195,13 +195,15 @@ def capture_duo(device, agent_device, output, locales):
                 # This runtime can dispatch a fold without reading its angle. Require the selected
                 # panel's native dimensions on every test attachment before publishing it.
             capture([device], f"Duo-{display}", staging, locales)
+        run("node", str(ROOT / "scripts/render-duo-screenshots.mjs"),
+            str(staging), str(output / "3d-duo"), *locales)
         # A failed second display must leave any previous complete set untouched.
         for locale in locales:
             destination = output / "duo" / locale
             destination.mkdir(parents=True, exist_ok=True)
             for source in (staging / locale).glob("Duo-*.png"):
                 shutil.copyfile(source, destination / source.name)
-    print(f"Duo PNGs ready in {output / 'duo'}. Review both displays before upload.\n"
+    print(f"Duo artwork ready in {output / '3d-duo'}. Raw captures are in {output / 'duo'}.\n"
           "Fastlane 2.240.1 does not recognize Duo sizes; upload these through App Store Connect.",
           flush=True)
 

@@ -1,4 +1,4 @@
-// 3D iPhone 17 Pro Max model shared by the App Store screenshot and creative asset renderers.
+// 3D device frames shared by the App Store screenshot and creative asset renderers.
 // WebGL runs on SwiftShader, so reruns match to within a few levels per channel.
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -41,12 +41,25 @@ export async function openPage(browser, { width, height, html, captures, font })
 // Runs in the page. Builds one phone model, renders each capture on it into its own transparent
 // canvas and places that canvas on the strip. W and H are the size of one panel; spec.x, spec.y and
 // spec.height are fractions of it. Returns nothing; throws if the layout is broken.
-export async function renderPhones({ phones, finish, W, H, captures }) {
+export async function renderPhones({ phones, finish, W, H, captures, device, textFontSize = 104 }) {
   const { THREE, RoomEnvironment, RoundedBoxGeometry, mergeVertices } = window.lib;
-  // iPhone 17 Pro Max in millimetres. B is the radius of the rounded frame edge.
-  const width = 78, height = 163.4, depth = 8.75, radius = 13.5, B = 1.4;
+  // The default frame is an iPhone 17 Pro Max. Duo glass follows the native capture aspect ratio.
+  const B = 1.4;
+  if (device) {
+    const first = new Image();
+    first.src = `/capture/${captures[phones[0].screen]}`;
+    await first.decode();
+    if (first.naturalWidth === device.captureHeight && first.naturalHeight === device.captureWidth) {
+      device = { ...device,
+        width: (device.width - 2 * B) * device.captureHeight / device.captureWidth + 2 * B,
+        captureWidth: first.naturalWidth, captureHeight: first.naturalHeight };
+    }
+  }
+  const width = device?.width ?? 78;
+  const height = device ? (width - 2 * B) * device.captureHeight / device.captureWidth + 2 * B : 163.4;
+  const depth = device?.depth ?? 8.75, radius = device?.radius ?? 13.5;
   const glassW = width - 2 * B, glassH = height - 2 * B;
-  const pxPerMm = 460 / 25.4; // 460 ppi, so a 1320 x 2868 capture fills the display exactly.
+  const pxPerMm = device ? device.captureWidth / glassW : 460 / 25.4;
   const outline = (w, h, r) => {
     const s = new THREE.Shape(), x = w / 2, y = h / 2;
     s.moveTo(-x + r, -y);
@@ -91,7 +104,8 @@ export async function renderPhones({ phones, finish, W, H, captures }) {
     [-1, 31, 7, metal], [-1, 46, 13, metal], [-1, 62, 13, metal], [1, 50, 19, metal], [1, 112, 17, sapphire],
   ]) {
     const button = new THREE.Mesh(new RoundedBoxGeometry(1.4, length, 2.6, 4, 0.6), material);
-    button.position.set(side * (width / 2 - 0.1 - (material === sapphire ? 0.4 : 0)), height / 2 - fromTop, 0);
+    button.position.set(side * (width / 2 - 0.1 - (material === sapphire ? 0.4 : 0)),
+      height / 2 - fromTop * (device ? height / 163.4 : 1), 0);
     phone.add(button);
   }
 
@@ -112,6 +126,9 @@ export async function renderPhones({ phones, finish, W, H, captures }) {
     const capture = new Image();
     capture.src = `/capture/${captures[spec.screen]}`;
     await capture.decode();
+    if (device && (capture.naturalWidth !== device.captureWidth || capture.naturalHeight !== device.captureHeight)) {
+      throw new Error(`Wrong decoded display size: ${captures[spec.screen]} (${capture.naturalWidth}x${capture.naturalHeight})`);
+    }
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(glassW * pxPerMm);
     canvas.height = Math.round(glassH * pxPerMm);
@@ -122,14 +139,16 @@ export async function renderPhones({ phones, finish, W, H, captures }) {
     c.fillRect(0, 0, canvas.width, canvas.height);
     c.save();
     c.beginPath();
-    c.roundRect(x0, y0, cw, ch, 186);
+    c.roundRect(x0, y0, cw, ch, device ? (radius - B) * pxPerMm : 186);
     c.clip();
     c.drawImage(capture, x0, y0);
     c.restore();
-    c.fillStyle = '#000';
-    c.beginPath();
-    c.roundRect(canvas.width / 2 - 189, y0 + 33, 378, 111, 55.5); // Dynamic Island
-    c.fill();
+    if (!device) {
+      c.fillStyle = '#000';
+      c.beginPath();
+      c.roundRect(canvas.width / 2 - 189, y0 + 33, 378, 111, 55.5); // Dynamic Island
+      c.fill();
+    }
     const glare = c.createLinearGradient(0, 0, canvas.width, canvas.height * 0.6);
     glare.addColorStop(0, '#ffffff14');
     glare.addColorStop(0.46, '#ffffff05');
@@ -143,7 +162,7 @@ export async function renderPhones({ phones, finish, W, H, captures }) {
     glassMaterial.needsUpdate = true;
 
     // Frame the camera so the phone is spec.height of the panel tall, with room for any rotation.
-    const phonePx = spec.height * H, size = Math.ceil(phonePx * 1.35);
+    const phonePx = spec.height * H, size = Math.ceil(phonePx * Math.max(1.35, width / height * 1.35));
     const camera = new THREE.PerspectiveCamera(fov, 1, 10, 10000);
     camera.position.z = (height * size / phonePx) / 2 / Math.tan(THREE.MathUtils.degToRad(fov / 2));
     phone.rotation.set(...spec.rotate.map(THREE.MathUtils.degToRad), 'ZYX');
@@ -159,6 +178,9 @@ export async function renderPhones({ phones, finish, W, H, captures }) {
       const x = left + (vertex.x + 1) / 2 * size, y = top + (1 - vertex.y) / 2 * size;
       box.left = Math.min(box.left, x); box.right = Math.max(box.right, x);
       box.top = Math.min(box.top, y); box.bottom = Math.max(box.bottom, y);
+    }
+    if (box.left < left || box.top < top || box.right > left + size || box.bottom > top + size) {
+      throw new Error(`The ${spec.screen} phone is clipped by its render canvas`);
     }
     bounds.push(box);
     const image = new Image();
@@ -181,7 +203,7 @@ export async function renderPhones({ phones, finish, W, H, captures }) {
       const hit = bounds.find(b => b.left < text.right && b.right > text.left && b.top < text.bottom && b.bottom > text.top);
       return hit && `overlaps the ${hit.screen} phone`;
     };
-    let size = 104;
+    let size = textFontSize;
     while (problem()) {
       if ((size -= 4) < 72) throw new Error(`Panel ${index + 1} text ${problem()} even at 76px`);
       section.style.fontSize = `${size}px`;

@@ -30,6 +30,7 @@
     "tariff:hk-virke:backpay": "bunx deno-bin@2.2.7 run --no-lock --allow-env --allow-net --config supabase/functions/deno.json scripts/hk-virke-backpay.ts",
     "screenshots": "python3 scripts/capture-app-store-screenshots.py",
     "screenshots:3d": "node scripts/render-3d-screenshots.mjs",
+    "screenshots:duo": "node scripts/render-duo-screenshots.mjs",
     "screenshots:creative": "node scripts/render-creative-assets.mjs",
     "screenshots:creative:upload": "node scripts/upload-creative-assets.mjs",
     "swiftlint": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; for arg in \"$@\"; do if [ \"$arg\" = \"--fix\" ] || [ \"$arg\" = \"autocorrect\" ]; then echo \"swiftlint autocorrect is disabled in this repo. Use bun run swift-format.\"; exit 1; fi; done; swiftlint lint \"$@\" && swift ios/Scripts/check-swift-imports.swift' --",

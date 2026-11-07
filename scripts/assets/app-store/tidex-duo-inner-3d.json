@@ -1,0 +1,16 @@
+{
+  "extends": "tidex-3d.json",
+  "family": "Duo-inner",
+  "width": 2853,
+  "height": 2007,
+  "capture": "{locale}/Duo-inner-{screen}.png",
+  "device": { "width": 156, "depth": 5.2, "radius": 8, "captureWidth": 2853, "captureHeight": 2007 },
+  "text": { "left": 0.05, "top": 0.19, "width": 0.28, "fontSize": 132 },
+  "phones": [
+    { "screen": "01-home", "x": 0.67, "y": 0.6, "height": 0.63, "rotate": [0, 12, 0] },
+    { "screen": "05-add", "x": 1.67, "y": 0.6, "height": 0.63, "rotate": [0, 18, 3] },
+    { "screen": "03-schedule", "x": 2.67, "y": 0.6, "height": 0.63, "rotate": [0, 0, 0] },
+    { "screen": "04-payroll", "x": 3.67, "y": 0.6, "height": 0.63, "rotate": [4, -16, -3] },
+    { "screen": "02-statistics", "x": 4.67, "y": 0.6, "height": 0.63, "rotate": [0, -12, 0] }
+  ]
+}
