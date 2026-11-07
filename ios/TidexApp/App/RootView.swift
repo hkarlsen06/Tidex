@@ -51,7 +51,22 @@ struct RootView: View {
 
   @ViewBuilder private var launchContent: some View {
     if isReady {
-      RootContent()
+      if LocalStore.shared.isStorageUnavailable {
+        ZStack {
+          TidexAppBackground()
+          ContentUnavailableView {
+            Label(
+              String(localized: .alertsStorageIssueTitle),
+              systemImage: "externaldrive.badge.exclamationmark"
+            )
+          } description: {
+            Text(.storageUnavailableMessage)
+          }
+          .foregroundStyle(Color.tidexTextPrimary)
+        }
+      } else {
+        RootContent()
+      }
     } else {
       LoadingView()
         .task {
@@ -80,8 +95,6 @@ private struct RootContent: View {
   @State private var showAuthAfterOnboarding = false
   @State private var authDestination: AuthDestination = .login
 
-  // Storage warning state - shown when LocalStore falls back to in-memory storage
-  @State private var showStorageWarning = false
   @State private var activeChatToast: InAppChatToastPayload?
   @State private var chatToastDismissTask: Task<Void, Never>?
 
@@ -202,18 +215,6 @@ private struct RootContent: View {
     .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
     { _ in
       Task { await appGate.refresh() }
-    }
-    .task {
-      // Defer storage initialization until after first render to avoid launch stalls.
-      await Task.yield()
-      if LocalStore.shared.isUsingInMemoryFallback {
-        showStorageWarning = true
-      }
-    }
-    .alert(String(localized: .alertsStorageIssueTitle), isPresented: $showStorageWarning) {
-      Button(String(localized: .alertsOk), role: .cancel) {}
-    } message: {
-      Text(.alertsStorageIssueMessage)
     }
     .onReceive(NotificationCenter.default.publisher(for: .restartPreAuthOnboarding)) { _ in
       restartPreAuthOnboarding()

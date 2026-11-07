@@ -30,9 +30,8 @@ internal final class LocalStore {
   /// Actor for serialized writes (sync operations)
   internal let storeActor: LocalStoreActor
 
-  /// Indicates if the store fell back to in-memory storage due to persistent storage failure.
-  /// When true, data will NOT be saved between app launches - user should be warned.
-  internal let isUsingInMemoryFallback: Bool
+  /// Blocks editing and sync when the persistent store could not be opened.
+  internal let isStorageUnavailable: Bool
 
   private static func ensureStoreParentDirectoryExists() {
     guard
@@ -60,109 +59,64 @@ internal final class LocalStore {
     }
   }
 
-  private static func makeSchema() -> Schema {
-    // Schema with all local models
-    Schema([
-      LocalJob.self,
-      LocalUserShift.self,
-      LocalEvent.self,
-      LocalRecurringShift.self,
-      LocalWageSnapshot.self,
-      LocalPayrollAdjustment.self,
-      LocalUserSettings.self,
-      LocalNotificationPreferences.self,
-      LocalSyncState.self,
-      LocalSharedShift.self,
-      LocalSharer.self,
-      LocalShiftPreview.self,
-      LocalSharedShiftFetchRecord.self,
-      LocalPendingFriendComposerDraft.self,
-      LocalThread.self,
-      LocalThreadState.self,
-      LocalThreadFeedPlacement.self,
-      LocalMessage.self,
-      LocalMessageAttachment.self,
-      LocalMessageReaction.self,
-      LocalFriendMessagingSyncState.self,
-    ])
-  }
+  private convenience init() {
+    Self.ensureStoreParentDirectoryExists()
 
-  /// Persistent container, or an in-memory / default fallback if persistent storage fails.
-  private static func makeContainer() -> (container: ModelContainer, isInMemoryFallback: Bool) {
-    let schema = makeSchema()
-
-    // Configure container for persistent storage
     var usesScreenshotMemoryStore = false
     #if DEBUG
       usesScreenshotMemoryStore = AppStoreScreenshotFixture.isActive
     #endif
-    let configuration = ModelConfiguration(
-      schema: schema,
+    self.init(configuration: ModelConfiguration(
+      schema: Schema(versionedSchema: SchemaV1.self),
       isStoredInMemoryOnly: usesScreenshotMemoryStore,
       allowsSave: true
-    )
-
-    do {
-      let container = try ModelContainer(for: schema, configurations: [configuration])
-      kLocalStoreLogger.info("LocalStore initialized successfully")
-      return (container, false)
-    } catch {
-      kLocalStoreLogger.error("Failed to initialize LocalStore: \(error.localizedDescription)")
-      return (makeFallbackContainer(schema: schema), true)
-    }
+    ))
   }
 
-  private static func makeFallbackContainer(schema: Schema) -> ModelContainer {
-    // Try to recover by creating an in-memory container as fallback
-    // This allows the app to function (without persistence) rather than crash
-    kLocalStoreLogger.warning("Attempting fallback to in-memory storage")
-    let fallbackConfig = ModelConfiguration(
-      schema: schema,
-      isStoredInMemoryOnly: true,
-      allowsSave: true
-    )
-
+  internal init(configuration: ModelConfiguration) {
+    let schema = Schema(versionedSchema: SchemaV1.self)
     do {
-      let container = try ModelContainer(for: schema, configurations: [fallbackConfig])
-      kLocalStoreLogger.warning(
-        "LocalStore initialized with in-memory fallback - data will not persist")
-      return container
-    } catch {
-      let fallbackError: Error = error
-      // This should essentially never happen - in-memory containers rarely fail
-      // But we need to initialize the properties, so create a minimal container
-      kLocalStoreLogger.critical(
-        "Failed to create even in-memory storage: \(fallbackError.localizedDescription)"
+      container = try ModelContainer(
+        for: schema,
+        migrationPlan: LocalStoreMigrationPlan.self,
+        configurations: [configuration]
       )
-
-      // Last resort: try with default configuration
-      // If this fails, there's a fundamental issue with the app's model definitions
+      isStorageUnavailable = false
+      kLocalStoreLogger.info("LocalStore initialized successfully")
+    } catch {
+      kLocalStoreLogger.error(
+        "Failed to open LocalStore: \(String(reflecting: error), privacy: .public)")
+      kLocalStoreLogger.error(
+        "LocalStore error details: \(String(reflecting: (error as NSError).userInfo), privacy: .private)")
       do {
-        let container = try ModelContainer(for: schema)
-        kLocalStoreLogger.critical("LocalStore using default container - app may be unstable")
-        return container
+        container = try Self.makeUnavailableContainer(schema: schema)
       } catch {
-        let lastResortError: Error = error
-        fatalError(
-          """
-          LocalStore: All storage initialization attempts failed.
-          Original error: \(error.localizedDescription)
-          In-memory fallback error: \(fallbackError.localizedDescription)
-          Default container error: \(lastResortError.localizedDescription)
-          This indicates a fundamental issue with the app's SwiftData model definitions.
-          """
-        )
+        fatalError("LocalStore could not create its read-only container: \(error)")
       }
+      isStorageUnavailable = true
     }
+    storeActor = LocalStoreActor(modelContainer: container)
   }
 
-  private init() {
-    Self.ensureStoreParentDirectoryExists()
-
-    let result = Self.makeContainer()
-    container = result.container
-    storeActor = LocalStoreActor(modelContainer: result.container)
-    isUsingInMemoryFallback = result.isInMemoryFallback
+  private static func makeUnavailableContainer(schema: Schema) throws -> ModelContainer {
+    // Keep the failed store untouched. SwiftData cannot open an in-memory store read-only,
+    // so create an empty temporary store for readers while the root view blocks editing.
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("unavailable-store-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let url = directory.appendingPathComponent("default.store")
+    try autoreleasepool {
+      _ = try ModelContainer(
+        for: schema,
+        configurations: [ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)]
+      )
+    }
+    return try ModelContainer(
+      for: schema,
+      configurations: [ModelConfiguration(
+        schema: schema, url: url, allowsSave: false, cloudKitDatabase: .none
+      )]
+    )
   }
 
   /// Get a fresh ModelContext for main actor operations

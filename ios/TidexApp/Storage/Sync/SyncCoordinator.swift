@@ -264,6 +264,20 @@ final class SyncCoordinator: @unchecked Sendable {
     tables: [SyncTable],
     updateWidgetStorage: Bool = true
   ) async -> SyncResult {
+    guard await MainActor.run(body: { !LocalStore.shared.isStorageUnavailable }) else {
+      return SyncResult(
+        success: false,
+        tableResults: [],
+        pushResults: [],
+        totalRowsProcessed: 0,
+        totalRowsPushed: 0,
+        totalConflicts: 0,
+        totalAutoMerged: 0,
+        duration: 0,
+        error: String(localized: .storageUnavailableMessage)
+      )
+    }
+
     var seenTables = Set<SyncTable>()
     let uniqueTables = tables.filter { seenTables.insert($0).inserted }
     guard !uniqueTables.isEmpty else {

@@ -92,6 +92,7 @@
 		ECD7A2F33AB681B306945A67 /* AssistantEarningsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D309DBAA8A9B8426E275DF /* AssistantEarningsTests.swift */; };
 		AF93110130C8000000A1B2C3 /* AddShiftSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */; };
 		AF93110330C8000000A1B2C3 /* ScheduleListMonthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */; };
+		D09D6B72D63E4D8394250001 /* LocalStoreMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09D6B72D63E4D8394250002 /* LocalStoreMigrationTests.swift */; };
 		B60A4D723072000000000001 /* LocalStoreShiftReadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */; };
 		B75A10013060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */; };
 		BB30A0013060000100A1B2C3 /* JobsRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB30A0023060000100A1B2C3 /* JobsRepositoryTests.swift */; };
@@ -245,6 +246,7 @@
 		AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftSubmissionTests.swift; sourceTree = "<group>"; };
 		AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleListMonthTests.swift; sourceTree = "<group>"; };
 		B4289F8A28BA4A1B40DF97B9 /* FriendsMessagingRealtimeCoordinatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsMessagingRealtimeCoordinatorTests.swift; sourceTree = "<group>"; };
+		D09D6B72D63E4D8394250002 /* LocalStoreMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreMigrationTests.swift; sourceTree = "<group>"; };
 		B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreShiftReadTests.swift; sourceTree = "<group>"; };
 		B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClockSessionRulesTests.swift; sourceTree = "<group>"; };
 		B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedKeychainAccessTokenPayloadTests.swift; sourceTree = "<group>"; };
@@ -500,6 +502,7 @@
 				6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */,
 				17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */,
 				B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */,
+				D09D6B72D63E4D8394250002 /* LocalStoreMigrationTests.swift */,
 				D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */,
 				B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */,
 				ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */,
@@ -1038,6 +1041,7 @@
 				9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */,
 				28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */,
 				B60A4D723072000000000001 /* LocalStoreShiftReadTests.swift in Sources */,
+				D09D6B72D63E4D8394250001 /* LocalStoreMigrationTests.swift in Sources */,
 				D4B0A0013050111100A1B2C3 /* ShiftReminderPlannerTests.swift in Sources */,
 				B75A10013060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift in Sources */,
 				AB5C10013070000000F1E2D3 /* FriendShiftTimingTests.swift in Sources */,

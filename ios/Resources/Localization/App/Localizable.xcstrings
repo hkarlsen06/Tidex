@@ -437298,6 +437298,24 @@
       },
       "shouldTranslate" : false
     },
+    "storage.unavailable.message" : {
+      "comment" : "Blocking screen when the local database cannot open. Editing and syncing stop to protect offline changes. Reopening retries, while uninstalling would remove those changes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex couldn't open your saved data. Editing and syncing are paused to protect unsynced changes. Close and reopen Tidex to try again. Keep the app installed."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex kunne ikke åpne de lagrede dataene dine. Redigering og synkronisering er satt på pause for å beskytte usynkroniserte endringer. Lukk og åpne Tidex for å prøve igjen. Behold appen installert."
+          }
+        }
+      }
+    },
     "Supplements" : {
       "shouldTranslate" : false
     },
