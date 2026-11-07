@@ -384,12 +384,12 @@ final class TidexAppUITests: XCTestCase {
       attachAppStoreScreenshot(app, name: "\(spec.id)-02-statistics")
 
       app.buttons["BackButton"].tap()
-      // iPad's floating tab bar is not a TabBar element, but there its buttons carry the tab's
-      // SF Symbol as their identifier. On iPhone that identifier is not reliable.
+      // Floating and vertical tab bars may expose the symbol on the image, not the button.
       let tabBar = app.tabBars.firstMatch
       let scheduleTab =
         tabBar.waitForExistence(timeout: 2)
-        ? tabBar.buttons.element(boundBy: 1) : app.buttons["calendar"].firstMatch
+        ? tabBar.buttons.element(boundBy: 1)
+        : app.buttons.containing(.image, identifier: "calendar").firstMatch
       XCTAssertTrue(scheduleTab.waitForExistence(timeout: defaultTimeout), app.debugDescription)
       scheduleTab.tap()
       let calendarTime = app.staticTexts.matching(NSPredicate(format: "label == %@", "09:00"))
@@ -408,10 +408,12 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(clockIn.waitForExistence(timeout: defaultTimeout))
     XCTAssertTrue(clockOut.exists)
     XCTAssertTrue(payout.waitForExistence(timeout: defaultTimeout))
+    let window = app.windows.firstMatch.frame
     XCTAssertGreaterThanOrEqual(
-      clockIn.frame.minX - app.frame.minX, 39,
+      clockIn.frame.minX - window.minX, 39,
       "Home content must leave a 40-point margin at each screen edge")
-    XCTAssertGreaterThanOrEqual(app.frame.maxX - clockOut.frame.maxX, 39)
+    XCTAssertGreaterThanOrEqual(
+      window.maxX - clockOut.frame.maxX, 39, app.debugDescription)
     XCTAssertEqual(payout.frame.minX, clockIn.frame.minX, accuracy: 1)
   }
 
@@ -462,13 +464,14 @@ final class TidexAppUITests: XCTestCase {
     // With several simulators running, the sheet can still be moving or miss a drag, so wait for
     // the link to fit and drag again from the header's current position if it does not.
     let paySettings = app.buttons["payroll-details.pay-settings"]
-    let fits = { paySettings.exists && app.frame.contains(paySettings.frame) }
+    let window = app.windows.firstMatch
+    let fits = { paySettings.exists && window.frame.contains(paySettings.frame) }
     for _ in 0..<3 where !fits() {
-      let header = app.coordinate(withNormalizedOffset: .zero)
-        .withOffset(CGVector(dx: app.frame.midX, dy: done.frame.midY))
+      let header = window.coordinate(withNormalizedOffset: .zero)
+        .withOffset(CGVector(dx: window.frame.width / 2, dy: done.frame.midY - window.frame.minY))
       header.press(
         forDuration: 0.1,
-        thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)))
+        thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)))
       let deadline = Date.now.addingTimeInterval(3)
       while !fits(), Date.now < deadline {
         Thread.sleep(forTimeInterval: 0.25)
@@ -503,7 +506,7 @@ final class TidexAppUITests: XCTestCase {
   private func attachAppStoreScreenshot(_ app: XCUIApplication, name: String) {
     // Currency transitions can still be animating after their accessibility value updates.
     Thread.sleep(forTimeInterval: 1)
-    let attachment = XCTAttachment(screenshot: app.screenshot())
+    let attachment = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
     attachment.name = name
     attachment.lifetime = .keepAlways
     add(attachment)
