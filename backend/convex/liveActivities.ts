@@ -15,14 +15,15 @@ import {
   projectedRecurringShifts,
   zonedShiftRange,
 } from "./lib/shared/liveActivityScheduling";
-import { computeShift } from "./lib/shared/payroll/calc";
+import { computeLiveActivityShift, overtimeWeekStart } from "./lib/shared/liveActivityPay";
 import type { UserSettings, WageSnapshot } from "./lib/shared/payroll/types";
 import { allowedRecipients, apnsConfigured, mayPush, sendToApns } from "./push";
 
 // Port of _shared/live-activity-delivery.ts and the internal.*_live_activity_* SQL
 // functions. A cron pass every 15 minutes starts a Live Activity on each device for the
 // shift in progress in the device's time zone, and ends the one for a shift that is
-// over. The pay shown comes from the same calculation the app uses.
+// over. The pay shown comes from the same calculation the app uses, including weekly
+// overtime from the user's earlier shifts that week.
 
 const MAX_ATTEMPTS = 10;
 const STALE_CLAIM_MS = 15 * 60_000;
@@ -98,14 +99,27 @@ export function applicableWageSnapshot(shift: LiveActivityRegularShift, snapshot
   );
 }
 
+type Person = {
+  currency?: string;
+  regular: LiveActivityRegularShift[];
+  recurring: LiveActivityRecurringShift[];
+  snapshots: Snapshot[];
+};
+
 function presentationForShift(
   shift: LiveActivityRegularShift,
   timeZone: string,
-  currency: string | undefined,
-  snapshots: Snapshot[],
+  person: Person,
 ): LiveActivityPresentationInput {
+  const { currency, snapshots } = person;
   const snapshot = applicableWageSnapshot(shift, snapshots);
-  const computed = computeShift(shift, { currency } as UserSettings, [], snapshot, null);
+  const computed = computeLiveActivityShift(
+    shift,
+    person.regular,
+    person.recurring,
+    (s) => applicableWageSnapshot(s, snapshots),
+    { currency } as UserSettings,
+  );
   const range = zonedShiftRange(shift, timeZone);
   return {
     shiftId: shift.id,
@@ -143,7 +157,8 @@ export const inputs = internalQuery({
   args: {},
   handler: async (ctx) => {
     const now = new Date();
-    const from = isoDateOffset(now, -2);
+    // Shifts from the start of the overtime week count toward the current shift's pay.
+    const from = overtimeWeekStart(isoDateOffset(now, -2));
     const to = isoDateOffset(now, 2);
     const people = new Map<string, unknown>();
     const devices = [];
@@ -203,10 +218,7 @@ export const inputs = internalQuery({
     }
     return {
       devices,
-      people: Object.fromEntries(people) as Record<
-        string,
-        { currency?: string; regular: LiveActivityRegularShift[]; recurring: LiveActivityRecurringShift[]; snapshots: Snapshot[] }
-      >,
+      people: Object.fromEntries(people) as Record<string, Person>,
     };
   },
 });
@@ -386,7 +398,7 @@ type Inputs = {
     apns_environment: "production" | "sandbox" | null;
     delivery: { id: string; shift_id: string; status: string; update_token: string | null; start_sent_at: string | null } | null;
   }[];
-  people: Record<string, { currency?: string; regular: LiveActivityRegularShift[]; recurring: LiveActivityRecurringShift[]; snapshots: Snapshot[] }>;
+  people: Record<string, Person>;
 };
 
 export const run = internalAction({
@@ -427,7 +439,7 @@ export const run = internalAction({
           const presentation =
             ended === undefined
               ? fallbackEndPresentation(delivery.shift_id, now)
-              : presentationForShift(ended, device.time_zone, person.currency, person.snapshots);
+              : presentationForShift(ended, device.time_zone, person);
           const result = await sendToApns(
             ctx,
             delivery.update_token,
@@ -458,7 +470,7 @@ export const run = internalAction({
           shift_id: ongoing.id,
         });
         if (deliveryId === null) continue;
-        const presentation = presentationForShift(ongoing, device.time_zone, person.currency, person.snapshots);
+        const presentation = presentationForShift(ongoing, device.time_zone, person);
         const result = await sendToApns(
           ctx,
           device.token,

@@ -35,6 +35,7 @@ import type * as lib_notify from "../lib/notify.js";
 import type * as lib_payrollCompatibility from "../lib/payrollCompatibility.js";
 import type * as lib_revision from "../lib/revision.js";
 import type * as lib_shared_dateUtils from "../lib/shared/dateUtils.js";
+import type * as lib_shared_liveActivityPay from "../lib/shared/liveActivityPay.js";
 import type * as lib_shared_liveActivityPayload from "../lib/shared/liveActivityPayload.js";
 import type * as lib_shared_liveActivityScheduling from "../lib/shared/liveActivityScheduling.js";
 import type * as lib_shared_payroll_breaks from "../lib/shared/payroll/breaks.js";
@@ -114,6 +115,7 @@ declare const fullApi: ApiFromModules<{
   "lib/payrollCompatibility": typeof lib_payrollCompatibility;
   "lib/revision": typeof lib_revision;
   "lib/shared/dateUtils": typeof lib_shared_dateUtils;
+  "lib/shared/liveActivityPay": typeof lib_shared_liveActivityPay;
   "lib/shared/liveActivityPayload": typeof lib_shared_liveActivityPayload;
   "lib/shared/liveActivityScheduling": typeof lib_shared_liveActivityScheduling;
   "lib/shared/payroll/breaks": typeof lib_shared_payroll_breaks;
