@@ -2,6 +2,8 @@
 
 Written 2026-10-16, changed 2026-10-29. One release, N+1, moves the data to Convex and sign-in to Clerk. Phases 0 and 1 change nothing for users, so we can stop after either of them.
 
+Build configuration changed on 2026-11-06. Debug and Release now share production Clerk and Convex through `ios/production-backend.xcconfig`. The separate Debug environment described below records the migration setup. See [running from Xcode](ios-environments.md) for the current setup.
+
 ## Starting point
 
 These numbers come from production on 2026-10-16.

@@ -1,0 +1,4 @@
+// Both build configurations use the same production account and data.
+CONVEX_URL = https:/$()/convex.tidex.no
+CONVEX_SITE_URL = https:/$()/actions.tidex.no
+CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsudGlkZXgubm8k
