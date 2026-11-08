@@ -105,13 +105,13 @@ struct CelebrationOverlay: View {
         AccessibilityNotification.LayoutChanged().post()
       } else {
         // Start count-up after the sheet slides in
-        try? await Task.sleep(for: .seconds(0.5))
+        do { try await Task.sleep(for: .seconds(0.5)) } catch { return }
         withAnimation(.spring(duration: 1.0, bounce: 0)) {
           displayedAmount = data.newDisplayValue
         }
 
         // Show card after count-up completes (with a brief pause)
-        try? await Task.sleep(for: .seconds(1.5))
+        do { try await Task.sleep(for: .seconds(1.5)) } catch { return }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
           showCard = true
           sheetDetent = expandedDetent

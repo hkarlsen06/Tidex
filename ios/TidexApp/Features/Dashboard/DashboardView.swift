@@ -517,7 +517,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         }
         .task {
           while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(30))  // swiftlint:disable:this no_magic_numbers
+            do {
+              try await Task.sleep(for: .seconds(30))  // swiftlint:disable:this no_magic_numbers
+            } catch { return }
             guard selectedTab == .home else { continue }
             guard !shouldShowWorkSetupRequiredPlaceholder else { continue }
             await viewModel.refreshClockState()

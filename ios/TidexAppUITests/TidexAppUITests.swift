@@ -364,7 +364,7 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(FileManager.default.fileExists(atPath: avatar), avatar)
     for spec in specs {
       let app = launchScreenshotApp(spec, avatar: avatar)
-      // 112 September hours after 20% tax, then one more 8-hour shift in the add screen.
+      // The fixture has 112 shift hours before adding one more 8-hour shift.
       let rate = spec.hourlyWage + spec.supplement
       let earnings = text(containingLabel: spec.amount(112 * rate * 0.8), in: app)
       XCTAssertTrue(earnings.waitForExistence(timeout: 30), "\(spec.id)\n\(app.debugDescription)")
@@ -525,7 +525,9 @@ final class TidexAppUITests: XCTestCase {
     )
     .firstMatch
     XCTAssertTrue(earnings.waitForExistence(timeout: 30), app.debugDescription)
-    XCTAssertTrue(text(containingLabel: "After tax in September", in: app).exists)
+    let monthName = Date.now.formatted(
+      .dateTime.month(.wide).locale(Locale(identifier: "en_US")))
+    XCTAssertTrue(text(containingLabel: "After tax in \(monthName)", in: app).exists)
     XCTAssertTrue(text(containingLabel: "+17% vs previous month", in: app).exists)
     attachAppStoreScreenshot(app, name: "money-01-home")
 
