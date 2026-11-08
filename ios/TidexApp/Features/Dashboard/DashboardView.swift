@@ -168,7 +168,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   private func loadDashboardContent() async {  // swiftlint:disable:this type_contents_order
     guard selectedTab == .home else { return }  // swiftlint:disable:this conditional_returns_on_newline
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-    await calendarSubscriptionStore.refreshIfNeeded()
     await viewModel.loadDashboard()
 
     // If sync already completed before view appeared, reload to pick up synced data
@@ -211,7 +210,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     }
 
     // When initial sync completes after login, reload dashboard to show synced data
-    if completed {
+    if completed,
+      viewModel.dashboardData == nil || coordinator.initialSyncNeedsLocalReload
+    {
       viewModel.markLocalDataStale()
       guard selectedTab == .home else { return }  // swiftlint:disable:this conditional_returns_on_newline
       // Set loading state SYNCHRONOUSLY before starting async task
@@ -434,23 +435,19 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   private var bodyWithLifecycle: AnyView {
     AnyView(
       navigationContent
-        .task {
+        .task(id: coordinator.userId) {
           viewModel.setActiveTabVisible(selectedTab == .home)
           refreshWorkSetupPresentationState()
           refreshHasAnyShifts()
+          guard coordinator.userId != nil else { return }
           await loadDashboardContent()
+        }
+        .task(id: coordinator.userId) {
+          guard coordinator.userId != nil else { return }
+          await calendarSubscriptionStore.refreshIfNeeded()
         }
         .onChange(of: coordinator.initialSyncComplete) { _, completed in
           handleInitialSyncCompleteChange(completed: completed)
-        }
-        .onChange(of: coordinator.userId) { _, _ in
-          refreshWorkSetupPresentationState()
-          viewModel.markLocalDataStale()
-          guard selectedTab == .home else { return }  // swiftlint:disable:this conditional_returns_on_newline
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-          Task {
-            await viewModel.reloadFromLocal()
-          }
         }
         .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) {
           notification in
@@ -733,22 +730,22 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       }
   }
 
-/// An action queued to run once the sheet that triggered it has finished dismissing.
-/// Presenting a new sheet while another is still animating out is a no-op in SwiftUI,
-/// so this replaces `DispatchQueue.main.asyncAfter` guesswork with a real `onDismiss` hook.
-private enum PendingDashboardSheetAction {
-  case shiftDelete(ShiftWithComputations)
-  case eventDelete(EventRow)
-  case recurringEdit(RecurringShiftRow)
-  case calendarSubscriptionSettings
-}
+  /// An action queued to run once the sheet that triggered it has finished dismissing.
+  /// Presenting a new sheet while another is still animating out is a no-op in SwiftUI,
+  /// so this replaces `DispatchQueue.main.asyncAfter` guesswork with a real `onDismiss` hook.
+  private enum PendingDashboardSheetAction {
+    case shiftDelete(ShiftWithComputations)
+    case eventDelete(EventRow)
+    case recurringEdit(RecurringShiftRow)
+    case calendarSubscriptionSettings
+  }
 
-struct EventSheetSelection: Identifiable {
-  let event: EventRow
-  let startInEditMode: Bool
+  struct EventSheetSelection: Identifiable {
+    let event: EventRow
+    let startInEditMode: Bool
 
-  var id: String { event.id }
-}
+    var id: String { event.id }
+  }
 
 }
 

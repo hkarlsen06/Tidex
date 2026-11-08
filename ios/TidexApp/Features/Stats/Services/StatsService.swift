@@ -128,10 +128,11 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
       try checkCurrentComputation(generation)
 
       // Load shared payroll inputs through the DAL-backed read service
-      let readContext: PayrollReadContext = await monthlyPayrollReadService.loadContextOffMain(
-        for: userId,
-        jobId: jobId
-      )
+      let readContext: PayrollReadContext =
+        await monthlyPayrollReadService.loadContextUsingStoreActor(
+          for: userId,
+          jobId: jobId
+        )
       try checkCurrentComputation(generation)
 
       guard let settings = readContext.settings else {

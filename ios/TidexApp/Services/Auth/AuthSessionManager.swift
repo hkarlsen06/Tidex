@@ -93,11 +93,19 @@ final class AuthSessionManager {
   /// The user for `cachedUserClerkId`. Cleared on sign-out and after impersonation changes.
   private var cachedUser: AuthUser?
   private var cachedUserClerkId: String?
-  private var lastToken: (token: String, expiresAt: TimeInterval)?
+  private struct RememberedToken {
+    let token: String
+    let expiresAt: TimeInterval
+    let sessionId: String
+    let published: Bool
+  }
+  private var lastToken: RememberedToken?
   private var userTask: Task<AuthUser, Error>?
   private var userTaskSessionId: String?
   private var cachedUserSessionId: String?
   private let activeSessionId: () -> String?
+  private let activeClerkUserId: () -> String?
+  private let defaults: UserDefaults
   private let lookupUser: () async throws -> AuthUser
   /// Bumped whenever the cached user is dropped, so a lookup that started before can't
   /// publish a user that is out of date, such as one from before an impersonation change.
@@ -105,6 +113,8 @@ final class AuthSessionManager {
 
   init(
     activeSessionId: @escaping () -> String? = { Clerk.shared.session?.id },
+    activeClerkUserId: @escaping () -> String? = { Clerk.shared.session?.clerkUserId },
+    defaults: UserDefaults = .standard,
     lookupUser: @escaping () async throws -> AuthUser = {
       if let user: AuthUser = try await ConvexAPI.app.query("users:current") { return user }
       _ = try await ConvexAPI.app.action("users:ensureCurrent", as: String.self)
@@ -115,6 +125,8 @@ final class AuthSessionManager {
     }
   ) {
     self.activeSessionId = activeSessionId
+    self.activeClerkUserId = activeClerkUserId
+    self.defaults = defaults
     self.lookupUser = lookupUser
   }
 
@@ -179,15 +191,23 @@ final class AuthSessionManager {
         return AppStoreScreenshotFixture.session
       }
     #endif
-    guard let clerkSession = Clerk.shared.session,
-      let user = storedUser(clerkUserId: clerkSession.clerkUserId)
+    guard let sessionId = activeSessionId(), let clerkUserId = activeClerkUserId(),
+      let user = storedUser(clerkUserId: clerkUserId)
     else { return nil }
+    guard !user.isImpersonating || cachedUserSessionId == sessionId else { return nil }
     return AuthSession(
       user: user,
-      accessToken: lastToken?.token ?? "",
-      expiresAt: lastToken?.expiresAt ?? 0,
-      clerkSessionId: clerkSession.id
+      accessToken: lastToken?.sessionId == sessionId ? lastToken?.token ?? "" : "",
+      expiresAt: lastToken?.sessionId == sessionId ? lastToken?.expiresAt ?? 0 : 0,
+      clerkSessionId: sessionId
     )
+  }
+
+  /// Local presentation requires the SDK's current account. Impersonation is checked
+  /// remotely first because the stored target may have expired while the app was closed.
+  func localPresentationSession() -> AuthSession? {
+    guard let session = localSession(), !session.user.isImpersonating else { return nil }
+    return session
   }
 
   /// Like `getSessionIfAvailable`, but a transient failure (offline, timeout) falls back to
@@ -199,7 +219,7 @@ final class AuthSessionManager {
     } catch {
       guard isTransientSessionResolutionError(error) else { return nil }
       logger.info("Using stored session after transient failure")
-      return localSession()
+      return localPresentationSession()
     }
   }
 
@@ -217,6 +237,7 @@ final class AuthSessionManager {
   func forceRefresh() async throws -> AuthSession {
     userGeneration += 1
     cachedUser = nil
+    cachedUserSessionId = nil
     userTask = nil
     let generation = userGeneration
     let session = try await withTimeout { try await self.resolveSession(skipCache: true) }
@@ -241,6 +262,7 @@ final class AuthSessionManager {
 
   /// Puts the session's token in the shared keychain for the extensions.
   func publishSessionToSharedKeychain(_ session: AuthSession) {
+    guard !session.accessToken.isEmpty, activeSessionId() == session.clerkSessionId else { return }
     remember(token: session.accessToken, sessionId: session.clerkSessionId)
   }
 
@@ -249,9 +271,10 @@ final class AuthSessionManager {
     userGeneration += 1
     cachedUser = nil
     cachedUserClerkId = nil
+    cachedUserSessionId = nil
     userTask = nil
     lastToken = nil
-    UserDefaults.standard.removeObject(forKey: Self.cachedUserKey)
+    defaults.removeObject(forKey: Self.cachedUserKey)
     WidgetAppGroup.storeSignedInUserId(nil)
   }
 
@@ -263,6 +286,10 @@ final class AuthSessionManager {
         .contains(error.code)
     }
     return false
+  }
+
+  func isDefinitiveSessionResolutionError(_ error: Error) -> Bool {
+    isMissingSessionError(error) || isSessionRevokedError(error)
   }
 
   /// No Clerk session, the normal state before the first sign-in.
@@ -305,11 +332,12 @@ final class AuthSessionManager {
   /// use. Nil when it never resolved, so local data is never opened for a guessed user,
   /// such as a store kept for a previous account.
   func offlineUserIdFallback() -> String? {
-    Clerk.shared.session.flatMap { storedUser(clerkUserId: $0.clerkUserId) }?.normalizedId
+    localPresentationSession()?.normalizedUserId
   }
 
   /// Clears the extensions' token on sign-out.
   func clearSharedKeychain() {
+    lastToken = nil
     do {
       try SharedKeychainStorage.clearAccessToken()
     } catch {
@@ -330,7 +358,8 @@ extension AuthSessionManager {
     guard activeSessionId() == clerkSession.id else {
       throw AuthSessionManagerError.notSignedIn
     }
-    let user = try await currentUser(clerkUserId: clerkSession.clerkUserId, sessionId: clerkSession.id)
+    let user = try await currentUser(
+      clerkUserId: clerkSession.clerkUserId, sessionId: clerkSession.id)
     guard activeSessionId() == clerkSession.id else {
       throw AuthSessionManagerError.notSignedIn
     }
@@ -360,7 +389,18 @@ extension AuthSessionManager {
       userTaskSessionId = sessionId
     }
     defer { if userTask == task { userTask = nil } }
-    let user = try await task.value
+    let user: AuthUser
+    do {
+      user = try await task.value
+    } catch {
+      if activeSessionId() == sessionId, userGeneration == generation,
+        isDefinitiveSessionResolutionError(error)
+      {
+        clearCachedUser()
+        clearSharedKeychain()
+      }
+      throw error
+    }
     guard activeSessionId() == sessionId else { throw AuthSessionManagerError.notSignedIn }
     guard userGeneration == generation else {
       return try await currentUser(clerkUserId: clerkUserId, sessionId: sessionId)
@@ -372,7 +412,7 @@ extension AuthSessionManager {
     // register under the signed-in person, the admin during an impersonation.
     WidgetAppGroup.storeSignedInUserId(user.actorId)
     if let data = try? JSONEncoder().encode(StoredUser(clerkUserId: clerkUserId, user: user)) {
-      UserDefaults.standard.set(data, forKey: Self.cachedUserKey)
+      defaults.set(data, forKey: Self.cachedUserKey)
     }
     return user
   }
@@ -384,7 +424,7 @@ extension AuthSessionManager {
 
   private func storedUser(clerkUserId: String) -> AuthUser? {
     if let cachedUser, cachedUserClerkId == clerkUserId { return cachedUser }
-    guard let data = UserDefaults.standard.data(forKey: Self.cachedUserKey),
+    guard let data = defaults.data(forKey: Self.cachedUserKey),
       let stored = try? JSONDecoder().decode(StoredUser.self, from: data),
       stored.clerkUserId == clerkUserId
     else { return nil }
@@ -393,10 +433,18 @@ extension AuthSessionManager {
 
   private func remember(token: String, sessionId: String) {
     let expiresAt = SharedAuthToken.expiry(ofJWT: token) ?? Date().timeIntervalSince1970 + 50
-    lastToken = (token, expiresAt)
+    if let lastToken, lastToken.token == token, lastToken.sessionId == sessionId,
+      lastToken.published
+    {
+      return
+    }
+    lastToken = RememberedToken(
+      token: token, expiresAt: expiresAt, sessionId: sessionId, published: false)
     do {
       try SharedKeychainStorage.storeAccessToken(token, expiresAt: Int(expiresAt))
       try SharedKeychainStorage.storeClerkSessionId(sessionId)
+      lastToken = RememberedToken(
+        token: token, expiresAt: expiresAt, sessionId: sessionId, published: true)
     } catch {
       // Extensions fall back to cached data without a token.
       logger.warning("Failed to store token in shared keychain: \(error.localizedDescription)")
@@ -405,8 +453,8 @@ extension AuthSessionManager {
 
 }
 
-private extension AuthSessionManager {
-  func withTimeout<T: Sendable>(
+extension AuthSessionManager {
+  fileprivate func withTimeout<T: Sendable>(
     _ operation: @escaping @MainActor @Sendable () async throws -> T
   ) async throws -> T {
     let timeout = sessionOperationTimeout

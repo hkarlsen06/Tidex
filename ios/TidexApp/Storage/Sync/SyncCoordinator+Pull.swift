@@ -12,8 +12,10 @@ extension SyncCoordinator {
   func pullTable(
     _ table: SyncTable,
     userId: String,
-    after start: Int64
+    after start: Int64,
+    firstPage: SyncDownloadedPage
   ) async throws -> TablePullResult {
+    var initialPage: SyncDownloadedPage? = firstPage
     var cursor = start
     var totalRows = 0
     var newConflicts = 0
@@ -25,31 +27,16 @@ extension SyncCoordinator {
     while true {
       let result: PagePullResult
 
-      switch table {
-      case .jobs:
-        result = try await pullJobsPage(userId: userId, cursor: cursor)
-
-      case .userShifts:
-        result = try await pullUserShiftsPage(userId: userId, cursor: cursor)
-
-      case .events:
-        result = try await pullEventsPage(userId: userId, cursor: cursor)
-
-      case .recurringShifts:
-        result = try await pullRecurringShiftsPage(userId: userId, cursor: cursor)
-
-      case .wageSnapshots:
-        result = try await pullWageSnapshotsPage(userId: userId, cursor: cursor)
-
-      case .payrollAdjustments:
-        result = try await pullPayrollAdjustmentsPage(userId: userId, cursor: cursor)
-
-      case .userSettings:
-        result = try await pullUserSettingsPage(userId: userId, cursor: cursor)
-
-      case .notificationPreferences:
-        result = try await pullNotificationPreferencesPage(userId: userId, cursor: cursor)
+      try Task.checkCancellation()
+      let page: SyncDownloadedPage
+      if let downloaded = initialPage {
+        page = downloaded
+        initialPage = nil
+      } else {
+        page = try await SyncDownloadedPage.fetch(table, after: cursor, limit: pageSize)
       }
+      try Task.checkCancellation()
+      result = try await applyDownloadedPage(page, userId: userId)
 
       totalRows += result.rowsProcessed
       newConflicts += result.newConflicts
@@ -74,7 +61,8 @@ extension SyncCoordinator {
       await Task.yield()
     }
 
-    syncCoordinatorLogger.debug("Pulled \(table.displayName): \(totalRows) rows, cursor now at \(cursor)")
+    syncCoordinatorLogger.debug(
+      "Pulled \(table.displayName): \(totalRows) rows, cursor now at \(cursor)")
 
     return TablePullResult(
       table: table,
@@ -86,6 +74,29 @@ extension SyncCoordinator {
       autoMerged: autoMerged,
       affectedMonths: affectedMonths
     )
+  }
+
+  private func applyDownloadedPage(_ page: SyncDownloadedPage, userId: String) async throws
+    -> PagePullResult
+  {
+    switch page {
+    case .jobs(let page):
+      return try await pullJobsPage(userId: userId, page: page)
+    case .userShifts(let page):
+      return try await pullUserShiftsPage(userId: userId, page: page)
+    case .events(let page):
+      return try await pullEventsPage(userId: userId, page: page)
+    case .recurringShifts(let page):
+      return try await pullRecurringShiftsPage(userId: userId, page: page)
+    case .wageSnapshots(let page):
+      return try await pullWageSnapshotsPage(userId: userId, page: page)
+    case .payrollAdjustments(let page):
+      return try await pullPayrollAdjustmentsPage(userId: userId, page: page)
+    case .userSettings(let page):
+      return try await pullUserSettingsPage(userId: userId, page: page)
+    case .notificationPreferences(let page):
+      return try await pullNotificationPreferencesPage(userId: userId, page: page)
+    }
   }
 
   /// Result of pulling a single page
@@ -142,9 +153,10 @@ extension SyncCoordinator {
 
   // MARK: - Jobs Pull
 
-  private func pullJobsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
-    let page: SyncPullPage<SyncJobRow> = try await SyncConvex.pull(
-      .jobs, after: cursor, limit: pageSize)
+  private func pullJobsPage(userId: String, page: SyncPullPage<SyncJobRow>) async throws
+    -> PagePullResult
+  {
+    try Task.checkCancellation()
     let rows = page.rows
 
     if rows.isEmpty {
@@ -179,7 +191,8 @@ extension SyncCoordinator {
     try await storeActor.save()
 
     let duration = Date().timeIntervalSince(pageStartTime)
-    syncCoordinatorLogger.info("jobs: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
+    syncCoordinatorLogger.info(
+      "jobs: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
 
     return PagePullResult(
       rowsProcessed: rows.count,
@@ -236,7 +249,8 @@ extension SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.jobCopy(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.jobCopy(id: serverRow.id), fresh.syncStatus != .clean
+      else {
         return .noChange
       }
       return await applyJobToExisting(
@@ -272,10 +286,10 @@ extension SyncCoordinator {
 
   // MARK: - User Shifts Pull
 
-  private func pullUserShiftsPage(userId: String, cursor: Int64) async throws -> PagePullResult
+  private func pullUserShiftsPage(userId: String, page: SyncPullPage<SyncShiftRow>) async throws
+    -> PagePullResult
   {
-    let page: SyncPullPage<SyncShiftRow> = try await SyncConvex.pull(
-      .userShifts, after: cursor, limit: pageSize)
+    try Task.checkCancellation()
     let rows = page.rows
 
     if rows.isEmpty {
@@ -394,7 +408,9 @@ extension SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.userShiftCopy(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.userShiftCopy(id: serverRow.id),
+        fresh.syncStatus != .clean
+      else {
         return .noChange
       }
       return await applyShiftToExisting(
@@ -438,7 +454,8 @@ extension SyncCoordinator {
     let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
 
     guard let shiftDate = dateFormatter.date(from: serverRow.shift_date) else {
-      syncCoordinatorLogger.error("Failed to parse shift_date '\(serverRow.shift_date)' for shift \(serverRow.id)")
+      syncCoordinatorLogger.error(
+        "Failed to parse shift_date '\(serverRow.shift_date)' for shift \(serverRow.id)")
       throw SyncError.dateParsingFailed(
         table: .userShifts, id: serverRow.id, rawValue: serverRow.shift_date)
     }
@@ -487,9 +504,10 @@ extension SyncCoordinator {
 
   // MARK: - Events Pull
 
-  private func pullEventsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
-    let page: SyncPullPage<SyncEventRow> = try await SyncConvex.pull(
-      .events, after: cursor, limit: pageSize)
+  private func pullEventsPage(userId: String, page: SyncPullPage<SyncEventRow>) async throws
+    -> PagePullResult
+  {
+    try Task.checkCancellation()
     let rows = page.rows
 
     if rows.isEmpty {
@@ -597,7 +615,9 @@ extension SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.eventCopy(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.eventCopy(id: serverRow.id),
+        fresh.syncStatus != .clean
+      else {
         return .noChange
       }
       return await applyEventToExisting(
@@ -638,13 +658,15 @@ extension SyncCoordinator {
     let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
 
     guard let startDate = dateFormatter.date(from: serverRow.start_date) else {
-      syncCoordinatorLogger.error("Failed to parse start_date '\(serverRow.start_date)' for event \(serverRow.id)")
+      syncCoordinatorLogger.error(
+        "Failed to parse start_date '\(serverRow.start_date)' for event \(serverRow.id)")
       throw SyncError.dateParsingFailed(
         table: .events, id: serverRow.id, rawValue: serverRow.start_date)
     }
 
     guard let endDate = dateFormatter.date(from: serverRow.end_date) else {
-      syncCoordinatorLogger.error("Failed to parse end_date '\(serverRow.end_date)' for event \(serverRow.id)")
+      syncCoordinatorLogger.error(
+        "Failed to parse end_date '\(serverRow.end_date)' for event \(serverRow.id)")
       throw SyncError.dateParsingFailed(
         table: .events, id: serverRow.id, rawValue: serverRow.end_date)
     }
@@ -681,11 +703,11 @@ extension SyncCoordinator {
 
   // MARK: - Recurring Shifts Pull
 
-  private func pullRecurringShiftsPage(userId: String, cursor: Int64) async throws
+  private func pullRecurringShiftsPage(userId: String, page: SyncPullPage<SyncRecurringShiftRow>)
+    async throws
     -> PagePullResult
   {
-    let page: SyncPullPage<SyncRecurringShiftRow> = try await SyncConvex.pull(
-      .recurringShifts, after: cursor, limit: pageSize)
+    try Task.checkCancellation()
     let rows = page.rows
 
     if rows.isEmpty {
@@ -714,7 +736,8 @@ extension SyncCoordinator {
       let rowNumber = index + 1
       if rowNumber.isMultiple(of: pullSaveBatchSize) {
         try await storeActor.save()
-        syncCoordinatorLogger.debug("recurring_shifts: saved batch at row \(rowNumber)/\(rows.count)")
+        syncCoordinatorLogger.debug(
+          "recurring_shifts: saved batch at row \(rowNumber)/\(rows.count)")
       }
     }
 
@@ -788,7 +811,9 @@ extension SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.recurringShiftCopy(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.recurringShiftCopy(id: serverRow.id),
+        fresh.syncStatus != .clean
+      else {
         return .noChange
       }
       return await applyRecurringShiftToExisting(
@@ -866,11 +891,11 @@ extension SyncCoordinator {
 
   // MARK: - Wage Snapshots Pull
 
-  private func pullWageSnapshotsPage(userId: String, cursor: Int64) async throws
+  private func pullWageSnapshotsPage(userId: String, page: SyncPullPage<SyncWageSnapshotRow>)
+    async throws
     -> PagePullResult
   {
-    let page: SyncPullPage<SyncWageSnapshotRow> = try await SyncConvex.pull(
-      .wageSnapshots, after: cursor, limit: pageSize)
+    try Task.checkCancellation()
     let rows = page.rows
 
     if rows.isEmpty {
@@ -972,7 +997,9 @@ extension SyncCoordinator {
         return .updated
       }
       // The row stopped being clean after it was read. Read it again and take the merge path.
-      guard let fresh = try? await storeActor.wageSnapshotCopy(id: serverRow.id), fresh.syncStatus != .clean else {
+      guard let fresh = try? await storeActor.wageSnapshotCopy(id: serverRow.id),
+        fresh.syncStatus != .clean
+      else {
         return .noChange
       }
       return await applyWageSnapshotToExisting(
@@ -1053,11 +1080,11 @@ extension SyncCoordinator {
 
   // MARK: - User Settings Pull
 
-  private func pullUserSettingsPage(userId: String, cursor: Int64) async throws
+  private func pullUserSettingsPage(userId: String, page: SyncPullPage<SyncUserSettingsRow>)
+    async throws
     -> PagePullResult
   {
-    let page: SyncPullPage<SyncUserSettingsRow> = try await SyncConvex.pull(
-      .userSettings, after: cursor, limit: pageSize)
+    try Task.checkCancellation()
     let rows = page.rows
 
     if rows.isEmpty {

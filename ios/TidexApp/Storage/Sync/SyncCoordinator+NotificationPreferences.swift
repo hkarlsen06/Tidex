@@ -7,11 +7,12 @@ extension SyncCoordinator {
 
   // MARK: - Notification Preferences Pull
 
-  func pullNotificationPreferencesPage(userId: String, cursor: Int64) async throws
+  func pullNotificationPreferencesPage(
+    userId: String, page: SyncPullPage<SyncNotificationPreferencesRow>
+  ) async throws
     -> PagePullResult
   {
-    let page: SyncPullPage<SyncNotificationPreferencesRow> = try await SyncConvex.pull(
-      .notificationPreferences, after: cursor, limit: pageSize)
+    try Task.checkCancellation()
     let rows = page.rows
 
     if rows.isEmpty {
@@ -80,11 +81,12 @@ extension SyncCoordinator {
     }
 
     // iOS is the source of truth, so every push sends all fields.
-    let returnedRow: SyncNotificationPreferencesRow = try await SyncConvex.upsertNotificationPreferences(
-      owner: userId,
-      shiftRemindersEnabled: preferences.shiftRemindersEnabled,
-      shiftReminderMinutesArray: preferences.shiftReminderMinutesArray,
-      sharedShiftsEnabled: preferences.sharedShiftsEnabled)
+    let returnedRow: SyncNotificationPreferencesRow =
+      try await SyncConvex.upsertNotificationPreferences(
+        owner: userId,
+        shiftRemindersEnabled: preferences.shiftRemindersEnabled,
+        shiftReminderMinutesArray: preferences.shiftReminderMinutesArray,
+        sharedShiftsEnabled: preferences.sharedShiftsEnabled)
 
     let serverUpdatedAt = parseUpdatedAt(
       returnedRow.updated_at, table: .notificationPreferences, id: userId)

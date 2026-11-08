@@ -146,7 +146,7 @@ final class MonthlyPayrollReadService {
     return context
   }
 
-  internal func loadContextOffMain(  // swiftlint:disable:this type_contents_order
+  internal func loadContextUsingStoreActor(  // swiftlint:disable:this type_contents_order
     for userId: String,
     jobId: String? = nil
   ) async -> PayrollReadContext {

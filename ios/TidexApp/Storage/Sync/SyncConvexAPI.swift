@@ -4,7 +4,7 @@ import Foundation
 
 /// One page of `sync:pull`. `cursor` is the revision of the last row, and `done` is true when the
 /// page held fewer rows than asked for.
-internal struct SyncPullPage<Row: Decodable>: Decodable {
+internal struct SyncPullPage<Row: Decodable & Sendable>: Decodable, Sendable {
   internal let rows: [Row]
   internal let cursor: Int64
   internal let done: Bool
@@ -130,7 +130,7 @@ internal enum SyncConvex {
     !serverColumns.contains(column)
   }
 
-  static func pull<Row: Decodable>(
+  static func pull<Row: Decodable & Sendable>(
     _ table: SyncTable, after: Int64, limit: Int
   ) async throws -> SyncPullPage<Row> {
     try await ConvexAPI.app.query(
@@ -139,7 +139,8 @@ internal enum SyncConvex {
 
   /// Every row of a table for the signed-in user, deleted rows included. Pages until the server
   /// says it is done, so a table with more than one page of rows is read in full.
-  static func pullAll<Row: Decodable>(_ table: SyncTable, pageSize: Int = 500) async throws -> [Row]
+  static func pullAll<Row: Decodable & Sendable>(_ table: SyncTable, pageSize: Int = 500)
+    async throws -> [Row]
   {
     var rows: [Row] = []
     var cursor: Int64 = 0
@@ -250,5 +251,72 @@ internal enum SyncConvex {
 
   private static func unexpected(_ status: String) -> ConvexAPI.Failure {
     .server(code: nil, message: "Unexpected sync reply \"\(status)\"")
+  }
+}
+
+/// Downloaded rows are immutable. Merging and saving still happen in table order.
+enum SyncDownloadedPage: Sendable {
+  case jobs(SyncPullPage<SyncJobRow>)
+  case userShifts(SyncPullPage<SyncShiftRow>)
+  case events(SyncPullPage<SyncEventRow>)
+  case recurringShifts(SyncPullPage<SyncRecurringShiftRow>)
+  case wageSnapshots(SyncPullPage<SyncWageSnapshotRow>)
+  case payrollAdjustments(SyncPullPage<SyncPayrollAdjustmentRow>)
+  case userSettings(SyncPullPage<SyncUserSettingsRow>)
+  case notificationPreferences(SyncPullPage<SyncNotificationPreferencesRow>)
+
+  static func fetch(_ table: SyncTable, after: Int64, limit: Int) async throws -> Self {
+    switch table {
+    case .jobs: return .jobs(try await SyncConvex.pull(table, after: after, limit: limit))
+    case .userShifts:
+      return .userShifts(try await SyncConvex.pull(table, after: after, limit: limit))
+    case .events: return .events(try await SyncConvex.pull(table, after: after, limit: limit))
+    case .recurringShifts:
+      return .recurringShifts(try await SyncConvex.pull(table, after: after, limit: limit))
+    case .wageSnapshots:
+      return .wageSnapshots(try await SyncConvex.pull(table, after: after, limit: limit))
+    case .payrollAdjustments:
+      return .payrollAdjustments(try await SyncConvex.pull(table, after: after, limit: limit))
+    case .userSettings:
+      return .userSettings(try await SyncConvex.pull(table, after: after, limit: limit))
+    case .notificationPreferences:
+      return .notificationPreferences(try await SyncConvex.pull(table, after: after, limit: limit))
+    }
+  }
+
+  /// Downloads at most two pages. Apply a completed leading page immediately, even if
+  /// the next download is slow, so a timeout cannot starve already-downloaded tables.
+  static func consumePair(
+    _ requests: [(table: SyncTable, cursor: Int64)], limit: Int,
+    fetch: @escaping @Sendable (SyncTable, Int64, Int) async throws -> Self = Self.fetch,
+    consume: @escaping @Sendable (SyncTable, Int64, Result<Self, Error>) async -> Bool
+  ) async -> Bool {
+    precondition(requests.count <= 2)
+    return await withTaskGroup(of: (Int, Result<Self, Error>).self) { group in
+      for (index, request) in requests.enumerated() {
+        group.addTask {
+          do {
+            try Task.checkCancellation()
+            return (index, .success(try await fetch(request.table, request.cursor, limit)))
+          } catch {
+            return (index, .failure(error))
+          }
+        }
+      }
+      var replies: [Int: Result<Self, Error>] = [:]
+      var next = 0
+      for await (index, result) in group {
+        replies[index] = result
+        while let ready = replies.removeValue(forKey: next) {
+          let request = requests[next]
+          guard await consume(request.table, request.cursor, ready) else {
+            group.cancelAll()
+            return false
+          }
+          next += 1
+        }
+      }
+      return true
+    }
   }
 }

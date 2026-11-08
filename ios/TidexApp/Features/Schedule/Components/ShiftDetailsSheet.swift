@@ -786,7 +786,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     else { return }
     let reader = MonthlyPayrollReadService.shared
     reader.invalidateSharedCache(for: userId)
-    let context = await reader.loadContextOffMain(for: userId, jobId: shift.shift.job_id)
+    let context = await reader.loadContextUsingStoreActor(for: userId, jobId: shift.shift.job_id)
     let month = date.yearMonth()
     let rows = await reader.loadShiftRows(
       for: userId, year: month.year, month: month.month, jobId: shift.shift.job_id

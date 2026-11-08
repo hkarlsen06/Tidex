@@ -355,7 +355,7 @@ struct SyncCursor {
 // MARK: - Sync Table Enum
 
 /// Tables that participate in sync
-enum SyncTable: String, CaseIterable {
+enum SyncTable: String, CaseIterable, Sendable {
   case jobs = "jobs"
   case userShifts = "user_shifts"
   case events = "events"

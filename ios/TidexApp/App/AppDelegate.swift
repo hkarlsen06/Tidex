@@ -539,7 +539,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       )
       LiveActivityPushTokenService.shared.observe(activity, locallyStarted: true)
     } catch {
-      launchLog.error("Failed to start Live Activity: \(error.localizedDescription, privacy: .private)")
+      launchLog.error(
+        "Failed to start Live Activity: \(error.localizedDescription, privacy: .private)")
     }
   }
 
@@ -592,7 +593,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     Task { @MainActor in
       await registerAPNsToken(tokenString)
-      await LiveActivityPushTokenService.shared.registerCachedTokensIfNeeded()
     }
   }
 
@@ -638,15 +638,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Prevent duplicate in-flight registrations
     guard !apnsRegistrationInFlight else { return }
 
-    // Never register push tokens during admin impersonation — this would
-    // associate the admin's physical device with the impersonated user,
-    // causing the admin to receive the target user's notifications.
-    let isImpersonating = await MainActor.run { ImpersonationManager.shared.isImpersonating }
-    guard !isImpersonating else {
-      launchLog.debug("[APNs] Skipping registration during impersonation")
-      return
-    }
-
     apnsRegistrationInFlight = true
     defer { apnsRegistrationInFlight = false }
 
@@ -672,8 +663,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
       // Push tokens are user-scoped server records. If APNs returns a token
       // while the app is signed out, keep the cached token and retry after login.
-      guard await AuthSessionManager.shared.getSessionIfAvailable() != nil else {
-        launchLog.debug("[APNs] Skipping token registration because no authenticated session is available")
+      guard let session = await AuthSessionManager.shared.getSessionIfAvailable(),
+        !session.user.isImpersonating
+      else {
+        launchLog.debug("[APNs] Skipping registration without a normal authenticated session")
         return
       }
 
@@ -696,6 +689,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         await MainActor.run {
           PushNotificationManager.shared.registrationSucceeded()
         }
+        // The Live Activity endpoint requires the push-device row created above.
+        await LiveActivityPushTokenService.shared.registerCachedTokensIfNeeded()
       } else {
         launchLog.error("[APNs] Registration did not succeed")
         await MainActor.run {
@@ -706,7 +701,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     } catch let error where isAPNsRegistrationCancellation(error) {
       launchLog.debug("[APNs] Token registration cancelled")
     } catch {
-      launchLog.error("[APNs] Failed to register token: \(error.localizedDescription, privacy: .private)")
+      launchLog.error(
+        "[APNs] Failed to register token: \(error.localizedDescription, privacy: .private)")
       await MainActor.run {
         PushNotificationManager.shared.serverRegistrationFailed(
           error.localizedDescription,
@@ -738,8 +734,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     if let token = cachedAPNsToken() {
       await registerAPNsToken(token)
     }
-
-    await LiveActivityPushTokenService.shared.registerCachedTokensIfNeeded()
   }
 
   /// Removes this device's push registration for the signed-in user. Call before
@@ -755,7 +749,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       _ = try await ConvexAPI.app.mutation(
         "devices:unregisterPush", Args(deviceToken: token), as: ConvexAPI.Ignored.self)
     } catch {
-      launchLog.error("[APNs] Failed to unregister token: \(error.localizedDescription, privacy: .private)")
+      launchLog.error(
+        "[APNs] Failed to unregister token: \(error.localizedDescription, privacy: .private)")
     }
   }
 

@@ -7,6 +7,114 @@ import XCTest
 @MainActor
 // swiftlint:disable:next type_body_length
 internal final class SyncOfflineBehaviorTests: XCTestCase {
+  func testPrefetchedPagesKeepMergeOrderWhenTheLaterTableReturnsFirst() async throws {
+    let jobsStarted = expectation(description: "Jobs download started")
+    let settingsFinished = expectation(description: "Settings downloaded first")
+    let pending = PendingLaunchSyncPage()
+    let replies = LaunchSyncReplies()
+    let task = Task {
+      await SyncDownloadedPage.consumePair(
+        [(.jobs, 10), (.userSettings, 20)], limit: 500,
+        fetch: {
+          table, cursor, _ in
+          if table == .jobs { return try await pending.wait(started: jobsStarted) }
+          settingsFinished.fulfill()
+          return .userSettings(SyncPullPage(rows: [], cursor: cursor + 1, done: true))
+        }, consume: { _, _, result in await replies.append(result) })
+    }
+    await fulfillment(of: [jobsStarted, settingsFinished], timeout: 2)
+    await pending.complete(.jobs(SyncPullPage(rows: [], cursor: 11, done: true)))
+    _ = await task.value
+    let pages = await replies.values
+    guard case .jobs(let jobs) = try pages[0].get(),
+      case .userSettings(let settings) = try pages[1].get()
+    else { return XCTFail("Network completion order changed the merge order") }
+    XCTAssertEqual(jobs.cursor, 11)
+    XCTAssertEqual(settings.cursor, 21)
+  }
+
+  func testPrefetchPreservesCompletedPagesAndErrorsForOrderedRetry() async throws {
+    let replies = LaunchSyncReplies()
+    _ = await SyncDownloadedPage.consumePair(
+      [(.jobs, 10), (.userSettings, 20)], limit: 500,
+      fetch: {
+        table, cursor, _ in
+        if table == .userSettings { throw URLError(.notConnectedToInternet) }
+        return .jobs(SyncPullPage(rows: [], cursor: cursor + 1, done: true))
+      }, consume: { _, _, result in await replies.append(result) })
+    let pages = await replies.values
+    guard case .jobs(let jobs) = try pages[0].get() else {
+      return XCTFail("Completed page was lost")
+    }
+    XCTAssertEqual(jobs.cursor, 11)
+    do {
+      _ = try pages[1].get()
+      XCTFail("The failed page must remain retryable")
+    } catch {
+      XCTAssertEqual((error as? URLError)?.code, .notConnectedToInternet)
+    }
+  }
+
+  func testCancellingPrefetchCancelsItsNetworkRequests() async {
+    let started = expectation(description: "Download started")
+    let replies = LaunchSyncReplies()
+    let task = Task {
+      await SyncDownloadedPage.consumePair(
+        [(.jobs, 0)], limit: 500,
+        fetch: { _, _, _ in
+          started.fulfill()
+          try await Task.sleep(for: .seconds(30))
+          return .jobs(SyncPullPage(rows: [], cursor: 1, done: true))
+        }, consume: { _, _, result in await replies.append(result) })
+    }
+    await fulfillment(of: [started], timeout: 2)
+    task.cancel()
+    _ = await task.value
+    let pages = await replies.values
+    do {
+      _ = try pages[0].get()
+      XCTFail("Cancelled prefetch returned a page to merge")
+    } catch {
+      XCTAssertTrue(SyncCoordinator.isCancellation(error))
+    }
+  }
+
+  func testSlowSecondDownloadCannotStarveTheFirstPagesDurableCursor() async throws {
+    let store = LocalStoreActor(modelContainer: try makeContainer())
+    _ = try await store.syncStateCopyCreatingIfNeeded(userId: "user-1")
+    await store.updateSyncState(userId: "user-1") { @Sendable state in
+      state.updateCursor(for: .jobs, to: 10)
+      state.updateCursor(for: .userSettings, to: 20)
+    }
+    let saved = expectation(description: "Leading page saved while the next download waits")
+    let secondStarted = expectation(description: "Second download started")
+    let task = Task {
+      await SyncDownloadedPage.consumePair(
+        [(.jobs, 10), (.userSettings, 20)], limit: 500,
+        fetch: {
+          table, _, _ in
+          if table == .jobs { return .jobs(SyncPullPage(rows: [], cursor: 11, done: true)) }
+          secondStarted.fulfill()
+          try await Task.sleep(for: .seconds(30))
+          return .userSettings(SyncPullPage(rows: [], cursor: 21, done: true))
+        },
+        consume: { table, _, result in
+          guard !Task.isCancelled, case .jobs(let page) = try? result.get() else { return false }
+          await store.updateSyncState(userId: "user-1") {
+            $0.updateCursor(for: table, to: page.cursor)
+          }
+          saved.fulfill()
+          return true
+        })
+    }
+    await fulfillment(of: [saved, secondStarted], timeout: 2)
+    task.cancel()
+    _ = await task.value
+    let state = try await store.syncStateCopy(userId: "user-1")
+    XCTAssertEqual(state?.cursor(for: .jobs), 11)
+    XCTAssertEqual(state?.cursor(for: .userSettings), 20)
+  }
+
   private let userId: String = "user-1"
 
   private func makeContainer() throws -> ModelContainer {
@@ -169,7 +277,8 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     var ready = false
     for await value in updates { ready = value }
     XCTAssertTrue(ready)
-    let refresh = await store.beginSync(reason: .manualRefresh, userId: userId, minimumSyncInterval: 60)
+    let refresh = await store.beginSync(
+      reason: .manualRefresh, userId: userId, minimumSyncInterval: 60)
     XCTAssertEqual(refresh, .started(generation: 0))
   }
 
@@ -225,7 +334,8 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     XCTAssertNil(staleEnd)
     let overlapping = await store.beginSync(
       reason: .foreground, userId: "other-user", minimumSyncInterval: 60)
-    XCTAssertEqual(overlapping, .alreadySyncing(generation: 1), "The new user's sync is still running")
+    XCTAssertEqual(
+      overlapping, .alreadySyncing(generation: 1), "The new user's sync is still running")
 
     let end = await store.endSync(success: true, generation: 1)
     XCTAssertNotNil(end, "The new user's own sync ends normally")
@@ -663,5 +773,30 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
 
   deinit {
     // Required by SwiftLint for XCTestCase subclasses.
+  }
+}
+
+private actor PendingLaunchSyncPage {
+  private var continuation: CheckedContinuation<SyncDownloadedPage, Error>?
+
+  func wait(started: XCTestExpectation) async throws -> SyncDownloadedPage {
+    try await withCheckedThrowingContinuation {
+      continuation = $0
+      started.fulfill()
+    }
+  }
+
+  func complete(_ page: SyncDownloadedPage) {
+    continuation?.resume(returning: page)
+    continuation = nil
+  }
+}
+
+private actor LaunchSyncReplies {
+  private(set) var values: [Result<SyncDownloadedPage, Error>] = []
+
+  func append(_ result: Result<SyncDownloadedPage, Error>) -> Bool {
+    values.append(result)
+    return true
   }
 }

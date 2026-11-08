@@ -314,7 +314,7 @@ extension ShiftsViewModel {
       return
     }
 
-    let context: PayrollReadContext = await monthlyPayrollReadService.loadContextOffMain(
+    let context: PayrollReadContext = await monthlyPayrollReadService.loadContextUsingStoreActor(
       for: userId
     )
     applyScheduleDependencies(context)

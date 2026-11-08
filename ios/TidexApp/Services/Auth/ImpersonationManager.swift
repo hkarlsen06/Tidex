@@ -44,17 +44,12 @@ final class ImpersonationManager {
   private var changeCount = 0
   @ObservationIgnored private var expiryTask: Task<Void, Never>?
 
-  private init() {
-    // A launch during an impersonation needs the expiry for the banner and the timer.
-    if isImpersonating {
-      Task { await refresh() }
-    }
-  }
+  private init() {}
 
   // MARK: - Public API
 
   /// Loads the open session for the banner and ends the impersonation in the app when it
-  /// expires. The manager calls it once at launch. Call it again when the app comes to the
+  /// expires. The coordinator calls it after resolving an impersonated identity. Call it when the app comes to the
   /// foreground if the session may have ended meanwhile.
   func refresh() async {
     guard let session = try? await AuthSessionManager.shared.getSession() else { return }

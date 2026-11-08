@@ -32,6 +32,13 @@ final class LiveActivityPushTokenService {
   private var activityUpdatesObservationTask: Task<Void, Never>?
   private var activityPushTokenTasks: [String: Task<Void, Never>] = [:]
   private var activityStateTasks: [String: Task<Void, Never>] = [:]
+  private struct DeviceRegistration {
+    let id = UUID()
+    let sessionId: String
+    let args: RegisterDeviceArgs
+    let task: Task<Void, Never>
+  }
+  private var deviceRegistration: DeviceRegistration?
   private var locallyStartedActivityIds: Set<String> = []
 
   private struct DeviceArgs: Encodable, Sendable {
@@ -39,7 +46,7 @@ final class LiveActivityPushTokenService {
     enum CodingKeys: String, CodingKey { case deviceId = "device_id" }
   }
 
-  private struct RegisterDeviceArgs: Encodable, Sendable {
+  private struct RegisterDeviceArgs: Encodable, Sendable, Equatable {
     let deviceId: String
     let pushToStartToken: String
     let timeZone: String
@@ -103,9 +110,6 @@ final class LiveActivityPushTokenService {
       }
     }
 
-    Task { @MainActor [weak self] in
-      await self?.registerCachedTokensIfNeeded()
-    }
   }
 
   func observe(
@@ -229,6 +233,10 @@ extension LiveActivityPushTokenService {
 
   private func handlePushToStartToken(_ token: Data) {
     let tokenString = LiveActivityTokenCodec.hexString(for: token)
+    guard UserDefaults.standard.string(forKey: Self.pushToStartTokenDefaultsKey) != tokenString
+    else {
+      return
+    }
     UserDefaults.standard.set(tokenString, forKey: Self.pushToStartTokenDefaultsKey)
 
     Task { @MainActor [weak self] in
@@ -246,6 +254,21 @@ extension LiveActivityPushTokenService {
       appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
     )
 
+    guard let sessionId = AuthSessionManager.shared.localSession()?.clerkSessionId else { return }
+    if let pending = deviceRegistration, pending.sessionId == sessionId, pending.args == args {
+      await pending.task.value
+      return
+    }
+    let task = Task { await sendDeviceRegistration(args) }
+    let registration = DeviceRegistration(sessionId: sessionId, args: args, task: task)
+    deviceRegistration = registration
+    await task.value
+    if deviceRegistration?.id == registration.id {
+      deviceRegistration = nil
+    }
+  }
+
+  private func sendDeviceRegistration(_ args: RegisterDeviceArgs) async {
     do {
       _ = try await ConvexAPI.app.mutation(
         "devices:registerLiveActivityDevice", args, as: ConvexAPI.Ignored.self)
@@ -310,8 +333,10 @@ extension LiveActivityPushTokenService {
   }
 
   private func hasAuthenticatedRegistrationContext() async -> Bool {
-    guard !ImpersonationManager.shared.isImpersonating else { return false }
-    return await AuthSessionManager.shared.getSessionIfAvailable() != nil
+    guard let session = await AuthSessionManager.shared.getSessionIfAvailable() else {
+      return false
+    }
+    return !session.user.isImpersonating
   }
 
   private func isTemporaryClockActivity(_ attributes: ShiftActivityAttributes) -> Bool {

@@ -21,15 +21,8 @@ extension Notification.Name {
   static let restartPreAuthOnboarding = Notification.Name("restartPreAuthOnboarding")
 }
 
-/// Root view wrapper that ensures a seamless launch experience.
-///
-/// The first SwiftUI frame renders a lightweight `LoadingView` that only depends
-/// on cached appearance state. This guarantees the frame is committed before iOS
-/// removes the launch storyboard, preventing the black-flash issue that can occur
-/// when heavier singletons trigger initialization during the first body evaluation.
-///
-/// After the initial frame is on screen, `isReady` flips and `RootContent` is
-/// created, which initializes `AppCoordinator` and other heavier singletons.
+/// Starts with cached appearance state before constructing the main content.
+/// SwiftUI lifecycle callbacks do not establish when a frame reaches the display.
 struct RootView: View {
   @State private var isReady = false
 
@@ -70,9 +63,7 @@ struct RootView: View {
     } else {
       LoadingView()
         .task {
-          // The .task fires after the view has appeared on screen.
-          // Flipping isReady triggers RootContent creation (with singletons)
-          // while LoadingView is already visible, so there is no black gap.
+          // Defer main content construction to the loading view task.
           isReady = true
         }
     }
@@ -118,6 +109,20 @@ private struct RootContent: View {
           switch coordinator.appState {
           case .loading:
             LoadingView()
+
+          case .sessionUnavailable:
+            ContentUnavailableView {
+              Label(
+                String(localized: .authErrorSessionTimedOut),
+                systemImage: "person.crop.circle.badge.exclamationmark"
+              )
+            } actions: {
+              Button(String(localized: .commonRetry)) {
+                Task { await coordinator.checkSession() }
+              }
+              .buttonStyle(.borderedProminent)
+              .tint(.tidexBlue)
+            }
 
           case .unauthenticated:
             if !hasCompletedPreAuthOnboarding, !showAuthAfterOnboarding {
@@ -211,10 +216,6 @@ private struct RootContent: View {
         await appGate.refresh()
         try? await Task.sleep(for: .seconds(60))
       }
-    }
-    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
-    { _ in
-      Task { await appGate.refresh() }
     }
     .onReceive(NotificationCenter.default.publisher(for: .restartPreAuthOnboarding)) { _ in
       restartPreAuthOnboarding()
@@ -333,7 +334,7 @@ struct LoadingView: View {
     }
     .ignoresSafeArea()
     .onAppear {
-      launchLog.info("[Launch] LoadingView.onAppear – first SwiftUI frame visible")
+      launchLog.info("[Launch] LoadingView.onAppear – view appeared")
     }
   }
 }

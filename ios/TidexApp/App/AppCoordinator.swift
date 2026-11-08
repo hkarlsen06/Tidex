@@ -39,6 +39,7 @@ final class AppCoordinator {
 
   enum AppState: Equatable {
     case loading  // Initial app load, checking session
+    case sessionUnavailable  // The SDK has a session, but its identity needs remote verification
     case unauthenticated  // No valid session, show login
     case termsRequired  // User needs to accept updated terms
     case authenticated  // Fully authenticated, show main app
@@ -158,6 +159,7 @@ final class AppCoordinator {
 
   /// Whether initial sync has completed after authentication
   private(set) var initialSyncComplete = false
+  private(set) var initialSyncNeedsLocalReload = true
 
   // MARK: - Dependencies
 
@@ -295,6 +297,8 @@ final class AppCoordinator {
       launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       await enterAuthenticatedState(user: session.user)
+    } else if Clerk.shared.session != nil {
+      appState = .sessionUnavailable
     } else {
       launchLog.error(
         "[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
@@ -318,8 +322,7 @@ final class AppCoordinator {
 
   private func setupAuthStateListener() {
     authStateTask = Task { [weak self] in
-      // Clerk restored the stored session in ClerkSetup.configure, so this needs no network
-      // unless a GoTrue session from version N is waiting to be exchanged.
+      // Route an existing local identity before refreshing its server profile.
       await self?.handleInitialSession()
       launchLog.info("[Launch] AppCoordinator Clerk auth events loop entered")
       for await event in Clerk.shared.auth.events {
@@ -344,6 +347,10 @@ final class AppCoordinator {
           handleSignedOutEvent()
 
         case .tokenRefreshed:
+          if appState == .sessionUnavailable {
+            await checkSession()
+            continue
+          }
           // A launch without network can leave userId unset. Finish it now that the
           // refresh worked.
           if userId == nil, appState == .authenticated {
@@ -388,7 +395,7 @@ final class AppCoordinator {
       return
     }
     resetLaunchSessionTimeoutCount()
-    if let session = AuthSessionManager.shared.localSession() {
+    if let session = AuthSessionManager.shared.localPresentationSession() {
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
     } else {
@@ -567,17 +574,37 @@ final class AppCoordinator {
     }
   }
 
-  /// Shows the main app and loads the profile, which sets `userId` and starts the initial
-  /// sync. Don't set `userId` by hand instead: the later recovery paths only load the
-  /// profile while `userId` is nil, so the dashboard would wait for a sync that never starts.
+  /// Publishes the known local identity and starts sync together. A fresh profile is still
+  /// required before presenting an impersonated account or an identity not stored locally.
   private func enterAuthenticatedState(user: AuthUser?) async {
-    // Load onboarding state before the state change so post-auth onboarding doesn't flash.
-    if let user {
-      loadOnboardingStateFromUser(user)
+    guard let user else {
+      appState = Clerk.shared.session == nil ? .unauthenticated : .sessionUnavailable
+      return
     }
+    // Load onboarding state before the state change so post-auth onboarding doesn't flash.
+    loadOnboardingStateFromUser(user)
     initialSyncComplete = false
+    if let local = AuthSessionManager.shared.localPresentationSession(),
+      local.normalizedUserId == user.normalizedId
+    {
+      await discardRetainedLocalDataIfUserChanged()
+      guard Clerk.shared.session?.id == local.clerkSessionId else {
+        return
+      }
+      applyUserProfile(user)
+      appState = .authenticated
+      triggerInitialSync(userId: user.normalizedId)
+      startAuthenticatedUserServices(userId: user.normalizedId)
+      runTrackedTask { [weak self] in
+        await self?.updateUserProfile(startInitialSync: false)
+      }
+      return
+    }
+    guard Clerk.shared.session != nil else { return }
+    applyUserProfile(user)
     appState = .authenticated
-    await updateUserProfile()
+    triggerInitialSync(userId: user.normalizedId)
+    startAuthenticatedUserServices(userId: user.normalizedId)
   }
 
   /// Background check for terms version update
@@ -676,11 +703,15 @@ final class AppCoordinator {
   private func applyRecoverableAuthFailureFallback(previousState: AppState) {
     let fallbackState: AppState
     switch previousState {
-    case .authenticated, .termsRequired, .unauthenticated:
+    case .authenticated, .termsRequired, .unauthenticated, .sessionUnavailable:
       fallbackState = previousState
 
     case .loading:
-      fallbackState = userId != nil ? .authenticated : .unauthenticated
+      if Clerk.shared.session != nil, userId == nil {
+        fallbackState = .sessionUnavailable
+      } else {
+        fallbackState = userId != nil ? .authenticated : .unauthenticated
+      }
     }
 
     if self.appState != fallbackState {
@@ -704,39 +735,56 @@ final class AppCoordinator {
 
   /// Update user profile data (display name and avatar)
   /// Also triggers initial sync in background
-  private func updateUserProfile() async {
+  private func updateUserProfile(startInitialSync: Bool = true) async {
+    let checkedSessionId = Clerk.shared.session?.id
     do {
       let session = try await sessionForProfileLoad()
       let user = session.user
+      guard !Task.isCancelled, appState == .authenticated,
+        AuthSessionManager.shared.localSession()?.clerkSessionId == session.clerkSessionId
+      else { return }
 
-      // Store user ID
       let currentUserId = user.normalizedId
-      self.userId = currentUserId
-
-      // loadOnboardingStateFromUser ran earlier, but the user row may have changed since
-      loadOnboardingStateFromUser(user)
-      Task { await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: currentUserId) }
-
-      userDisplayName = Self.displayName(for: user)
-
-      // Register only if permission already exists. First-run onboarding should not be
-      // interrupted by the system notification prompt.
-      await NotificationService.shared.registerIfPermissionAlreadyGranted()
-
-      // Trigger initial sync in background after authentication
-      triggerInitialSync(userId: currentUserId)
-
-      if let appDelegate = AppDelegate.shared {
-        runTrackedTask { [weak self] in
-          guard self?.userId == currentUserId else { return }
-          await appDelegate.registerCachedAPNsTokenIfNeeded()
-        }
+      let needsInitialSync = startInitialSync || userId != currentUserId
+      applyUserProfile(user)
+      if needsInitialSync {
+        triggerInitialSync(userId: currentUserId)
+        startAuthenticatedUserServices(userId: currentUserId)
       }
-
-      // The sync refreshes these. Until then, use the cached settings.
-      applyCachedSettings(userId: currentUserId)
     } catch {
-      userDisplayName = "User"
+      guard !Task.isCancelled else { return }
+      if let checkedSessionId, Clerk.shared.session?.id == checkedSessionId,
+        AuthSessionManager.shared.isDefinitiveSessionResolutionError(error)
+      {
+        // A server rejection overrides cached presentation. Keep the local store for
+        // this account, including unsynced edits, while removing device credentials.
+        let rejectedUserId = userId
+        appState = .sessionUnavailable
+        await performSignOut(global: false, retainingLocalDataFor: rejectedUserId)
+      } else if userDisplayName.isEmpty {
+        userDisplayName = "User"
+      }
+    }
+  }
+
+  private func applyUserProfile(_ user: AuthUser) {
+    userId = user.normalizedId
+    loadOnboardingStateFromUser(user)
+    userDisplayName = Self.displayName(for: user)
+    applyCachedSettings(userId: user.normalizedId)
+  }
+
+  private func startAuthenticatedUserServices(userId: String) {
+    runTrackedTask { [weak self] in
+      if AuthSessionManager.shared.localSession()?.user.isImpersonating == true {
+        await ImpersonationManager.shared.refresh()
+      }
+      guard !Task.isCancelled, self?.userId == userId else { return }
+      await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: userId)
+      guard !Task.isCancelled, self?.userId == userId else { return }
+      await NotificationService.shared.registerIfPermissionAlreadyGranted()
+      guard !Task.isCancelled, self?.userId == userId else { return }
+      await AppDelegate.shared?.registerCachedAPNsTokenIfNeeded()
     }
   }
 
@@ -770,7 +818,7 @@ final class AppCoordinator {
       return try await AuthSessionManager.shared.getSession()
     } catch {
       guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
-        let stored = AuthSessionManager.shared.localSession()
+        let stored = AuthSessionManager.shared.localPresentationSession()
       else {
         throw error
       }
@@ -784,14 +832,21 @@ final class AppCoordinator {
   /// Trigger initial sync after authentication
   private func triggerInitialSync(userId: String) {
     initialSyncComplete = false
+    initialSyncNeedsLocalReload = true
     let coordinator = syncCoordinator
 
     runTrackedTask { [weak self] in
       await coordinator.loadTrackingState(userId: userId)
-      _ = await coordinator.sync(reason: .appLaunch, userId: userId)
+      let result = await coordinator.sync(reason: .appLaunch, userId: userId)
       await FriendsMessageOutbox.shared.drain(userId: userId)
 
       guard let self, self.userId == userId else { return }
+      initialSyncNeedsLocalReload =
+        !result.success
+        || SyncCompletionSummary(
+          reason: .appLaunch, userId: userId,
+          tableResults: result.tableResults, pushResults: result.pushResults
+        ).hasLocalReadModelChanges
       initialSyncComplete = true
       applyCachedSettings(userId: userId)
     }
@@ -804,6 +859,10 @@ final class AppCoordinator {
   /// Called when app returns to foreground
   /// Triggers a sync with interval guard (won't sync if recent sync occurred)
   func handleAppForeground() {
+    if appState == .sessionUnavailable {
+      runTrackedTask { [weak self] in await self?.checkSession() }
+      return
+    }
     guard appState == .authenticated else { return }
 
     foregroundTask?.cancel()
@@ -821,6 +880,10 @@ final class AppCoordinator {
   /// Called by `ConnectivityMonitor` when the network comes back. Pushes local changes,
   /// bypassing the sync interval guard, and sends queued chat messages.
   func handleConnectivityRestored() async {
+    if appState == .sessionUnavailable {
+      await checkSession()
+      return
+    }
     guard appState == .authenticated else { return }
     recheckTermsIfPending()
 

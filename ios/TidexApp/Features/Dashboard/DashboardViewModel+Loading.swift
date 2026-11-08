@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import Observation
 import UIKit
-import os.log  // swiftlint:disable:this sorted_imports
+import os  // swiftlint:disable:this sorted_imports
 
 extension DashboardViewModel {
 
@@ -86,6 +86,12 @@ extension DashboardViewModel {
 
   func applyDashboardData(_ data: DashboardData) {  // swiftlint:disable:this type_contents_order
     guard dashboardData != data else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    if dashboardData == nil {
+      let log = OSLog(subsystem: "no.tidex.app", category: .pointsOfInterest)
+      os_signpost(.event, log: log, name: "Local dashboard ready")
+      Logger(subsystem: "no.tidex.app", category: "Launch").info(
+        "[Launch] Local dashboard data applied")
+    }
     dashboardData = data
   }
 
@@ -270,7 +276,8 @@ extension DashboardViewModel {
       // Prefetch neighboring months in the background
       prefetchNeighboringMonths()
 
-      dashboardViewModelLogger.info("✅ Pull-to-refresh complete (synced \(syncResult.totalRowsProcessed) rows)")
+      dashboardViewModelLogger.info(
+        "✅ Pull-to-refresh complete (synced \(syncResult.totalRowsProcessed) rows)")
 
     } catch {
       dashboardViewModelLogger.error("❌ Pull-to-refresh failed: \(error.localizedDescription)")
@@ -296,7 +303,7 @@ extension DashboardViewModel {
       return
     }
 
-    let context = await monthlyPayrollReadService.loadContextOffMain(for: userId)  // swiftlint:disable:this explicit_type_interface line_length
+    let context = await monthlyPayrollReadService.loadContextUsingStoreActor(for: userId)  // swiftlint:disable:this explicit_type_interface line_length
     applyDashboardDependencies(context)
   }
 
@@ -591,7 +598,8 @@ extension DashboardViewModel {
     let initialSyncJustCompleted = consumeInitialSyncCompletionTransition()  // swiftlint:disable:this explicit_type_interface line_length
     let refreshedContext: PayrollReadContext?
     if let currentUserId {
-      refreshedContext = await monthlyPayrollReadService.loadContextOffMain(for: currentUserId)
+      refreshedContext = await monthlyPayrollReadService.loadContextUsingStoreActor(
+        for: currentUserId)
     } else {
       refreshedContext = nil
     }
@@ -820,7 +828,9 @@ extension DashboardViewModel {
 
       // The user may have changed month during the awaits above. Applying this result would
       // show the old month under the new month's header.
-      guard displayYear == displayYM.year, displayMonth == displayYM.month else {
+      guard !Task.isCancelled, cachedUserId == userId,
+        displayYear == displayYM.year, displayMonth == displayYM.month
+      else {
         dashboardViewModelLogger.info("⏭️ Skipping stale dashboard payload after fetch")
         return
       }
@@ -869,7 +879,8 @@ extension DashboardViewModel {
       await refreshClockActiveState(referenceDate: Date())
       self.isLoading = false
 
-      dashboardViewModelLogger.info("📊 Loaded dashboard from local: \(displayShifts.count) shifts for \(displayKey)")
+      dashboardViewModelLogger.info(
+        "📊 Loaded dashboard from local: \(displayShifts.count) shifts for \(displayKey)")
 
     } catch is CancellationError {
       dashboardViewModelLogger.info("⏭️ Load cancelled (user navigated away)")
@@ -988,7 +999,8 @@ extension DashboardViewModel {
       // Evict old cache entries if over limit
       self.evictCacheIfNeeded()
 
-      dashboardViewModelLogger.info("📦 Prefetched \(key) with \(computedShifts.count) shifts from local")
+      dashboardViewModelLogger.info(
+        "📦 Prefetched \(key) with \(computedShifts.count) shifts from local")
     }
   }
 
@@ -1005,24 +1017,26 @@ extension DashboardViewModel {
   /// Get current authenticated user ID and update user profile data
   func getCurrentUserId() async throws -> String? {  // swiftlint:disable:this type_contents_order
     let session: AuthSession
-    do {
-      // Use AuthSessionManager to prevent concurrent refresh race conditions
-      session = try await AuthSessionManager.shared.getSession()
-    } catch {
-      guard AuthSessionManager.shared.isTransientSessionResolutionError(error) else {
+    if let local = AuthSessionManager.shared.localPresentationSession() {
+      session = local
+    } else {
+      do {
+        session = try await AuthSessionManager.shared.getSession()
+      } catch {
+        guard AuthSessionManager.shared.isTransientSessionResolutionError(error) else {
+          throw error
+        }
+
+        if let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() {
+          if self.userDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            self.userDisplayName = "User"
+          }
+          dashboardViewModelLogger.info("Using offline user id fallback")
+          return offlineUserId
+        }
+
         throw error
       }
-
-      if let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() {
-        // Preserve usable dashboard header state during cold offline launches.
-        if self.userDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-          self.userDisplayName = "User"
-        }
-        dashboardViewModelLogger.info("Using offline user id fallback")
-        return offlineUserId
-      }
-
-      throw error
     }
     let user = session.user  // swiftlint:disable:this explicit_type_interface
 

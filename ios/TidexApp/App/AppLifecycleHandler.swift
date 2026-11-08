@@ -40,6 +40,7 @@ final class AppLifecycleHandler {
 
     if !isInitialActivation {
       AppCoordinator.shared.handleAppForeground()
+      Task { await AppGate.shared.refresh() }
     }
     recordAppActivity()
 

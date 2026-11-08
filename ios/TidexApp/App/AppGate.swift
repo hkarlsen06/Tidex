@@ -14,11 +14,23 @@ final class AppGate {
   static let shared = AppGate()
 
   private(set) var block: AppGateBlock?
+  private var refreshTask: Task<Void, Never>?
 
   private let appVersion =
     Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
 
   func refresh() async {
+    if let refreshTask {
+      await refreshTask.value
+      return
+    }
+    let task = Task { await fetchConfiguration() }
+    refreshTask = task
+    await task.value
+    refreshTask = nil
+  }
+
+  private func fetchConfiguration() async {
     let request = URLRequest(
       url: APIConfiguration.appConfigURL,
       cachePolicy: .reloadIgnoringLocalCacheData,

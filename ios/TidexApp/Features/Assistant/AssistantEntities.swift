@@ -182,7 +182,7 @@ enum AssistantShifts {
   ) async throws -> (shifts: [ShiftWithComputations], context: PayrollReadContext) {
     let userId = try access.requireUserId()
     let window = window(around: now)
-    let context = await readService.loadContextOffMain(for: userId)
+    let context = await readService.loadContextUsingStoreActor(for: userId)
     let shifts = await readService.loadShiftRows(
       for: userId, startDate: window.startDate, endDate: window.endDate)
     let yearMonth = now.yearMonth()

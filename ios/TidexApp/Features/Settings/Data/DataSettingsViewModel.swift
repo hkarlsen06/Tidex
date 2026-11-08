@@ -412,7 +412,7 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
 
     // Use the same engine as the app so overtime and conflict exclusion match its totals.
     let readService = MonthlyPayrollReadService.shared
-    let context = await readService.loadContextOffMain(for: userId)
+    let context = await readService.loadContextUsingStoreActor(for: userId)
     let rows = await readService.loadShiftRows(for: userId, startDate: startDate, endDate: endDate)
     let calendar = Calendar.gregorianCurrent
     let computed = PayrollEngine.computeShiftsForMonth(

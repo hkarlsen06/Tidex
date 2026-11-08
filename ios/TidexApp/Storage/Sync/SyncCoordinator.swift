@@ -244,7 +244,8 @@ final class SyncCoordinator: Sendable {
       // Manual pull-to-refresh should wait for an ongoing sync, then retry.
       // This avoids dismissing the refresh UI immediately when background sync is active.
       if case .alreadySyncing(let waitingGeneration) = decision, reason == .manualRefresh {
-        syncCoordinatorLogger.info("Manual refresh requested while sync in progress, waiting for idle")
+        syncCoordinatorLogger.info(
+          "Manual refresh requested while sync in progress, waiting for idle")
         let updates = await stateStore.idleUpdates(generation: waitingGeneration)
         var finished = false
         for await ready in updates { finished = ready }
@@ -461,7 +462,8 @@ final class SyncCoordinator: Sendable {
         "sharing:setLastSyncedAt", Args(lastSyncedAt: formatTimestamp(syncedAt)))
       syncCoordinatorLogger.debug("Updated remote last_synced_at for \(userId.prefix(8))")
     } catch {
-      syncCoordinatorLogger.warning("Failed to update remote last_synced_at: \(error.localizedDescription)")
+      syncCoordinatorLogger.warning(
+        "Failed to update remote last_synced_at: \(error.localizedDescription)")
     }
   }
 
@@ -517,18 +519,29 @@ final class SyncCoordinator: Sendable {
     userId: String,
     startCursors: [SyncTable: Int64]
   ) async {
-    for table in tables {
+    let requests = tables.compactMap { table in
+      startCursors[table].map { (table: table, cursor: $0) }
+    }
+    for offset in stride(from: 0, to: requests.count, by: 2) {
       if Task.isCancelled { return }
-      guard let start = startCursors[table] else { continue }
-      do {
-        await phase.append(try await pullTable(table, userId: userId, after: start))
-      } catch {
-        syncCoordinatorLogger.error("Pull of \(table.displayName) failed: \(error.localizedDescription)")
-        await phase.record(error)
-        if Self.isCancellation(error) { return }
-        if await Self.isNetworkError(error) { return }
+      let pair = Array(requests[offset..<min(offset + 2, requests.count)])
+      let finished = await SyncDownloadedPage.consumePair(pair, limit: pageSize) {
+        table, start, download in
+        if Task.isCancelled { return false }
+        do {
+          let page = try download.get()
+          await phase.append(
+            try await self.pullTable(table, userId: userId, after: start, firstPage: page))
+        } catch {
+          syncCoordinatorLogger.error(
+            "Pull of \(table.displayName) failed: \(error.localizedDescription)")
+          await phase.record(error)
+          if Self.isCancellation(error) { return false }
+          if await Self.isNetworkError(error) { return false }
+        }
+        return true
       }
-      await Task.yield()
+      if !finished { return }
     }
   }
 
@@ -610,7 +623,8 @@ final class SyncCoordinator: Sendable {
             pushResults.append(result)
           } catch {
             if Self.isCancellation(error) { throw error }
-            syncCoordinatorLogger.error("Push of \(table.displayName) failed: \(error.localizedDescription)")
+            syncCoordinatorLogger.error(
+              "Push of \(table.displayName) failed: \(error.localizedDescription)")
             if pushError == nil { pushError = error }
             if Self.isWrongUser(error) { break }
             if await Self.isNetworkError(error) { break }

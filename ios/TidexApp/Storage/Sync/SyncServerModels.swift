@@ -4,7 +4,7 @@ import Foundation
 
 /// Extended shift row with sync metadata fields
 /// Used when fetching from server for sync (includes updated_at, revision, deleted_at)
-internal struct SyncShiftRow: Codable {
+internal struct SyncShiftRow: Codable, Sendable {
   internal let id: String
   internal let user_id: String
   internal let job_id: String?
@@ -37,7 +37,7 @@ internal struct SyncShiftRow: Codable {
 }
 
 /// Extended event row with sync metadata fields.
-internal struct SyncEventRow: Codable {
+internal struct SyncEventRow: Codable, Sendable {
   internal let id: String
   internal let user_id: String
   internal let start_date: String
@@ -71,7 +71,7 @@ internal struct SyncEventRow: Codable {
 }
 
 /// Extended recurring shift row with sync metadata fields
-internal struct SyncRecurringShiftRow: Codable {
+internal struct SyncRecurringShiftRow: Codable, Sendable {
   private static let timeZoneOffsetSeparatorMinimumIndex: Int = 2
   private static let timePrefixLength: Int = 5
 
@@ -138,7 +138,7 @@ internal struct SyncRecurringShiftRow: Codable {
 }
 
 /// Extended wage snapshot row with sync metadata fields
-internal struct SyncWageSnapshotRow: Codable {
+internal struct SyncWageSnapshotRow: Codable, Sendable {
   internal let id: String
   internal let user_id: String
   internal let job_id: String?
@@ -183,7 +183,7 @@ internal struct SyncWageSnapshotRow: Codable {
 }
 
 /// Extended payroll adjustment row with sync metadata fields
-internal struct SyncPayrollAdjustmentRow: Codable {
+internal struct SyncPayrollAdjustmentRow: Codable, Sendable {
   internal let id: String
   internal let user_id: String
   internal let job_id: String?
@@ -232,7 +232,7 @@ internal struct SyncPayrollAdjustmentRow: Codable {
 }
 
 /// Extended jobs row with sync metadata fields
-internal struct SyncJobRow: Codable {
+internal struct SyncJobRow: Codable, Sendable {
   internal let id: String
   internal let user_id: String
   internal let name: String
@@ -294,7 +294,7 @@ internal struct SyncJobRow: Codable {
 }
 
 /// Extended user settings row with sync metadata fields
-internal struct SyncUserSettingsRow: Codable {
+internal struct SyncUserSettingsRow: Codable, Sendable {
   internal let user_id: String
   internal let created_at: String?
   internal let updated_at: String
@@ -336,7 +336,7 @@ internal struct SyncUserSettingsRow: Codable {
 
 /// Notification preferences row for sync
 /// iOS is the source of truth. The server row also has a revision, which the app does not use.
-internal struct SyncNotificationPreferencesRow: Codable {
+internal struct SyncNotificationPreferencesRow: Codable, Sendable {
   internal let user_id: String
   internal let shift_reminders_enabled: Bool
   internal let shift_reminder_minutes_array: [Int]?

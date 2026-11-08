@@ -5,22 +5,106 @@ import XCTest
 
 final class OfflineAuthTests: XCTestCase {
   @MainActor
+  func testLaunchRestoresOnlyTheActiveAccountsLocalIdentityWithoutAToken() async throws {
+    let suite = "OfflineAuthTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let user = authUser("known-user")
+    let writer = AuthSessionManager(
+      activeSessionId: { "old-session" }, activeClerkUserId: { "clerk-user" },
+      defaults: defaults, lookupUser: { user }
+    )
+    _ = try await writer.currentUser(clerkUserId: "clerk-user", sessionId: "old-session")
+
+    var currentAccount: String? = "clerk-user"
+    var currentSession: String? = "new-session"
+    let restored = AuthSessionManager(
+      activeSessionId: { currentSession }, activeClerkUserId: { currentAccount },
+      defaults: defaults, lookupUser: { throw URLError(.notConnectedToInternet) }
+    )
+    let local = try XCTUnwrap(restored.localPresentationSession())
+    XCTAssertEqual(local.normalizedUserId, "known-user")
+    XCTAssertEqual(local.clerkSessionId, "new-session")
+    XCTAssertTrue(local.accessToken.isEmpty)
+
+    currentAccount = "someone-else"
+    XCTAssertNil(restored.localPresentationSession())
+    currentAccount = "clerk-user"
+    currentSession = nil
+    XCTAssertNil(restored.localPresentationSession())
+  }
+
+  @MainActor
+  func testDefinitiveIdentityRejectionRemovesPersistedOfflinePresentation() async throws {
+    let suite = "OfflineAuthTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let user = authUser("known-user")
+    let writer = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-user" }, defaults: defaults,
+      lookupUser: { user }
+    )
+    _ = try await writer.currentUser(clerkUserId: "clerk-user", sessionId: "session")
+    let rejected = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-user" }, defaults: defaults,
+      lookupUser: { throw AuthSessionManagerError.notSignedIn }
+    )
+    XCTAssertNotNil(rejected.localPresentationSession())
+    do {
+      _ = try await rejected.currentUser(clerkUserId: "clerk-user", sessionId: "session")
+      XCTFail("The server rejected this identity")
+    } catch { XCTAssertTrue(rejected.isDefinitiveSessionResolutionError(error)) }
+    XCTAssertNil(rejected.localPresentationSession())
+    let nextLaunch = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-user" }, defaults: defaults,
+      lookupUser: { throw URLError(.notConnectedToInternet) }
+    )
+    XCTAssertNil(nextLaunch.offlineUserIdFallback())
+  }
+
+  @MainActor
+  func testAnImpersonatedTargetCannotBePresentedFromTheStartupCache() async throws {
+    let suite = "OfflineAuthTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let target = AuthUser(
+      id: "target", email: nil, name: nil, avatarUrl: nil, role: nil, termsAcceptedAt: nil,
+      finishedOnboarding: true, isImpersonating: true, actorId: "administrator"
+    )
+    let manager = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-admin" },
+      defaults: defaults, lookupUser: { target }
+    )
+    _ = try await manager.currentUser(clerkUserId: "clerk-admin", sessionId: "session")
+    XCTAssertEqual(manager.localSession()?.normalizedUserId, "target")
+    XCTAssertNil(manager.localPresentationSession())
+    let restored = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-admin" },
+      defaults: defaults, lookupUser: { throw URLError(.notConnectedToInternet) }
+    )
+    XCTAssertNil(restored.localSession())
+    XCTAssertNil(restored.offlineUserIdFallback())
+  }
+
+  @MainActor
   func testLookupBeforeInvalidationCannotRestoreImpersonatedUser() async throws {
     let started = expectation(description: "old lookup started")
     var pending: CheckedContinuation<AuthUser, Error>?
     var first = true
     let old = authUser("old-target")
     let current = authUser("current-target")
-    let manager = AuthSessionManager(activeSessionId: { "session" }) {
-      if first {
-        first = false
-        return try await withCheckedThrowingContinuation {
-          pending = $0
-          started.fulfill()
+    let manager = AuthSessionManager(
+      activeSessionId: { "session" },
+      lookupUser: {
+        if first {
+          first = false
+          return try await withCheckedThrowingContinuation {
+            pending = $0
+            started.fulfill()
+          }
         }
-      }
-      return current
-    }
+        return current
+      })
     let lookup = Task { try await manager.currentUser(clerkUserId: "clerk", sessionId: "session") }
     await fulfillment(of: [started], timeout: 2)
     manager.clearCachedUser()
@@ -36,18 +120,22 @@ final class OfflineAuthTests: XCTestCase {
     var pending: CheckedContinuation<AuthUser, Error>?
     let old = authUser("old-account")
     let current = authUser("new-account")
-    let manager = AuthSessionManager(activeSessionId: { session }) {
-      if session == "old-session" {
-        return try await withCheckedThrowingContinuation {
-          pending = $0
-          started.fulfill()
+    let manager = AuthSessionManager(
+      activeSessionId: { session },
+      lookupUser: {
+        if session == "old-session" {
+          return try await withCheckedThrowingContinuation {
+            pending = $0
+            started.fulfill()
+          }
         }
-      }
-      return current
-    }
+        return current
+      })
     let first = Task { try await manager.currentUser(clerkUserId: "old", sessionId: "old-session") }
     await fulfillment(of: [started], timeout: 2)
-    let second = Task { try await manager.currentUser(clerkUserId: "old", sessionId: "old-session") }
+    let second = Task {
+      try await manager.currentUser(clerkUserId: "old", sessionId: "old-session")
+    }
     await Task.yield()
     session = "new-session"
     let newUser = try await manager.currentUser(clerkUserId: "new", sessionId: session)

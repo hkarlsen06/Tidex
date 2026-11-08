@@ -310,11 +310,11 @@ extension SyncCoordinator {
 
   // MARK: - Payroll Adjustments Pull
 
-  func pullPayrollAdjustmentsPage(userId: String, cursor: Int64) async throws
+  func pullPayrollAdjustmentsPage(userId: String, page: SyncPullPage<SyncPayrollAdjustmentRow>)
+    async throws
     -> PagePullResult
   {
-    let page: SyncPullPage<SyncPayrollAdjustmentRow> = try await SyncConvex.pull(
-      .payrollAdjustments, after: cursor, limit: pageSize)
+    try Task.checkCancellation()
     let rows = page.rows
 
     if rows.isEmpty {

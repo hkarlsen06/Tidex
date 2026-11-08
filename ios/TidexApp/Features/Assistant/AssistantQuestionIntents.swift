@@ -102,7 +102,7 @@ struct PeriodEarnings: Equatable {
     let days = period.days(around: now)
     let firstISO = days.first.toISODateString()
     let lastISO = days.last.toISODateString()
-    let context = await readService.loadContextOffMain(for: userId)
+    let context = await readService.loadContextUsingStoreActor(for: userId)
 
     var shiftsByMonth: [(month: Int, shifts: [ShiftWithComputations])] = []
     var month = days.first.yearMonth()
@@ -133,7 +133,9 @@ struct PeriodEarnings: Equatable {
           period.name, total, CurrencyConfig.format(completedGross, currency: currency)))
       : String(localized: .assistantEarningsTotal(period.name, total))
     if let net {
-      text += " " + String(localized: .assistantEarningsNet(CurrencyConfig.format(net, currency: currency)))
+      text +=
+        " "
+        + String(localized: .assistantEarningsNet(CurrencyConfig.format(net, currency: currency)))
     }
     return text
   }
@@ -166,7 +168,8 @@ struct NextShiftIntent: AppIntent {
       .first { $0.start > now }
     guard let next else {
       return .result(
-        value: nil, dialog: IntentDialog(.assistantNextShiftNone), view: NextShiftSnippet(shift: nil))
+        value: nil, dialog: IntentDialog(.assistantNextShiftNone),
+        view: NextShiftSnippet(shift: nil))
     }
     let dialog = String(
       localized: .assistantNextShiftDialog(
