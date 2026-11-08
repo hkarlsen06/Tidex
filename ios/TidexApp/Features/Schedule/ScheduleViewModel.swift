@@ -4,13 +4,13 @@ import Observation
 import UIKit
 import os.log
 
-private let kScheduleLogger: Logger = Logger(
+let kScheduleLogger: Logger = Logger(
   subsystem: "com.tidex.app", category: "ShiftsViewModel")
 private let kScheduleMonthNameFormatter: DateFormatter = FormatterCache.monthNameFormatter()
-private let kScheduleISODateFormatter: DateFormatter = FormatterCache.isoDateFormatter(
+let kScheduleISODateFormatter: DateFormatter = FormatterCache.isoDateFormatter(
   timeZone: Date.localTimeZone
 )
-private let kScheduleHourMinuteFormatter: DateFormatter = FormatterCache.hourMinuteFormatter(
+let kScheduleHourMinuteFormatter: DateFormatter = FormatterCache.hourMinuteFormatter(
   timeZone: Date.localTimeZone
 )
 
@@ -40,46 +40,6 @@ internal enum ShiftsError: Error, LocalizedError {
     case .notAuthenticated:
       return String(localized: .commonErrorNotAuthenticated)
     }
-  }
-}
-
-// MARK: - Month Cache Entry
-
-/// Cache entry for a single month's computed shifts
-private struct MonthCacheEntry {
-  private static let validityDuration: TimeInterval = 300
-
-  let year: Int
-  let month: Int
-  let shifts: [ShiftWithComputations]
-  let events: [EventRow]
-  let visibleRange: (start: Date, end: Date)
-  let timestamp: Date
-  /// Last access time for LRU eviction
-  var lastAccessed: Date
-
-  var key: String { "\(year)-\(month)" }
-
-  /// Check if cache entry is still valid (within 5 minutes)
-  var isValid: Bool {
-    Date().timeIntervalSince(timestamp) < Self.validityDuration
-  }
-
-  init(
-    year: Int,
-    month: Int,
-    shifts: [ShiftWithComputations],
-    events: [EventRow],
-    visibleRange: (start: Date, end: Date),
-    timestamp: Date
-  ) {
-    self.year = year
-    self.month = month
-    self.shifts = shifts
-    self.events = events
-    self.visibleRange = visibleRange
-    self.timestamp = timestamp
-    self.lastAccessed = timestamp
   }
 }
 
@@ -196,7 +156,7 @@ internal struct ShiftsCalendarPresentation {
   }
 }
 
-private struct MonthComputationInput {
+struct MonthComputationInput {
   let year: Int
   let month: Int
   let shifts: [ShiftRow]
@@ -216,37 +176,37 @@ final class ShiftsViewModel: MonthNavigable {
 
   // MARK: - Dependencies (Local-First Repositories)
 
-  private let shiftsRepository: ShiftsRepository
-  private let eventsRepository: EventsRepository
+  let shiftsRepository: ShiftsRepository
+  let eventsRepository: EventsRepository
   private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
-  private let recurringShiftsRepository: RecurringShiftsRepository
-  private let monthlyPayrollReadService: MonthlyPayrollReadService
-  private let syncCoordinator: SyncCoordinator
-  private let monthContext: SharedMonthContext
+  let recurringShiftsRepository: RecurringShiftsRepository
+  let monthlyPayrollReadService: MonthlyPayrollReadService
+  let syncCoordinator: SyncCoordinator
+  let monthContext: SharedMonthContext
 
   // MARK: - Published State
 
   /// All shifts for the displayed month (computed with payroll)
-  private(set) var shifts: [ShiftWithComputations] = []
+  var shifts: [ShiftWithComputations] = []
   /// Private events overlapping the currently visible calendar range.
-  private(set) var events: [EventRow] = []
+  var events: [EventRow] = []
   /// Event presentations keyed by covered ISO date for the displayed calendar range.
-  private(set) var eventCoverageByDate: [String: [EventPresentation]] = [:]
+  var eventCoverageByDate: [String: [EventPresentation]] = [:]
   /// Precomputed calendar maps and totals for the displayed month.
-  private(set) var calendarPresentation = ShiftsCalendarPresentation.empty()
+  var calendarPresentation = ShiftsCalendarPresentation.empty()
   /// Shifts grouped by ISO week
   /// Whether data is currently loading
-  private(set) var isLoading = false
+  var isLoading = false
   /// Error if data loading failed
-  private(set) var error: Error?
+  var error: Error?
   /// Set of shift IDs that have conflicts (overlapping with other shifts)
-  private(set) var conflictingShiftIds: Set<String> = []
+  var conflictingShiftIds: Set<String> = []
   /// Set of shift IDs excluded from totals (higher-earning overlapping shifts are excluded)
-  private(set) var excludedFromTotalIds: Set<String> = []
+  var excludedFromTotalIds: Set<String> = []
   /// Set of dates (ISO strings) that have conflicts
-  private(set) var conflictDates: Set<String> = []
+  var conflictDates: Set<String> = []
 
   /// Direction of last navigation (for animations) - synced from SharedMonthContext
   var navigationDirection: MonthNavigationDirection? { monthContext.navigationDirection }
@@ -256,10 +216,10 @@ final class ShiftsViewModel: MonthNavigable {
   // The calendar uses these to avoid showing the new month structure before data arrives
 
   /// The year that is actually ready to display (data loaded)
-  private(set) var committedYear: Int
+  var committedYear: Int
 
   /// The month that is actually ready to display (data loaded)
-  private(set) var committedMonth: Int
+  var committedMonth: Int
 
   /// Currently displayed year - synced from SharedMonthContext
   var displayYear: Int { monthContext.displayYear }
@@ -295,13 +255,13 @@ final class ShiftsViewModel: MonthNavigable {
   }
 
   /// User's currency for formatting
-  private(set) var currency: String = "kr"
+  var currency: String = "kr"
 
   /// Next upcoming shift (for countdown display)
-  private(set) var nextUpcomingShift: ShiftWithComputations?
+  var nextUpcomingShift: ShiftWithComputations?
 
   /// All non-deleted jobs for metadata rendering (badges/colors in shift cards).
-  private(set) var activeJobs: [Job] = []
+  var activeJobs: [Job] = []
 
   // MARK: - Selection State
 
@@ -355,13 +315,13 @@ final class ShiftsViewModel: MonthNavigable {
   var isUpdatingShift: Bool = false
 
   /// Whether an event update is in progress
-  private var isUpdatingEvent = false
+  var isUpdatingEvent = false
 
   /// Whether an event deletion is in progress
-  private var isDeletingEvent = false
+  var isDeletingEvent = false
 
   /// The shift being copied or moved (stored when entering copy/move mode)
-  private var shiftForOperation: ShiftWithComputations?
+  var shiftForOperation: ShiftWithComputations?
 
   /// Single vs multi-selection mode
   var isMultiSelectMode: Bool { selectedDates.count > 1 }
@@ -441,7 +401,7 @@ final class ShiftsViewModel: MonthNavigable {
     return activeJobsById[jobId]
   }
 
-  private static func visibleRange(
+  static func visibleRange(
     _ visibleRange: (start: Date, end: Date), contains dateISO: String
   )
     -> Bool
@@ -453,7 +413,7 @@ final class ShiftsViewModel: MonthNavigable {
     return date >= visibleRange.start && date <= visibleRange.end
   }
 
-  private static func buildEventCoverageByDate(
+  static func buildEventCoverageByDate(
     events: [EventRow],
     visibleRange: (start: Date, end: Date)
   ) -> [String: [EventPresentation]] {
@@ -503,7 +463,7 @@ final class ShiftsViewModel: MonthNavigable {
   }
 
   /// Recompute cached selection summary for header UI.
-  private func updateSelectionSummary() {
+  func updateSelectionSummary() {
     guard !selectedDates.isEmpty else {
       selectionSummary = nil
       return
@@ -556,31 +516,31 @@ final class ShiftsViewModel: MonthNavigable {
 
   // MARK: - Private State
 
-  @ObservationIgnored private var settings: UserSettings?
-  @ObservationIgnored private var snapshots: [WageSnapshot] = []
-  @ObservationIgnored private var recurringShifts: [RecurringShiftRow] = []
-  @ObservationIgnored private var scheduleDependenciesLoaded = false
-  @ObservationIgnored private var cachedUserId: String?
-  @ObservationIgnored private var isActiveTabVisible = true
-  @ObservationIgnored private var displayedMonthLoadPending = false
+  @ObservationIgnored var settings: UserSettings?
+  @ObservationIgnored var snapshots: [WageSnapshot] = []
+  @ObservationIgnored var recurringShifts: [RecurringShiftRow] = []
+  @ObservationIgnored var scheduleDependenciesLoaded = false
+  @ObservationIgnored var cachedUserId: String?
+  @ObservationIgnored var isActiveTabVisible = true
+  @ObservationIgnored var displayedMonthLoadPending = false
 
   /// Subscription to SharedMonthContext changes
   @ObservationIgnored private var monthContextCancellable: AnyCancellable?
 
   /// Track the last observed month to detect changes
-  @ObservationIgnored private var lastObservedYear: Int = 0
-  @ObservationIgnored private var lastObservedMonth: Int = 0
+  @ObservationIgnored var lastObservedYear: Int = 0
+  @ObservationIgnored var lastObservedMonth: Int = 0
 
   // MARK: - Month Cache
 
   /// Cache of computed shifts by month key (e.g., "2025-1")
-  @ObservationIgnored private var monthCache: [String: MonthCacheEntry] = [:]
+  @ObservationIgnored var monthCache: [String: MonthCacheEntry] = [:]
 
   /// Maximum number of months to keep in cache (prevents unbounded memory growth)
-  private static let maxCacheSize = 12
+  static let maxCacheSize = 12
 
   /// Background prefetch tasks keyed by month (to avoid duplicates and cancel stale work).
-  @ObservationIgnored private var prefetchTasks: [String: Task<Void, Never>] = [:]
+  @ObservationIgnored var prefetchTasks: [String: Task<Void, Never>] = [:]
 
   /// Memory warning observer
   @ObservationIgnored private var memoryWarningObserver: NSObjectProtocol?
@@ -589,17 +549,17 @@ final class ShiftsViewModel: MonthNavigable {
   @ObservationIgnored private var shiftReminderObserver: NSObjectProtocol?
 
   /// Whether cached month data must be rebuilt from local storage before reuse.
-  @ObservationIgnored private var localDataNeedsReload = false
+  @ObservationIgnored var localDataNeedsReload = false
 
   /// Cross-tab shift/event change observer.
   @ObservationIgnored private var shiftsDidChangeObserver: NSObjectProtocol?
 
   /// In-flight local reload shared by notification and tab-entry callers.
-  @ObservationIgnored private var localReloadTask: Task<Void, Never>?
-  @ObservationIgnored private var localReloadID: UUID?
+  @ObservationIgnored var localReloadTask: Task<Void, Never>?
+  @ObservationIgnored var localReloadID: UUID?
 
   /// Track active navigation task to cancel stale fetches
-  @ObservationIgnored private var activeNavigationTask: Task<Void, Never>?
+  @ObservationIgnored var activeNavigationTask: Task<Void, Never>?
 
   // MARK: - Initialization
 
@@ -737,1840 +697,43 @@ final class ShiftsViewModel: MonthNavigable {
     }
   }
 
-  // MARK: - Memory Management
+// MARK: - Month Cache Entry
 
-  /// Handle memory warning by clearing the cache
-  private func handleMemoryWarning() {
-    kScheduleLogger.warning(
-      "⚠️ Memory warning received - clearing month cache (\(self.monthCache.count) entries)"
-    )
-    monthCache.removeAll()
-    cancelPrefetchTasks()
+/// Cache entry for a single month's computed shifts
+struct MonthCacheEntry {
+  private static let validityDuration: TimeInterval = 300
+
+  let year: Int
+  let month: Int
+  let shifts: [ShiftWithComputations]
+  let events: [EventRow]
+  let visibleRange: (start: Date, end: Date)
+  let timestamp: Date
+  /// Last access time for LRU eviction
+  var lastAccessed: Date
+
+  var key: String { "\(year)-\(month)" }
+
+  /// Check if cache entry is still valid (within 5 minutes)
+  var isValid: Bool {
+    Date().timeIntervalSince(timestamp) < Self.validityDuration
   }
 
-  // MARK: - Deep Linking
-
-  /// Handle shift reminder notification tap - navigate to the shift's date
-  private func handleShiftReminderTap(_ notification: Notification) {
-    guard let userInfo = notification.userInfo,
-      let shiftDateString = userInfo["shift_date"] as? String
-    else {
-      kScheduleLogger.warning("Shift reminder tap missing shift_date")
-      return
-    }
-
-    kScheduleLogger.info("Deep linking to shift date: \(shiftDateString)")
-
-    // Parse the shift date (format: "yyyy-MM-dd")
-    guard let shiftDate = kScheduleISODateFormatter.date(from: shiftDateString) else {
-      kScheduleLogger.warning("Failed to parse shift date: \(shiftDateString)")
-      return
-    }
-
-    let calendar = Calendar.gregorianCurrent
-    let year = calendar.component(.year, from: shiftDate)
-    let month = calendar.component(.month, from: shiftDate)
-
-    // Navigate to the month and select the date
-    monthContext.navigateTo(year: year, month: month)
-    selectedDates = [shiftDateString]
-  }
-
-  /// Evict least recently used cache entries if over limit
-  private func evictCacheIfNeeded() {
-    guard monthCache.count > Self.maxCacheSize else {
-      return
-    }
-
-    // Sort by last accessed time (oldest first)
-    let sortedKeys = monthCache.keys.sorted { key1, key2 in
-      guard let entry1 = monthCache[key1], let entry2 = monthCache[key2] else {
-        return false
-      }
-      return entry1.lastAccessed < entry2.lastAccessed
-    }
-
-    // Remove oldest entries until we're under the limit
-    let entriesToRemove = monthCache.count - Self.maxCacheSize
-    for i in 0..<entriesToRemove {
-      let key = sortedKeys[i]
-      monthCache.removeValue(forKey: key)
-      kScheduleLogger.info("🗑️ Evicted cache entry: \(key)")
-    }
-  }
-
-  // MARK: - Month Navigation
-
-  /// Navigate to the previous month (non-blocking)
-  /// Delegates to SharedMonthContext - data reload happens via subscription
-  func goToPreviousMonth() {
-    monthContext.goToPreviousMonth()
-  }
-
-  /// Navigate to the next month (non-blocking)
-  /// Delegates to SharedMonthContext - data reload happens via subscription
-  func goToNextMonth() {
-    monthContext.goToNextMonth()
-  }
-
-  /// Reset to current month (non-blocking)
-  /// Delegates to SharedMonthContext - data reload happens via subscription
-  func goToCurrentMonth() {
-    monthContext.goToCurrentMonth()
-  }
-
-  // MARK: - Selection Actions
-
-  /// Handle a tap on a day that has shifts or events.
-  /// Outside selection mode a tap opens the day, so this returns `true` and leaves the
-  /// selection alone. In selection mode it toggles the day and returns `false`.
-  @discardableResult
-  func handleDayTapped(dateISO: String, shiftsOnDay: [ShiftWithComputations]) -> Bool {
-    // Reset delete confirmation on any tap
-    confirmingDelete = false
-
-    guard isSelectionModeEnabled else {
-      return true
-    }
-
-    // If tapping a date with no shifts, ignore (don't clear selection)
-    guard !shiftsOnDay.isEmpty else {
-      return false
-    }
-
-    if selectedDates.contains(dateISO) {
-      selectedDates.remove(dateISO)
-    } else {
-      selectedDates.insert(dateISO)
-    }
-    return false
-  }
-
-  /// Long press + drag on the calendar replaces the selection.
-  func applyDragSelection(_ dates: Set<String>) {
-    confirmingDelete = false
-    selectedDates = dates
-  }
-
-  /// Clear all selection state
-  func clearSelection() {
-    selectedDates.removeAll()
-    confirmingDelete = false
-    // Also clear copy/move state
-    isCopyMode = false
-    isMoveMode = false
-    copyTargetDates.removeAll()
-    shiftForOperation = nil
-  }
-
-  /// Delete all shifts for selected dates
-  func deleteSelectedShifts() async {
-    let shiftsToDelete = shifts.filter { selectedDates.contains($0.shiftDate) }
-    guard !shiftsToDelete.isEmpty else {
-      return
-    }
-
-    isDeleting = true
-
-    do {
-      let virtualExclusions = shiftsToDelete.compactMap {
-        shift -> (recurringId: String, date: String)? in
-        guard shift.isVirtual, let recurringId = shift.shift.recurring_id else {
-          return nil
-        }
-        return (recurringId, shift.shiftDate)
-      }
-      let virtualExclusionsByRecurringId = Dictionary(
-        grouping: virtualExclusions,
-        by: { $0.recurringId }
-      ).mapValues { exclusions in
-        exclusions.map(\.date)
-      }
-      let regularShiftIds = shiftsToDelete.filter { !$0.isVirtual }.map(\.id)
-
-      for (recurringId, dates) in virtualExclusionsByRecurringId {
-        try await recurringShiftsRepository.addExclusions(
-          id: recurringId,
-          dates: dates
-        )
-      }
-
-      if !regularShiftIds.isEmpty {
-        try await shiftsRepository.deleteShifts(ids: regularShiftIds)
-      }
-
-      clearSelection()
-      await reloadFromLocal()
-      notifyShiftsDidChange(
-        context: .affecting(
-          isoDates: shiftsToDelete.map(\.shiftDate)
-        ))
-
-      // Play deletion feedback
-      Haptics.playShiftDeleted()
-      UIAccessibility.post(
-        notification: .announcement, argument: String(localized: .shiftsAccessibilityShiftsDeleted))
-    } catch {
-      kScheduleLogger.error("Failed to delete shifts: \(error.localizedDescription)")
-    }
-
-    isDeleting = false
-  }
-
-  // MARK: - Copy/Move Actions
-
-  /// Enter copy mode - prepares to copy the selected shift to a new date
-  func initiateCopy() {
-    guard selectedDates.count == 1,
-      let dateISO = selectedDates.first
-    else { return }
-
-    // Get the shift for this date
-    let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
-    guard shiftsOnDate.count == 1, let shift = shiftsOnDate.first else {
-      // Multiple shifts on date or no shift found - can't copy
-      return
-    }
-
-    // Store the shift and enter copy mode
-    shiftForOperation = shift
-    copyTargetDates.removeAll()
-    isCopyMode = true
-    isMoveMode = false
-    confirmingDelete = false
-  }
-
-  /// Enter move mode - prepares to move the selected shift to a new date
-  func initiateMove() {
-    guard selectedDates.count == 1,
-      let dateISO = selectedDates.first
-    else { return }
-
-    // Get the shift for this date
-    let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
-    guard shiftsOnDate.count == 1, let shift = shiftsOnDate.first else {
-      // Multiple shifts on date or no shift found - can't move
-      return
-    }
-
-    // Store the shift and enter move mode
-    shiftForOperation = shift
-    copyTargetDates.removeAll()
-    isCopyMode = false
-    isMoveMode = true
-    confirmingDelete = false
-  }
-
-  /// Cancel copy/move mode and return to normal selection
-  func cancelCopyMoveMode() {
-    isCopyMode = false
-    isMoveMode = false
-    copyTargetDates.removeAll()
-    shiftForOperation = nil
-    // Keep the original selection so user can try again
-  }
-
-  /// Toggle a target date while choosing where to copy the selected shift.
-  /// - Parameter targetDateISO: The ISO date string to copy to.
-  func toggleCopyTargetDate(_ targetDateISO: String) {
-    guard isCopyMode, let sourceShift = shiftForOperation else {
-      return
-    }
-    guard targetDateISO != sourceShift.shiftDate else {
-      return
-    }
-
-    if copyTargetDates.contains(targetDateISO) {
-      copyTargetDates.remove(targetDateISO)
-    } else {
-      copyTargetDates.insert(targetDateISO)
-    }
-  }
-
-  /// Finish copy mode by copying the selected shift to all chosen target dates.
-  func finishCopyToSelectedDates() async {
-    // Prevent duplicate taps
-    guard !isCopying else {
-      return
-    }
-
-    guard isCopyMode,
-      let sourceShift = shiftForOperation,
-      !copyTargetDates.isEmpty
-    else { return }
-
-    isCopying = true
-    defer {
-      isCopying = false
-    }
-
-    do {
-      // Get current user ID - use cached value or fall back to AppCoordinator
-      // This guards against race conditions if user signs out mid-operation
-      let userId = cachedUserId ?? AppCoordinator.shared.getCurrentUserId()
-      guard let userId else {
-        throw ShiftsError.notAuthenticated
-      }
-
-      let sortedTargetDates = copyTargetDates.sorted()
-      try await createCopies(of: sourceShift, on: sortedTargetDates, userId: userId)
-
-      kScheduleLogger.info(
-        "Copied shift from \(sourceShift.shiftDate) to \(self.copyTargetDates.count) target dates")
-
-      // Exit copy mode and clear selection
-      isCopyMode = false
-      copyTargetDates.removeAll()
-      shiftForOperation = nil
-      clearSelection()
-
-      // Reload to show the new shift
-      await reloadFromLocal()
-      notifyShiftsDidChange(context: .affecting(isoDates: sortedTargetDates))
-      UIAccessibility.post(
-        notification: .announcement, argument: String(localized: .shiftsAccessibilityShiftsCopied))
-
-    } catch {
-      kScheduleLogger.error("Failed to copy shift: \(error.localizedDescription)")
-    }
-  }
-
-  /// Create a shift with the same times and supplements on each target date.
-  private func createCopies(
-    of sourceShift: ShiftWithComputations,
-    on targetDatesISO: [String],
-    userId: String
-  ) async throws {
-    for targetDateISO in targetDatesISO {
-      guard let targetDate = Date.fromISODateString(targetDateISO) else {
-        kScheduleLogger.error("Invalid target date: \(targetDateISO)")
-        continue
-      }
-
-      // Create a new shift with the same times at the target date
-      _ = try await shiftsRepository.createShift(
-        userId: userId,
-        jobId: sourceShift.shift.job_id,
-        shiftDate: targetDate,
-        startTime: sourceShift.startTime,
-        endTime: sourceShift.endTime,
-        customSupplements: sourceShift.shift.custom_supplements
-      )
-    }
-  }
-
-  private func computeCopyPreviewEarnings(
-    for dateISO: String,
-    sourceShift: ShiftWithComputations
-  ) -> CalendarEarningsData? {
-    let jobId = sourceShift.shift.job_id
-    let scopedSnapshots = snapshotsForJob(jobId)
-
-    let wageSnapshot = SnapshotsService.snapshotForDate(dateISO, from: scopedSnapshots)
-    let payoutDate = payoutSchedule(for: jobId).payoutDate(for: dateISO)
-    let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: scopedSnapshots)
-
-    let shift = ShiftRow(
-      id: "copy-preview-\(dateISO)",
-      user_id: sourceShift.shift.user_id,
-      job_id: jobId,
-      shift_date: dateISO,
-      start_time: sourceShift.startTime,
-      end_time: sourceShift.endTime,
-      custom_supplements: sourceShift.shift.custom_supplements
-    )
-
-    let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
-    let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
-    let net = computed.netPay(
-      taxEnabled: taxEnabled,
-      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
-    )
-
-    return CalendarEarningsData(net: net, gross: computed.gross, hasTaxEnabled: taxEnabled)
-  }
-
-  private func snapshotsForJob(_ jobId: String?) -> [WageSnapshot] {
-    let jobSnapshots = snapshots.filter { $0.job_id == jobId }
-    if !jobSnapshots.isEmpty {
-      return jobSnapshots
-    }
-
-    let defaultJobId = activeJobs.first(where: \.is_default)?.id  // swiftlint:disable:this explicit_type_interface
-    if defaultJobId == jobId {
-      return snapshots.filter { $0.job_id == nil }
-    }
-
-    return []
-  }
-
-  private func payoutSchedule(for jobId: String?) -> PayoutSchedule {
-    PayoutSchedule(
-      job: jobId.flatMap { id in activeJobs.first { $0.id == id } },
-      fallbackPayrollDay: settings?.effectivePayrollDay ?? 1
-    )
-  }
-
-  /// Handle date tap when in move mode - move shift to the tapped date
-  /// - Parameter targetDateISO: The ISO date string to move to
-  func handleMoveToDate(_ targetDateISO: String) async {
-    // Prevent duplicate taps
-    guard !isMoving else {
-      return
-    }
-
-    guard isMoveMode,
-      let sourceShift = shiftForOperation
-    else { return }
-
-    // Don't move to the same date
-    guard targetDateISO != sourceShift.shiftDate else {
-      cancelCopyMoveMode()
-      return
-    }
-
-    // Virtual shifts (from recurring patterns) cannot be moved
-    if sourceShift.isVirtual {
-      kScheduleLogger.warning("Cannot move virtual shift - must move the recurring pattern")
-      cancelCopyMoveMode()
-      return
-    }
-
-    isMoving = true
-
-    do {
-      // Parse the target date
-      guard let targetDate = Date.fromISODateString(targetDateISO) else {
-        kScheduleLogger.error("Invalid target date: \(targetDateISO)")
-        isMoving = false
-        cancelCopyMoveMode()
-        return
-      }
-
-      // Update the shift's date
-      _ = try await shiftsRepository.updateShift(
-        id: sourceShift.id,
-        shiftDate: targetDate
-      )
-
-      kScheduleLogger.info("Moved shift from \(sourceShift.shiftDate) to \(targetDateISO)")
-
-      // Exit move mode and clear selection
-      isMoveMode = false
-      shiftForOperation = nil
-      clearSelection()
-
-      // Reload to show the moved shift
-      await reloadFromLocal()
-      notifyShiftsDidChange(
-        context: .affecting(
-          isoDates: [sourceShift.shiftDate, targetDateISO]
-        ))
-      UIAccessibility.post(
-        notification: .announcement, argument: String(localized: .shiftsAccessibilityShiftsMoved))
-
-    } catch {
-      kScheduleLogger.error("Failed to move shift: \(error.localizedDescription)")
-    }
-
-    isMoving = false
-  }
-
-  // MARK: - Recurring Shift Editing
-
-  /// Update a recurring shift pattern
-  /// - Parameter editResult: The result from the recurring shift edit form
-  func updateRecurringShift(_ editResult: RecurringShiftEditResult) async {
-    // Prevent duplicate taps
-    guard !isUpdatingRecurring else {
-      return
-    }
-
-    isUpdatingRecurring = true
-    kScheduleLogger.info("📝 Updating recurring shift \(editResult.recurringId)")
-
-    do {
-      _ = try await recurringShiftsRepository.updateRecurringShift(
-        id: editResult.recurringId,
-        startTime: editResult.startTime,
-        endTime: editResult.endTime,
-        repeatIntervalWeeks: editResult.repeatIntervalWeeks,
-        selectedDays: editResult.selectedDays,
-        endCondition: editResult.endCondition,
-        exclusions: editResult.exclusions
-      )
-
-      kScheduleLogger.info("✅ Updated recurring shift \(editResult.recurringId)")
-
-      // Clear recurring shifts cache so changes are picked up
-      recurringShifts = []
-      scheduleDependenciesLoaded = false
-
-      // Reload to show the changes
-      await reloadFromLocal()
-
-      // Post notification for other views
-      notifyShiftsDidChange(context: .fullReload)
-
-    } catch {
-      kScheduleLogger.error("❌ Failed to update recurring shift: \(error.localizedDescription)")
-    }
-
-    isUpdatingRecurring = false
-  }
-
-  func stopRecurringShiftAfterDate(recurringId: String, occurrenceDate: String) async throws {
-    guard !isUpdatingRecurring else { throw ShiftSaveError.alreadyInProgress }
-
-    isUpdatingRecurring = true
-    defer { isUpdatingRecurring = false }
-    kScheduleLogger.info("📝 Ending recurring shift \(recurringId) after \(occurrenceDate)")
-
-    do {
-      _ = try await recurringShiftsRepository.updateRecurringShift(
-        id: recurringId,
-        endCondition: .endDate(date: occurrenceDate)
-      )
-
-      recurringShifts = []
-      scheduleDependenciesLoaded = false
-
-      await reloadFromLocal()
-      notifyShiftsDidChange(context: .fullReload)
-    } catch {
-      kScheduleLogger.error("❌ Failed to end recurring shift: \(error.localizedDescription)")
-      throw error
-    }
-  }
-
-  /// Delete a recurring shift pattern
-  /// - Parameter recurringId: The ID of the recurring shift to delete
-  func deleteRecurringShift(_ recurringId: String) async {
-    // Prevent duplicate taps
-    guard !isDeletingRecurring else {
-      return
-    }
-
-    isDeletingRecurring = true
-    kScheduleLogger.info("🗑️ Deleting recurring shift \(recurringId)")
-
-    do {
-      try await recurringShiftsRepository.deleteRecurringShift(id: recurringId)
-
-      kScheduleLogger.info("✅ Deleted recurring shift \(recurringId)")
-
-      // Clear recurring shifts cache so changes are picked up
-      recurringShifts = []
-      scheduleDependenciesLoaded = false
-
-      // Reload to show the changes
-      await reloadFromLocal()
-
-      // Post notification for other views
-      notifyShiftsDidChange(context: .fullReload)
-
-    } catch {
-      kScheduleLogger.error("❌ Failed to delete recurring shift: \(error.localizedDescription)")
-    }
-
-    isDeletingRecurring = false
-  }
-
-  /// Get a recurring shift by ID
-  /// - Parameter id: The recurring shift ID
-  /// - Returns: The recurring shift if found
-  func getRecurringShift(id: String) -> RecurringShiftRow? {
-    recurringShiftsRepository.getRecurringShift(id: id)
-  }
-
-  func getDisplayedShift(id: String) -> ShiftWithComputations? {
-    shifts.first(where: { $0.id == id })
-  }
-
-  // MARK: - Event Editing
-
-  func updateEvent(_ editResult: EventEditResult) async throws {
-    guard !isUpdatingEvent else {
-      return
-    }
-
-    isUpdatingEvent = true
-    defer { isUpdatingEvent = false }
-    kScheduleLogger.info("📝 Updating event \(editResult.eventId)")
-    let existingEvent = events.first(where: { $0.id == editResult.eventId })
-
-    guard
-      let startDate = Date.fromISODateString(editResult.startDate),
-      let endDate = Date.fromISODateString(editResult.endDate)
-    else {
-      kScheduleLogger.error(
-        "Invalid event date range: \(editResult.startDate) - \(editResult.endDate)"
-      )
-      throw ShiftsError.invalidEventDateRange
-    }
-
-    do {
-      guard
-        try await eventsRepository.updateEvent(
-          id: editResult.eventId,
-          startDate: startDate,
-          endDate: endDate,
-          isAllDay: editResult.isAllDay,
-          startTime: editResult.startTime,
-          endTime: editResult.endTime,
-          note: editResult.note,
-          notificationMinutesArray: editResult.notificationMinutesArray,
-          notificationAnchorTime: editResult.notificationAnchorTime
-        ) != nil
-      else {
-        kScheduleLogger.error("❌ Event missing during update: \(editResult.eventId)")
-        throw ShiftsError.eventNotFound
-      }
-
-      await reloadFromLocal()
-      notifyShiftsDidChange(
-        context: eventChangeContext(
-          for: editResult,
-          existingEvent: existingEvent
-        ))
-    } catch {
-      kScheduleLogger.error("❌ Failed to update event: \(error.localizedDescription)")
-      throw error
-    }
-  }
-
-  func deleteEvent(_ event: EventRow) async throws {
-    guard !isDeletingEvent else {
-      return
-    }
-
-    isDeletingEvent = true
-    defer { isDeletingEvent = false }
-
-    kScheduleLogger.info("🗑️ Deleting event \(event.id)")
-
-    try await eventsRepository.deleteEvent(id: event.id)
-    await reloadFromLocal()
-    notifyShiftsDidChange(
-      context: .affecting(
-        isoDateRangeStart: event.start_date,
-        end: event.end_date
-      ))
-  }
-
-  // MARK: - Shift Editing
-
-  /// Update a shift with new date/time values
-  /// - Parameter editResult: The result from the shift edit form
-  func updateShift(_ editResult: ShiftEditResult) async throws {
-    // Prevent duplicate taps
-    guard !isUpdatingShift else { throw ShiftSaveError.alreadyInProgress }
-
-    isUpdatingShift = true
-    defer { isUpdatingShift = false }
-    kScheduleLogger.info("📝 Updating shift \(editResult.shiftId)")
-
-    do {
-      // Parse the new date
-      guard let newDate = Date.fromISODateString(editResult.shiftDate) else {
-        kScheduleLogger.error("Invalid date format: \(editResult.shiftDate)")
-        throw ShiftSaveError.invalidDate
-      }
-
-      let currentShift = shifts.first(where: { $0.id == editResult.shiftId })?.shift
-      let hasTimeOrDateChanges =
-        editResult.shiftDate != currentShift?.shift_date
-        || editResult.startTime != currentShift.map { String($0.start_time.prefix(5)) }
-        || editResult.endTime != currentShift.map { String($0.end_time.prefix(5)) }
-      let resolvedNote = editResult.noteWasEdited ? editResult.note : currentShift?.note
-
-      if editResult.isVirtualShiftConversion {
-        try await convertVirtualShift(
-          editResult,
-          newDate: newDate,
-          hasTimeOrDateChanges: hasTimeOrDateChanges,
-          resolvedNote: resolvedNote
-        )
-
-      } else {
-        try await updateRegularShift(editResult, newDate: newDate)
-      }
-
-      // Reload to show the changes
-      await reloadFromLocal()
-
-      // Post notification for other views
-      notifyShiftsDidChange(
-        context: shiftChangeContext(
-          for: editResult,
-          existingShift: currentShift
-        ))
-
-    } catch {
-      kScheduleLogger.error("❌ Failed to update shift: \(error.localizedDescription)")
-      throw error
-    }
-  }
-
-  /// Regular shift update - just update the existing shift
-  private func updateRegularShift(_ editResult: ShiftEditResult, newDate: Date) async throws {
-    _ = try await shiftsRepository.updateShift(
-      id: editResult.shiftId,
-      shiftDate: newDate,
-      startTime: editResult.startTime,
-      endTime: editResult.endTime,
-      note: editResult.note,
-      noteWasEdited: editResult.noteWasEdited,
-      customSupplements: editResult.customSupplements
-    )
-    kScheduleLogger.info("✅ Updated shift \(editResult.shiftId)")
-  }
-
-  /// Convert a virtual (recurring) shift into a regular shift, or store only a per-date note.
-  private func convertVirtualShift(
-    _ editResult: ShiftEditResult,
-    newDate: Date,
-    hasTimeOrDateChanges: Bool,
-    resolvedNote: String?
-  ) async throws {
-    // Virtual shift conversion:
-    // 1. Add exclusion to the recurring shift for the original date
-    // 2. Create a new regular shift with the edited values
-    kScheduleLogger.info("🔄 Converting virtual shift to regular shift")
-
-    // Get user ID - use cached value or fall back to AppCoordinator
-    // This guards against race conditions if user signs out mid-operation
-    let userId = cachedUserId ?? AppCoordinator.shared.getCurrentUserId()
-    guard let recurringId = editResult.recurringId,
-      let userId
-    else {
-      kScheduleLogger.error("Missing recurringId or userId for virtual shift conversion")
-      throw ShiftSaveError.missingRecurringInfo
-    }
-
-    let recurringShift =
-      recurringShifts.first(where: { $0.id == recurringId })
-      ?? recurringShiftsRepository.getRecurringShift(id: recurringId)
-
-    if !hasTimeOrDateChanges, editResult.customSupplements == nil, editResult.noteWasEdited {
-      var updatedNotes = recurringShift?.date_specific_notes ?? [:]
-      if let resolvedNote {
-        updatedNotes[editResult.originalDate] = resolvedNote
-      } else {
-        updatedNotes.removeValue(forKey: editResult.originalDate)
-      }
-
-      _ = try await recurringShiftsRepository.updateDateSpecificNotes(
-        id: recurringId,
-        dateSpecificNotes: updatedNotes
-      )
-      kScheduleLogger.info("✅ Updated recurring note for \(editResult.originalDate)")
-    } else {
-      try await clearDateSpecificNote(
-        on: editResult.originalDate, recurringId: recurringId, recurringShift: recurringShift)
-
-      // Step 1: Add exclusion for the original date
-      try await RecurringShiftsRepository.shared.addExclusion(
-        id: recurringId,
-        date: editResult.originalDate
-      )
-      kScheduleLogger.info("✅ Added exclusion for \(editResult.originalDate)")
-
-      // Step 2: Create a new regular shift with the edited values
-      try await createRegularShift(
-        from: editResult, recurringId: recurringId, userId: userId,
-        newDate: newDate, note: resolvedNote)
-
-      try await clearDateSpecificNote(
-        on: editResult.originalDate, recurringId: recurringId, recurringShift: recurringShift)
-    }
-  }
-
-  private func createRegularShift(
-    from editResult: ShiftEditResult,
-    recurringId: String,
-    userId: String,
-    newDate: Date,
-    note: String?
-  ) async throws {
-    let sourceJobId =
-      shifts.first(where: { $0.id == editResult.shiftId })?.shift.job_id
-      ?? recurringShifts.first(where: { $0.id == recurringId })?.job_id
-
-    _ = try await shiftsRepository.createShift(
-      userId: userId,
-      jobId: sourceJobId,
-      shiftDate: newDate,
-      startTime: editResult.startTime,
-      endTime: editResult.endTime,
-      note: note,
-      customSupplements: editResult.customSupplements
-    )
-    kScheduleLogger.info("✅ Created new shift on \(editResult.shiftDate)")
-  }
-
-  private func clearDateSpecificNote(
-    on date: String,
-    recurringId: String,
-    recurringShift: RecurringShiftRow?
-  ) async throws {
-    guard var updatedNotes = recurringShift?.date_specific_notes else { return }
-    updatedNotes.removeValue(forKey: date)
-    _ = try await recurringShiftsRepository.updateDateSpecificNotes(
-      id: recurringId,
-      dateSpecificNotes: updatedNotes
-    )
-  }
-
-  func updateShiftPause(_ editResult: ShiftPauseEditResult) async {
-    guard !isUpdatingShift else {
-      return
-    }
-
-    isUpdatingShift = true
-    defer { isUpdatingShift = false }
-
-    kScheduleLogger.info("⏸️ Updating shift pause windows")
-    let changeContext: ShiftChangeContext
-
-    switch editResult.target {
-    case .standalone(let shiftId):
-      if let shift = shifts.first(where: { $0.id == shiftId }) {
-        changeContext = .affecting(isoDate: shift.shiftDate)
-      } else {
-        changeContext = .fullReload
-      }
-
-    case .recurringOccurrence(_, let date):
-      changeContext = .affecting(isoDate: date)
-    }
-
-    do {
-      switch editResult.target {
-      case .standalone(let shiftId):
-        _ = try await shiftsRepository.updateCustomPauseWindows(
-          id: shiftId,
-          customPauseWindows: editResult.customPauseWindows
-        )
-
-      case .recurringOccurrence(let recurringId, let date):
-        guard
-          let recurringShift = recurringShifts.first(where: { $0.id == recurringId })
-            ?? recurringShiftsRepository.getRecurringShift(id: recurringId)
-        else {
-          kScheduleLogger.error("Recurring shift not found for pause update: \(recurringId)")
-          return
-        }
-
-        var updatedPauseWindows = recurringShift.date_specific_pause_windows ?? [:]
-        if let normalized = PauseWindowSupport.normalize(editResult.customPauseWindows) {
-          updatedPauseWindows[date] = normalized
-        } else {
-          updatedPauseWindows.removeValue(forKey: date)
-        }
-
-        _ = try await recurringShiftsRepository.updateDateSpecificPauseWindows(
-          id: recurringId,
-          dateSpecificPauseWindows: PauseWindowSupport.normalize(updatedPauseWindows)
-        )
-      }
-
-      await reloadFromLocal()
-      notifyShiftsDidChange(context: changeContext)
-    } catch {
-      kScheduleLogger.error("❌ Failed to update shift pause windows: \(error.localizedDescription)")
-    }
-  }
-
-  /// Non-blocking month data loader
-  /// Uses cache for instant display, fetches in background if needed
-  /// IMPORTANT: Commits display state (year/month) atomically with shift data
-  private func applyCommittedMonthSnapshot(
-    shifts computedShifts: [ShiftWithComputations],
-    events displayEvents: [EventRow],
-    year: Int,
-    month: Int
-  ) {
-    let visibleRange = Date.visibleCalendarRange(year: year, month: month)
-    let currentMonth = Date.currentYearMonth()
-    let nextUpcomingShift =
-      currentMonth.year == year && currentMonth.month == month
-      ? findNextUpcomingShift(in: computedShifts)
-      : nil
-
-    updateConflictDetection(for: computedShifts)
-    self.shifts = computedShifts
-    self.events = displayEvents
-    self.eventCoverageByDate = Self.buildEventCoverageByDate(
-      events: displayEvents,
-      visibleRange: visibleRange
-    )
-    self.calendarPresentation = ShiftsCalendarPresentation.build(
-      shifts: computedShifts,
-      year: year,
-      month: month,
-      jobs: activeJobs,
-      currency: currency,
-      excludedFromTotalIds: excludedFromTotalIds
-    )
-    self.committedYear = year
-    self.committedMonth = month
-    self.nextUpcomingShift = nextUpcomingShift
-    if !selectedDates.isEmpty {
-      updateSelectionSummary()
-    }
-  }
-
-  private func notifyShiftsDidChange(context: ShiftChangeContext = .fullReload) {
-    NotificationCenter.default.postShiftsDidChange(object: self, context: context)
-  }
-
-  private func shiftChangeContext(
-    for editResult: ShiftEditResult,
-    existingShift: ShiftRow?
-  ) -> ShiftChangeContext {
-    var dates = [editResult.shiftDate, editResult.originalDate]
-
-    if let existingShift {
-      dates.append(existingShift.shift_date)
-    }
-
-    return .affecting(isoDates: dates)
-  }
-
-  private func eventChangeContext(
-    for editResult: EventEditResult,
-    existingEvent: EventRow?
-  ) -> ShiftChangeContext {
-    var context = ShiftChangeContext.affecting(
-      isoDateRangeStart: editResult.startDate,
-      end: editResult.endDate
-    )
-
-    if let existingEvent {
-      context = context.merging(
-        .affecting(
-          isoDateRangeStart: existingEvent.start_date,
-          end: existingEvent.end_date
-        ))
-    }
-
-    return context
-  }
-
-  @discardableResult
-  private func applyCachedDisplayedMonthIfValid(year: Int, month: Int) -> Bool {
-    let displayKey = "\(year)-\(month)"
-
-    guard var displayCache = monthCache[displayKey], displayCache.isValid else {
-      return false
-    }
-
-    kScheduleLogger.info("📦 Using cached computed data for \(displayKey)")
-
-    // ATOMIC UPDATE: Set shifts and committed state together
-    // This ensures the calendar structure and event data update in the same render pass.
-    applyCommittedMonthSnapshot(
-      shifts: displayCache.shifts,
-      events: displayCache.events,
-      year: year,
-      month: month
-    )
-
-    // Update last accessed time for LRU tracking
-    displayCache.lastAccessed = Date()
-    monthCache[displayKey] = displayCache
-
-    return true
-  }
-
-  private func loadShiftsForDisplayedMonthNonBlocking() {
-    guard isActiveTabVisible else {
-      displayedMonthLoadPending = true
-      kScheduleLogger.info("⏸️ Deferring schedule month load while Schedule tab is hidden")
-      return
-    }
-
-    let targetYear = displayYear
-    let targetMonth = displayMonth
-    let displayKey = "\(targetYear)-\(targetMonth)"
-
-    // Check if we have valid computed cache for displayed month
-    if applyCachedDisplayedMonthIfValid(year: targetYear, month: targetMonth) {
-      // Still prefetch neighbors in background
-      prefetchNeighboringMonths()
-      return
-    }
-
-    // Cache miss - fetch from local in background
-    // DON'T clear shifts array or update committed state - keep showing previous month until new data is ready
-    // This prevents the "flash of empty state" during local SQLite reads
-    kScheduleLogger.info("🔄 Cache miss for \(displayKey), fetching from local...")
-    self.isLoading = true
-
-    // Cancel any previous navigation task
-    activeNavigationTask?.cancel()
-
-    // Start background fetch
-    activeNavigationTask = Task { [weak self] in
-      guard let self else {
-        return
-      }
-
-      // Check if this task is still relevant
-      guard !Task.isCancelled,
-        displayYear == targetYear,
-        displayMonth == targetMonth
-      else {
-        kScheduleLogger.info("⏭️ Skipping stale fetch for \(displayKey)")
-        return
-      }
-
-      await loadShiftsForDisplayedMonth(
-        showLoadingState: false, targetYear: targetYear, targetMonth: targetMonth)
-
-      // Check again after fetch
-      guard !Task.isCancelled,
-        displayYear == targetYear,
-        displayMonth == targetMonth
-      else {
-        kScheduleLogger.info("⏭️ Skipping prefetch - user navigated during fetch")
-        return
-      }
-
-      // Prefetch neighbors after successful load
-      prefetchNeighboringMonths()
-    }
-  }
-
-  // MARK: - Public Methods
-
-  /// Get tariff supplement rules for a specific shift date
-  /// Used by CustomSupplementsEditorSheet to show applicable tariff rules
-  /// - Parameter shiftDate: ISO date string (YYYY-MM-DD)
-  /// - Returns: Array of supplement rules from the applicable snapshot
-  func getTariffRules(for shiftDate: String) -> [SupplementRule] {
-    guard let snapshot = SnapshotsService.snapshotForDate(shiftDate, from: snapshots) else {
-      return []
-    }
-    return snapshot.effectiveSupplements
-  }
-
-  /// Load all shifts data for current month (initial load)
-  /// Reads from local repositories only - sync is triggered by AppCoordinator
-  func loadShifts() async {
-    guard isActiveTabVisible else {
-      displayedMonthLoadPending = true
-      return
-    }
-
-    // Sync tracking with current month context values
-    lastObservedYear = monthContext.displayYear
-    lastObservedMonth = monthContext.displayMonth
-
-    // Clear all caches on full reload (including cachedUserId for impersonation support)
-    monthCache.removeAll()
-    cancelPrefetchTasks()
-    cachedUserId = nil
-    resetScheduleDependencies()
-
-    if await loadShiftsFromLocal() {
-      localDataNeedsReload = false
-      displayedMonthLoadPending = false
-    }
-
-    // Seed adjacent months after the initial local load so first navigation can use cache.
-    prefetchNeighboringMonths()
-  }
-
-  /// Refresh shifts data via sync then local reload
-  /// Called by pull-to-refresh - triggers network sync, then reloads from local
-  func refresh() async {
-    // SwiftUI .refreshable can cancel the parent task when the view hierarchy changes.
-    // Run refresh work in an unstructured task so sync can complete reliably.
-    let refreshTask = Task { @MainActor [weak self] in
-      guard let self else {
-        return
-      }
-      await performRefresh()
-    }
-
-    _ = await refreshTask.result
-  }
-
-  /// Performs pull-to-refresh sync and local reload.
-  private func performRefresh() async {
-    kScheduleLogger.info("🔄 Pull-to-refresh: triggering sync then local reload")
-
-    // Store current data as fallback
-    let previousShifts = shifts
-
-    do {
-      // Get user ID
-      if cachedUserId == nil {
-        guard let userId = try await getCurrentUserId() else {
-          throw ShiftsError.notAuthenticated
-        }
-        cachedUserId = userId
-      }
-
-      guard let userId = cachedUserId else {
-        throw ShiftsError.notAuthenticated
-      }
-
-      // Trigger sync to pull/push changes
-      let syncResult = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
-
-      if !syncResult.success, let errorMessage = syncResult.error {
-        kScheduleLogger.warning("⚠️ Sync had issues: \(errorMessage)")
-        // Continue anyway - we still want to show local data
-      }
-
-      // Clear in-memory caches so we pick up synced data
-      monthCache.removeAll()
-      cancelPrefetchTasks()
-      invalidateSharedPayrollReadCache(for: userId)
-      resetScheduleDependencies()
-
-      // Reload from local repositories
-      if await loadShiftsFromLocal() {
-        localDataNeedsReload = false
-      }
-
-      // Prefetch neighboring months
-      prefetchNeighboringMonths()
-
-      kScheduleLogger.info(
-        "✅ Pull-to-refresh complete (synced \(syncResult.totalRowsProcessed) rows)")
-
-    } catch {
-      kScheduleLogger.error("❌ Pull-to-refresh failed: \(error.localizedDescription)")
-
-      // Restore previous data so UI doesn't break
-      self.shifts = previousShifts
-
-      kScheduleLogger.info("📦 Restored previous data after refresh failure")
-    }
-  }
-
-  /// Reload shifts from local data without triggering sync
-  /// Called when shifts change locally (e.g., after adding a shift)
-  func reloadFromLocal() async {
-    guard isActiveTabVisible else {
-      markLocalDataStale()
-      return
-    }
-
-    let reloadID = UUID()
-    let task: Task<Void, Never> = Task { @MainActor [weak self] in
-      guard let self else {
-        return
-      }
-      await performReloadFromLocal()
-    }
-
-    localReloadTask = task
-    localReloadID = reloadID
-    await task.value
-    if localReloadID == reloadID {
-      localReloadTask = nil
-      localReloadID = nil
-    }
-  }
-
-  private func performReloadFromLocal() async {
-    kScheduleLogger.info("🔄 Reloading shifts from local data")
-
-    // Clear all caches to pick up new data
-    // Also critical for impersonation: cachedUserId must be refreshed from current session
-    monthCache.removeAll()
-    cancelPrefetchTasks()
-    invalidateSharedPayrollReadCache()
-    cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
-    resetScheduleDependencies()
-
-    // Reload from local repositories
-    let didReload = await loadShiftsFromLocal()
-    localDataNeedsReload = !didReload
-    if didReload {
-      displayedMonthLoadPending = false
-    }
-
-    // Prefetch neighboring months
-    if didReload {
-      prefetchNeighboringMonths()
-    }
-
-    if didReload {
-      kScheduleLogger.info("✅ Shifts reloaded from local")
-    } else {
-      kScheduleLogger.warning("⚠️ Shifts local reload did not complete")
-    }
-  }
-
-  func markLocalDataStale() {
-    localDataNeedsReload = true
-    displayedMonthLoadPending = true
-    scheduleDependenciesLoaded = false
-    invalidateSharedPayrollReadCache()
-  }
-
-  func handleExternalShiftsDidChange(_ context: ShiftChangeContext) async {
-    invalidateSharedPayrollReadCache()
-
-    guard context.canUseTargetedInvalidation else {
-      markLocalDataStale()
-      guard isActiveTabVisible else {
-        return
-      }
-      await reloadFromLocal()
-      return
-    }
-
-    let affectedKeys = scheduleCacheKeysAffected(by: context.affectedMonths)
-    invalidateMonthCacheEntries(for: affectedKeys, reason: "shift-change")
-
-    let currentDisplayKey = monthCacheKey(year: displayYear, month: displayMonth)
-    guard affectedKeys.contains(currentDisplayKey) else {
-      return
-    }
-
-    displayedMonthLoadPending = true
-    guard isActiveTabVisible else {
-      return
-    }
-    await reloadFromLocalIfStale()
-  }
-
-  private func monthCacheKey(year: Int, month: Int) -> String {
-    "\(year)-\(month)"
-  }
-
-  private func monthCacheKey(_ month: ShiftChangeAffectedMonth) -> String {
-    monthCacheKey(year: month.year, month: month.month)
-  }
-
-  private func scheduleCacheKeysAffected(
-    by affectedMonths: Set<ShiftChangeAffectedMonth>
-  ) -> Set<String> {
-    Set(
-      HomeScheduleAffectedMonthResolver.scheduleDisplayMonthsAffected(by: affectedMonths)
-        .map(monthCacheKey)
-    )
-  }
-
-  private func invalidateMonthCacheEntries(for keys: Set<String>, reason: String) {
-    guard !keys.isEmpty else {
-      return
-    }
-
-    var removedCount = 0
-    for key in keys {
-      if monthCache.removeValue(forKey: key) != nil {
-        removedCount += 1
-      }
-      prefetchTasks.removeValue(forKey: key)?.cancel()
-    }
-
-    if removedCount > 0 {
-      kScheduleLogger.info("♻️ Invalidated \(removedCount) schedule cache entries (\(reason))")
-    }
-  }
-
-  func setActiveTabVisible(_ isVisible: Bool) {
-    guard isActiveTabVisible != isVisible else {
-      return
-    }
-
-    isActiveTabVisible = isVisible
-
-    if !isVisible {
-      activeNavigationTask?.cancel()
-      cancelPrefetchTasks()
-      isLoading = false
-      return
-    }
-
-    let displayKey = "\(displayYear)-\(displayMonth)"
-    let hasValidDisplayedCache = monthCache[displayKey]?.isValid == true
-    let committedMatchesDisplayed = committedYear == displayYear && committedMonth == displayMonth
-    if localDataNeedsReload || displayedMonthLoadPending || !hasValidDisplayedCache
-      || !committedMatchesDisplayed
-    {
-      Task {
-        await reloadFromLocalIfStale()
-      }
-    }
-  }
-
-  /// Reload local storage only when an external change made cached month data stale.
-  /// Used on Schedule tab re-entry to preserve hot month cache when nothing changed.
-  func reloadFromLocalIfStale() async {
-    guard isActiveTabVisible else {
-      displayedMonthLoadPending = true
-      return
-    }
-
-    if let localReloadTask {
-      await localReloadTask.value
-      return
-    }
-
-    guard localDataNeedsReload else {
-      let targetYear = displayYear
-      let targetMonth = displayMonth
-
-      if applyCachedDisplayedMonthIfValid(year: targetYear, month: targetMonth) {
-        kScheduleLogger.info("📦 Preserved valid schedule cache on tab re-entry")
-        displayedMonthLoadPending = false
-        prefetchNeighboringMonths()
-        return
-      }
-
-      kScheduleLogger.info("🔄 Schedule cache unavailable on tab re-entry, loading displayed month")
-      await loadShiftsForDisplayedMonth(
-        showLoadingState: false,
-        targetYear: targetYear,
-        targetMonth: targetMonth
-      )
-      displayedMonthLoadPending = false
-      prefetchNeighboringMonths()
-      return
-    }
-
-    await reloadFromLocal()
-  }
-
-  // MARK: - Private Loading Methods
-
-  private func loadScheduleDependencies(  // swiftlint:disable:this type_contents_order
-    for userId: String,
-    forceReload: Bool = false
-  ) async {
-    guard forceReload || !scheduleDependenciesLoaded else {
-      return
-    }
-
-    let context: PayrollReadContext = await monthlyPayrollReadService.loadContextOffMain(
-      for: userId
-    )
-    applyScheduleDependencies(context)
-  }
-
-  private func applyScheduleDependencies(_ context: PayrollReadContext) {
-    settings = context.settings
-    if let userSettings = settings {
-      currency = userSettings.currency ?? "kr"
-    }
-    snapshots = context.snapshots
-    recurringShifts = context.recurringShifts
-    activeJobs = context.jobs
-    scheduleDependenciesLoaded = true
-  }
-
-  private func resetScheduleDependencies() {
-    settings = nil
-    snapshots = []
-    recurringShifts = []
-    activeJobs = []
-    scheduleDependenciesLoaded = false
-  }
-
-  private func invalidateSharedPayrollReadCache(for userId: String? = nil) {
-    monthlyPayrollReadService.invalidateSharedCache(for: userId ?? cachedUserId)
-  }
-
-  private func resolveCachedUserId() async throws -> String {
-    // Get or cache user ID
-    if cachedUserId == nil {
-      guard let userId = try await getCurrentUserId() else {
-        throw ShiftsError.notAuthenticated
-      }
-      cachedUserId = userId
-    }
-
-    guard let userId = cachedUserId else {
-      throw ShiftsError.notAuthenticated
-    }
-    return userId
-  }
-
-  /// Load raw data for the full visible calendar range (so out-of-month days show data).
-  private func loadVisibleMonthWindow(
-    for userId: String,
-    year: Int,
-    month: Int
-  ) async -> PayrollRawWindowData {
-    let windowData = await monthlyPayrollReadService.loadRawWindow(
-      for: userId,
-      window: .visibleCalendarMonth(year: year, month: month)
-    )
-    kScheduleLogger.info("📋 Loaded shifts for \(year)-\(month): \(windowData.shifts.count)")
-    kScheduleLogger.info("📋 Loaded events for \(year)-\(month): \(windowData.events.count)")
-    return windowData
-  }
-
-  /// Compute payroll for the visible month, cache it, and commit it as the displayed month.
-  private func computeAndCommitMonth(
+  init(
     year: Int,
     month: Int,
-    window: PayrollRawWindowData,
-    payrollSettings: UserSettings
-  ) async throws -> [ShiftWithComputations] {
-    let visibleRange = Date.visibleCalendarRange(year: year, month: month)
-    let rawShifts = window.shifts
-    let displayEvents = window.events
-    let recurringSnapshot = recurringShifts  // swiftlint:disable:this explicit_type_interface
-    let snapshotsSnapshot = snapshots  // swiftlint:disable:this explicit_type_interface
-    let activeJobsSnapshot = activeJobs  // swiftlint:disable:this explicit_type_interface
-    let computedShifts = try await Self.computeShiftsForMonthOffMain(
-      MonthComputationInput(
-        year: year,
-        month: month,
-        shifts: rawShifts,
-        recurringShifts: recurringSnapshot,
-        snapshots: snapshotsSnapshot,
-        settings: payrollSettings,
-        visibleRange: visibleRange,
-        jobs: activeJobsSnapshot
-      )
-    )
-    try Task.checkCancellation()
-
-    // Cache the computed results
-    let displayKey = "\(year)-\(month)"
-    monthCache[displayKey] = MonthCacheEntry(
-      year: year,
-      month: month,
-      shifts: computedShifts,
-      events: displayEvents,
-      visibleRange: visibleRange,
-      timestamp: Date()
-    )
-
-    // Evict old cache entries if over limit
-    evictCacheIfNeeded()
-
-    // ATOMIC UPDATE: Set shifts, events, and committed state together.
-    applyCommittedMonthSnapshot(
-      shifts: computedShifts,
-      events: displayEvents,
-      year: year,
-      month: month
-    )
-
-    return computedShifts
+    shifts: [ShiftWithComputations],
+    events: [EventRow],
+    visibleRange: (start: Date, end: Date),
+    timestamp: Date
+  ) {
+    self.year = year
+    self.month = month
+    self.shifts = shifts
+    self.events = events
+    self.visibleRange = visibleRange
+    self.timestamp = timestamp
+    self.lastAccessed = timestamp
   }
-
-  /// Load shifts data from local repositories
-  @discardableResult
-  private func loadShiftsFromLocal() async -> Bool {
-    isLoading = true
-    error = nil
-
-    do {
-      let userId = try await resolveCachedUserId()
-
-      await loadScheduleDependencies(for: userId)
-      kScheduleLogger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
-      kScheduleLogger.info("📋 Loaded snapshots: \(self.snapshots.count)")
-      kScheduleLogger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
-
-      // The window covers the displayed month plus the out-of-month padding days shown in the calendar
-      let displayYM = (year: displayYear, month: displayMonth)
-
-      let displayWindowData = await loadVisibleMonthWindow(
-        for: userId, year: displayYM.year, month: displayYM.month)
-
-      // Check if we have settings to compute payroll
-      guard let currentSettings = self.settings else {
-        kScheduleLogger.info("📭 No local settings yet - waiting for sync (userId: \(userId))")
-        self.isLoading = false
-        return false
-      }
-
-      let computedShifts = try await computeAndCommitMonth(
-        year: displayYM.year,
-        month: displayYM.month,
-        window: displayWindowData,
-        payrollSettings: currentSettings
-      )
-
-      self.isLoading = false
-
-      kScheduleLogger.info(
-        "📊 Loaded shifts from local: \(computedShifts.count) shifts"
-      )
-
-      return true
-
-    } catch is CancellationError {
-      kScheduleLogger.info("⏭️ Load cancelled (user navigated away)")
-      return false
-    } catch {
-      kScheduleLogger.error("❌ Shifts local load failed: \(error.localizedDescription)")
-      self.error = ShiftsError.dataLoadFailed(underlying: error)
-      self.isLoading = false
-      return false
-    }
-  }
-
-  /// Load shifts data for the currently displayed month
-  /// - Parameters:
-  ///   - showLoadingState: Whether to show loading indicator
-  ///   - targetYear: The year to load (for atomic commit)
-  ///   - targetMonth: The month to load (for atomic commit)
-  private func loadShiftsForDisplayedMonth(
-    showLoadingState: Bool = true, targetYear: Int? = nil, targetMonth: Int? = nil
-  ) async {
-    if showLoadingState {
-      isLoading = true
-    }
-    error = nil
-
-    // Use provided targets or fall back to current display values
-    let loadYear = targetYear ?? displayYear
-    let loadMonth = targetMonth ?? displayMonth
-
-    do {
-      // Get or cache user ID
-      if cachedUserId == nil {
-        guard let userId = try await getCurrentUserId() else {
-          throw ShiftsError.notAuthenticated
-        }
-        cachedUserId = userId
-      }
-
-      guard let userId = cachedUserId else {
-        throw ShiftsError.notAuthenticated
-      }
-
-      await loadScheduleDependencies(for: userId)
-
-      // Calculate date range for displayed month (includes out-of-month padding days visible in calendar)
-      let displayYM = (year: loadYear, month: loadMonth)
-      let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
-
-      // Load raw data for the full visible calendar range (so out-of-month days show data)
-      let displayWindowData = await monthlyPayrollReadService.loadRawWindow(
-        for: userId,
-        window: .visibleCalendarMonth(year: displayYM.year, month: displayYM.month)
-      )
-      let displayShifts = displayWindowData.shifts
-      let displayEvents = displayWindowData.events
-
-      // Ensure settings are available
-      guard let currentSettings = self.settings else {
-        kScheduleLogger.info("📭 No local settings yet - waiting for sync")
-        self.isLoading = false
-        return
-      }
-
-      let recurringSnapshot = recurringShifts  // swiftlint:disable:this explicit_type_interface
-      let snapshotsSnapshot = snapshots  // swiftlint:disable:this explicit_type_interface
-      let activeJobsSnapshot = activeJobs  // swiftlint:disable:this explicit_type_interface
-      let computedShifts = try await Self.computeShiftsForMonthOffMain(
-        MonthComputationInput(
-          year: displayYM.year,
-          month: displayYM.month,
-          shifts: displayShifts,
-          recurringShifts: recurringSnapshot,
-          snapshots: snapshotsSnapshot,
-          settings: currentSettings,
-          visibleRange: visibleRange,
-          jobs: activeJobsSnapshot
-        )
-      )
-      try Task.checkCancellation()
-
-      // Cache the computed results
-      let displayKey = "\(displayYM.year)-\(displayYM.month)"
-      monthCache[displayKey] = MonthCacheEntry(
-        year: displayYM.year,
-        month: displayYM.month,
-        shifts: computedShifts,
-        events: displayEvents,
-        visibleRange: visibleRange,
-        timestamp: Date()
-      )
-
-      // Evict old cache entries if over limit
-      evictCacheIfNeeded()
-
-      // ATOMIC UPDATE: Set shifts, events, and committed state together.
-      applyCommittedMonthSnapshot(
-        shifts: computedShifts,
-        events: displayEvents,
-        year: loadYear,
-        month: loadMonth
-      )
-
-      self.isLoading = false
-
-    } catch is CancellationError {
-      kScheduleLogger.info("⏭️ Load cancelled (user navigated away)")
-    } catch {
-      kScheduleLogger.error("❌ Shifts load failed: \(error.localizedDescription)")
-      self.error = ShiftsError.dataLoadFailed(underlying: error)
-      self.isLoading = false
-    }
-  }
-
-  // MARK: - Next Upcoming Shift
-
-  /// Find the next upcoming shift from the current shifts.
-  private func findNextUpcomingShift(in shifts: [ShiftWithComputations]) -> ShiftWithComputations? {
-    let now = Date()
-    let calendar = Calendar.gregorianCurrent
-
-    // Filter to shifts that haven't ended yet
-    let upcomingShifts = shifts.filter { shift in
-      guard let shiftDate = Date.fromISODateString(shift.shiftDate),
-        let endTime = parseTime(shift.endTime)
-      else {
-        return false
-      }
-
-      // Combine date and time
-      var shiftEndComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-      shiftEndComponents.hour = calendar.component(.hour, from: endTime)
-      shiftEndComponents.minute = calendar.component(.minute, from: endTime)
-
-      // Handle cross-midnight shifts
-      if shift.endTime <= shift.startTime {
-        shiftEndComponents.day = (shiftEndComponents.day ?? 0) + 1
-      }
-
-      guard let shiftEnd = calendar.date(from: shiftEndComponents) else {
-        return false
-      }
-      return shiftEnd > now
-    }
-
-    // Sort by start datetime and take the first one
-    let sorted = upcomingShifts.sorted { a, b in
-      guard let dateA = Date.fromISODateString(a.shiftDate),
-        let dateB = Date.fromISODateString(b.shiftDate),
-        let timeA = parseTime(a.startTime),
-        let timeB = parseTime(b.startTime)
-      else {
-        return false
-      }
-
-      var componentsA = calendar.dateComponents([.year, .month, .day], from: dateA)
-      componentsA.hour = calendar.component(.hour, from: timeA)
-      componentsA.minute = calendar.component(.minute, from: timeA)
-
-      var componentsB = calendar.dateComponents([.year, .month, .day], from: dateB)
-      componentsB.hour = calendar.component(.hour, from: timeB)
-      componentsB.minute = calendar.component(.minute, from: timeB)
-
-      guard let startA = calendar.date(from: componentsA),
-        let startB = calendar.date(from: componentsB)
-      else {
-        return false
-      }
-
-      return startA < startB
-    }
-
-    return sorted.first
-  }
-
-  private func parseTime(_ time: String) -> Date? {
-    kScheduleHourMinuteFormatter.date(from: String(time.prefix(5)))
-  }
-
-  // MARK: - Conflict Detection
-
-  /// Update conflict detection for the given shifts
-  /// Sets conflictingShiftIds, excludedFromTotalIds, and conflictDates
-  private func updateConflictDetection(for shifts: [ShiftWithComputations]) {
-    let analysis = ConflictExclusion.analyze(shifts: shifts)
-
-    self.conflictingShiftIds = analysis.conflictingIds
-    self.excludedFromTotalIds = analysis.excludedIds
-    self.conflictDates = analysis.conflictDates
-
-    // Update the month context so MainTabView can show the conflict indicator on the list button
-    monthContext.hasConflictsInMonth = !analysis.conflictDates.isEmpty
-
-    if !analysis.conflictingIds.isEmpty {
-      kScheduleLogger.info(
-        """
-        ⚠️ Found \(analysis.conflictingIds.count) conflicting shifts on \(analysis.conflictDates.count) dates, \
-        \(analysis.excludedIds.count) excluded from totals
-        """
-      )
-    }
-
-    updateSelectionSummary()
-  }
-
-  // MARK: - Prefetching
-
-  /// Prefetch neighboring months in the background
-  private func prefetchNeighboringMonths() {
-    guard isActiveTabVisible else {
-      return
-    }
-
-    let displayYM = (year: displayYear, month: displayMonth)
-
-    // Calculate previous and next months
-    let previousYM = Date.previousYearMonth(from: displayYM)
-    let nextYM = nextYearMonth(from: displayYM)
-
-    // Prefetch both neighbors
-    prefetchMonthInBackground(year: previousYM.year, month: previousYM.month)
-    prefetchMonthInBackground(year: nextYM.year, month: nextYM.month)
-  }
-
-  /// Prefetch a single month's shift data with full payroll computation
-  /// Computes payroll upfront so navigation is instant
-  private func prefetchMonthInBackground(year: Int, month: Int) {
-    let key = "\(year)-\(month)"
-
-    // Skip if already have computed cache
-    if let cached = monthCache[key], cached.isValid {
-      return
-    }
-
-    // Skip if already prefetching
-    if prefetchTasks[key] != nil {
-      return
-    }
-
-    prefetchTasks[key] = Task { [weak self] in
-      guard let self else {
-        return
-      }
-      defer { prefetchTasks.removeValue(forKey: key) }
-
-      guard let userId = cachedUserId,
-        let currentSettings = settings
-      else {
-        return
-      }
-
-      // Get visible calendar range (includes out-of-month padding days)
-      let visibleRange = Date.visibleCalendarRange(year: year, month: month)
-
-      // Read raw data for the full visible calendar range
-      let fetchedWindow = await monthlyPayrollReadService.loadRawWindow(
-        for: userId,
-        window: .visibleCalendarMonth(year: year, month: month)
-      )
-
-      let recurringSnapshot = recurringShifts  // swiftlint:disable:this explicit_type_interface
-      let snapshotsSnapshot = snapshots  // swiftlint:disable:this explicit_type_interface
-      let activeJobsSnapshot = activeJobs  // swiftlint:disable:this explicit_type_interface
-
-      do {
-        try Task.checkCancellation()
-        let computedShifts = try await Self.computeShiftsForMonthOffMain(
-          MonthComputationInput(
-            year: year,
-            month: month,
-            shifts: fetchedWindow.shifts,
-            recurringShifts: recurringSnapshot,
-            snapshots: snapshotsSnapshot,
-            settings: currentSettings,
-            visibleRange: visibleRange,
-            jobs: activeJobsSnapshot
-          )
-        )
-
-        guard !Task.isCancelled else {
-          kScheduleLogger.info("⏭️ Prefetch cancelled for \(key)")
-          return
-        }
-
-        // Store in full computed cache
-        monthCache[key] = MonthCacheEntry(
-          year: year,
-          month: month,
-          shifts: computedShifts,
-          events: fetchedWindow.events,
-          visibleRange: visibleRange,
-          timestamp: Date()
-        )
-
-        // Evict old entries if needed
-        evictCacheIfNeeded()
-
-        kScheduleLogger.info("📦 Prefetched \(key): \(computedShifts.count) shifts (with payroll)")
-      } catch is CancellationError {
-        kScheduleLogger.info("⏭️ Prefetch cancelled for \(key)")
-      } catch {
-        kScheduleLogger.error("❌ Prefetch failed for \(key): \(error.localizedDescription)")
-      }
-    }
-  }
-
-  private func cancelPrefetchTasks() {
-    for task in prefetchTasks.values {
-      task.cancel()
-    }
-    prefetchTasks.removeAll()
-  }
-
-  private nonisolated static func computeShiftsForMonthOffMain(
-    _ input: MonthComputationInput
-  ) async throws -> [ShiftWithComputations] {
-    try Task.checkCancellation()
-
-    let computeTask = Task.detached(priority: .userInitiated) {
-      try Task.checkCancellation()
-      return PayrollEngine.computeShiftsForMonth(
-        .init(
-          year: input.year,
-          month: input.month,
-          shifts: input.shifts,
-          recurring: input.recurringShifts,
-          snapshots: input.snapshots,
-          settings: input.settings,
-          visibleRange: input.visibleRange,
-          jobs: input.jobs
-        )
-      )
-    }
-
-    do {
-      return try await computeTask.value
-    } catch {
-      computeTask.cancel()
-      throw error
-    }
-  }
-
-  /// Get next year/month (handles year rollover)
-  private func nextYearMonth(from current: (year: Int, month: Int)) -> (year: Int, month: Int) {
-    if current.month == 12 {
-      return (year: current.year + 1, month: 1)
-    }
-    return (year: current.year, month: current.month + 1)
-  }
-
-  // MARK: - Private Helpers
-
-  /// Get current authenticated user ID
-  private func getCurrentUserId() async throws -> String? {
-    do {
-      // Use AuthSessionManager to prevent concurrent refresh race conditions
-      let session = try await AuthSessionManager.shared.getSession()
-      return session.normalizedUserId
-    } catch {
-      guard AuthSessionManager.shared.isTransientSessionResolutionError(error) else {
-        throw error
-      }
-
-      if let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() {
-        kScheduleLogger.info("Using offline user id fallback")
-        return offlineUserId
-      }
-
-      throw error
-    }
-  }
+}
 }  // swiftlint:disable:this file_length
