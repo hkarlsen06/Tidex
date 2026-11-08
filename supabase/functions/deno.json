@@ -1,11 +1,11 @@
 {
   "imports": {
-    "@apple/app-store-server-library": "npm:@apple/app-store-server-library@3.0.0",
-    "@supabase/server": "npm:@supabase/server@1.4.0",
-    "@supabase/server/core": "npm:@supabase/server@1.4.0/core",
-    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.110.7",
-    "standardwebhooks": "npm:standardwebhooks@1.0.0",
-    "zod": "npm:zod@4.3.6"
+    "@apple/app-store-server-library": "npm:@apple/app-store-server-library@3.1.0",
+    "@supabase/server": "npm:@supabase/server@1.9.2",
+    "@supabase/server/core": "npm:@supabase/server@1.9.2/core",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.119.0",
+    "standardwebhooks": "npm:standardwebhooks@1.1.1",
+    "zod": "npm:zod@4.6.7"
   },
   "nodeModulesDir": "auto"
 }

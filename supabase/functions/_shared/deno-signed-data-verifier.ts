@@ -16,7 +16,7 @@ import {
   VerificationException,
   VerificationStatus,
 } from "@apple/app-store-server-library";
-import { ASN1HEX, KEYUTIL, X509 as JSRX509 } from "npm:jsrsasign@11.1.3";
+import { ASN1HEX, KEYUTIL, X509 as JSRX509 } from "npm:jsrsasign@11.1.5";
 
 // Supabase's Deno runtime does not implement X509Certificate.toString(),
 // verify(), or raw (self-hosted edge-runtime on Deno 2.1), so keep the DER

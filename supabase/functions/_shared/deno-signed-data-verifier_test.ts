@@ -1,7 +1,7 @@
 import { deepStrictEqual as assertEquals, rejects } from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { Environment } from "@apple/app-store-server-library";
-import { KEYUTIL, KJUR } from "npm:jsrsasign@11.1.3";
+import { KEYUTIL, KJUR } from "npm:jsrsasign@11.1.5";
 import { DenoSignedDataVerifier } from "./deno-signed-data-verifier.ts";
 
 const BUNDLE_ID = "no.tidex.app";
