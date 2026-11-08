@@ -2122,7 +2122,7 @@ Verified this document against:
 - `ios/TidexApp/Services/Payroll/PayrollAdjustmentCalculator.swift`
 - `ios/TidexApp/Services/Payroll/JobCurrencyAggregateResolver.swift`
 - `ios/TidexApp/Storage/Repositories/SnapshotsRepository.swift`
-- `ios/TidexApp/Features/Dashboard/DashboardViewModel.swift`
+- `ios/TidexApp/Features/Dashboard/DashboardViewModel+Payroll.swift`
 - `supabase/functions/_shared/payroll/calc.ts`
 - `marketing/app/docs/payroll/page.tsx`
 
