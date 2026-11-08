@@ -10,6 +10,7 @@ Every agent, subagents included, builds and runs the app and its tests itself to
 - Run a wrapper in the foreground with a 600000 ms timeout. That is how you wait for a long run, so do not write `sleep` loops to poll one. The wrapper's last line is a summary such as `SUMMARY: SUCCESS queued=312s compiled=95s tested=140s simulator="Shared iPhone 2"`, where `queued` is the time it waited for other agents and for a simulator to boot.
 - Run the smallest set of tests that proves the change, filtered with `-only-testing:<Target>/<Class>` where possible. The test wrapper builds the app itself, so do not run the build wrapper first.
 - Run UI tests (`TidexAppUITests`) when the change alters a journey they walk. Unfiltered runs skip them, so name the class with `-only-testing:TidexAppUITests/<Class>`.
+- UI journeys using the `app-store-screenshots` fixture require a shared simulator because the fixture is disabled on physical devices. Run them separately from device unit tests with `XCODE_TEST_AGENT_DESTINATION` unset.
 - Run on a connected device, or on a shared simulator when none is connected. [Devices and simulators](#devices-and-simulators) below says how. Do not open Simulator.app.
 - The lock does not see the Xcode app. If a run fails with `build.db: database is locked`, Hjalmar is probably building in Xcode. Wait a minute and retry.
 - `XCODE_AGENT_NICE` and `XCODE_AGENT_JOBS` are for the user to set, not you.
@@ -242,7 +243,7 @@ These functions are retained source only. Their production container is retired 
 - **Shared code**: `supabase/functions/_shared/`
 - **Deployment**: Sync the function to `/srv/tidex/tidex-sb/volumes/functions/` on `one-s` and restart the `functions` service
 - **Imports**: type-only imports from Node built-ins need the `node:` prefix (`"node:crypto"`, not `"crypto"`). The self-hosted edge runtime fails on the bare name.
-- **Tests**: `deno` is not installed on the Mac. From `supabase/functions` run `bunx deno-bin@2.2.7 test -A --no-lock <file>`, and use `check` the same way.
+- **Tests**: From `supabase/functions` run `bunx deno@2.9.6 test -A --frozen <file>`, and use `check` the same way. The older `deno-bin` runner cannot typecheck the current Apple SDK's Node crypto types.
 
 **JWT enforcement:**
 
