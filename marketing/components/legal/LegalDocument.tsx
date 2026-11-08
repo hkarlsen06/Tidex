@@ -1,14 +1,30 @@
 import type { ReactNode } from 'react';
 import type { Dictionary } from '@/lib/i18n/dictionaries';
 
-type TermsContent = Dictionary['legal']['terms'];
+interface LegalListItem {
+  text: string;
+  boldLabel?: string;
+  link?: { href: string; text: string };
+}
 
-interface TermsOfServiceProps {
-  content: TermsContent;
+interface LegalSection {
+  heading: string;
+  paragraphs?: readonly string[];
+  importantNote?: { label: string; text: string };
+  listIntro?: string;
+  list?: readonly LegalListItem[];
+  subsections?: readonly { subheading: string; text: string }[];
+  closingParagraph?: string;
+}
+
+interface LegalDocumentProps {
+  content: Pick<Dictionary['legal']['terms' | 'privacy' | 'security'], 'title' | 'lastUpdatedDate' | 'lastUpdatedLabel' | 'dateLocale'> & {
+    sections: readonly LegalSection[];
+  };
   headerAction?: ReactNode;
 }
 
-export function TermsOfService({ content, headerAction }: TermsOfServiceProps) {
+export function LegalDocument({ content, headerAction }: LegalDocumentProps) {
   const formattedDate = new Date(content.lastUpdatedDate).toLocaleDateString(content.dateLocale);
 
   return (
@@ -30,25 +46,25 @@ export function TermsOfService({ content, headerAction }: TermsOfServiceProps) {
       {content.sections.map((section) => (
         <div key={section.heading}>
           <h2>{section.heading}</h2>
-          {'paragraphs' in section && section.paragraphs && (section.paragraphs as unknown as readonly string[]).map((paragraph, index) => (
+          {section.paragraphs?.map((paragraph, index) => (
             <p key={`${section.heading}-p-${index}`}>{paragraph}</p>
           ))}
 
-          {'importantNote' in section && section.importantNote && (
+          {section.importantNote && (
             <p>
-              <strong>{(section.importantNote as any).label}</strong> {(section.importantNote as any).text}
+              <strong>{section.importantNote.label}</strong> {section.importantNote.text}
             </p>
           )}
 
-          {'listIntro' in section && section.listIntro ? <p>{String(section.listIntro)}</p> : null}
+          {section.listIntro ? <p>{section.listIntro}</p> : null}
 
-          {'list' in section && section.list && (
+          {section.list && (
             <ul>
-              {(section.list as unknown as any[]).map((item, index) => (
+              {section.list.map((item, index) => (
                 <li key={`${section.heading}-list-${index}`}>
-                  {'boldLabel' in item && item.boldLabel && (
+                  {item.boldLabel && (
                     <>
-                      <strong>{item.boldLabel as string}</strong>{' '}
+                      <strong>{item.boldLabel}</strong>{' '}
                     </>
                   )}
                   {renderListText(item)}
@@ -57,9 +73,9 @@ export function TermsOfService({ content, headerAction }: TermsOfServiceProps) {
             </ul>
           )}
 
-          {'subsections' in section && section.subsections && (
+          {section.subsections && (
             <div className="mt-4 space-y-3">
-              {(section.subsections as unknown as any[]).map((subsection, index) => (
+              {section.subsections.map((subsection, index) => (
                 <div key={`${section.heading}-sub-${index}`}>
                   <h3 className="text-base font-semibold">{subsection.subheading}</h3>
                   <p>{subsection.text}</p>
@@ -68,14 +84,14 @@ export function TermsOfService({ content, headerAction }: TermsOfServiceProps) {
             </div>
           )}
 
-          {'closingParagraph' in section && section.closingParagraph ? <p>{String(section.closingParagraph)}</p> : null}
+          {section.closingParagraph ? <p>{section.closingParagraph}</p> : null}
         </div>
       ))}
     </div>
   );
 }
 
-function renderListText(item: any) {
+function renderListText(item: LegalListItem) {
   if (!item.link) {
     return item.text;
   }
