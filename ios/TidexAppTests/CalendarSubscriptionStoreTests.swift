@@ -4,6 +4,105 @@ import XCTest
 
 @MainActor
 final class CalendarSubscriptionStoreTests: XCTestCase {
+  func testLaunchDoesNotOfferSetupWhileSubscriptionStateIsStillLoading() async {
+    let service = MockCalendarSubscriptionService(
+      state: .inactive, activeAfterDuplicate: .inactive, createError: nil
+    )
+    let started = expectation(description: "Subscription request started")
+    var reply: CheckedContinuation<CalendarSubscriptionState, Error>?
+    service.getOverride = {
+      try await withCheckedThrowingContinuation {
+        reply = $0
+        started.fulfill()
+      }
+    }
+    let store = makeStore(service: service, defaults: makeDefaults())
+    let refresh = Task { await store.refreshIfNeeded() }
+    await fulfillment(of: [started], timeout: 2)
+    XCTAssertFalse(store.canOfferSetup)
+    reply?.resume(returning: CalendarSubscriptionState(metadata: makeMetadata()))
+    await refresh.value
+    XCTAssertTrue(store.isActive)
+    XCTAssertFalse(store.canOfferSetup)
+  }
+
+  func testOldAccountsPendingRefreshCannotReplaceTheNewAccountsState() async {
+    let defaults = makeDefaults()
+    let service = MockCalendarSubscriptionService(
+      state: .inactive, activeAfterDuplicate: .inactive, createError: nil
+    )
+    let started = expectation(description: "Old account request started")
+    var reply: CheckedContinuation<CalendarSubscriptionState, Error>?
+    service.getOverride = {
+      try await withCheckedThrowingContinuation {
+        reply = $0
+        started.fulfill()
+      }
+    }
+    var userId = "old-user"
+    let store = CalendarSubscriptionStore(
+      service: service, tokenStore: InMemoryCalendarSubscriptionTokenStore(),
+      defaults: defaults, userIdProvider: { userId }
+    )
+    let oldRefresh = Task { await store.refresh() }
+    await fulfillment(of: [started], timeout: 2)
+    store.resetForUserChange()
+    userId = "new-user"
+    service.getOverride = nil
+    await store.refresh()
+    reply?.resume(returning: CalendarSubscriptionState(metadata: makeMetadata()))
+    await oldRefresh.value
+    XCTAssertFalse(store.isActive)
+    XCTAssertTrue(store.canOfferSetup)
+
+    service.getError = URLError(.notConnectedToInternet)
+    let nextLaunch = makeStore(service: service, defaults: defaults, userId: "new-user")
+    await nextLaunch.refresh()
+    XCTAssertFalse(nextLaunch.isActive)
+    XCTAssertTrue(nextLaunch.canOfferSetup)
+  }
+
+  func testOldAccountsRotationCannotSaveOrOpenAFeedForTheNewAccount() async throws {
+    let service = MockCalendarSubscriptionService(
+      state: .inactive, activeAfterDuplicate: .inactive, createError: nil
+    )
+    let started = expectation(description: "Old account rotation started")
+    var reply: CheckedContinuation<CalendarSubscriptionCreated, Error>?
+    service.createOverride = {
+      try await withCheckedThrowingContinuation {
+        reply = $0
+        started.fulfill()
+      }
+    }
+    var userId = "old-user"
+    let tokens = InMemoryCalendarSubscriptionTokenStore()
+    let store = CalendarSubscriptionStore(
+      service: service, tokenStore: tokens, defaults: makeDefaults(), userIdProvider: { userId }
+    )
+    // Match the settings action, which opens the feed only after the rotation returns.
+    let rotation = Task {
+      _ = try await store.rotate(mode: nil)
+      return try await store.rawTokenForActiveSubscription()
+    }
+    await fulfillment(of: [started], timeout: 2)
+    store.resetForUserChange()
+    userId = "new-user"
+    await store.refresh()
+    let oldMetadata = makeMetadata(id: "old-subscription")
+    reply?.resume(
+      returning: CalendarSubscriptionCreated(metadata: oldMetadata, rawToken: "old-secret"))
+    do {
+      _ = try await rotation.value
+      XCTFail("A stale rotation must stop the settings action")
+    } catch is CancellationError {
+      // The caller cannot proceed to open the old feed.
+    }
+    XCTAssertNil(tokens.loadToken(userId: "new-user", metadata: oldMetadata))
+    XCTAssertNil(tokens.loadToken(userId: "old-user", metadata: oldMetadata))
+    XCTAssertNil(store.activeMetadata)
+    XCTAssertNil(store.errorMessage)
+    XCTAssertTrue(store.canOfferSetup)
+  }
 
   func testDuplicateCreateRefreshesActiveState() async {
     let activeMetadata = makeMetadata()
@@ -160,14 +259,17 @@ final class CalendarSubscriptionStoreTests: XCTestCase {
     XCTAssertTrue(store.isStateUnknown)
   }
 
-  private func makeDefaults() -> UserDefaults {
+}
+
+extension CalendarSubscriptionStoreTests {
+  fileprivate func makeDefaults() -> UserDefaults {
     let suiteName = "CalendarSubscriptionStoreTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName) ?? .standard
     defaults.removePersistentDomain(forName: suiteName)
     return defaults
   }
 
-  private func makeStore(
+  fileprivate func makeStore(
     service: CalendarSubscriptionServicing,
     defaults: UserDefaults,
     userId: String = "user-1"
@@ -180,7 +282,7 @@ final class CalendarSubscriptionStoreTests: XCTestCase {
     )
   }
 
-  private func makeMetadata(
+  fileprivate func makeMetadata(
     id: String = "subscription-1",
     suffix: String = "aaaaaaaa"
   ) -> CalendarSubscriptionMetadata {
@@ -207,11 +309,15 @@ private enum MockCalendarSubscriptionError: Error, LocalizedError {
 }
 
 // `@unchecked` is safe because only the main actor tests touch the mock.
-private final class MockCalendarSubscriptionService: CalendarSubscriptionServicing, @unchecked Sendable {
+private final class MockCalendarSubscriptionService: CalendarSubscriptionServicing,
+  @unchecked Sendable
+{
   var state: CalendarSubscriptionState
   let activeAfterDuplicate: CalendarSubscriptionState
   let createError: Error?
+  var createOverride: (@MainActor @Sendable () async throws -> CalendarSubscriptionCreated)?
   var getError: Error?
+  var getOverride: (@MainActor @Sendable () async throws -> CalendarSubscriptionState)?
 
   init(
     state: CalendarSubscriptionState,
@@ -223,8 +329,8 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
     self.createError = createError
   }
 
-  // swiftlint:disable:next async_without_await
   func getSubscription() async throws -> CalendarSubscriptionState {
+    if let getOverride { return try await getOverride() }
     if let getError {
       throw getError
     }
@@ -234,10 +340,10 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
     return state
   }
 
-  // swiftlint:disable:next async_without_await
   func createSubscription(mode: CalendarSubscriptionContentMode) async throws
     -> CalendarSubscriptionCreated
   {
+    if let createOverride { return try await createOverride() }
     if let createError {
       throw createError
     }

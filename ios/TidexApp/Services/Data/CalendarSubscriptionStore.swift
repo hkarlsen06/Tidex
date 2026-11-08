@@ -1,7 +1,7 @@
 import Foundation
 import Observation
-import os.log
 import UIKit
+import os.log
 
 private let calendarSubscriptionStoreLogger = Logger(
   subsystem: "com.tidex.app",
@@ -18,7 +18,7 @@ final class CalendarSubscriptionStore {
   private(set) var isMutating = false
   /// True when the last refresh failed and no earlier result is stored, so the app can't
   /// tell whether a subscription exists. Screens must not offer "Set up" in this state.
-  private(set) var isStateUnknown = false
+  private(set) var isStateUnknown = true
   var errorMessage: String?
   var fallbackHTTPSURL: URL?
 
@@ -27,6 +27,7 @@ final class CalendarSubscriptionStore {
   @ObservationIgnored private let defaults: UserDefaults
   @ObservationIgnored private let userIdProvider: () async throws -> String
   @ObservationIgnored private var hasLoadedForCurrentSession = false
+  @ObservationIgnored private var userGeneration = 0
 
   init(
     service: CalendarSubscriptionServicing = CalendarSubscriptionService.shared,
@@ -62,25 +63,31 @@ final class CalendarSubscriptionStore {
 
   func refresh() async {
     guard !isLoading else { return }
+    let generation = userGeneration
     isLoading = true
     errorMessage = nil
     fallbackHTTPSURL = nil
-    defer { isLoading = false }
+    defer {
+      if generation == userGeneration { isLoading = false }
+    }
 
     do {
-      state = try await service.getSubscription()
+      let userId = try await userIdProvider()
+      guard generation == userGeneration, !Task.isCancelled else { return }
+      let refreshedState = try await service.getSubscription()
+      guard generation == userGeneration, !Task.isCancelled else { return }
+      state = refreshedState
       isStateUnknown = false
       hasLoadedForCurrentSession = true
-      await remember(state)
+      remember(state, userId: userId)
     } catch {
+      guard generation == userGeneration, !Task.isCancelled else { return }
       // Keep what the screen already shows. Otherwise fall back to the last known state.
       if !hasLoadedForCurrentSession {
-        if let lastKnown = await lastKnownState() {
-          state = lastKnown
-          isStateUnknown = false
-        } else {
-          isStateUnknown = true
-        }
+        let lastKnown = await lastKnownState()
+        guard generation == userGeneration, !Task.isCancelled else { return }
+        state = lastKnown ?? state
+        isStateUnknown = lastKnown == nil
       }
       errorMessage = ErrorTranslations.translate(error)
     }
@@ -88,15 +95,18 @@ final class CalendarSubscriptionStore {
 
   @discardableResult
   func create(mode: CalendarSubscriptionContentMode) async throws -> CalendarSubscriptionCreated {
-    try await mutate {
+    try await mutate { account in
       do {
         let created = try await service.createSubscription(mode: mode)
-        try await save(created: created)
+        try save(created: created, account: account)
         state = CalendarSubscriptionState(metadata: created.metadata)
-        await remember(state)
+        remember(state, userId: account.userId)
         return created
       } catch  where CalendarSubscriptionService.isDuplicateActiveSubscriptionError(error) {
-        state = try await service.getSubscription()
+        let refreshed = try await service.getSubscription()
+        try validate(account)
+        state = refreshed
+        remember(state, userId: account.userId)
         throw CalendarSubscriptionStoreError.subscriptionAlreadyActive
       }
     }
@@ -104,53 +114,63 @@ final class CalendarSubscriptionStore {
 
   @discardableResult
   func rotate(mode: CalendarSubscriptionContentMode?) async throws -> CalendarSubscriptionCreated {
-    try await mutate {
+    try await mutate { account in
       let created = try await service.rotateSubscription(mode: mode)
-      try await save(created: created)
+      try save(created: created, account: account)
       state = CalendarSubscriptionState(metadata: created.metadata)
-      await remember(state)
+      remember(state, userId: account.userId)
       return created
     }
   }
 
   func setContentMode(_ mode: CalendarSubscriptionContentMode) async throws {
-    try await mutate {
+    try await mutate { account in
       let metadata = try await service.setContentMode(mode)
+      try validate(account)
       state = CalendarSubscriptionState(metadata: metadata)
-      await remember(state)
+      remember(state, userId: account.userId)
       return ()
     }
   }
 
   func disable() async throws {
-    try await mutate {
+    try await mutate { account in
       let previousMetadata = state.metadata
       let disabled = try await service.disableSubscription()
+      try validate(account)
       if disabled, let previousMetadata {
-        let userId = try await userIdProvider()
-        tokenStore.deleteToken(userId: userId, metadata: previousMetadata)
+        tokenStore.deleteToken(userId: account.userId, metadata: previousMetadata)
       }
       state = .inactive
-      await remember(state)
+      remember(state, userId: account.userId)
       fallbackHTTPSURL = nil
       return ()
     }
   }
 
   func openCalendarApp() async {
+    let generation = userGeneration
+    let metadata = state.metadata
     do {
       fallbackHTTPSURL = nil
       let rawToken = try await rawTokenForActiveSubscription()
+      guard generation == userGeneration, metadata == state.metadata, !Task.isCancelled else {
+        return
+      }
       guard let webcalURL = service.webcalURL(rawToken: rawToken) else {
         throw CalendarSubscriptionStoreError.invalidURL
       }
 
       let opened = await UIApplication.shared.open(webcalURL)
+      guard generation == userGeneration, metadata == state.metadata, !Task.isCancelled else {
+        return
+      }
       if !opened, let httpsURL = service.httpsURL(rawToken: rawToken) {
         fallbackHTTPSURL = httpsURL
         errorMessage = String(localized: .calendarSubscriptionOpenFallbackMessage)
       }
     } catch {
+      guard generation == userGeneration, !Task.isCancelled else { return }
       errorMessage = ErrorTranslations.translate(error)
     }
   }
@@ -161,11 +181,15 @@ final class CalendarSubscriptionStore {
   }
 
   func rawTokenForActiveSubscription() async throws -> String {
+    let generation = userGeneration
     guard let metadata = state.metadata else {
       throw CalendarSubscriptionStoreError.noActiveSubscription
     }
 
     let userId = try await userIdProvider()
+    guard generation == userGeneration, metadata == state.metadata, !Task.isCancelled else {
+      throw CancellationError()
+    }
     guard let token = tokenStore.loadToken(userId: userId, metadata: metadata) else {
       throw CalendarSubscriptionStoreError.missingLocalToken
     }
@@ -174,8 +198,9 @@ final class CalendarSubscriptionStore {
   }
 
   func resetForUserChange() {
+    userGeneration += 1
     state = .inactive
-    isStateUnknown = false
+    isStateUnknown = true
     defaults.removeObject(forKey: Self.lastKnownStateKey)
     isLoading = false
     isMutating = false
@@ -196,9 +221,10 @@ final class CalendarSubscriptionStore {
     let metadata: CalendarSubscriptionMetadata?
   }
 
-  private func remember(_ state: CalendarSubscriptionState) async {
-    guard let userId = try? await userIdProvider(),
-      let data = try? JSONEncoder().encode(LastKnownState(userId: userId, metadata: state.metadata))
+  private func remember(_ state: CalendarSubscriptionState, userId: String) {
+    guard
+      let data = try? JSONEncoder().encode(
+        LastKnownState(userId: userId, metadata: state.metadata))
     else { return }
     defaults.set(data, forKey: Self.lastKnownStateKey)
   }
@@ -216,26 +242,49 @@ final class CalendarSubscriptionStore {
     return CalendarSubscriptionState(metadata: stored.metadata)
   }
 
-  private func save(created: CalendarSubscriptionCreated) async throws {
-    let userId = try await userIdProvider()
+  private struct AccountContext {
+    let userId: String
+    let generation: Int
+  }
+
+  private func validate(_ account: AccountContext) throws {
+    guard account.generation == userGeneration, !Task.isCancelled else {
+      throw CancellationError()
+    }
+  }
+
+  private func save(created: CalendarSubscriptionCreated, account: AccountContext) throws {
+    try validate(account)
     try tokenStore.saveToken(
       CalendarSubscriptionKeychainToken(
-        userId: userId,
+        userId: account.userId,
         subscriptionId: created.metadata.id,
         tokenSuffix: created.metadata.tokenSuffix,
         rawToken: created.rawToken
       ))
   }
 
-  private func mutate<T>(_ operation: () async throws -> T) async throws -> T {
+  private func mutate<T>(_ operation: (AccountContext) async throws -> T) async throws -> T {
     guard !isMutating else { throw CalendarSubscriptionStoreError.operationInProgress }
+    let generation = userGeneration
     isMutating = true
     errorMessage = nil
-    defer { isMutating = false }
+    defer {
+      if generation == userGeneration { isMutating = false }
+    }
 
     do {
-      return try await operation()
+      let account = AccountContext(userId: try await userIdProvider(), generation: generation)
+      try validate(account)
+      let result = try await operation(account)
+      try validate(account)
+      isStateUnknown = false
+      hasLoadedForCurrentSession = true
+      return result
     } catch {
+      guard generation == userGeneration, !Task.isCancelled, !(error is CancellationError) else {
+        throw CancellationError()
+      }
       if !(error is CalendarSubscriptionStoreError) {
         calendarSubscriptionStoreLogger.warning(
           "Calendar subscription mutation failed: \(error.localizedDescription)")
