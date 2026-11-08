@@ -6,21 +6,22 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@remotion/cli": "4.0.529",
-    "@remotion/google-fonts": "4.0.529",
-    "@remotion/media": "4.0.529",
-    "@remotion/transitions": "4.0.529",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "remotion": "4.0.529"
+    "@remotion/cli": "4.0.541",
+    "@remotion/google-fonts": "4.0.541",
+    "@remotion/media": "4.0.541",
+    "@remotion/transitions": "4.0.541",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.541"
   },
   "devDependencies": {
-    "@remotion/eslint-config-flat": "4.0.529",
-    "@types/react": "19.2.7",
-    "@types/web": "0.0.166",
-    "eslint": "9.19.0",
-    "prettier": "3.8.1",
-    "typescript": "5.9.3"
+    "@remotion/eslint-config-flat": "4.0.541",
+    "@types/react": "19.3.0",
+    "@types/web": "0.0.361",
+    "eslint": "10.14.0",
+    "prettier": "3.9.10",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "@typescript/native": "npm:typescript@7.0.2"
   },
   "scripts": {
     "dev": "remotion studio",
@@ -28,5 +29,8 @@
     "export": "scripts/export.sh",
     "lint": "eslint src && tsc",
     "upgrade": "remotion upgrade"
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <=11.0.0": "^11.0.5"
   }
 }

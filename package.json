@@ -1,7 +1,7 @@
 {
   "name": "tidex",
   "private": true,
-  "packageManager": "bun@1.3.14",
+  "packageManager": "bun@1.4.4",
   "workspaces": [
     "marketing",
     "ios"
@@ -27,7 +27,7 @@
     "ios:l10n:validate": "swift ios/Scripts/validate-localization.swift",
     "maint:size-hotspots": "./scripts/report-size-hotspots.sh",
     "ios:chat-package:check": "./scripts/check-chat-package-source.sh",
-    "tariff:hk-virke:backpay": "bunx deno-bin@2.2.7 run --no-lock --allow-env --allow-net --config supabase/functions/deno.json scripts/hk-virke-backpay.ts",
+    "tariff:hk-virke:backpay": "bunx deno@2.9.6 run --frozen --allow-env --allow-net --config supabase/functions/deno.json scripts/hk-virke-backpay.ts",
     "screenshots": "python3 scripts/capture-app-store-screenshots.py",
     "screenshots:3d": "node scripts/render-3d-screenshots.mjs",
     "screenshots:duo": "node scripts/render-duo-screenshots.mjs",
@@ -42,8 +42,8 @@
     "prepare": "husky || true"
   },
   "overrides": {
-    "@types/react": "19.2.2",
-    "@types/react-dom": "19.2.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "brace-expansion@<1.1.13": "1.1.13",
     "flatted@<3.4.2": "3.4.2",
     "glob": "^11.0.4",
@@ -52,10 +52,9 @@
     "tar@<7.5.8": ">=7.5.8",
     "ajv@<6.14.0": "^6.14.0",
     "minimatch@<3.1.5": "3.1.5",
-    "minimatch@>=9.0.0 <9.0.9": "9.0.9",
-    "minimatch@>=10.0.0 <10.2.3": ">=10.2.3",
     "postcss@<8.5.10": "8.5.10",
-    "rollup@>=4.0.0 <4.59.0": ">=4.59.0"
+    "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
+    "minimatch@>=7.0.0 <=11.0.0": "11.0.5"
   },
   "trustedDependencies": [
     "@firebase/util",
@@ -68,8 +67,8 @@
   ],
   "devDependencies": {
     "husky": "^9.1.7",
-    "playwright": "1.58.1",
-    "three": "0.186.1",
-    "wrangler": "4.118.0"
+    "playwright": "1.65.0",
+    "three": "0.187.0",
+    "wrangler": "4.158.0"
   }
 }
