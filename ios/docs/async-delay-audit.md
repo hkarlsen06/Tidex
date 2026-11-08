@@ -28,15 +28,15 @@ The inventory command was `rg -n 'asyncAfter|Task\.sleep' ios/TidexApp ios/Share
 | `Features/Settings/Admin/AdminSharesView.swift:74` | Keep the cancellable search debounce. |
 | `Features/Settings/Pay/PaySettingsViewModel.swift:734` | Keep the preview debounce. Convert to Task.sleep(for:). |
 | `Features/Settings/Pay/Components/AddJobPayDetailsCard.swift:99` | Replace the focus timer with onAppear on the conditional text field. |
-| `Features/Schedule/ScheduleView.swift:1045` | Remove the stabilization timer. The existing committed-month guard and data-change handler determine when the linked shift can open. |
-| `Features/Schedule/ScheduleView.swift:1082` | Keep the cancellable highlight display duration. Convert to Task.sleep(for:). |
+| `Features/Schedule/ShiftsView+Actions.swift` | Remove the stabilization timer. The existing committed-month guard and data-change handler determine when the linked shift can open. |
+| `Features/Schedule/ShiftsView+Actions.swift` | Keep the cancellable highlight display duration. Convert to Task.sleep(for:). |
 | `Features/Schedule/Components/EventDetailsSheet.swift:684` | Keep the inline reminder-save debounce. Convert to Task.sleep(for:). |
 | `Features/Schedule/Components/SupplementRuleCard.swift:609` | Replace the focus timer with onAppear on the conditional text field. |
-| `Features/AddShift/AddShiftViewModel.swift:2579` | Keep the cancellable draft-save debounce. Convert to Task.sleep(for:). |
-| `Features/AddShift/AddShiftViewModel.swift:2843` | Keep the adaptive input-preview debounce. Convert to Task.sleep(for:). |
-| `Features/Dashboard/DashboardView.swift:520` | Keep periodic clock-state refresh while Home is visible, and stop on cancellation. Time passing has no repository change event. |
-| `Features/Dashboard/DashboardViewModel.swift:2646` | Remove the launch-animation guess. Start the existing background prefetch after the local load finishes. |
-| `Features/Dashboard/DashboardViewModel.swift:2698` | Remove settings polling. Existing initial-sync and successful-sync handlers reload the saved local read model. |
+| `Features/AddShift/AddShiftViewModel+Draft.swift` | Keep the cancellable draft-save debounce. Convert to Task.sleep(for:). |
+| `Features/AddShift/AddShiftViewModel+Preview.swift` | Keep the adaptive input-preview debounce. Convert to Task.sleep(for:). |
+| `Features/Dashboard/DashboardView.swift` | Keep periodic clock-state refresh while Home is visible, and stop on cancellation. Time passing has no repository change event. |
+| `Features/Dashboard/DashboardViewModel+Loading.swift` | Remove the launch-animation guess. Start the existing background prefetch after the local load finishes. |
+| `Features/Dashboard/DashboardViewModel+Loading.swift` | Remove settings polling. Existing initial-sync and successful-sync handlers reload the saved local read model. |
 | `Features/Dashboard/Components/FeaturedShiftCard.swift:374` | Keep the dot animation cadence in the view task. |
 | `Features/Dashboard/Components/FeaturedShiftCard.swift:378` | Keep the intentional pause between dot animation waves. |
 | `Features/Celebration/CelebrationOverlay.swift:108` | Keep the staged count-up reveal in the view task, and return when it is cancelled. |
@@ -50,8 +50,8 @@ The inventory command was `rg -n 'asyncAfter|Task\.sleep' ios/TidexApp ios/Share
 | `Features/Friends/FriendsView.swift:965` | Keep remote typing expiry when no stop event arrives. |
 | `Features/Friends/FriendsView.swift:974` | Keep the typing-stop grace period to avoid flicker. |
 | `Features/Friends/Messages/FriendsThreadComposerView.swift:659` | Replace repeated focus attempts with picker dismissal callbacks. PhotosPicker uses its presentation binding change because it has no onDismiss callback. |
-| `Features/Friends/Messages/FriendsThreadExyteChat.swift:1958` | Keep the UIKit reply-scroll settling workaround. Self-sizing rows and table reloads can interrupt animated scrolling. The bridge observes content offset and size, but those changes do not mark the end of interrupted scrolling or row sizing. UIList owns the table delegate. There is no single reliable completion event. |
-| `Features/Friends/Messages/FriendsThreadExyteChat.swift:2033` | Keep the UIKit deferred-scroll workaround. Retry after the fork has applied its pending table layout. Request identity checks reject superseded work. |
+| `Features/Friends/Messages/FriendsThreadExyteChat.swift` | Keep the UIKit reply-scroll settling workaround. Self-sizing rows and table reloads can interrupt animated scrolling. The bridge observes content offset and size, but those changes do not mark the end of interrupted scrolling or row sizing. UIList owns the table delegate. There is no single reliable completion event. |
+| `Features/Friends/Messages/FriendsThreadExyteChat.swift` | Keep the UIKit deferred-scroll workaround. Retry after the fork has applied its pending table layout. Request identity checks reject superseded work. |
 | `Features/Friends/Messages/FriendsChatMessageRowContent.swift:1079` | Replace the reset timer with the swipe-reset animation completion. |
 | `Features/Friends/Messages/FriendsChatMessageRowContent.swift:1090` | Replace the reply handoff timer with the same animation completion. |
 | `Features/Friends/Messages/FriendsThreadViewModel.swift:411` | Keep the cancellable visible-read debounce. |
@@ -85,9 +85,9 @@ The inventory command was `rg -n 'asyncAfter|Task\.sleep' ios/TidexApp ios/Share
 | `Shared/Animations/MonthTransition.swift:610` | Replace the bounce timer with the animation completion before presenting the month picker. |
 | `Shared/Animations/MonthTransition.swift:634` | Replace the bounce timer with the animation completion before navigating to today. |
 | `Storage/Sync/SyncRevisionWatcher.swift:63` | Keep the cancellable subscription retry backoff. |
-| `Storage/Sync/SyncCoordinator.swift:304` | Replace manual-refresh polling with the state actor idle stream. Account generation and cancellation stop obsolete waits. |
-| `Storage/Sync/SyncCoordinator.swift:410` | Keep the overall sync deadline. Convert to Task.sleep(for:). |
-| `Storage/Sync/SyncCoordinator.swift:542` | Keep the pull-phase deadline. Convert to Task.sleep(for:). |
+| `Storage/Sync/SyncCoordinator.swift` | Replace manual-refresh polling with the state actor idle stream. Account generation and cancellation stop obsolete waits. |
+| `Storage/Sync/SyncCoordinator.swift` | Keep the overall sync deadline. Convert to Task.sleep(for:). |
+| `Storage/Sync/SyncCoordinator.swift` | Keep the pull-phase deadline. Convert to Task.sleep(for:). |
 | `Services/Auth/ImpersonationManager.swift:211` | Keep the server session-expiry deadline and one-second clock tolerance. |
 | `Services/Auth/AuthSessionManager.swift:416` | Keep the authentication operation deadline. |
 | `Services/Auth/OAuthProviders/AppleAuthProvider.swift:76` | Keep the authorization request deadline. Convert to Task.sleep(for:). |
