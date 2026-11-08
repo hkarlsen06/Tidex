@@ -57,10 +57,9 @@ A test earns its place by checking an outcome a user would notice. Assertions on
 
 A monorepo for the Tidex iOS app and its supporting infrastructure.
 
-Tidex is now an iOS-only product, and it has been free since 2026-09-28. The paywall and the Apple subscriptions are gone, so don't add purchase, entitlement or StoreKit code. The repository still includes supporting public/legal web surfaces, the legacy compatibility host for `app.tidex.no`, and the shared backend.
+Tidex is now an iOS-only product, and it has been free since 2026-09-28. The paywall and the Apple subscriptions are gone, so don't add purchase, entitlement or StoreKit code. The repository still includes supporting public/legal web surfaces and the shared backend. The `app.tidex.no` compatibility host was retired on 2026-11-08.
 
 - **marketing/** - Next.js 16 public website for `tidex.no`
-- **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
 - **ios/** - Native iOS application
 
 The iOS app uses Convex in `backend/` and Clerk authentication. The production cutover and manual release of 3.1.0 took place on 2026-10-29. Before migration or retirement work, read the [live cutover checkpoint](docs/convex-cutover-checklist.md#current-checkpoint-2026-10-29).
@@ -165,7 +164,6 @@ replay every migration.
 ```
 tidex/
 ├── marketing/      # Marketing static site (tidex.no)
-├── app-compat/     # Compatibility redirects + Apple association files (app.tidex.no)
 ├── ios/            # Native iOS application (see ios/AGENTS.md)
 ├── backend/        # Production Convex backend
 ├── supabase/       # Retained source data and legacy GoTrue refresh

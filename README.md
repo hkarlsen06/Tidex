@@ -2,19 +2,18 @@
 
 A monorepo for the Tidex iOS app and its supporting infrastructure.
 
-Tidex is now an iOS-only product. This repository still contains the supporting public/legal website, the legacy compatibility host for old `app.tidex.no` links, and the shared Supabase backend.
+Tidex is an iOS-only product. This repository contains the supporting public/legal website and the shared backend. The `app.tidex.no` compatibility host was retired on 2026-11-08.
 
 - **marketing/** - Next.js 16 public website for `tidex.no`
-- **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
 - **ios/** - Native iOS application
 
-The iOS app and its supporting web infrastructure share a common self-hosted Supabase backend on the `one-s` server for authentication, database, and edge functions. Production traffic uses `api.tidex.no`.
+The iOS app uses Convex on `one-s` and Clerk authentication. The retained Supabase database and GoTrue service support source data and legacy session refresh.
 
 ## Tech Stack
 
 ### Supporting Web Surfaces
 - **Framework**: Next.js 16 with React 19
-- **Purpose**: Public marketing/legal pages plus legacy compatibility redirects
+- **Purpose**: Public marketing and legal pages
 - **Hosting**: Cloudflare Pages
 
 ### iOS (ios/)
@@ -22,22 +21,23 @@ The iOS app and its supporting web infrastructure share a common self-hosted Sup
 - **Architecture**: MVVM with Swift concurrency
 
 ### Shared
-- **Database & Auth**: Self-hosted Supabase on `one-s`
+- **Database**: Self-hosted Convex on `one-s`
+- **Authentication**: Clerk
 - **Payments**: None. Tidex is free since 2026-09-28; earlier purchases are handled manually via support
-- **Push Notifications**: Firebase Cloud Messaging
+- **Push Notifications**: APNs through Convex
 
 ## Repository Structure
 
 ```
 tidex/
 ├── marketing/          # Public Tidex site (tidex.no)
-├── app-compat/         # Static compatibility host (app.tidex.no)
 ├── ios/                # Native iOS application
 │   ├── TidexApp/       # iOS app target (Swift source)
 │   ├── TidexShiftWidget/ # Widget extension
 │   └── docs/           # iOS-specific documentation
-├── supabase/           # Shared backend
-│   ├── functions/      # Edge functions
+├── backend/            # Production Convex backend
+├── supabase/           # Retained source data and legacy GoTrue refresh
+│   ├── functions/      # Retired edge-function source
 │   ├── migrations/     # Database migrations
 │   └── sql/            # SQL functions and cron jobs
 └── docs/               # Shared documentation
@@ -47,7 +47,7 @@ tidex/
 
 ### Prerequisites
 
-- Bun 1.3.14+
+- Bun 1.4.4
 - Xcode 27.2+ (for iOS development)
 
 ### Supporting Website Development
@@ -60,14 +60,13 @@ bun run dev         # Start the Tidex public/legal site locally (http://localhos
 
 ### Cloudflare Pages
 
-The marketing Pages project builds from `marketing/` with `bun run build` and publishes `out/`. The compatibility project publishes `app-compat/` directly.
+The `tidex` Pages project builds from `marketing/` with `bun run build` and publishes `out/`. Pushing `main` deploys the public website.
 
 ```bash
 bun run pages:deploy:marketing
-bun run pages:deploy:app-compat
 ```
 
-Set `CLOUDFLARE_API_TOKEN` or authenticate with `bunx wrangler login` before deploying. These scripts target the existing `tidex` and `app-compat` Pages projects.
+Set `CLOUDFLARE_API_TOKEN` or authenticate with `bunx wrangler login` before deploying directly to the `tidex` Pages project.
 
 ### iOS Development
 

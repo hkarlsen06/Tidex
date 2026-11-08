@@ -437,5 +437,4 @@ curl -X POST "https://api.tidex.no/functions/v1/send-push-notifications" \
 | `supabase/sql/functions/notification/claim_outbox_notifications.sql` | Atomic queue claiming |
 | `supabase/functions/send-push-notifications/index.ts` | Main delivery edge function |
 | `supabase/sql/functions/trigger/queue_abuse_report_notification.sql` | Admin abuse-report notification enqueueing |
-| `app-compat/_redirects` | Legacy `app.tidex.no` redirect behavior after web app retirement |
 | `ios/TidexApp/Services/Notification/NotificationService.swift` | iOS push handling |

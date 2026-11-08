@@ -16,7 +16,6 @@
     "lint": "bun run --filter marketing typecheck",
     "test": "bun run --filter marketing build",
     "pages:deploy:marketing": "bun run --filter marketing build && wrangler --cwd marketing pages deploy out --project-name tidex",
-    "pages:deploy:app-compat": "wrangler --cwd app-compat pages deploy . --project-name app-compat",
     "open-ios": "open ios/Tidex.xcodeproj",
     "localize": "bun ios/Scripts/translate-xcstrings.mjs",
     "ios:l10n:set": "./scripts/xcstrings-set",
