@@ -1995,7 +1995,7 @@ The app and widget use the same Foundation-only payroll code in `ios/Shared`. Th
 
 | Component/Module | Path Alias | Purpose |
 |------------------|------------|---------|
-| `SharingComputeCore` | `ios/Shared/FriendsAPIClient.swift` | Payroll, overtime, payout-date tax lookup, recurrence, and conflict selection |
+| `SharingComputeCore` | `ios/Shared/SharingComputeCore.swift` | Payroll, overtime, payout-date tax lookup, recurrence, and conflict selection |
 | `PayrollEngine` | `ios/TidexApp/Services/Payroll/PayrollEngine.swift` | App model adapter and monthly totals |
 | `PayrollCalculator` | `ios/TidexApp/Services/Payroll/PayrollCalculator.swift` | App adapter for per-shift pay and rounding |
 | `WagePeriodBuilder` | `ios/Shared/WagePeriodBuilder.swift` | Time period construction |

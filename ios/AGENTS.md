@@ -33,7 +33,7 @@ Paths are under `ios/TidexApp/` unless they start with `ios/`.
 
 ## Project file
 
-All app and extension folders are synchronized groups, so adding or deleting a Swift file there needs no `project.pbxproj` edit. `TidexAppTests` and `TidexAppUITests` are the exceptions. A new test file needs a `PBXBuildFile`, a `PBXFileReference`, a group child and a Sources entry in `ios/Tidex.xcodeproj/project.pbxproj`. Copy the pattern of an existing test file. A file without them never compiles or runs, and nothing warns you. Seven test files sat outside the target from September to October 2026. This prints any test file missing from the target:
+App and extension folders are synchronized groups. `ios/Shared` is synchronized into the app, share extension and Siri target, while the widget and notification service include selected Shared files through per-target `membershipExceptions` lists in `project.pbxproj`, so add new dependencies there explicitly. `TidexAppTests` and `TidexAppUITests` are the exceptions. A new test file needs a `PBXBuildFile`, a `PBXFileReference`, a group child and a Sources entry in `ios/Tidex.xcodeproj/project.pbxproj`. Copy the pattern of an existing test file. A file without them never compiles or runs, and nothing warns you. Seven test files sat outside the target from September to October 2026. This prints any test file missing from the target:
 
 ```bash
 for f in ios/TidexAppTests/*.swift ios/TidexAppTests/*/*.swift ios/TidexAppUITests/*.swift; do grep -q "/\* ${f##*/} in Sources \*/" ios/Tidex.xcodeproj/project.pbxproj || echo "$f"; done

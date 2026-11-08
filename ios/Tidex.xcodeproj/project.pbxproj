@@ -309,6 +309,8 @@
 				"Calendar+Gregorian.swift",
 				ConvexAPI.swift,
 				FriendsAPIClient.swift,
+				SharingRPCModels.swift,
+				SharingComputeCore.swift,
 				NorwegianHolidays.swift,
 				ISO8601Timestamp.swift,
 				PayPeriod.swift,
