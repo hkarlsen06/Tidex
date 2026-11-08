@@ -94,9 +94,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   private let initialShift: ShiftWithComputations
   @State private var recalculatedShift: ShiftWithComputations?
   @State private var recalculatedTariffRules: [SupplementRule]?
-  @State private var showingPaySettings = false
+  @State var showingPaySettings = false
 
-  private var shift: ShiftWithComputations { recalculatedShift ?? initialShift }
+  var shift: ShiftWithComputations { recalculatedShift ?? initialShift }
   /// Job name to display in the header badge (only set when user has multiple jobs)
   let jobName: String?
   /// Job color hex for the badge (e.g. "#3B82F6")
@@ -114,35 +114,35 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   private let initialTariffRules: [SupplementRule]
   private var tariffRules: [SupplementRule] { recalculatedTariffRules ?? initialTariffRules }
 
-  @Environment(AppCoordinator.self) private var coordinator
-  @Environment(\.userCurrency) private var currency
-  @Environment(\.layoutDirection) private var layoutDirection
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Environment(AppCoordinator.self) var coordinator
+  @Environment(\.userCurrency) var currency
+  @Environment(\.layoutDirection) var layoutDirection
+  @Environment(\.dismiss) var dismiss
+  @Environment(\.accessibilityReduceMotion) var reduceMotion
+  @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
   // MARK: - Edit Mode State
 
   /// Whether the sheet is in edit mode
-  @State private var isEditing = false
+  @State var isEditing = false
 
   /// Whether to start in edit mode (passed from parent)
   var startInEditMode: Bool = false
 
   /// Edited date (ISO format YYYY-MM-DD)
-  @State private var editedDate = Date()  // swiftlint:disable:this explicit_type_interface
+  @State var editedDate = Date()  // swiftlint:disable:this explicit_type_interface
 
   /// Edited start time
-  @State private var editedStartTime: Date?
+  @State var editedStartTime: Date?
 
   /// Edited end time
-  @State private var editedEndTime: Date?
+  @State var editedEndTime: Date?
 
   /// Which time input field is focused (for TimeRangePicker)
-  @State private var focusedTimeField: TimeInputField?
+  @State var focusedTimeField: TimeInputField?
 
   /// Whether the note editor is focused
-  @FocusState private var isNoteFieldFocused: Bool
+  @FocusState var isNoteFieldFocused: Bool
 
   /// Edited custom supplements (nil = unchanged, set to clear or modify)
   @State private var editedSupplements: CustomSupplementsData?
@@ -169,19 +169,19 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   @State private var errorMessage: String?
 
   /// Whether showing the supplements editor sheet
-  @State private var showingSupplementsEditor = false
+  @State var showingSupplementsEditor = false
 
   /// Whether showing the pause editor sheet
-  @State private var showingPauseEditor = false
+  @State var showingPauseEditor = false
 
   /// Whether the break deduction breakdown is expanded
-  @State private var isBreakDeductionExpanded = false
+  @State var isBreakDeductionExpanded = false
 
   /// Whether the supplement breakdown is expanded
-  @State private var isSupplementBreakdownExpanded = false
+  @State var isSupplementBreakdownExpanded = false
 
   /// Whether the overtime breakdown is expanded
-  @State private var isOvertimeBreakdownExpanded = false
+  @State var isOvertimeBreakdownExpanded = false
 
   /// Whether showing the share destination picker
   @State private var showingShareDestinationPicker = false
@@ -191,16 +191,16 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Whether showing the send-to-chat recipient picker
   @State private var showingSendToChatSheet = false
-  @State private var showingCalendarSubscriptionConfirmation = false
-  @State private var showingStopRecurringConfirmation = false
-  @State private var isStoppingRecurringAfterDate = false
+  @State var showingCalendarSubscriptionConfirmation = false
+  @State var showingStopRecurringConfirmation = false
+  @State var isStoppingRecurringAfterDate = false
 
   /// Haptic feedback generator
-  private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
+  let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
 
   // MARK: - Computed Properties
 
-  private var isVirtualShift: Bool {
+  var isVirtualShift: Bool {
     shift.isVirtual
   }
 
@@ -243,7 +243,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     self.initialTariffRules = tariffRules
   }
 
-  private var formattedDate: String {
+  var formattedDate: String {
     guard let date = Date.fromISODateString(shift.shiftDate) else {
       return shift.shiftDate
     }
@@ -265,7 +265,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     return formatter.string(from: date)
   }
 
-  private var formattedTimeRange: String {
+  var formattedTimeRange: String {
     ShiftCardFormatter.localizedTimeRange(
       start: shift.startTime,
       end: shift.endTime,
@@ -274,14 +274,14 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     )
   }
 
-  private var formattedHours: String {
+  var formattedHours: String {
     let hoursLabel = String(localized: .commonHours)
     let hoursValue = shift.paidHours.formatted(
       .number.precision(.fractionLength(2)).locale(.appLocale))
     return "\(hoursValue) \(hoursLabel)"
   }
 
-  private var showTaxBreakdown: Bool {
+  var showTaxBreakdown: Bool {
     shift.taxEnabled && shift.taxAmount > 0
   }
 
@@ -289,30 +289,30 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     ShiftDetailsPresentationPolicy(snapshotShareContext: snapshotShareContext)
   }
 
-  private var showsEarningsDetails: Bool {
+  var showsEarningsDetails: Bool {
     presentationPolicy.showsEarningsDetails
   }
 
   /// Whether this shift has supplement pay to show breakdown
-  private var hasSupplementBreakdown: Bool {
+  var hasSupplementBreakdown: Bool {
     displayedSupplementPay > 0 && !supplementSegments.isEmpty
   }
 
-  private var hasOvertimeBreakdown: Bool {
+  var hasOvertimeBreakdown: Bool {
     displayedOvertimePay > 0 && !overtimeSegments.isEmpty
   }
 
-  private var hasEarningsBreakdown: Bool {
+  var hasEarningsBreakdown: Bool {
     hasSupplementBreakdown || hasOvertimeBreakdown || shouldShowBreakDeductionRow
   }
 
-  private var displayedBasePay: Double {
+  var displayedBasePay: Double {
     shouldShowBreakDeductionRow
       ? BreakDeductionBreakdown.basePay(for: shift.computed.preBreakWagePeriods)
       : shift.computed.basePay
   }
 
-  private var displayedSupplementPay: Double {
+  var displayedSupplementPay: Double {
     return roundedCurrency(max(0, displayedTotalSupplementPay - displayedOvertimePay))
   }
 
@@ -322,18 +322,18 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       : shift.computed.supplementPay
   }
 
-  private var displayedOvertimePay: Double {
+  var displayedOvertimePay: Double {
     PayrollCalculator.payTotals(
       for: shift.computed.classifiedWagePeriods.filter { $0.isOvertime == true }
     ).supplement
   }
 
   /// Check if shift has custom supplements (including explicitly empty rules)
-  private var hasCustomSupplements: Bool {
+  var hasCustomSupplements: Bool {
     return shift.shift.custom_supplements != nil
   }
 
-  private var noteBinding: Binding<String> {
+  var noteBinding: Binding<String> {
     Binding(
       get: { editedNote },
       set: { note in
@@ -343,7 +343,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     )
   }
 
-  private var displayedNote: String? {
+  var displayedNote: String? {
     hasOptimisticNoteOverride ? optimisticNoteOverride : shift.note
   }
 
@@ -351,11 +351,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     PauseWindowSupport.normalize(shift.shift.custom_pause_windows)
   }
 
-  private var hasCustomPauseWindows: Bool {
+  var hasCustomPauseWindows: Bool {
     normalizedCustomPauseWindows != nil
   }
 
-  private var shouldShowBreakSection: Bool {
+  var shouldShowBreakSection: Bool {
     showsEarningsDetails
       && (onUpdatePause != nil || hasCustomPauseWindows
         || shift.computed.breakAudit.deductedHours > 0)
@@ -365,49 +365,36 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     canEditSupplements || canEditPauseWindows
   }
 
-  /// With no note, an editable shift still shows the row as a way to add one.
-  private var shouldShowNoteSection: Bool {
-    displayedNote != nil || onUpdate != nil
-  }
-
   /// Net pay when tax is deducted, otherwise gross. The breakdown card adds up to this.
-  private var headlinePay: Double {
+  var headlinePay: Double {
     showTaxBreakdown ? shift.netPay : shift.grossPay
   }
 
-  private var headlinePayLabel: LocalizedStringResource {
+  var headlinePayLabel: LocalizedStringResource {
     showTaxBreakdown ? .shiftsNetPay : .shiftsGrossPay
   }
 
-  private var showsPayBreakdownCard: Bool {
+  var showsPayBreakdownCard: Bool {
     hasEarningsBreakdown || showTaxBreakdown
   }
 
-  private var shouldShowEarningsSection: Bool {
-    showsEarningsDetails && (showsPayBreakdownCard || shift.calculationContext != nil)
-  }
-
-  private var canManageRecurring: Bool {
+  var canManageRecurring: Bool {
     isVirtualShift && shift.shift.recurring_id != nil && onEditRecurring != nil
   }
 
-  private var canStopRecurring: Bool {
+  var canStopRecurring: Bool {
     isVirtualShift && shift.shift.recurring_id != nil && onStopRecurringAfterDate != nil
   }
 
-  private var shouldShowViewModeActionButtons: Bool {
-    onUpdate != nil || canStopRecurring
-  }
-
-  private var canEditSupplements: Bool {
+  var canEditSupplements: Bool {
     onUpdate != nil && !tariffRules.isEmpty
   }
 
-  private var canEditPauseWindows: Bool {
+  var canEditPauseWindows: Bool {
     onUpdatePause != nil
   }
 
-  private var displayedPauseWindows: [PauseWindow] {
+  var displayedPauseWindows: [PauseWindow] {
     if shift.computed.breakAudit.source == .customPauseWindows,
       let appliedPauseWindows = shift.computed.breakAudit.appliedPauseWindows,
       !appliedPauseWindows.isEmpty
@@ -418,26 +405,26 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     return normalizedCustomPauseWindows?.windows ?? []
   }
 
-  private var deductedPauseMinutes: Int {
+  var deductedPauseMinutes: Int {
     Int((shift.computed.breakAudit.deductedHours * 60).rounded())
   }
 
-  private var breakDeductionBreakdown: BreakDeductionBreakdown? {
+  var breakDeductionBreakdown: BreakDeductionBreakdown? {
     BreakDeductionBreakdown.make(
       originalPeriods: shift.computed.preBreakWagePeriods,
       adjustedPeriods: shift.computed.wagePeriods
     )
   }
 
-  private var shouldShowBreakDeductionRow: Bool {
+  var shouldShowBreakDeductionRow: Bool {
     shift.computed.breakAudit.deductedHours > 0 && breakDeductionBreakdown != nil
   }
 
-  private var breakDeductionLabel: String {
+  var breakDeductionLabel: String {
     String(localized: .shiftsBreakDeduction)
   }
 
-  private var breakDeductionExplanation: LocalizedStringResource {
+  var breakDeductionExplanation: LocalizedStringResource {
     switch shift.computed.breakAudit.source {
     case .customPauseWindows:
       return .shiftsBreakDeductionExplanationExactPause
@@ -462,7 +449,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     }
   }
 
-  private var pauseEditorButtonTitle: String {
+  var pauseEditorButtonTitle: String {
     hasCustomPauseWindows
       ? String(localized: .shiftsPauseSectionEditWindows)
       : String(localized: .shiftsPauseSectionAddExactWindows)
@@ -483,20 +470,20 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     return shift.computed.basePay / shift.computed.paidHours
   }
 
-  private var supplementSegments: [SupplementSegment] {
+  var supplementSegments: [SupplementSegment] {
     let periods =
       shouldShowBreakDeductionRow
       ? shift.computed.preBreakWagePeriods : shift.computed.classifiedWagePeriods
     return SupplementSegment.grouped(from: periods.filter { $0.isOvertime != true })
   }
 
-  private var overtimeSegments: [SupplementSegment] {
+  var overtimeSegments: [SupplementSegment] {
     SupplementSegment.grouped(
       from: shift.computed.classifiedWagePeriods.filter { $0.isOvertime == true }
     )
   }
 
-  private func roundedCurrency(_ amount: Double) -> Double {
+  func roundedCurrency(_ amount: Double) -> Double {
     (amount * 100).rounded() / 100
   }
 
@@ -724,30 +711,6 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   }
 
   @ViewBuilder
-  private var viewModeSections: some View {
-    if shouldShowNoteSection {
-      noteSection
-    }
-
-    if shouldShowEarningsSection {
-      earningsSection
-    }
-
-    if !detailRowItems.isEmpty {
-      detailRowsSection
-    }
-
-    if shouldShowViewModeActionButtons {
-      viewModeActionButtons
-    }
-
-    // Added/edited timestamps (only for non-virtual shifts)
-    if !isVirtualShift {
-      shiftTimestampFooter(createdAt: shift.createdAt, updatedAt: shift.updatedAt)
-    }
-  }
-
-  @ViewBuilder
   private var shareAndDeleteButtons: some View {
     Button {
       impactHaptic.impactOccurred()
@@ -866,7 +829,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   }
 
   /// Format Date to HH:mm string
-  private func formatTimeToString(_ date: Date) -> String {
+  func formatTimeToString(_ date: Date) -> String {
     date.toHourMinuteString()
   }
 
@@ -897,7 +860,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     }
   }
 
-  private func beginNoteEditing() {
+  func beginNoteEditing() {
     editedNote = displayedNote ?? ""
     noteWasEdited = false
     errorMessage = nil
@@ -1018,1384 +981,6 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       isStoppingRecurringAfterDate = false
     }
   }
-
-  // MARK: - Sections
-
-  /// Summary card: when, how long and how much, visible at the medium detent.
-  private var headerSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      headerTimeSummary
-
-      if showsEarningsDetails {
-        Divider()
-        headerPaySummary
-      }
-    }
-    .padding(Spacing.md)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xxl)
-        .fill(Color.tidexSurfacePrimary)
-    )
-  }
-
-  private var headerTimeSummary: some View {
-    VStack(alignment: .leading, spacing: Spacing.xxs) {
-      HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
-        Text(formattedDate)
-          .font(.tidexSubheadline)
-          .foregroundStyle(Color.tidexTextSecondary)
-
-        Spacer(minLength: 0)
-
-        // Job badge (only shown when user has multiple jobs)
-        if let jobName, !jobName.isEmpty {
-          WorkplaceNameText(
-            name: jobName,
-            colorHex: jobColorHex,
-            font: .tidexFootnoteMedium,
-            fallbackBadgeColor: .tidexBlue,
-            lineLimit: dynamicTypeSize.isAccessibilitySize ? nil : 1,
-            maxTextWidth: dynamicTypeSize.isAccessibilitySize ? nil : 160
-          )
-        }
-      }
-
-      Text(formattedTimeRange)
-        .font(.tidexAmountLarge)
-        .foregroundStyle(Color.tidexTextPrimary)
-        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)
-        .environment(\.layoutDirection, .leftToRight)
-
-      HStack(spacing: Spacing.sm) {
-        Text(formattedHours)
-
-        if isVirtualShift {
-          Label(.shiftsRecurringShift, systemImage: "repeat")
-        }
-      }
-      .font(.tidexFootnote)
-      .foregroundStyle(Color.tidexTextSecondary)
-    }
-    .accessibilityElement(children: .combine)
-  }
-
-  private var headerPaySummary: some View {
-    HStack(alignment: .firstTextBaseline) {
-      Text(headlinePayLabel)
-        .font(.tidexSubheadline)
-        .foregroundStyle(Color.tidexTextSecondary)
-
-      Spacer()
-
-      Text(formatCurrency(headlinePay))
-        .font(.tidexLargeTitle)
-        .foregroundStyle(Color.tidexTextPrimary)
-    }
-    .accessibilityElement(children: .combine)
-  }
-
-  private var noteSection: some View {
-    detailCard {
-      detailRow(
-        DetailRowItem(
-          id: "note",
-          systemImage: "note.text",
-          title: displayedNote ?? String(localized: .shiftsDetailsNotePlaceholder),
-          titleColor: displayedNote == nil ? .tidexTextSecondary : .tidexTextPrimary,
-          action: onUpdate == nil ? nil : { beginNoteEditing() }
-        )
-      )
-      .accessibilityHint(onUpdate == nil ? Text(verbatim: "") : Text(.shiftsDetailsNoteEdit))
-    }
-  }
-
-  // MARK: - Detail Rows
-
-  private struct DetailRowItem: Identifiable {
-    let id: String
-    let systemImage: String
-    let title: String
-    var titleColor: Color = .tidexTextPrimary
-    var subtitle: String?
-    var value: String?
-    var action: (() -> Void)?
-  }
-
-  /// Secondary settings and navigation, one tappable row each.
-  private var detailRowItems: [DetailRowItem] {
-    var items: [DetailRowItem] = []
-
-    if shouldShowBreakSection {
-      items.append(
-        DetailRowItem(
-          id: "break",
-          systemImage: "pause.circle",
-          title: String(localized: .shiftsDetailsBreakRow),
-          subtitle: breakRowSubtitle,
-          value: deductedPauseMinutes > 0
-            ? "\(deductedPauseMinutes) \(String(localized: .commonMinutesShort))" : nil,
-          action: canEditPauseWindows ? { openPauseEditor() } : nil
-        ))
-    }
-
-    if canEditSupplements {
-      items.append(
-        DetailRowItem(
-          id: "supplements",
-          systemImage: "slider.horizontal.3",
-          title: String(localized: .settingsPayEditorSupplementsTitle),
-          action: openSupplementsEditor
-        ))
-    }
-
-    if snapshotShareContext == .own {
-      items.append(
-        DetailRowItem(
-          id: "pay-settings",
-          systemImage: "gearshape",
-          title: String(localized: .settingsPayReviewOpen),
-          action: { showingPaySettings = true }
-        ))
-    }
-
-    if canManageRecurring, let recurringId = shift.shift.recurring_id {
-      items.append(
-        DetailRowItem(
-          id: "manage-recurring",
-          systemImage: "repeat",
-          title: String(localized: .shiftsRecurringManageButton),
-          action: {
-            // The caller nils out the item binding that presents this sheet and queues
-            // the recurring editor to open once the dismiss animation finishes.
-            onEditRecurring?(recurringId)
-          }
-        ))
-    }
-
-    if showsCalendarSubscriptionCTA {
-      items.append(
-        DetailRowItem(
-          id: "calendar",
-          systemImage: "calendar.badge.clock",
-          title: String(localized: .calendarSubscriptionDetailCta),
-          action: { showingCalendarSubscriptionConfirmation = true }
-        ))
-    }
-
-    return items
-  }
-
-  private func openPauseEditor() {
-    impactHaptic.impactOccurred()
-    showingPauseEditor = true
-  }
-
-  private func openSupplementsEditor() {
-    impactHaptic.impactOccurred()
-    showingSupplementsEditor = true
-  }
-
-  private var breakRowSubtitle: String? {
-    if !displayedPauseWindows.isEmpty {
-      return displayedPauseWindows.map(formatPauseWindow).formatted(
-        .list(type: .and, width: .narrow))
-    }
-    return canEditPauseWindows ? pauseEditorButtonTitle : nil
-  }
-
-  private var detailRowsSection: some View {
-    detailCard {
-      ForEach(Array(detailRowItems.enumerated()), id: \.element.id) { index, item in
-        if index > 0 {
-          Divider()
-            .padding(.leading, Spacing.md + Spacing.iconSize + Spacing.sm)
-        }
-        detailRow(item)
-      }
-    }
-  }
-
-  private func detailCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-    VStack(spacing: 0, content: content)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
-      )
-  }
-
-  @ViewBuilder
-  private func detailRow(_ item: DetailRowItem) -> some View {
-    if let action = item.action {
-      Button(action: action) {
-        detailRowContent(item)
-      }
-      .buttonStyle(.plain)
-    } else {
-      detailRowContent(item)
-        .accessibilityElement(children: .combine)
-    }
-  }
-
-  private func detailRowContent(_ item: DetailRowItem) -> some View {
-    HStack(spacing: Spacing.sm) {
-      Image(systemName: item.systemImage)
-        .font(.tidexBody)
-        .foregroundStyle(Color.tidexTextSecondary)
-        .frame(width: Spacing.iconSize)
-        .accessibilityHidden(true)
-
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(item.title)
-          .font(.tidexBodyMedium)
-          .foregroundStyle(item.titleColor)
-          .multilineTextAlignment(.leading)
-
-        if let subtitle = item.subtitle {
-          Text(subtitle)
-            .font(.tidexFootnote)
-            .foregroundStyle(Color.tidexTextSecondary)
-            .multilineTextAlignment(.leading)
-        }
-      }
-
-      Spacer(minLength: Spacing.xs)
-
-      if let value = item.value {
-        Text(value)
-          .font(.tidexSubheadline)
-          .foregroundStyle(Color.tidexTextSecondary)
-      }
-
-      if item.action != nil {
-        Image(systemName: "chevron.right")
-          .font(.tidexCaption)
-          .foregroundStyle(Color.tidexTextMuted)
-          .flipsForRightToLeftLayoutDirection(true)
-          .accessibilityHidden(true)
-      }
-    }
-    .padding(.horizontal, Spacing.md)
-    .padding(.vertical, Spacing.sm)
-    .frame(minHeight: 44)
-    .contentShape(Rectangle())
-  }
-
-  // MARK: - Editable Time Section
-
-  private var editableTimeSection: some View {
-    VStack(spacing: Spacing.md) {
-      // Date picker row
-      HStack {
-        Text(.shiftsDate)
-          .font(.tidexSubheadline)
-          .foregroundStyle(Color.tidexTextSecondary)
-        Spacer()
-        DatePicker(
-          String(localized: .shiftsDate),
-          selection: $editedDate,
-          displayedComponents: .date
-        )
-        .labelsHidden()
-        .tint(.tidexTextPrimary)
-      }
-
-      Divider()
-
-      // Time range picker (numeric keyboard input)
-      TimeRangePicker(
-        startTime: $editedStartTime,
-        endTime: $editedEndTime,
-        focusedFieldBinding: $focusedTimeField
-      )
-
-      // Info about cross-midnight shifts
-      if isCrossMidnightShift {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "moon.fill")
-            .font(.tidexCaption)
-            .foregroundStyle(Color.tidexTextSecondary)
-          Text(.shiftsCrossMidnightInfo)
-            .font(.tidexFootnote)
-            .foregroundStyle(Color.tidexTextSecondary)
-          Spacer()
-        }
-        .padding(.top, Spacing.xxs)
-      }
-
-      // Virtual shift info (will be converted to regular shift)
-      if isVirtualShift {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "info.circle")
-            .font(.tidexSubheadline)
-            .foregroundStyle(Color.tidexTextSecondary)
-          Text(.shiftsVirtualConversionInfo)
-            .font(.tidexFootnote)
-            .foregroundStyle(Color.tidexTextSecondary)
-          Spacer()
-        }
-        .padding(.top, Spacing.xxs)
-      }
-    }
-    .padding(Spacing.md)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xxl)
-        .fill(Color.tidexSurfacePrimary)
-    )
-  }
-
-  private var noteEditorSection: some View {
-    VStack(spacing: Spacing.md) {
-      HStack(alignment: .center, spacing: Spacing.sm) {
-        Image(systemName: "note.text")
-          .foregroundStyle(Color.tidexTextSecondary)
-
-        Text(.shiftsDetailsNoteTitle)
-          .font(.tidexLabelStrong)
-          .foregroundStyle(Color.tidexTextSecondary)
-
-        Spacer()
-      }
-
-      TextField(
-        String(localized: .shiftsDetailsNotePlaceholder),
-        text: noteBinding,
-        axis: .vertical
-      )
-      .focused($isNoteFieldFocused)
-      .textFieldStyle(.plain)
-      .font(.tidexBodyMedium)
-      .foregroundStyle(Color.tidexTextPrimary)
-      .lineLimit(3...8)
-      .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.md)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .stroke(Color.tidexBorder, lineWidth: 1)
-      )
-    }
-  }
-
-  /// Whether the edited times represent a cross-midnight shift
-  private var isCrossMidnightShift: Bool {
-    guard let start = editedStartTime, let end = editedEndTime else {
-      return false
-    }
-    let startStr = formatTimeToString(start)
-    let endStr = formatTimeToString(end)
-    return endStr <= startStr && endStr != "00:00"
-  }
-
-  // MARK: - Error Banner
-
-  @ViewBuilder
-  private func errorBanner(message: String) -> some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: "exclamationmark.triangle.fill")
-        .font(.tidexSubheadline)
-        .foregroundStyle(Color.tidexError)
-        .accessibilityHidden(true)
-      Text(message)
-        .font(.tidexSubheadline)
-        .foregroundStyle(Color.tidexError)
-      Spacer()
-    }
-    .announcesToVoiceOver(message)
-    .padding(Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.lg)
-        .fill(Color.tidexError.opacity(0.1))
-    )
-  }
-
-  // MARK: - Action Buttons
-
-  private var editOptionsSection: some View {
-    VStack(spacing: Spacing.sm) {
-      if canEditSupplements {
-        inlineEditOptionButton(
-          title: String(localized: .supplementsEditButton),
-          systemImage: "slider.horizontal.3"
-        ) {
-          openSupplementsEditor()
-        }
-      }
-
-      if canEditPauseWindows {
-        inlineEditOptionButton(
-          title: pauseEditorButtonTitle,
-          systemImage: hasCustomPauseWindows ? "pencil.circle" : "plus.circle"
-        ) {
-          openPauseEditor()
-        }
-      }
-    }
-  }
-
-  private func inlineEditOptionButton(
-    title: String,
-    systemImage: String,
-    action: @escaping () -> Void
-  ) -> some View {
-    Button(action: action) {
-      HStack(spacing: Spacing.xxxs) {
-        Image(systemName: systemImage)
-          .font(.tidexFootnote)
-          .foregroundStyle(Color.tidexTextPrimary)
-        Text(title)
-          .font(.tidexLabel)
-          .foregroundStyle(Color.tidexBlueText)
-      }
-      .padding(.vertical, Spacing.xs)
-      .frame(maxWidth: .infinity)
-      .background(Color.tidexBlue.opacity(0.08))
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
-    }
-    .buttonStyle(.plain)
-  }
-
-  /// Action buttons for view mode
-  private var viewModeActionButtons: some View {
-    VStack(spacing: Spacing.sm) {
-      // Edit button (only show if onUpdate callback is provided)
-      if onUpdate != nil {
-        DetailSheetActionButton(
-          title: String(localized: .shiftsEditButton),
-          systemImage: "pencil",
-          style: .primary
-        ) {
-          withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
-            isEditing = true
-          }
-        }
-      }
-
-      if canStopRecurring {
-        DetailSheetActionButton(
-          title: String(localized: .shiftsRecurringStopAfterDateButton),
-          systemImage: "calendar.badge.minus",
-          style: .secondary
-        ) {
-          showingStopRecurringConfirmation = true
-        }
-        .disabled(isStoppingRecurringAfterDate)
-      }
-    }
-  }
-
-  /// The parts that add up to the headline pay. The total itself lives in the header.
-  private var earningsSection: some View {
-    VStack(spacing: Spacing.sm) {
-      if showsPayBreakdownCard {
-        EarningsBreakdownCard {
-          payComponentRows
-          taxRows
-        }
-      }
-
-      if let context = shift.calculationContext {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(
-            .settingsPayReviewTaxDate(
-              Date.fromISODateString(context.scheduledPayoutDate)?
-                .formatted(.dateTime.day().month(.wide).year().calendar(.gregorian))
-                ?? context.scheduledPayoutDate)
-          )
-          .font(.tidexFootnote)
-          .foregroundStyle(Color.tidexTextSecondary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          if context.halfTaxApplied {
-            Text(.settingsPayReviewHalfTax)
-              .font(.tidexFootnote)
-              .foregroundStyle(Color.tidexTextSecondary)
-              .frame(maxWidth: .infinity, alignment: .leading)
-          }
-        }
-        .fixedSize(horizontal: false, vertical: true)
-      }
-    }
-  }
-
-  @ViewBuilder
-  private func breakDeductionSection(_ breakdown: BreakDeductionBreakdown) -> some View {
-    VStack(spacing: Spacing.xs) {
-      let canExpand = breakdown.parts.count > 1
-
-      if canExpand {
-        Button {
-          impactHaptic.impactOccurred()
-          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
-            isBreakDeductionExpanded.toggle()
-          }
-        } label: {
-          breakDeductionTotalRow(breakdown, showsChevron: true)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(breakDeductionLabel)
-        .accessibilityValue(
-          expansionValue(
-            "−\(formatCurrency(breakdown.totalAmount))", isExpanded: isBreakDeductionExpanded)
-        )
-        .accessibilityHint(Text(.shiftsBreakDeductionExpandAccessibilityHint))
-      } else {
-        breakDeductionTotalRow(breakdown, showsChevron: false)
-      }
-
-      if canExpand, isBreakDeductionExpanded {
-        VStack(spacing: Spacing.xs) {
-          ForEach(breakdown.parts) { part in
-            breakDeductionPartView(part)
-          }
-
-          Text(breakDeductionExplanation)
-            .font(.tidexCaptionRegular)
-            .foregroundStyle(Color.tidexTextMuted)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, Spacing.xxxs)
-        }
-        .padding(.top, Spacing.xxxs)
-      }
-    }
-  }
-
-  @ViewBuilder
-  private var payComponentRows: some View {
-    if hasEarningsBreakdown {
-      earningsRow(
-        label: String(localized: .shiftsBasePay),
-        value: formatCurrency(displayedBasePay)
-      )
-
-      if hasSupplementBreakdown {
-        Divider()
-        supplementBreakdownSection
-      }
-
-      if hasOvertimeBreakdown {
-        Divider()
-        overtimeBreakdownSection
-      }
-
-      if shouldShowBreakDeductionRow, let breakdown = breakDeductionBreakdown {
-        Divider()
-        breakDeductionSection(breakdown)
-      }
-    }
-  }
-
-  @ViewBuilder
-  private var taxRows: some View {
-    if showTaxBreakdown {
-      if hasEarningsBreakdown {
-        Divider()
-      }
-
-      earningsRow(
-        label: String(localized: .shiftsGrossPay),
-        value: formatCurrency(shift.grossPay)
-      )
-
-      Divider()
-
-      earningsRow(
-        label: String(localized: .shiftsTaxDeduction),
-        value: "−\(formatCurrency(shift.taxAmount))",
-        valueColor: .tidexError
-      )
-    }
-  }
-
-  private func breakDeductionTotalRow(
-    _ breakdown: BreakDeductionBreakdown,
-    showsChevron: Bool
-  ) -> some View {
-    HStack(spacing: Spacing.xs) {
-      Text(breakDeductionLabel)
-        .font(.tidexSubheadline)
-        .foregroundStyle(Color.tidexTextSecondary)
-
-      if showsChevron {
-        Image(systemName: "chevron.down")
-          .font(.tidexFootnote)
-          .foregroundStyle(Color.tidexTextMuted)
-          .rotationEffect(.degrees(isBreakDeductionExpanded ? 180 : 0))
-      }
-
-      Spacer()
-
-      Text("−\(formatCurrency(breakdown.totalAmount))")
-        .font(.tidexLabel)
-        .foregroundStyle(Color.tidexError)
-    }
-    .contentShape(Rectangle())
-  }
-
-  @ViewBuilder
-  private func breakDeductionPartView(_ part: BreakDeductionPart) -> some View {
-    switch part.kind {
-    case .base:
-      breakDeductionBasePayCard(part)
-
-    case .supplement:
-      breakDeductionSupplementCard(part)
-    }
-  }
-
-  private func breakDeductionBasePayCard(_ part: BreakDeductionPart) -> some View {
-    EarningsBreakDeductionDetailCard(
-      title: String(localized: .shiftsBreakDeductionPartBasePay),
-      amount: "−\(formatCurrency(part.amount))",
-      detailTitle: String(localized: .shiftsBreakDeduction),
-      detailValue: part.rate.map { "\(formatHoursValue(part.hours)) × \(formatCurrency($0))" }
-        ?? formatHoursValue(part.hours)
-    )
-  }
-
-  @ViewBuilder
-  private func breakDeductionSupplementCard(_ part: BreakDeductionPart) -> some View {
-    if let segment = part.supplementSegment {
-      EarningsBreakDeductionDetailCard(
-        title: String(localized: .shiftsBreakDeductionPartSupplement),
-        amount: "−\(formatCurrency(part.amount))",
-        detailTitle: segmentTimeRange(segment),
-        detailValue: "\(formatHoursValue(part.hours)) × \(formatCurrency(segment.rate))",
-        forcesLeftToRight: true
-      )
-    } else {
-      HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
-        Text(.shiftsBreakDeductionPartSupplement)
-          .font(.tidexFootnote)
-          .foregroundStyle(Color.tidexTextMuted)
-
-        Spacer()
-
-        Text("\(formatHoursValue(part.hours)) / −\(formatCurrency(part.amount))")
-          .font(.tidexFootnote)
-          .foregroundStyle(Color.tidexTextSecondary)
-      }
-    }
-  }
-
-  /// Supplement breakdown showing each time period with supplements
-  @ViewBuilder
-  private var supplementBreakdownSection: some View {
-    VStack(spacing: Spacing.sm) {
-      let canExpand = !supplementSegments.isEmpty
-
-      if canExpand {
-        Button {
-          impactHaptic.impactOccurred()
-          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
-            isSupplementBreakdownExpanded.toggle()
-          }
-        } label: {
-          supplementTotalRow(showsChevron: true)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(.shiftsTotalSupplement))
-        .accessibilityValue(
-          expansionValue(
-            formatCurrency(displayedSupplementPay), isExpanded: isSupplementBreakdownExpanded)
-        )
-        .accessibilityHint(Text(.shiftsAccessibilityExpandHint))
-      } else {
-        supplementTotalRow(showsChevron: false)
-      }
-
-      if canExpand, isSupplementBreakdownExpanded {
-        ForEach(supplementSegments) { segment in
-          supplementSegmentRow(segment)
-        }
-      }
-    }
-  }
-
-  private func supplementTotalRow(showsChevron: Bool) -> some View {
-    HStack(spacing: Spacing.xs) {
-      HStack(spacing: Spacing.xs) {
-        Text(.shiftsTotalSupplement)
-          .font(.tidexSubheadline)
-          .foregroundStyle(Color.tidexTextSecondary)
-
-        if showsChevron {
-          Image(systemName: "chevron.down")
-            .font(.tidexFootnote)
-            .foregroundStyle(Color.tidexTextMuted)
-            .rotationEffect(.degrees(isSupplementBreakdownExpanded ? 180 : 0))
-            .accessibilityHidden(true)
-        }
-
-        if hasCustomSupplements {
-          Text(.shiftsCustomized)
-            .font(.tidexMicro)
-            .foregroundStyle(Color.tidexBlueText)
-            .padding(.horizontal, Spacing.xs)
-            .padding(.vertical, 3)
-            .background(
-              Capsule()
-                .fill(Color.tidexBlue.opacity(0.15))
-            )
-        }
-      }
-
-      Spacer()
-
-      Text(formatCurrency(displayedSupplementPay))
-        .font(.tidexLabel)
-        .foregroundStyle(Color.tidexTextPrimary)
-    }
-    .contentShape(Rectangle())
-  }
-
-  /// Overtime breakdown showing periods where weekly overtime applied.
-  @ViewBuilder
-  private var overtimeBreakdownSection: some View {
-    VStack(spacing: Spacing.sm) {
-      let canExpand = !overtimeSegments.isEmpty
-
-      if canExpand {
-        Button {
-          impactHaptic.impactOccurred()
-          withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
-            isOvertimeBreakdownExpanded.toggle()
-          }
-        } label: {
-          overtimeTotalRow(showsChevron: true)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(.shiftsOvertimeLabel))
-        .accessibilityValue(
-          expansionValue(
-            formatCurrency(displayedOvertimePay), isExpanded: isOvertimeBreakdownExpanded)
-        )
-        .accessibilityHint(Text(.shiftsAccessibilityExpandHint))
-      } else {
-        overtimeTotalRow(showsChevron: false)
-      }
-
-      if canExpand, isOvertimeBreakdownExpanded {
-        ForEach(overtimeSegments) { segment in
-          overtimeSegmentRow(segment)
-        }
-      }
-    }
-  }
-
-  private func overtimeTotalRow(showsChevron: Bool) -> some View {
-    HStack(spacing: Spacing.xs) {
-      HStack(spacing: Spacing.xs) {
-        Text(.shiftsOvertimeLabel)
-          .font(.tidexSubheadline)
-          .foregroundStyle(Color.tidexTextSecondary)
-
-        if showsChevron {
-          Image(systemName: "chevron.down")
-            .font(.tidexFootnote)
-            .foregroundStyle(Color.tidexTextMuted)
-            .rotationEffect(.degrees(isOvertimeBreakdownExpanded ? 180 : 0))
-            .accessibilityHidden(true)
-        }
-      }
-
-      Spacer()
-
-      Text(formatCurrency(displayedOvertimePay))
-        .font(.tidexLabel)
-        .foregroundStyle(Color.tidexTextPrimary)
-    }
-    .contentShape(Rectangle())
-  }
-
-  /// A single supplement segment row showing time range, hours × rate, and amount
-  @ViewBuilder
-  private func supplementSegmentRow(_ segment: SupplementSegment) -> some View {
-    EarningsSupplementBreakdownDetailCard(
-      timeRange: segmentTimeRange(segment),
-      hoursAndRate: "\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))",
-      amount: formatCurrency(segment.amount)
-    )
-  }
-
-  @ViewBuilder
-  private func overtimeSegmentRow(_ segment: SupplementSegment) -> some View {
-    EarningsSupplementBreakdownDetailCard(
-      title: String(localized: .shiftsOvertimeLabel),
-      timeRange: segmentTimeRange(segment),
-      hoursAndRate: "\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))",
-      amount: formatCurrency(segment.amount)
-    )
-  }
-
-  /// Spoken amount followed by whether the row's details are showing.
-  private func expansionValue(_ amount: String, isExpanded: Bool) -> Text {
-    let state =
-      isExpanded
-      ? String(localized: .shiftsAccessibilityExpanded)
-      : String(localized: .shiftsAccessibilityCollapsed)
-    return Text(verbatim: "\(amount), \(state)")
-  }
-
-  /// Format hours value (e.g., "2.50 t")
-  private func formatHoursValue(_ hours: Double) -> String {
-    ShiftCardFormatter.formattedHours(hours, locale: .appLocale)
-  }
-
-  private func formatPauseWindow(_ window: PauseWindow) -> String {
-    "\(window.start) – \(window.end)"
-  }
-
-  private func durationMinutes(for window: PauseWindow) -> Int {
-    let start = minutes(for: window.start)
-    var end = minutes(for: window.end)
-    if end <= start {
-      end += 24 * 60
-    }
-    return end - start
-  }
-
-  private func minutes(for hhmm: String) -> Int {
-    let parts = hhmm.split(separator: ":").compactMap { Int($0) }
-    guard parts.count == 2 else {
-      return 0
-    }
-    return (parts[0] * 60) + parts[1]
-  }
-
-  private func segmentTimeRange(_ segment: SupplementSegment) -> String {
-    let range = segment.timeRange
-    guard layoutDirection == .rightToLeft else {
-      return range
-    }
-    let parts = range.components(separatedBy: " – ")
-    if parts.count == 2 {
-      return "\(parts[1]) – \(parts[0])"
-    }
-    return range
-  }
-
-  @ViewBuilder
-  private func earningsRow(
-    label: String,
-    value: String,
-    valueColor: Color = .tidexTextPrimary
-  ) -> some View {
-    EarningsBreakdownCard<EmptyView>.Row(
-      label: label,
-      value: value,
-      valueColor: valueColor
-    )
-  }
-
-  /// Footer showing when the shift was added and, when applicable, last edited.
-  @ViewBuilder
-  private func shiftTimestampFooter(createdAt: Date?, updatedAt: Date?) -> some View {
-    if let createdAt {
-      VStack(spacing: Spacing.xxs) {
-        Text(String(localized: .shiftsAdded) + " " + formattedShiftTimestamp(createdAt))
-
-        if let updatedAt, !timestampsMatch(createdAt, updatedAt) {
-          Text(String(localized: .shiftsLastEdited) + " " + formattedShiftTimestamp(updatedAt))
-        }
-      }
-      .font(.tidexCaptionRegular)
-      .foregroundStyle(Color.tidexTextMuted)
-      .frame(maxWidth: .infinity)
-      .padding(.top, Spacing.xs)
-    } else if let updatedAt {
-      Text(String(localized: .shiftsLastEdited) + " " + formattedShiftTimestamp(updatedAt))
-        .font(.tidexCaptionRegular)
-        .foregroundStyle(Color.tidexTextMuted)
-        .frame(maxWidth: .infinity)
-        .padding(.top, Spacing.xs)
-    }
-  }
-
-  private func timestampsMatch(_ lhs: Date, _ rhs: Date) -> Bool {
-    abs(lhs.timeIntervalSince(rhs)) < 1
-  }
-
-  /// Format shift metadata dates with relative or absolute formatting.
-  private func formattedShiftTimestamp(_ date: Date) -> String {
-    let calendar = Calendar.gregorianCurrent
-    let now = Date()
-
-    // If within the last 7 days, use relative formatting
-    if let daysAgo = calendar.dateComponents([.day], from: date, to: now).day, daysAgo < 7 {
-      let formatter = RelativeDateTimeFormatter()
-      formatter.unitsStyle = .full
-      return formatter.localizedString(for: date, relativeTo: now)
-    }
-    // Otherwise use a short date format
-    let formatter = DateFormatter()  // swiftlint:disable:this explicit_type_interface
-    formatter.locale = Locale.appLocale
-    formatter.dateStyle = .medium
-    formatter.timeStyle = .none
-    return formatter.string(from: date)
-  }
-
-  // MARK: - Formatting
-
-  private func formatCurrency(_ amount: Double) -> String {
-    CurrencyConfig.format(amount, currency: currency)
-  }
-
-  private var viewerUserId: String? {
-    coordinator.getCurrentUserId()
-  }
-
-  private var canSendShiftSnapshots: Bool {
-    FriendsMessagingCapabilities.shared.canSendShiftSnapshots
-  }
-
-  private func makeShiftSnapshotDraft(for recipient: ShareRecipient) throws
-    -> ComposerShiftSnapshotDraft
-  {
-    switch snapshotShareContext {
-    case .own:
-      guard let viewerUserId else {
-        throw FriendsMessagingServiceError.notAuthenticated
-      }
-      return OwnShiftSnapshotBuilder(
-        shift: shift,
-        jobName: jobName,
-        jobColorHex: jobColorHex,
-        currency: currency,
-        ownerUserId: viewerUserId,
-        ownerDisplayName: coordinator.userDisplayName,
-        ownerAvatarUrl: coordinator.userAvatarUrl
-      )
-      .build(for: recipient)
-
-    case .shared(let owner):
-      return SharedShiftSnapshotBuilder(
-        shift: shift,
-        jobName: jobName,
-        jobColorHex: jobColorHex,
-        currency: currency,
-        owner: owner
-      )
-      .build()
-    }
-  }
-}
-
-// MARK: - Share Options Sheet
-
-/// Bottom sheet for selecting share options
-private struct ShareOptionsSheet: View {
-  let earningsImage: UIImage?
-  let hiddenEarningsImage: UIImage?
-
-  var body: some View {
-    ScrollView {
-      VStack(spacing: Spacing.mlg) {
-        // Title
-        Text(.shiftsShareTitle)
-          .font(.tidexHeadline)
-          .foregroundStyle(Color.tidexTextPrimary)
-          .padding(.top, Spacing.md)
-
-        VStack(spacing: Spacing.sm) {
-          shareLinkRow(image: earningsImage, systemImage: "eye", label: .shiftsShareShowEarnings)
-          shareLinkRow(
-            image: hiddenEarningsImage, systemImage: "eye.slash", label: .shiftsShareHideEarnings)
-        }
-        .padding(.horizontal, Spacing.mlg)
-      }
-      .frame(maxWidth: .infinity)
-    }
-    .background(Color.tidexBackground)
-  }
-
-  @ViewBuilder
-  private func shareLinkRow(
-    image: UIImage?, systemImage: String, label: LocalizedStringResource
-  ) -> some View {
-    if let image, let pngData = image.pngData() {
-      ShareLink(
-        item: TransferablePNGImage(data: pngData),
-        preview: SharePreview(Text(label), image: Image(uiImage: image))
-      ) {
-        HStack(spacing: Spacing.msm) {
-          Image(systemName: systemImage)
-            .font(.tidexTitle2)
-            .foregroundStyle(Color.tidexTextSecondary)
-            .frame(minWidth: 28)
-            .accessibilityHidden(true)
-          Text(label)
-            .font(.tidexBodyMedium)
-            .foregroundStyle(Color.tidexTextPrimary)
-          Spacer()
-        }
-        .padding(.horizontal, Spacing.mlg)
-        .padding(.vertical, 18)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.xl)
-            .fill(Color.tidexSurfacePrimary)
-        )
-      }
-      .buttonStyle(.plain)
-    }
-  }
-}
-
-struct ShareDestinationSheet: View {
-  let title: LocalizedStringResource
-  let onShareAsImage: () -> Void
-  let onShareInChat: () -> Void
-
-  init(
-    title: LocalizedStringResource = .shiftsShareTitle,
-    onShareAsImage: @escaping () -> Void,
-    onShareInChat: @escaping () -> Void
-  ) {
-    self.title = title
-    self.onShareAsImage = onShareAsImage
-    self.onShareInChat = onShareInChat
-  }
-
-  var body: some View {
-    ScrollView {
-      VStack(spacing: Spacing.mlg) {
-        Text(title)
-          .font(.tidexHeadline)
-          .foregroundStyle(Color.tidexTextPrimary)
-          .padding(.top, Spacing.md)
-
-        VStack(spacing: Spacing.sm) {
-          Button(action: onShareInChat) {
-            HStack(spacing: Spacing.msm) {
-              Image(systemName: "bubble.left.and.text.bubble.right")
-                .font(.tidexTitle2)
-                .foregroundStyle(Color.tidexTextSecondary)
-                .frame(minWidth: 28)
-                .accessibilityHidden(true)
-              Text(.friendsChatSendToChat)
-                .font(.tidexBodyMedium)
-                .foregroundStyle(Color.tidexTextPrimary)
-              Spacer()
-            }
-            .padding(.horizontal, Spacing.mlg)
-            .padding(.vertical, 18)
-            .background(
-              RoundedRectangle(cornerRadius: CornerRadius.xl)
-                .fill(Color.tidexSurfacePrimary)
-            )
-          }
-          .buttonStyle(.plain)
-
-          Button(action: onShareAsImage) {
-            HStack(spacing: Spacing.msm) {
-              Image(systemName: "photo.on.rectangle")
-                .font(.tidexTitle2)
-                .foregroundStyle(Color.tidexTextSecondary)
-                .frame(minWidth: 28)
-                .accessibilityHidden(true)
-              Text(.shiftsShareAsImage)
-                .font(.tidexBodyMedium)
-                .foregroundStyle(Color.tidexTextPrimary)
-              Spacer()
-            }
-            .padding(.horizontal, Spacing.mlg)
-            .padding(.vertical, 18)
-            .background(
-              RoundedRectangle(cornerRadius: CornerRadius.xl)
-                .fill(Color.tidexSurfacePrimary)
-            )
-          }
-          .buttonStyle(.plain)
-        }
-        .padding(.horizontal, Spacing.mlg)
-      }
-      .frame(maxWidth: .infinity)
-    }
-    .background(Color.tidexBackground)
-  }
-}
-
-// MARK: - Supplement Segment
-
-/// A grouped supplement segment for display
-struct SupplementSegment: Identifiable, Equatable {
-  let fromMin: Double
-  let toMin: Double
-  let rate: Double
-  let actualHours: Double
-  var isOvertime: Bool = false
-
-  var id: String { "\(fromMin)-\(toMin)-\(rate)-\(isOvertime)" }
-
-  static func grouped(from periods: [WagePeriod]) -> [Self] {
-    var result: [Self] = []
-    for period in periods where period.durationMinutes > 0 && period.supplementRate > 0 {
-      let isOvertime = period.isOvertime == true
-      if let last = result.last, last.toMin == period.fromMin,
-        last.rate == period.supplementRate, last.isOvertime == isOvertime
-      {
-        result[result.count - 1] = Self(
-          fromMin: last.fromMin, toMin: period.toMin, rate: last.rate,
-          actualHours: last.actualHours + period.durationHours, isOvertime: isOvertime
-        )
-      } else {
-        result.append(
-          Self(
-            fromMin: period.fromMin, toMin: period.toMin, rate: period.supplementRate,
-            actualHours: period.durationHours, isOvertime: isOvertime
-          ))
-      }
-    }
-    return result
-  }
-
-  /// Format minutes to display time (e.g., "21:00")
-  func formatTime(_ minutes: Double) -> String {
-    let dayOffset = Int(minutes / 1_440)  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    let remainder = Int(minutes) % 1_440  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    let normalizedMinutes = remainder < 0 ? remainder + 1_440 : remainder  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    let hours = normalizedMinutes / 60
-    let mins = normalizedMinutes % 60
-    let base = String(format: "%02d:%02d", hours, mins)
-    if dayOffset > 0 {
-      return "\(base) (+\(dayOffset))"
-    }
-    if dayOffset < 0 {
-      return "\(base) (\(dayOffset))"
-    }
-    return base
-  }
-
-  /// Formatted time range string
-  var timeRange: String {
-    let from = formatTime(fromMin)
-    let to = formatTime(toMin)
-    return "\(from) – \(to)"
-  }
-
-  /// Total supplement amount for this segment
-  var amount: Double {
-    actualHours * rate
-  }
-}
-
-struct BreakDeductionBreakdown: Equatable {
-  let parts: [BreakDeductionPart]
-
-  var totalAmount: Double {
-    parts.reduce(0) { $0 + $1.amount }
-  }
-
-  static func basePay(for periods: [WagePeriod]) -> Double {
-    PayrollCalculator.payTotals(for: periods).base
-  }
-
-  static func supplementPay(for periods: [WagePeriod]) -> Double {
-    PayrollCalculator.payTotals(for: periods).supplement
-  }
-
-  static func make(
-    originalPeriods: [WagePeriod],
-    adjustedPeriods: [WagePeriod]
-  ) -> Self? {
-    var parts: [BreakDeductionPart] = []
-
-    let baseAmount = roundedCurrency(
-      max(0, basePay(for: originalPeriods) - basePay(for: adjustedPeriods)))
-    let baseHours = deductedBaseHours(
-      originalPeriods: originalPeriods,
-      adjustedPeriods: adjustedPeriods
-    )
-
-    if isDisplayable(baseAmount) {
-      parts.append(
-        BreakDeductionPart(
-          id: "base",
-          kind: .base,
-          supplementSegment: nil,
-          hours: baseHours,
-          rate: baseHours > 0 ? baseAmount / baseHours : nil,
-          amount: baseAmount
-        ))
-    }
-
-    parts.append(
-      contentsOf: supplementParts(
-        originalPeriods: originalPeriods,
-        adjustedPeriods: adjustedPeriods
-      )
-    )
-
-    guard !parts.isEmpty else {
-      return nil
-    }
-    return Self(parts: parts)
-  }
-
-  private static func supplementParts(
-    originalPeriods: [WagePeriod],
-    adjustedPeriods: [WagePeriod]
-  ) -> [BreakDeductionPart] {
-    var parts: [BreakDeductionPart] = []
-    var periodIndex = 0
-
-    while periodIndex < originalPeriods.count {
-      let period = originalPeriods[periodIndex]
-      guard period.supplementRate > 0 else {
-        periodIndex += 1
-        continue
-      }
-
-      let groupStart = period.fromMin
-      var groupEnd = period.toMin
-      let rate = period.supplementRate
-      var nextPeriodIndex = periodIndex + 1
-
-      while nextPeriodIndex < originalPeriods.count,
-        originalPeriods[nextPeriodIndex].supplementRate == rate
-      {
-        groupEnd = originalPeriods[nextPeriodIndex].toMin
-        nextPeriodIndex += 1
-      }
-
-      if let part = supplementPart(
-        originalPeriods: originalPeriods,
-        adjustedPeriods: adjustedPeriods,
-        groupStart: groupStart,
-        groupEnd: groupEnd,
-        rate: rate
-      ) {
-        parts.append(part)
-      }
-
-      periodIndex = nextPeriodIndex
-    }
-
-    return allocatingRemainder(
-      to: parts, originalPeriods: originalPeriods, adjustedPeriods: adjustedPeriods)
-  }
-
-  private static func supplementPart(
-    originalPeriods: [WagePeriod],
-    adjustedPeriods: [WagePeriod],
-    groupStart: Double,
-    groupEnd: Double,
-    rate: Double
-  ) -> BreakDeductionPart? {
-    let originalMetrics = overlappingMetrics(
-      periods: originalPeriods,
-      from: groupStart,
-      to: groupEnd,
-      supplementRate: rate
-    )
-    let adjustedMetrics = overlappingMetrics(
-      periods: adjustedPeriods,
-      from: groupStart,
-      to: groupEnd,
-      supplementRate: rate
-    )
-    let deductedHours = max(0, originalMetrics.hours - adjustedMetrics.hours)
-    let amount = roundedCurrency(max(0, originalMetrics.pay - adjustedMetrics.pay))
-
-    guard deductedHours > 0 else { return nil }
-    return BreakDeductionPart(
-      id: "supplement-\(groupStart)-\(groupEnd)-\(rate)",
-      kind: .supplement,
-      supplementSegment: SupplementSegment(
-        fromMin: groupStart,
-        toMin: groupEnd,
-        rate: rate,
-        actualHours: deductedHours
-      ),
-      hours: deductedHours,
-      rate: rate,
-      amount: amount
-    )
-  }
-
-  private static func allocatingRemainder(
-    to parts: [BreakDeductionPart],
-    originalPeriods: [WagePeriod],
-    adjustedPeriods: [WagePeriod]
-  ) -> [BreakDeductionPart] {
-    // The visible deduction must equal the difference of the rounded pay components.
-    // Allocate any fractional-cent remainder without inventing an extra deduction row.
-    var remaining = roundedCurrency(
-      max(
-        0,
-        supplementPay(for: originalPeriods) - supplementPay(for: adjustedPeriods)
-      ))
-    return parts.enumerated().compactMap { index, part in
-      let amount = index == parts.count - 1 ? remaining : min(part.amount, remaining)
-      remaining = roundedCurrency(remaining - amount)
-      guard isDisplayable(amount) else { return nil }
-      return BreakDeductionPart(
-        id: part.id, kind: part.kind, supplementSegment: part.supplementSegment,
-        hours: part.hours, rate: part.rate, amount: amount
-      )
-    }
-  }
-
-  private static func overlappingMetrics(
-    periods: [WagePeriod],
-    from: Double,
-    to: Double,
-    supplementRate: Double
-  ) -> (hours: Double, pay: Double) {
-    periods
-      .filter { $0.supplementRate == supplementRate }
-      .reduce((hours: 0, pay: 0)) { total, current in
-        let overlapStart = max(current.fromMin, from)
-        let overlapEnd = min(current.toMin, to)
-        guard overlapEnd > overlapStart else {
-          return total
-        }
-        let hours = (overlapEnd - overlapStart) / 60.0
-        return (
-          hours: total.hours + hours,
-          pay: total.pay + payFor(hours: hours, rate: supplementRate)
-        )
-      }
-  }
-
-  private static func deductedBaseHours(
-    originalPeriods: [WagePeriod],
-    adjustedPeriods: [WagePeriod]
-  ) -> Double {
-    let originalHours = originalPeriods.reduce(0) { $0 + max(0, $1.durationHours) }
-    let adjustedHours = adjustedPeriods.reduce(0) { $0 + max(0, $1.durationHours) }
-    return max(0, originalHours - adjustedHours)
-  }
-
-  private static func roundedCurrency(_ amount: Double) -> Double {
-    (amount * 100).rounded() / 100
-  }
-
-  private static func payFor(hours: Double, rate: Double) -> Double {
-    hours * rate
-  }
-
-  private static func isDisplayable(_ amount: Double) -> Bool {
-    roundedCurrency(amount) > 0
-  }
-}
-
-struct BreakDeductionPart: Identifiable, Equatable {
-  enum Kind: Equatable {
-    case base
-    case supplement
-  }
-
-  let id: String
-  let kind: Kind
-  let supplementSegment: SupplementSegment?
-  let hours: Double
-  let rate: Double?
-  let amount: Double
 }
 
 // MARK: - Preview
