@@ -34,18 +34,18 @@ internal struct EmailVerificationForm: View {
     VStack(spacing: Spacing.xs) {
       Text(.signupVerifyTitle)
         .font(.tidexTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 
       Text(String(localized: .signupVerifySubtitle(viewModel.pendingEmail)))
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
       Text(.signupVerifyHint)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .multilineTextAlignment(.center)
     }
   }
@@ -66,7 +66,7 @@ internal struct EmailVerificationForm: View {
       }) {
         Text(resendTitle(secondsRemaining: remaining))
           .font(.tidexSubheadline)
-          .foregroundColor(remaining > 0 ? .tidexTextMuted : .tidexBlueText)
+          .foregroundStyle(remaining > 0 ? Color.tidexTextMuted : Color.tidexBlueText)
           .multilineTextAlignment(.center)
           .frame(minHeight: 44)
           .contentShape(Rectangle())
@@ -94,7 +94,7 @@ internal struct EmailVerificationForm: View {
         Text(.signupVerifyBack)
           .font(.tidexSubheadline)
       }
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .frame(minHeight: 44)
       .contentShape(Rectangle())
     }

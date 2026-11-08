@@ -35,7 +35,7 @@ struct WorkplaceNameText: View {
     if let badgeColor = resolvedBadgeColor {
       Text(name)
         .font(font)
-        .foregroundColor(badgeForegroundColor(for: badgeColor))
+        .foregroundStyle(badgeForegroundColor(for: badgeColor))
         .multilineTextAlignment(multilineTextAlignment)
         .lineLimit(effectiveLineLimit)
         .truncationMode(.tail)
@@ -49,7 +49,7 @@ struct WorkplaceNameText: View {
     } else {
       Text(name)
         .font(font)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(multilineTextAlignment)
         .lineLimit(effectiveLineLimit)
         .truncationMode(.tail)
@@ -159,7 +159,7 @@ struct WorkplaceColorGrid: View {
 
           Image(systemName: "checkmark")
             .font(.system(size: 13, weight: .bold))
-            .foregroundColor(swatchForegroundColor(for: hex))
+            .foregroundStyle(swatchForegroundColor(for: hex))
         }
       }
       .frame(width: Self.swatchControlSize, height: Self.swatchControlSize)

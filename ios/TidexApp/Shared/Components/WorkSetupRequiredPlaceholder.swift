@@ -31,13 +31,13 @@ struct WorkSetupRequiredPlaceholder: View {
           VStack(spacing: Spacing.xs) {
             Text(.settingsPaySetupScheduleTitle)
               .font(.tidexTitle)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
               .multilineTextAlignment(.center)
               .fixedSize(horizontal: false, vertical: true)
 
             Text(.workSetupRequiredDescription)
               .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
               .multilineTextAlignment(.center)
               .lineSpacing(2)
               .fixedSize(horizontal: false, vertical: true)
@@ -79,7 +79,7 @@ struct WorkSetupRequiredPlaceholder: View {
 
           Image(systemName: "building.2")
             .font(.system(size: 24, weight: .semibold))
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityHidden(true)
         }
         .frame(width: 52, height: 52)
@@ -87,13 +87,13 @@ struct WorkSetupRequiredPlaceholder: View {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.settingsPaySetupRequiredBadge)
             .font(.tidexCaptionStrong)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             .minimumScaleFactor(0.85)
 
           Text(.settingsPaySetupFinishTitle)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             .minimumScaleFactor(0.85)
         }
@@ -150,7 +150,7 @@ struct WorkSetupRequiredPlaceholder: View {
           .font(.tidexCaptionStrong)
           .opacity(isRefreshingBeforeSetup ? 0 : 1)
       }
-      .foregroundColor(.tidexTextOnBrand)
+      .foregroundStyle(Color.tidexTextOnBrand)
       .frame(maxWidth: .infinity)
       .frame(minHeight: Spacing.buttonHeight)
       .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? Spacing.xs : 0)
@@ -290,7 +290,7 @@ private struct WorkSetupPreviewRow: View {
     HStack(spacing: Spacing.sm) {
       Image(systemName: icon)
         .font(.tidexFootnoteStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .frame(width: 28, height: 28)
         .background(
           Circle()
@@ -300,7 +300,7 @@ private struct WorkSetupPreviewRow: View {
 
       Text(title)
         .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .minimumScaleFactor(0.85)
 
@@ -308,7 +308,7 @@ private struct WorkSetupPreviewRow: View {
 
       Image(systemName: "lock.fill")
         .font(.system(size: 11, weight: .semibold))
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)

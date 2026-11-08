@@ -105,13 +105,13 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
     VStack(spacing: Spacing.sm) {
       Text(statusTitle)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 
       Text(statusSubtitle)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
       if saveStatus == .success || saveStatus == .idle {
@@ -121,7 +121,7 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
         // Reassurance line
         Text(reassuranceText)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .multilineTextAlignment(.center)
           .padding(.horizontal, Spacing.md)
       }
@@ -172,7 +172,7 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
       } label: {
         Text(.calendarImportEntryButton)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .multilineTextAlignment(.center)
           .frame(minHeight: 44)
           .contentShape(Rectangle())
@@ -187,7 +187,7 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
       }) {
         Text(.commonRetry)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .frame(minHeight: 44)
           .contentShape(Rectangle())
       }
@@ -209,7 +209,7 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
 
         Image(systemName: "checkmark.circle.fill")
           .font(.system(size: iconSize))
-          .foregroundColor(.tidexSuccess)
+          .foregroundStyle(Color.tidexSuccess)
           .scaleEffect(checkmarkScale)
           .opacity(checkmarkOpacity)
           .accessibilityHidden(true)
@@ -234,7 +234,7 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
 
         Image(systemName: "exclamationmark.circle.fill")
           .font(.system(size: iconSize))
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .accessibilityHidden(true)
       }
     }
@@ -311,12 +311,12 @@ struct SuccessScreen: View {  // swiftlint:disable:this type_body_length
     HStack(spacing: Spacing.sm) {
       Image(systemName: "exclamationmark.triangle.fill")
         .font(.tidexBody)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .accessibilityHidden(true)
 
       Text(message)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .fixedSize(horizontal: false, vertical: true)
 
       Spacer()

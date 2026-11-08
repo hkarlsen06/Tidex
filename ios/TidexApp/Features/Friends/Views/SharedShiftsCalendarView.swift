@@ -293,7 +293,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
           Text(.shiftsDetails)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 44)
         .background(
@@ -315,7 +315,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
           Text(.commonCancel)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 44)
         .background(
@@ -341,7 +341,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       }
       .accessibilityElement(children: .ignore)
       .accessibilityLabel(Text(.commonAccessibilitySelectedCount(selectedDates.count)))
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .frame(maxWidth: .infinity)
       .frame(minHeight: 44)
       .background(
@@ -360,7 +360,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
           Text(.commonCancel)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 44)
         .background(
@@ -455,13 +455,13 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
       Image(systemName: icon)
         .font(.tidexFootnote.weight(.semibold))
-        .foregroundColor(iconColor)
+        .foregroundStyle(iconColor)
         .frame(minWidth: Spacing.iconSize, alignment: .leading)
         .accessibilityHidden(true)
 
       description
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
     }
   }
 

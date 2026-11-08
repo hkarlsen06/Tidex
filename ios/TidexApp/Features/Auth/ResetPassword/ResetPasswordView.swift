@@ -94,14 +94,14 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
 
         Image(systemName: "key.fill")
           .font(.system(size: iconSize))
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .accessibilityHidden(true)
       }
 
       // Title
       Text("Tidex")
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
   }
 
@@ -113,13 +113,13 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
       VStack(spacing: Spacing.xs) {
         Text(.resetPasswordTitle)
           .font(.tidexTitle)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(.center)
           .accessibilityAddTraits(.isHeader)
 
         Text(.resetPasswordEmailSubtitle)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
 
@@ -140,7 +140,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         if let emailError = viewModel.fieldErrors.email {
           Text(emailError)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xxs)
             .announcesToVoiceOver(emailError)
@@ -150,7 +150,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         Text(.resetPasswordCodeHint)
           .font(.tidexFootnote)
           .fixedSize(horizontal: false, vertical: true)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
 
         // Submit button
@@ -173,13 +173,13 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
       VStack(spacing: Spacing.xs) {
         Text(.otpTitle)
           .font(.tidexTitle)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(.center)
           .accessibilityAddTraits(.isHeader)
 
         Text(otpSubtitle)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
 
@@ -209,7 +209,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         }) {
           Text(.otpResendCode)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .multilineTextAlignment(.center)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
@@ -230,13 +230,13 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
       VStack(spacing: Spacing.xs) {
         Text(.resetPasswordNewPasswordTitle)
           .font(.tidexTitle)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(.center)
           .accessibilityAddTraits(.isHeader)
 
         Text(.resetPasswordNewPasswordSubtitle)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .multilineTextAlignment(.center)
       }
 
@@ -266,7 +266,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         if let newPasswordError = viewModel.fieldErrors.newPassword {
           Text(newPasswordError)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xxs)
             .announcesToVoiceOver(newPasswordError)
@@ -275,7 +275,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         if let confirmError = viewModel.fieldErrors.confirmPassword {
           Text(confirmError)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xxs)
             .announcesToVoiceOver(confirmError)
@@ -284,7 +284,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         // Password hint
         Text(.resetPasswordPasswordHint)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)
 
         // Submit button
@@ -316,7 +316,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         Text(.commonBack)
           .font(.tidexSubheadline)
       }
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .frame(minHeight: 44)
       .contentShape(Rectangle())
     }
@@ -336,7 +336,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
         Text(.resetPasswordBackToLogin)
           .font(.tidexSubheadline)
       }
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .frame(minHeight: 44)
       .contentShape(Rectangle())
     }

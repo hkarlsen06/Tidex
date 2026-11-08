@@ -143,15 +143,15 @@ struct DataSettingsView: View {
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(title)
               .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
 
             Text(isLoading && viewModel.isSyncing ? String(localized: .dataExportSyncing) : description)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
           }
         } icon: {
           Image(systemName: icon)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
         }
 
         Spacer(minLength: Spacing.xs)
@@ -160,7 +160,7 @@ struct DataSettingsView: View {
           ProgressView()
         } else {
           Image(systemName: "square.and.arrow.down")
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityHidden(true)
         }
       }
@@ -177,15 +177,15 @@ struct DataSettingsView: View {
         Label {
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.dataExportShare)
-              .foregroundColor(.tidexBlueText)
+              .foregroundStyle(Color.tidexBlueText)
 
             Text(url.lastPathComponent)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
           }
         } icon: {
           Image(systemName: "square.and.arrow.up")
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
         }
       }
       .announcesToVoiceOver(String(localized: .dataExportReadyToShare))

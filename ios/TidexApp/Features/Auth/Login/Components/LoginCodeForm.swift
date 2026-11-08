@@ -33,13 +33,13 @@ internal struct LoginCodeForm: View {
     VStack(spacing: Spacing.xs) {
       Text(.otpTitle)
         .font(.tidexTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 
       Text(String(localized: .otpSubtitle(viewModel.email)))
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
   }
@@ -57,7 +57,7 @@ internal struct LoginCodeForm: View {
     }) {
       Text(.otpResendCode)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .multilineTextAlignment(.center)
         .frame(minHeight: 44)
         .contentShape(Rectangle())
@@ -77,7 +77,7 @@ internal struct LoginCodeForm: View {
         Text(.otpBackToLogin)
           .font(.tidexSubheadline)
       }
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .frame(minHeight: 44)
       .contentShape(Rectangle())
     }

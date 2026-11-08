@@ -32,13 +32,13 @@ extension EarningsBreakdownCard {
       HStack {
         Text(label)
           .font(isHighlighted ? .tidexLabel : .tidexSubheadline)
-          .foregroundColor(isHighlighted ? .tidexTextPrimary : .tidexTextSecondary)
+          .foregroundStyle(isHighlighted ? Color.tidexTextPrimary : Color.tidexTextSecondary)
 
         Spacer()
 
         Text(value)
           .font(isHighlighted ? .tidexTitle2 : .tidexLabel)
-          .foregroundColor(valueColor)
+          .foregroundStyle(valueColor)
       }
     }
   }
@@ -75,7 +75,7 @@ struct EarningsBreakdownDetailLine: View {
       HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
         Text(title)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .environment(\.layoutDirection, forcesLeftToRight ? .leftToRight : layoutDirection)
 
         Spacer(minLength: Spacing.sm)
@@ -83,14 +83,14 @@ struct EarningsBreakdownDetailLine: View {
         Text(amount)
           .font(.tidexSubheadline)
           .monospacedDigit()
-          .foregroundColor(valueColor)
+          .foregroundStyle(valueColor)
       }
 
       if let detail {
         Text(detail)
           .font(.tidexFootnote)
           .monospacedDigit()
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .environment(\.layoutDirection, forcesLeftToRight ? .leftToRight : layoutDirection)
       }
     }

@@ -155,7 +155,7 @@ struct JobPaySetupSheet: View {
       dismiss()
     }
     .font(.tidexBodyMedium)
-    .foregroundColor(.tidexBlueText)
+    .foregroundStyle(Color.tidexBlueText)
     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
@@ -181,7 +181,7 @@ struct JobPaySetupSheet: View {
         ProgressView()
         Text(.commonLoading)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary.opacity(0.9))
@@ -253,7 +253,7 @@ private struct JobPayScheduleSetupScreen: View {
             if let saveError {
               Text(saveError)
                 .font(.tidexFootnote)
-                .foregroundColor(.tidexError)
+                .foregroundStyle(Color.tidexError)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.top, Spacing.sm)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -278,7 +278,7 @@ private struct JobPayScheduleSetupScreen: View {
         onCancel()
       }
       .font(.tidexBody)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .frame(minWidth: 44, minHeight: 44, alignment: .leading)
       .contentShape(Rectangle())
       .disabled(isSaving)
@@ -294,12 +294,12 @@ private struct JobPayScheduleSetupScreen: View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "calendar.badge.clock")
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .accessibilityHidden(true)
 
       Text(.settingsPaySetupScheduleTitle)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 

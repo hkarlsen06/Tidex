@@ -86,12 +86,12 @@ struct DetailSheetActionButton: View {
         if let systemImage {
           Image(systemName: systemImage)
             .font(.tidexLabel)
-            .foregroundColor(style.iconForegroundColor)
+            .foregroundStyle(style.iconForegroundColor)
         }
 
         Text(title)
           .font(.tidexLabelStrong)
-          .foregroundColor(style.foregroundColor)
+          .foregroundStyle(style.foregroundColor)
           .multilineTextAlignment(.leading)
       }
       .frame(maxWidth: .infinity)

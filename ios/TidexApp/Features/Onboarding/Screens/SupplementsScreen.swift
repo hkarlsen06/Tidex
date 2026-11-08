@@ -90,7 +90,7 @@ struct SupplementsScreen: View {
 
         Text(.onboardingSupplementsHint)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .multilineTextAlignment(.center)
           .padding(.horizontal, Spacing.xl)
           .adaptiveContentWidth()
@@ -114,7 +114,7 @@ struct SupplementsScreen: View {
           Text(.commonBack)
             .font(.tidexBody)
         }
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .frame(minHeight: 44)
         .contentShape(Rectangle())
       }
@@ -130,13 +130,13 @@ struct SupplementsScreen: View {
     VStack(spacing: Spacing.sm) {
       Text(.onboardingSupplementsTitle)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 
       Text(.onboardingSupplementsSubtitle)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
     .padding(.horizontal, Spacing.xl)
@@ -180,7 +180,7 @@ struct SupplementsScreen: View {
           .font(.tidexBodyMedium)
           .multilineTextAlignment(.center)
       }
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.xs)
       .frame(minHeight: 56)
@@ -215,21 +215,21 @@ private struct SupplementRuleCard: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(rule.daysDescription)
           .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         HStack(spacing: Spacing.xs) {
           Text(rule.timeDescription)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
 
           Text("•")
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityHidden(true)
 
           Text(rule.valueDescription(locale: locale, currency: currency))
             .font(.tidexLabel)
-            .foregroundColor(.tidexSuccess)
+            .foregroundStyle(Color.tidexSuccess)
         }
       }
       .accessibilityElement(children: .combine)
@@ -243,7 +243,7 @@ private struct SupplementRuleCard: View {
       }) {
         Image(systemName: "pencil")
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .accessibilityHidden(true)
           .frame(width: 36, height: 36)
           .background(Color.tidexBlue.opacity(0.1))
@@ -265,7 +265,7 @@ private struct SupplementRuleCard: View {
       }) {
         Image(systemName: "trash")
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .accessibilityHidden(true)
           .frame(width: 36, height: 36)
           .background(Color.tidexError.opacity(0.1))

@@ -60,7 +60,7 @@ struct AddJobStepPage<Header: View, Cards: View>: View {
       if let validationError {
         Text(validationError)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .padding(.horizontal, Spacing.lg)
           .padding(.top, Spacing.sm)
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -77,13 +77,13 @@ struct AddJobStepPage<Header: View, Cards: View>: View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: icon)
         .font(.tidexTitle)
-        .foregroundColor(iconTint)
+        .foregroundStyle(iconTint)
         .frame(width: iconBadgeSize, height: iconBadgeSize)
         .background(iconTint.opacity(0.16), in: Circle())
         .accessibilityHidden(true)
       Text(title)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
     }
@@ -124,7 +124,7 @@ struct AddJobSavingOverlay: View {
         ProgressView()
         Text(.commonLoading)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary.opacity(0.9))

@@ -118,18 +118,18 @@ private struct SummaryHeader: View {
           HStack(spacing: Spacing.xs) {
             Text(titleText)
               .font(.tidexLargeTitle)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
 
             if isIndefinite {
               Image(systemName: "infinity")
                 .font(.tidexHeadline)
-                .foregroundColor(.tidexBlueText)
+                .foregroundStyle(Color.tidexBlueText)
             }
           }
 
           Text(subtitleText)
             .font(.tidexBody)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .environment(\.layoutDirection, .leftToRight)
         }
 
@@ -162,7 +162,7 @@ private struct ConflictBadge: View {
       Text(String(localized: .previewConflictBadge(count)))
         .font(.tidexLabelStrong)
     }
-    .foregroundColor(.tidexTextOnWarning)
+    .foregroundStyle(Color.tidexTextOnWarning)
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xxxs)
     .background(Color.tidexWarning)
@@ -182,11 +182,11 @@ private struct ConflictWarning: View {
   var body: some View {
     HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle")
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
 
       Text(warningText)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
     }
     .padding(Spacing.sm)
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -226,12 +226,12 @@ private struct ProjectedShiftRow: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(formattedDate)
           .font(.tidexBodyMedium)
-          .foregroundColor(hasConflict ? .tidexTextMuted : .tidexTextPrimary)
+          .foregroundStyle(hasConflict ? Color.tidexTextMuted : Color.tidexTextPrimary)
           .strikethrough(hasConflict)
 
         Text(timeRangeText)
           .font(.tidexSubheadline)
-          .foregroundColor(hasConflict ? .tidexTextMuted : .tidexTextSecondary)
+          .foregroundStyle(hasConflict ? Color.tidexTextMuted : Color.tidexTextSecondary)
           .strikethrough(hasConflict)
           .environment(\.layoutDirection, .leftToRight)
       }
@@ -240,10 +240,10 @@ private struct ProjectedShiftRow: View {
 
       if hasConflict {
         Image(systemName: "xmark.circle.fill")
-          .foregroundColor(.tidexWarning)
+          .foregroundStyle(Color.tidexWarning)
       } else {
         Image(systemName: "checkmark.circle.fill")
-          .foregroundColor(.tidexSuccess)
+          .foregroundStyle(Color.tidexSuccess)
       }
     }
     .padding(Spacing.md)
@@ -277,12 +277,12 @@ private struct MoreShiftsIndicator: View {
       if isIndefinite {
         Image(systemName: "infinity")
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
 
       Text(displayText)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .padding()
     .frame(maxWidth: .infinity)
@@ -304,7 +304,7 @@ private struct ActionButtons: View {
       Button(action: onCancel) {
         Text(.previewCancel)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.md)
       }
@@ -320,7 +320,7 @@ private struct ActionButtons: View {
         } else {
           Text(.previewConfirm)
             .font(.tidexButton)
-            .foregroundColor(.tidexTextOnBrand)
+            .foregroundStyle(Color.tidexTextOnBrand)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.md)
         }

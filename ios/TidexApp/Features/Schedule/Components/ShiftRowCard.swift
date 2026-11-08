@@ -134,18 +134,18 @@ struct ShiftRowCard: View {
         HStack(spacing: Spacing.xxs) {
           Text(dateParts.weekday)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           Text("·")
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
           Text(dateParts.dayMonth)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
         }
 
         if isToday {
           Text(.commonToday)
             .font(.tidexMicro)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .padding(.horizontal, Spacing.xs)
             .padding(.vertical, Spacing.micro)
             .background(Color.tidexBlue.opacity(0.12))
@@ -160,14 +160,14 @@ struct ShiftRowCard: View {
       let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
       Text(amountTextOverride ?? formatCurrency(displayAmount))
         .font(.tidexTitle)
-        .foregroundColor(excludedFromTotal ? .tidexTextMuted : .tidexTextPrimary)
+        .foregroundStyle(excludedFromTotal ? Color.tidexTextMuted : Color.tidexTextPrimary)
         .strikethrough(excludedFromTotal, color: .tidexTextMuted)
     } trailingBottom: {
       // When excluded from total, show excluded label instead of breakdown
       if excludedFromTotal {
         Text(.shiftsExcludedFromTotal)
           .font(.tidexMicro)
-          .foregroundColor(.tidexWarning)
+          .foregroundStyle(Color.tidexWarning)
       } else if shouldRenderJobBadge, let jobName, !jobName.isEmpty {
         WorkplaceNameText(
           name: jobName,
@@ -189,7 +189,7 @@ struct ShiftRowCard: View {
           Text(formatPlainAmount(shift.taxAmount))
         }
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
       }
     }
     .padding(.horizontal, Spacing.mlg)
@@ -238,7 +238,7 @@ struct ShiftRowCard: View {
   private var timeRangeTextLabel: some View {
     Text(timeRangeText)
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
       .environment(\.layoutDirection, .leftToRight)
@@ -248,10 +248,10 @@ struct ShiftRowCard: View {
     Group {
       if hasConflict {
         Image(systemName: "exclamationmark.triangle.fill")
-          .foregroundColor(.tidexWarning)
+          .foregroundStyle(Color.tidexWarning)
       } else {
         Image(systemName: "clock")
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
     }
     .font(.tidexFootnote)

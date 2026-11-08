@@ -111,7 +111,7 @@ struct ShareableCalendarView: View {
           .frame(width: 14, height: 14)
         Text("Tidex")
           .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
       .padding(.top, Spacing.xs)
     }
@@ -130,11 +130,11 @@ struct ShareableCalendarView: View {
       HStack(spacing: Spacing.xxxs) {
         Text(monthName)
           .font(.tidexTitle2)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Text(String(year))
           .font(.tidexBodyLarge)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
 
       Spacer()
@@ -158,18 +158,18 @@ struct ShareableCalendarView: View {
       if monthlyTotals.gross == 0 {
         Text("—")
           .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       } else {
         Text(CurrencyConfig.format(displayAmount, currency: currency))
           .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
 
       // Gross line (only when tax enabled and has value)
       if hasTaxEnabled, monthlyTotals.gross > 0 {
         Text(CurrencyConfig.format(monthlyTotals.gross, currency: currency))
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
     }
     .frame(minHeight: 36, alignment: .trailing)
@@ -265,7 +265,7 @@ struct CalendarShareOptionsSheet: View {
       // Title
       Text(title)
         .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .padding(.top, Spacing.md)
 
       VStack(spacing: Spacing.sm) {
@@ -293,11 +293,11 @@ struct CalendarShareOptionsSheet: View {
         HStack(spacing: Spacing.msm) {
           Image(systemName: systemImage)
             .font(.tidexBodyLarge)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .frame(width: 28)
           Text(label)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           Spacer()
         }
         .padding(.horizontal, Spacing.mlg)

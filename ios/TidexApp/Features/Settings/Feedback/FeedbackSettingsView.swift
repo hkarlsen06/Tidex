@@ -43,10 +43,10 @@ struct FeedbackSettingsView: View {
     Section {
       Label {
         Text(.feedbackSuccess)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       } icon: {
         Image(systemName: "checkmark.circle.fill")
-          .foregroundColor(.tidexSuccess)
+          .foregroundStyle(Color.tidexSuccess)
       }
       .announcesToVoiceOver(String(localized: .feedbackSuccess))
 
@@ -54,7 +54,7 @@ struct FeedbackSettingsView: View {
         viewModel.resetSuccess()
       } label: {
         Text(.feedbackSubmitAnother)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
     }
   }
@@ -71,7 +71,7 @@ struct FeedbackSettingsView: View {
       .lineLimit(6...)
       .accessibilityLabel(Text(.feedbackTitle))
       .font(.tidexBody)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .disabled(viewModel.isSubmitting)
     } footer: {
       HStack {
@@ -89,7 +89,7 @@ struct FeedbackSettingsView: View {
           Text(viewModel.characterCountText)
             .monospacedDigit()
         }
-        .foregroundColor(viewModel.isOverLimit ? .tidexError : .tidexTextMuted)
+        .foregroundStyle(viewModel.isOverLimit ? Color.tidexError : Color.tidexTextMuted)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
           viewModel.isOverLimit
@@ -110,7 +110,7 @@ struct FeedbackSettingsView: View {
         HStack(spacing: Spacing.xs) {
           Text(viewModel.isSubmitting ? .feedbackSending : .feedbackSubmit)
             .font(.tidexButton)
-            .foregroundColor(viewModel.canSubmit ? .tidexBlueText : .tidexTextMuted)
+            .foregroundStyle(viewModel.canSubmit ? Color.tidexBlueText : Color.tidexTextMuted)
 
           if viewModel.isSubmitting {
             ProgressView()
@@ -164,7 +164,7 @@ struct FeedbackSettingsView: View {
 
       Text(item.message)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(1)
     }
   }
@@ -174,7 +174,7 @@ struct FeedbackSettingsView: View {
       "\(String(localized: .feedbackHistorySubmittedOn)) \(item.formattedDate(locale: Locale.current))"
     )
     .font(.tidexCaptionRegular)
-    .foregroundColor(.tidexTextMuted)
+    .foregroundStyle(Color.tidexTextMuted)
   }
 
   private func historyStatus(_ item: FeedbackItem) -> some View {
@@ -185,14 +185,14 @@ struct FeedbackSettingsView: View {
     }
     .labelStyle(.titleAndIcon)
     .font(.tidexMicro)
-    .foregroundColor(item.response != nil ? .tidexSuccess : .tidexTextMuted)
+    .foregroundStyle(item.response != nil ? Color.tidexSuccess : Color.tidexTextMuted)
   }
 
   @ViewBuilder
   private func feedbackHistoryDetail(_ item: FeedbackItem) -> some View {
     Text(item.message)
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .textSelection(.enabled)
 
     if let response = item.response {
@@ -206,11 +206,11 @@ struct FeedbackSettingsView: View {
               .font(.tidexCaptionRegular)
           }
         }
-        .foregroundColor(.tidexSuccess)
+        .foregroundStyle(Color.tidexSuccess)
 
         Text(response)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .textSelection(.enabled)
       }
     }

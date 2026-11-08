@@ -40,13 +40,13 @@ struct SharedShiftRow: View {
         HStack(spacing: Spacing.xxs) {
           Text(dateParts.weekday)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           Text("·")
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityHidden(true)
           Text(dateParts.dayMonth)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
         }
         .fixedSize(horizontal: !isStacked, vertical: false)
 
@@ -95,7 +95,7 @@ struct SharedShiftRow: View {
       Text(formatCurrency(displayAmount))
         .font(.tidexTitle)
         .tracking(-0.5)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(isStacked ? nil : 1)
         .fixedSize(horizontal: !isStacked, vertical: false)
 
@@ -107,7 +107,7 @@ struct SharedShiftRow: View {
           Text(formatPlainAmount(shift.taxAmount))
         }
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .lineLimit(isStacked ? nil : 1)
         .fixedSize(horizontal: !isStacked, vertical: false)
       }
@@ -124,7 +124,7 @@ struct SharedShiftRow: View {
       Text(.sharingHidden)
         .font(.tidexLabel)
     }
-    .foregroundColor(.tidexTextMuted)
+    .foregroundStyle(Color.tidexTextMuted)
   }
 
   // MARK: - Formatting
@@ -164,7 +164,7 @@ struct SharedShiftRow: View {
   private var timeRangeTextLabel: some View {
     Text(timeRangeText)
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .lineLimit(isStacked ? nil : 1)
       .minimumScaleFactor(isStacked ? 1 : 0.85)
       .environment(\.layoutDirection, .leftToRight)
@@ -173,7 +173,7 @@ struct SharedShiftRow: View {
   private var clockIcon: some View {
     Image(systemName: "clock")
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .accessibilityHidden(true)
   }
 

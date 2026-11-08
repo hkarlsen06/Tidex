@@ -236,14 +236,14 @@ extension ProfileSettingsView {
           : viewModel.displayName
       )
       .font(.tidexTitle)
-      .foregroundColor(viewModel.displayName.isEmpty ? .tidexTextMuted : .tidexTextPrimary)
+      .foregroundStyle(viewModel.displayName.isEmpty ? Color.tidexTextMuted : Color.tidexTextPrimary)
       .multilineTextAlignment(.center)
       .lineLimit(2)
 
       if !viewModel.username.isEmpty {
         Text(usernameDisplayText)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
       }
     }
@@ -344,7 +344,7 @@ extension ProfileSettingsView {
       Button(action: onOpenSecurity) {
         HStack(spacing: Spacing.sm) {
           Label(String(localized: .settingsMenuSecurityLabel), systemImage: "lock.shield")
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           Spacer(minLength: Spacing.sm)
 

@@ -32,19 +32,19 @@ struct ScreenshotNotificationBubble: View {
     layout {
       Image(systemName: "camera.viewfinder")
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .accessibilityHidden(true)
 
       Text(.sharingScreenshotTaken)
         .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       if showNotifiedIcon {
         notifiedBell
 
         Text(.sharingScreenshotNotified(notifiedName))
           .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
           .transition(.opacity)
       }
@@ -72,7 +72,7 @@ struct ScreenshotNotificationBubble: View {
   private var bellImage: some View {
     Image(systemName: "bell.and.waves.left.and.right")
       .font(.tidexCaption)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
   }
 
   private var shakingBell: some View {

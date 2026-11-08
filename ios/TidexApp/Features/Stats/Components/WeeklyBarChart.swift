@@ -94,7 +94,7 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
 
               Text(label)
                 .font((isHighlighted || isSelected) ? .tidexCaptionStrong : .tidexCaptionRegular)
-                .foregroundColor((isHighlighted || isSelected) ? .tidexBlueText : .tidexTextSecondary)
+                .foregroundStyle((isHighlighted || isSelected) ? Color.tidexBlueText : Color.tidexTextSecondary)
             }
           }
         }
@@ -173,11 +173,11 @@ private struct TooltipView: View {
     VStack(alignment: .center, spacing: Spacing.xxs) {
       Text(dayData.fullDay)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Text(CurrencyConfig.format(dayData.earnings, currency: currency))
         .font(.tidexMonoBody)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)

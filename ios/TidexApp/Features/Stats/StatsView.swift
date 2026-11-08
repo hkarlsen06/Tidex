@@ -242,10 +242,10 @@ struct StatsView: View {
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: "line.3.horizontal.decrease.circle")
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
         Text(.jobsFilterTitle)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
       // The button below carries the same title as its label.
       .accessibilityHidden(true)
@@ -323,11 +323,11 @@ struct StatsView: View {
       } else {
         Text(viewModel.selectedJobName ?? String(localized: .jobsFilterAll))
           .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
       Image(systemName: "chevron.down")
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
     }
     .padding(.horizontal, Spacing.sm)
@@ -405,12 +405,12 @@ struct StatsView: View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: errorIconSize))
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
 
       Text(message)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
       Button {
@@ -420,7 +420,7 @@ struct StatsView: View {
       } label: {
         Text(.commonRetry)
           .font(.tidexButton)
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundStyle(Color.tidexTextOnBrand)
           .padding(.horizontal, Spacing.lg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
@@ -472,7 +472,7 @@ private struct StatsOverviewLedger: View {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.statsMonthlyEarnings)
             .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
 
           CurrencyCountUpText(
             amount: mainDisplayValue,
@@ -481,14 +481,14 @@ private struct StatsOverviewLedger: View {
           )
           // At accessibility sizes the amount uses a smaller base font and wraps instead of shrinking.
           .font(dynamicTypeSize.isAccessibilitySize ? .tidexAmountLarge : .tidexAmountDisplay)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.45)  // swiftlint:disable:this line_length no_magic_numbers
           .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
           if stats.tax.enabled {
             Text(String(localized: .statsAfterTax).lowercased())
               .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
           }
         }
         .accessibilityElement(children: .combine)
@@ -500,7 +500,7 @@ private struct StatsOverviewLedger: View {
           Button(action: onEarningsTap) {
             Image(systemName: "info.circle")
               .font(.tidexTitle2)
-              .foregroundColor(.tidexTextMuted)
+              .foregroundStyle(Color.tidexTextMuted)
               .frame(minWidth: 44, minHeight: 44)  // swiftlint:disable:this no_magic_numbers
               .contentShape(Rectangle())
           }
@@ -577,17 +577,17 @@ private struct StatsLedgerMetric: View {
       HStack(spacing: Spacing.xxs) {
         Image(systemName: systemImage)
           .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
 
         Text(label)
           .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       Text(value)
         .font(.tidexTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)  // swiftlint:disable:this no_magic_numbers
     }
@@ -607,13 +607,13 @@ private struct StatsLedgerValueRow: View {
     HStack(spacing: Spacing.sm) {
       Text(label)
         .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       Spacer(minLength: Spacing.sm)
 
       Text(value)
         .font(.tidexMonoLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.75)  // swiftlint:disable:this no_magic_numbers
     }

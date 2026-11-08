@@ -16,10 +16,10 @@ struct RecurringShiftsSettingsView: View {
           Section {
             Label {
               Text(errorMessage)
-                .foregroundColor(.tidexError)
+                .foregroundStyle(Color.tidexError)
             } icon: {
               Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.tidexError)
+                .foregroundStyle(Color.tidexError)
             }
             .font(.tidexSubheadline)
             .announcesToVoiceOver(errorMessage)
@@ -107,12 +107,12 @@ struct RecurringShiftsSettingsView: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(verbatim: "\(recurring.cleanStartTime) - \(recurring.cleanEndTime)")
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .monospacedDigit()
 
         Text(verbatim: details.joined(separator: " • "))
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
       .padding(.vertical, Spacing.xxxs)
     }

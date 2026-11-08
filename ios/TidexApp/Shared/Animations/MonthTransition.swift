@@ -265,7 +265,7 @@ struct MonthYearPickerSheet: View {
 
       Text(String(selectedYear))
         .font(.title2.weight(.semibold).monospacedDigit())
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .contentTransition(.numericText(value: Double(selectedYear)))
         .frame(maxWidth: .infinity)
         .accessibilityAddTraits(.isHeader)
@@ -351,7 +351,7 @@ private struct MonthCellButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.body.weight(isSelected || isToday ? .semibold : .regular))
-      .foregroundColor(foreground)
+      .foregroundStyle(foreground)
       .lineLimit(1)
       .minimumScaleFactor(0.7)
       .frame(maxWidth: .infinity, minHeight: minHeight)
@@ -386,7 +386,7 @@ private struct MonthPickerCurrentButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.body.weight(.semibold))
-      .foregroundColor(isSelected ? .tidexTextSecondary : .tidexBlueText)
+      .foregroundStyle(isSelected ? Color.tidexTextSecondary : Color.tidexBlueText)
       .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
       .multilineTextAlignment(.center)
       .frame(maxWidth: .infinity, minHeight: 48)
@@ -573,12 +573,12 @@ struct AnimatedMonthHeader: View {
     HStack(spacing: Spacing.xxxs) {
       Text(monthName.sentenceCased())
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(1)
 
       Text(yearText)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
     }
   }
 
@@ -588,12 +588,12 @@ struct AnimatedMonthHeader: View {
     VStack(spacing: 0) {
       Text(monthName.sentenceCased())
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(1)
 
       Text(yearText)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
     }
   }
 
@@ -664,7 +664,7 @@ struct AnimatedMonthHeader: View {
     } label: {
       Image(systemName: icon)
         .font(.system(size: navIconSize, weight: .semibold))
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .accessibilityLabel(Text(label))
         .frame(width: navPillVisualSize, height: navPillVisualSize)
         .background(Color.tidexBlue.opacity(0.1))
@@ -687,7 +687,7 @@ struct AnimatedMonthHeader: View {
     } label: {
       Image(systemName: icon)
         .font(.system(size: navIconSize, weight: .semibold))
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .accessibilityLabel(Text(label))
         .frame(width: navTapTargetSize, height: navTapTargetSize)
         .contentShape(Rectangle())

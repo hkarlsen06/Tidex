@@ -54,7 +54,7 @@ struct WageSourceSelector: View {
       // Section header
       Text(.settingsPayEditorWageSource)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .accessibilityAddTraits(.isHeader)
 
       // Toggle buttons: Tariff vs Custom (only show if tariff is available)
@@ -144,7 +144,7 @@ struct WageSourceSelector: View {
     currentWageLayout {
       Text(.settingsPayEditorCurrentWage)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       if !dynamicTypeSize.isAccessibilitySize {
         Spacer()
@@ -153,7 +153,7 @@ struct WageSourceSelector: View {
       Text(formatWage(currentWage))
         .accessibilityIdentifier("pay-settings.hourly-wage")
         .font(.tidexButton)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .combine)
@@ -198,11 +198,11 @@ private struct WageTypeToggleButton: View {
         Image(systemName: icon)
           .font(.system(size: iconSize))
           .accessibilityHidden(true)
-          .foregroundColor(isSelected ? .tidexBlueText : .tidexTextMuted)
+          .foregroundStyle(isSelected ? Color.tidexBlueText : Color.tidexTextMuted)
 
         Text(title)
           .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-          .foregroundColor(isSelected ? .tidexTextPrimary : .tidexTextSecondary)
+          .foregroundStyle(isSelected ? Color.tidexTextPrimary : Color.tidexTextSecondary)
       }
       .padding(.vertical, Spacing.xs)
       .frame(maxWidth: .infinity)

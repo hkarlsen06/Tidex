@@ -16,13 +16,13 @@ struct StatsChartHeader<Accessory: View>: View {  // swiftlint:disable:this expl
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(title)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         if let value {
           Text(value)
             .font(.tidexLargeTitle)
             .monospacedDigit()
-            .foregroundColor(valueColor)
+            .foregroundStyle(valueColor)
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)  // swiftlint:disable:this line_length no_magic_numbers
         }
@@ -30,7 +30,7 @@ struct StatsChartHeader<Accessory: View>: View {  // swiftlint:disable:this expl
         if let caption {
           Text(caption)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
         }
       }

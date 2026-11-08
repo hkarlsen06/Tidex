@@ -433,7 +433,7 @@ private struct InitialsCircle: View {
 
       Text(initials)
         .font(.system(size: size * 0.4, weight: .semibold))
-        .foregroundColor(textColor)
+        .foregroundStyle(textColor)
     }
     .frame(width: size, height: size)
   }
@@ -563,11 +563,11 @@ struct FriendShiftWidgetView: View {
     VStack(spacing: 12) {
       Image(systemName: "person.crop.circle.badge.plus")
         .font(.system(size: 36))
-        .foregroundColor(mutedTextColor)
+        .foregroundStyle(mutedTextColor)
 
       Text(.widgetSelectAFriend)
         .font(.system(size: 15, weight: .medium))
-        .foregroundColor(mutedTextColor)
+        .foregroundStyle(mutedTextColor)
     }
   }
 
@@ -585,7 +585,7 @@ struct FriendShiftWidgetView: View {
 
       Text(.widgetNoShifts)
         .font(.system(size: 15, weight: .medium))
-        .foregroundColor(mutedTextColor)
+        .foregroundStyle(mutedTextColor)
     }
   }
 
@@ -616,7 +616,7 @@ struct FriendShiftWidgetView: View {
           Text("\(countdownTarget, style: .timer)  \(entry.netEarnings)")
             .font(.system(size: 15, weight: .semibold))
             .monospacedDigit()
-            .foregroundColor(accentColor)
+            .foregroundStyle(accentColor)
             .multilineTextAlignment(.center)
             .widgetAccentable()
             .lineLimit(1)
@@ -624,7 +624,7 @@ struct FriendShiftWidgetView: View {
           Text(countdownTarget, style: .timer)
             .font(.system(size: 15, weight: .semibold))
             .monospacedDigit()
-            .foregroundColor(accentColor)
+            .foregroundStyle(accentColor)
             .widgetAccentable()
             .lineLimit(1)
         }
@@ -634,7 +634,7 @@ struct FriendShiftWidgetView: View {
           Text("\(shiftEnd, style: .timer)  \(entry.netEarnings)")
             .font(.system(size: 15, weight: .semibold))
             .monospacedDigit()
-            .foregroundColor(accentColor)
+            .foregroundStyle(accentColor)
             .multilineTextAlignment(.center)
             .widgetAccentable()
             .lineLimit(1)
@@ -642,7 +642,7 @@ struct FriendShiftWidgetView: View {
           Text(shiftEnd, style: .timer)
             .font(.system(size: 15, weight: .semibold))
             .monospacedDigit()
-            .foregroundColor(accentColor)
+            .foregroundStyle(accentColor)
             .widgetAccentable()
             .lineLimit(1)
         }
@@ -650,14 +650,14 @@ struct FriendShiftWidgetView: View {
         HStack(spacing: 6) {
           Text(entry.shiftDate)
             .font(.system(size: 15, weight: .semibold))
-            .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+            .foregroundStyle(entry.hasShift ? accentColor : mutedTextColor)
             .widgetAccentable(entry.hasShift)
             .lineLimit(1)
 
           if entry.showEarnings {
             Text(entry.netEarnings)
               .font(.system(size: 15, weight: .semibold))
-              .foregroundColor(secondaryTextColor)
+              .foregroundStyle(secondaryTextColor)
               .lineLimit(1)
           }
         }
@@ -669,7 +669,7 @@ struct FriendShiftWidgetView: View {
     // Always show friend's first name at bottom
     Text(firstName)
       .font(.system(size: 15, weight: .bold))
-      .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+      .foregroundStyle(entry.hasShift ? accentColor : mutedTextColor)
       .widgetAccentable(entry.hasShift)
       .lineLimit(1)
   }
@@ -681,20 +681,20 @@ struct FriendShiftWidgetView: View {
       } else if entry.shiftHasEnded {
         Text(.widgetDoneCapitalized)
           .font(.system(size: 36, weight: .bold))
-          .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+          .foregroundStyle(entry.hasShift ? primaryTextColor : mutedTextColor)
           .lineLimit(1)
           .minimumScaleFactor(0.7)
       } else {
         Text(entry.startTime)
           .font(.system(size: 32, weight: entry.shiftHasStarted ? .medium : .bold))
           .monospacedDigit()
-          .foregroundColor(startTimeColor)
+          .foregroundStyle(startTimeColor)
           .lineLimit(1)
 
         Text(entry.endTime)
           .font(.system(size: 32, weight: entry.shiftHasStarted ? .bold : .medium))
           .monospacedDigit()
-          .foregroundColor(endTimeColor)
+          .foregroundStyle(endTimeColor)
           .lineLimit(1)
       }
     }
@@ -709,19 +709,19 @@ struct FriendShiftWidgetView: View {
       Text("\(daysAgo)")
         .font(.system(size: 72, weight: .bold))
         .monospacedDigit()
-        .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+        .foregroundStyle(entry.hasShift ? primaryTextColor : mutedTextColor)
         .lineLimit(1)
         .minimumScaleFactor(0.5)
 
       VStack(alignment: .leading, spacing: -4) {
         Text(daysText)
           .font(.system(size: 24, weight: .semibold))
-          .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+          .foregroundStyle(entry.hasShift ? primaryTextColor : mutedTextColor)
           .lineLimit(1)
 
         Text(agoText)
           .font(.system(size: 24, weight: .semibold))
-          .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+          .foregroundStyle(entry.hasShift ? primaryTextColor : mutedTextColor)
           .lineLimit(1)
       }
     }
@@ -751,19 +751,19 @@ struct FriendShiftWidgetView: View {
       Text("\(entry.daysRemaining)")
         .font(.system(size: 72, weight: .bold))
         .monospacedDigit()
-        .foregroundColor(primaryTextColor)
+        .foregroundStyle(primaryTextColor)
         .lineLimit(1)
         .minimumScaleFactor(0.5)
 
       VStack(alignment: .leading, spacing: -4) {
         Text(daysLabel)
           .font(.system(size: 24, weight: .semibold))
-          .foregroundColor(primaryTextColor)
+          .foregroundStyle(primaryTextColor)
           .lineLimit(1)
 
         Text(leftLabel)
           .font(.system(size: 24, weight: .semibold))
-          .foregroundColor(primaryTextColor)
+          .foregroundStyle(primaryTextColor)
           .lineLimit(1)
       }
     }

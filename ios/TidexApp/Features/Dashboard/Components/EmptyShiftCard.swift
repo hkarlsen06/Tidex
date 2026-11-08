@@ -117,7 +117,7 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
       Image(systemName: "plus")
         .font(.tidexLabelStrong)
     }
-    .foregroundColor(.tidexTextOnBrand)
+    .foregroundStyle(Color.tidexTextOnBrand)
     .padding(.horizontal, Spacing.lg)
     .frame(minHeight: 44)  // swiftlint:disable:this no_magic_numbers
     .background(Color.tidexBlue, in: Capsule())

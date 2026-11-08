@@ -46,7 +46,7 @@ struct EventReminderEditorSection: View {
       if showsPastEventHint {
         Text(.eventsNotificationsPastEventHint)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
     }
     .sheet(isPresented: $showTimePickerSheet) {
@@ -83,18 +83,18 @@ struct EventReminderEditorSection: View {
     VStack(alignment: .leading, spacing: Spacing.xxs) {
       Text(.eventsNotificationsSectionTitle)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Text(.eventsNotificationsSectionDescription)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
     }
   }
 
   private var emptyState: some View {
     Text(.eventsNotificationsNone)
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
   }
 
   private var reminderRows: some View {
@@ -107,20 +107,20 @@ struct EventReminderEditorSection: View {
           HStack(spacing: Spacing.sm) {
             Image(systemName: "bell.fill")
               .font(.tidexBody)
-              .foregroundColor(.tidexBlueText)
+              .foregroundStyle(Color.tidexBlueText)
               .frame(width: 24)
               .accessibilityHidden(true)
 
             Text(reminderLabel(for: minutes))
               .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
 
             Spacer()
 
             if isEditable {
               Image(systemName: "pencil")
                 .font(.tidexSubheadline)
-                .foregroundColor(.tidexTextMuted)
+                .foregroundStyle(Color.tidexTextMuted)
                 .accessibilityHidden(true)
             }
           }
@@ -139,12 +139,12 @@ struct EventReminderEditorSection: View {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "plus.circle.fill")
           .font(.tidexBody)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .accessibilityHidden(true)
 
         Text(.notificationsRemindersAddTime)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
     }
     .buttonStyle(.plain)

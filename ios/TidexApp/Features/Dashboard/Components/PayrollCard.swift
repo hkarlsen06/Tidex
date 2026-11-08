@@ -82,32 +82,32 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "banknote")
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .accessibilityHidden(true)
           Text(.dashboardToday)
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
           Image(systemName: "party.popper.fill")
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .accessibilityHidden(true)
         }
       } else {
         HStack(spacing: Spacing.xxs) {
           Image(systemName: "banknote")
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .accessibilityHidden(true)
           Text(dateParts.weekday)
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
           Text("·")
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityHidden(true)
           Text(dateParts.dayMonth)
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .contentTransition(reduceMotion ? .identity : .numericText())
         }
         .animation(reduceMotion ? nil : .spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)  // swiftlint:disable:this line_length no_magic_numbers
@@ -132,12 +132,12 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
           if hasPayrollAdjustments {
             Image(systemName: "plus.forwardslash.minus")
               .font(.tidexCaption)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
               .padding(.leading, Spacing.xxxs)
               .accessibilityLabel(Text(.dashboardPayrollCardIncludesAdjustments))
           }
         }
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
       } else {
         ZStack {
           Text(verbatim: "00 000")
@@ -158,7 +158,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
             .contentTransition(reduceMotion ? .identity : .numericText())
         }
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
       } else if !showPayout {
         ZStack {
           Text(verbatim: "00 000 − 00 000")
@@ -335,7 +335,7 @@ extension PayrollCard {
         systemImage: isMarkedReceived ? "checkmark.circle.fill" : "circle"
       )
       .font(.tidexLabel)
-      .foregroundColor(textTint)
+      .foregroundStyle(textTint)
       .padding(.horizontal, Spacing.xs)
       .padding(.vertical, Spacing.xxxs)
       .background(Capsule(style: .continuous).fill(tint.opacity(0.12)))  // swiftlint:disable:this no_magic_numbers

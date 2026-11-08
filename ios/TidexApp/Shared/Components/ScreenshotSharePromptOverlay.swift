@@ -87,7 +87,7 @@ struct ScreenshotSharePromptOverlay: View {
       // Title
       Text(.screenshotShareTitle)
         .font(.tidexTitle2)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .padding(.horizontal, Spacing.mlg)
         .padding(.bottom, Spacing.xs)
@@ -95,7 +95,7 @@ struct ScreenshotSharePromptOverlay: View {
       // Description
       Text(.screenshotShareDescription)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
         .lineLimit(nil)
         .fixedSize(horizontal: false, vertical: true)
@@ -116,7 +116,7 @@ struct ScreenshotSharePromptOverlay: View {
           .frame(maxWidth: .infinity)
           .frame(minHeight: 52)
           .background(Color.tidexSurfacePrimary)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
       }
       .buttonStyle(PromptButtonStyle())
@@ -131,7 +131,7 @@ struct ScreenshotSharePromptOverlay: View {
           .frame(maxWidth: .infinity)
           .frame(minHeight: 52)
           .background(Color.tidexBrandPrimary)
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundStyle(Color.tidexTextOnBrand)
           .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
       }
       .buttonStyle(PromptButtonStyle())
@@ -176,7 +176,7 @@ struct ScreenshotSharePromptOverlay: View {
         VStack(spacing: Spacing.xxxs) {
           Image(systemName: "square.and.arrow.up")
             .font(.tidexBodyLarge)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .frame(width: 48, height: 48)
             .glassEffectID("screenshotPrompt.shareButton", in: glassNamespace)
             .tidexGlass(shape: .circle, interactive: true)
@@ -184,13 +184,13 @@ struct ScreenshotSharePromptOverlay: View {
           // Pointer arrow
           Image(systemName: "arrowtriangle.up.fill")
             .font(.system(size: 10))
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
         }
 
         // Selection button - dimmed with liquid glass
         Image(systemName: "checkmark.circle")
           .font(.tidexHeadline)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .frame(width: 40, height: 40)
           .glassEffectID("screenshotPrompt.selectionButton", in: glassNamespace)
           .tidexGlass(shape: .circle)

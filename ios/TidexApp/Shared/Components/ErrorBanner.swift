@@ -115,13 +115,13 @@ struct SuccessBanner: View {
   var body: some View {
     HStack(alignment: isToast ? .center : .top, spacing: isToast ? Spacing.xs : Spacing.sm) {
       Image(systemName: "checkmark.circle.fill")
-        .foregroundColor(.tidexSuccess)
+        .foregroundStyle(Color.tidexSuccess)
         .font(isToast ? .tidexLabelStrong : .tidexBody)
         .accessibilityHidden(true)
 
       Text(message)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.leading)
         .lineLimit(isToast ? 1 : nil)
         .truncationMode(.tail)
@@ -133,7 +133,7 @@ struct SuccessBanner: View {
         Button(action: onAction) {
           Text(actionTitle)
             .font(isToast ? .tidexFootnoteStrong : .tidexLabel)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .lineLimit(1)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
@@ -145,7 +145,7 @@ struct SuccessBanner: View {
       if let onDismiss {
         Button(action: onDismiss) {
           Image(systemName: "xmark")
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .font(isToast ? .tidexMicro : .tidexCaptionStrong)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())

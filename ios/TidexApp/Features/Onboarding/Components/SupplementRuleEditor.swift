@@ -263,7 +263,7 @@ struct SupplementRuleEditor: View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsTypeLabel)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       HStack(spacing: Spacing.sm) {
         TypeButton(
@@ -310,7 +310,7 @@ extension SupplementRuleEditor {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsDaysLabel)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       dayButtonRow
 
@@ -400,7 +400,7 @@ extension SupplementRuleEditor {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsTimeLabel)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       TimeRangePicker(
         startTime: supplementStartTimeBinding,

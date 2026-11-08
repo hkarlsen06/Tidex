@@ -172,12 +172,12 @@ private struct CompactFriendShiftPreviewTextRow: View {
     VStack(alignment: .leading, spacing: Spacing.micro) {
       Text(formattedDate)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(isStacked ? nil : 1)
 
       Text(formattedTimeRange)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .lineLimit(isStacked ? nil : 1)
         .environment(\.layoutDirection, .leftToRight)
     }
@@ -187,14 +187,14 @@ private struct CompactFriendShiftPreviewTextRow: View {
     VStack(alignment: isStacked ? .leading : .trailing, spacing: Spacing.micro) {
       Text(statusText(at: now))
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(isStacked ? nil : 1)
         .fixedSize(horizontal: !isStacked, vertical: isStacked)
 
       if showEarnings {
         Text(formattedEarnings)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .lineLimit(isStacked ? nil : 1)
           .fixedSize(horizontal: !isStacked, vertical: isStacked)
       }

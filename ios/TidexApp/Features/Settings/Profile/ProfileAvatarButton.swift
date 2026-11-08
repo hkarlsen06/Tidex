@@ -55,7 +55,7 @@ struct ProfileAvatarButton: View {
           Image(systemName: "camera.fill")
             .accessibilityHidden(true)
             .font(.system(size: ProfileAvatarLayout.cameraIconSize, weight: .semibold))
-            .foregroundColor(.tidexTextOnBrand)
+            .foregroundStyle(Color.tidexTextOnBrand)
             .frame(
               width: ProfileAvatarLayout.cameraBadgeSize,
               height: ProfileAvatarLayout.cameraBadgeSize

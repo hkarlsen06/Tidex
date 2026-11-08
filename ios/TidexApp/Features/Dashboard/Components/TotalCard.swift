@@ -187,7 +187,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         }
       }
       .font(.tidexLabel)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .lineLimit(usesFixedTypographyFrames ? 1 : nil)
       .multilineTextAlignment(.center)
     } else {
@@ -221,7 +221,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       )
       // At accessibility sizes the amount uses a smaller base font and wraps instead of shrinking.
       .font(usesFixedTypographyFrames ? .tidexHeroAmount : .tidexAmountLarge)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .minimumScaleFactor(usesFixedTypographyFrames ? 0.4 : 1)  // swiftlint:disable:this no_magic_numbers
       .lineLimit(usesFixedTypographyFrames ? 1 : nil)
       .multilineTextAlignment(.center)
@@ -244,13 +244,13 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       Text(label)
     }
     .font(.tidexBody)
-    .foregroundColor(.tidexTextSecondary)
+    .foregroundStyle(Color.tidexTextSecondary)
   }
 
   private func animatedCountLabel(_ text: Text, count: Int) -> some View {
     text
       .font(.tidexBody)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .contentTransition(reduceMotion ? .identity : .numericText(value: Double(count)))
       .animation(reduceMotion ? nil : .spring(duration: amountAnimationDuration, bounce: 0), value: count)
   }

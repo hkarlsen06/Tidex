@@ -272,16 +272,16 @@ private struct RecurringAnchorCalendarInstructions: View {
     VStack(spacing: Spacing.xs) {
       Image(systemName: "calendar.badge.plus")
         .font(.system(size: 24))
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
 
       Text(.addShiftTapToSetAnchors)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
       Text(.addShiftOneAnchorPerWeekday)
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .padding(Spacing.mlg)
     .frame(maxWidth: .infinity)

@@ -193,7 +193,7 @@ struct AddShiftView: View {
         handleKeyboardButtonTap()
       }
       .font(.tidexLabelStrong)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.xsm)
       .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.3))

@@ -25,7 +25,7 @@ struct CalendarSyncSettingsView: View {
             HStack(spacing: Spacing.sm) {
               ProgressView()
               Text(.calendarSubscriptionLoading)
-                .foregroundColor(.tidexTextSecondary)
+                .foregroundStyle(Color.tidexTextSecondary)
             }
           }
         } else if CalendarSubscriptionStore.shared.isStateUnknown {
@@ -145,7 +145,7 @@ struct CalendarSyncSettingsView: View {
         }
       }
     }
-    .foregroundColor(.tidexBlueText)
+    .foregroundStyle(Color.tidexBlueText)
     .disabled(viewModel.isUpdatingCalendarSubscription)
   }
 
@@ -153,7 +153,7 @@ struct CalendarSyncSettingsView: View {
   private var unknownStateSection: some View {
     Section {
       Text(.commonErrorLoadFailed)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       Button {
         Task {
@@ -162,7 +162,7 @@ struct CalendarSyncSettingsView: View {
       } label: {
         Label(String(localized: .commonRetry), systemImage: "arrow.clockwise")
       }
-      .foregroundColor(.tidexBlue)
+      .foregroundStyle(Color.tidexBlue)
     }
   }
 
@@ -174,7 +174,7 @@ struct CalendarSyncSettingsView: View {
       } label: {
         Label(String(localized: .calendarSubscriptionCopyLinkButton), systemImage: "doc.on.doc")
       }
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
     } footer: {
       Text(.calendarSubscriptionFallbackDescription)
     }
@@ -187,7 +187,7 @@ struct CalendarSyncSettingsView: View {
       } label: {
         Label(String(localized: .calendarSubscriptionDisableButton), systemImage: "stop.circle")
       }
-      .foregroundColor(.tidexError)
+      .foregroundStyle(Color.tidexError)
       .disabled(viewModel.isUpdatingCalendarSubscription)
     }
   }

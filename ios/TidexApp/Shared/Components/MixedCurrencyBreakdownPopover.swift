@@ -20,7 +20,7 @@ struct MixedCurrencyBreakdownPopover: View {
           HStack(alignment: .top, spacing: Spacing.sm) {
             Text(entry.jobName)
               .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
               .lineLimit(nil)
               .multilineTextAlignment(.leading)
               .fixedSize(horizontal: false, vertical: true)
@@ -29,7 +29,7 @@ struct MixedCurrencyBreakdownPopover: View {
 
             Text(CurrencyConfig.format(entry.displayAmount, currency: entry.currency))
               .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
               .lineLimit(nil)
               .multilineTextAlignment(.trailing)
               .fixedSize(horizontal: false, vertical: true)

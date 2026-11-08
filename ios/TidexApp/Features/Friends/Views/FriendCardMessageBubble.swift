@@ -81,7 +81,7 @@ struct FriendCardMessageBubble: View {
       } else if let preview {
         Text(preview.text)
           .font(state == .incomingUnread ? .tidexSubheadline.weight(.semibold) : .tidexSubheadline)
-          .foregroundColor(textColor)
+          .foregroundStyle(textColor)
           .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xxxs)

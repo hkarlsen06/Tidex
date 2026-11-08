@@ -303,7 +303,7 @@ struct SendAttachmentToChatSheet: View {
           Button(String(localized: .commonCancel)) {
             dismiss()
           }
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
         }
 
         ToolbarItem(placement: .topBarTrailing) {
@@ -325,25 +325,25 @@ struct SendAttachmentToChatSheet: View {
         ProgressView()
         Text(.friendsChatSendToChatLoading)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     } else if viewModel.recipients.isEmpty {
       VStack(spacing: Spacing.md) {
         Image(systemName: "person.2.slash")
           .font(.system(size: emptyIconSize, weight: .medium))
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
 
         Text(.friendsChatSendToChatEmptyTitle)
           .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Text(
           .friendsChatSendToChatEmptyMessage
         )
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .multilineTextAlignment(.center)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -351,12 +351,12 @@ struct SendAttachmentToChatSheet: View {
       VStack(alignment: .leading, spacing: Spacing.md) {
         Text(.friendsChatSendToChatPrompt)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
 
         if let errorMessage = viewModel.errorMessage {
           Text(errorMessage)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
             .announcesToVoiceOver(errorMessage)
         }
 

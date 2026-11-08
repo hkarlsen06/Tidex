@@ -102,12 +102,12 @@ struct InAppChatToastView: View {
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(payload.senderName)
               .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
               .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
             Text(payload.previewText)
               .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
               .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
               .truncationMode(.tail)
           }
@@ -121,7 +121,7 @@ struct InAppChatToastView: View {
       Button(action: onDismiss) {
         Image(systemName: "xmark")
           .font(.tidexFootnoteStrong)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
           .frame(width: 44, height: 44)
           .contentShape(Rectangle())

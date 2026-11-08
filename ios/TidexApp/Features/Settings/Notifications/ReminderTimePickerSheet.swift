@@ -92,7 +92,7 @@ struct ReminderTimePickerSheet: View {
       // Description label
       Text(descriptionText)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
       // Dual wheel picker
@@ -131,12 +131,12 @@ struct ReminderTimePickerSheet: View {
   private var previewLabel: some View {
     HStack(spacing: Spacing.xs) {
       Image(systemName: canSave ? "bell.fill" : "bell.slash")
-        .foregroundColor(canSave ? .tidexBlueText : .tidexTextMuted)
+        .foregroundStyle(canSave ? Color.tidexBlueText : Color.tidexTextMuted)
         .accessibilityHidden(true)
 
       Text(formatPreview())
         .font(.tidexLabel)
-        .foregroundColor(canSave ? .tidexTextPrimary : .tidexTextMuted)
+        .foregroundStyle(canSave ? Color.tidexTextPrimary : Color.tidexTextMuted)
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
@@ -177,7 +177,7 @@ struct ReminderTimePickerSheet: View {
         Text(.commonDelete)
           .font(.tidexButton)
       }
-      .foregroundColor(.tidexTextOnDanger)
+      .foregroundStyle(Color.tidexTextOnDanger)
       .frame(maxWidth: .infinity)
       .frame(minHeight: Spacing.buttonHeight)
       .background(Color.tidexError)

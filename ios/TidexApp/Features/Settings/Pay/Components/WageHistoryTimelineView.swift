@@ -57,12 +57,12 @@ struct WageHistoryTimelineView: View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "clock.badge.questionmark")
         .font(.tidexAmountLarge)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
 
       Text(.settingsPayTimelineEmpty)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity)
@@ -152,7 +152,7 @@ private struct TimelineEntryRow: View {
 
       Image(systemName: "chevron.right")
         .font(.tidexCaption)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
     }
   }
@@ -257,7 +257,7 @@ private struct TimelineEntryRow: View {
   private var dateText: some View {
     Text(entry.dateRange)
       .font(.tidexLabel)
-      .foregroundColor(entry.type == .past ? .tidexTextSecondary : .tidexTextPrimary)
+      .foregroundStyle(entry.type == .past ? Color.tidexTextSecondary : Color.tidexTextPrimary)
       .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
       .minimumScaleFactor(0.8)
   }
@@ -265,7 +265,7 @@ private struct TimelineEntryRow: View {
   private var wageTitle: some View {
     Text(formattedWage)
       .font(entry.type == .current ? .tidexTitle : .tidexBodyMedium)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .monospacedDigit()
       .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
   }
@@ -278,7 +278,7 @@ private struct TimelineEntryRow: View {
         nonWageChanges.map { rtlAdjustedChangeDescription($0.description) }.joined(separator: " · ")
       )
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     }
   }

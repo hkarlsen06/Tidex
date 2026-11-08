@@ -222,7 +222,7 @@ struct PreAuthSimulatorToolbarTotals: View {
             onUpdate: { lastDisplayedPrimary = $0 }
           )
           .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
           if let delta = deltaAmount {
             HStack(alignment: .center, spacing: Spacing.xxxs) {
@@ -237,7 +237,7 @@ struct PreAuthSimulatorToolbarTotals: View {
               )
               .font(.tidexFootnote)
             }
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .transition(reduceMotion ? .opacity : .offset(y: -4).combined(with: .opacity))
           }
         }

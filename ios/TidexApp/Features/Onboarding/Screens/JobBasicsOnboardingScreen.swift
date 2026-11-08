@@ -70,14 +70,14 @@ struct JobBasicsOnboardingScreen: View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingJobBasicsTitle)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.leading)
         .accessibilityAddTraits(.isHeader)
         .frame(maxWidth: .infinity, alignment: .leading)
 
       Text(.onboardingJobBasicsSubtitle)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -92,7 +92,7 @@ struct JobBasicsOnboardingScreen: View {
       VStack(alignment: .leading, spacing: Spacing.xs) {
         Text(.settingsPayAddJobColorLabel)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         WorkplaceColorGrid(
           selectedHex: data.jobColor ?? OnboardingData.defaultJobColor
@@ -143,7 +143,7 @@ struct JobBasicsOnboardingScreen: View {
           Text(.commonBack)
             .font(.tidexBody)
         }
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .frame(minHeight: 44)
         .contentShape(Rectangle())
       }
@@ -160,7 +160,7 @@ struct JobBasicsOnboardingScreen: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayAddJobName)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       TextField(
         "",
@@ -168,11 +168,11 @@ struct JobBasicsOnboardingScreen: View {
         prompt: Text(
           String(localized: .onboardingJobBasicsNamePlaceholder)
         )
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
       )
       .accessibilityLabel(Text(.settingsPayAddJobName))
       .font(.tidexBody)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .textInputAutocapitalization(.words)
       .submitLabel(.done)
       .focused($isJobNameFocused)

@@ -340,14 +340,14 @@ extension SettingsView {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(coordinator.userDisplayName)
             .font(.tidexLargeTitle)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
             .lineLimit(2)
             .fixedSize(horizontal: false, vertical: true)
 
           if let profileEmail, !profileEmail.isEmpty {
             Text(profileEmail)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
               .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
               .truncationMode(.middle)
           }
@@ -1016,7 +1016,7 @@ extension SettingsView {
           Section {
             Text(payChooserError)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
+              .foregroundStyle(Color.tidexError)
               .announcesToVoiceOver(payChooserError)
           }
         }
@@ -1055,7 +1055,7 @@ extension SettingsView {
       if payChooserJobs.isEmpty {
         Text(.settingsPayChooseJobEmpty)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       } else {
         ForEach(payChooserJobs, id: \.id) { job in
           payChooserWorkplaceRow(job, isDefault: job.id == defaultJob?.id)
@@ -1068,10 +1068,10 @@ extension SettingsView {
       } label: {
         Label {
           Text(.settingsPayAddJobCta)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
         } icon: {
           Image(systemName: "plus.circle.fill")
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
         }
         .font(.tidexBodyMedium)
       }
@@ -1151,17 +1151,17 @@ extension SettingsView {
     Label {
       HStack(spacing: Spacing.sm) {
         Text(.settingsPayManageJobsArchivedTitle)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         Spacer(minLength: Spacing.sm)
 
         Text(payArchivedJobs.count, format: .number)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .monospacedDigit()
       }
     } icon: {
       Image(systemName: "archivebox")
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .font(.tidexBodyMedium)
   }
@@ -1198,7 +1198,7 @@ extension SettingsView {
 
         Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
       }
       .contentShape(Rectangle())

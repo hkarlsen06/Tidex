@@ -361,7 +361,7 @@ extension PostAuthOnboardingView {
     } label: {
       Image(systemName: "xmark")
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .accessibilityHidden(true)
         .frame(width: 36, height: 36)
         .background(Color.tidexSurfaceSecondary)

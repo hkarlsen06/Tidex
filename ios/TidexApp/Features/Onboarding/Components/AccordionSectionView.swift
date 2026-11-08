@@ -65,12 +65,12 @@ struct AccordionSectionView<Content: View>: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(title)
           .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         if !isExpanded, let summary {
           Text(summary)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
       }
 
@@ -80,17 +80,17 @@ struct AccordionSectionView<Content: View>: View {
       if isComplete {
         Image(systemName: "checkmark.circle.fill")
           .font(.title3)
-          .foregroundColor(.tidexSuccess)
+          .foregroundStyle(Color.tidexSuccess)
           .accessibilityHidden(true)
       } else if isExpanded {
         Image(systemName: "chevron.up")
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .accessibilityHidden(true)
       } else {
         Image(systemName: "chevron.down")
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .accessibilityHidden(true)
       }
     }
@@ -110,7 +110,7 @@ struct AccordionSectionView<Content: View>: View {
         }) {
           Text(.commonContinue)
             .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextOnBrand)
+            .foregroundStyle(Color.tidexTextOnBrand)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.xs)

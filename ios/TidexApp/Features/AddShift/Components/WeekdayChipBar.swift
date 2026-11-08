@@ -23,11 +23,11 @@ struct WeekdayChipBar: View {
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "star.fill")
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityHidden(true)
           Text(.addShiftSelectAnchorDates)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
         }
       } else {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -76,16 +76,16 @@ private struct WeekdayChip: View {
     HStack(spacing: Spacing.xxxs) {
       Text(weekdayName)
         .font(.tidexFootnoteStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
 
       Text(formattedDate)
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       Button(action: onRemove) {
         Image(systemName: "xmark.circle.fill")
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           // Grows the touch target to about 44pt without changing the chip.
           .padding(Spacing.xs)
           .contentShape(Rectangle())

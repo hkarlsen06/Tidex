@@ -5,7 +5,7 @@ struct ProfileDisclosureChevron: View {
   var body: some View {
     Image(systemName: "chevron.forward")
       .font(.tidexCaptionRegular)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .accessibilityHidden(true)
   }
 }
@@ -38,13 +38,13 @@ struct ProfileValueRow: View {
 
   private var titleText: some View {
     Text(title)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
   }
 
   /// Long values such as an email address stay on one line at normal sizes and wrap at accessibility sizes.
   private var valueText: some View {
     Text(value.isEmpty ? placeholder : value)
-      .foregroundColor(value.isEmpty ? .tidexTextMuted : .tidexTextSecondary)
+      .foregroundStyle(value.isEmpty ? Color.tidexTextMuted : Color.tidexTextSecondary)
       .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
       .truncationMode(.middle)
   }
@@ -59,7 +59,7 @@ struct ProfileValueRow: View {
     } else {
       Image(systemName: "lock.fill")
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
     }
   }
@@ -100,7 +100,7 @@ struct ProfilePersonalInfoFooter: View {
     VStack(alignment: .leading, spacing: Spacing.xxs) {
       if let error = viewModel.usernameErrorMessage {
         Text(error)
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .announcesToVoiceOver(error)
       }
 
@@ -155,7 +155,7 @@ struct ProfileAvatarImage: View {
 
       Text(initials)
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
     }
   }
 }

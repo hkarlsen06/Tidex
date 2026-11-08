@@ -317,12 +317,12 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
     HStack(spacing: Spacing.sm) {
       Image(systemName: "info.circle")
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .accessibilityHidden(true)
 
       Text(.supplementsEditorHint)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       Spacer()
     }
@@ -338,16 +338,16 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
     VStack(spacing: Spacing.sm) {
       Image(systemName: "plus.circle.dashed")
         .font(.system(size: emptyIconSize))
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
 
       Text(.supplementsNoRules)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       Text(.supplementsNoRulesHint)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .multilineTextAlignment(.center)
     }
     .padding(.vertical, Spacing.xxl)
@@ -384,10 +384,10 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
       HStack(spacing: Spacing.xs) {
         Image(systemName: "plus.circle.fill")
           .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
         Text(.supplementsAddRule)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
@@ -411,7 +411,7 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
         Text(.supplementsResetToStandard)
           .font(.tidexLabel)
       }
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .padding(.vertical, Spacing.sm)
     }
     .buttonStyle(.plain)

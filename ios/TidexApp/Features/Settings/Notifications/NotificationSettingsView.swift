@@ -112,15 +112,15 @@ struct NotificationSettingsView: View {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(.notificationsPermissionTitle)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           Text(permissionStatusText)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
       } icon: {
         Image(systemName: icon)
-          .foregroundColor(iconColor)
+          .foregroundStyle(iconColor)
       }
 
       if !dynamicTypeSize.isAccessibilitySize {
@@ -180,17 +180,17 @@ struct NotificationSettingsView: View {
       HStack(spacing: Spacing.sm) {
         Label {
           Text(viewModel.formatReminderTime(minutes, locale: Locale.current))
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
         } icon: {
           Image(systemName: "clock")
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
 
         Spacer(minLength: Spacing.xs)
 
         Image(systemName: "chevron.right")
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
       }
       .contentShape(Rectangle())
@@ -208,10 +208,10 @@ struct NotificationSettingsView: View {
     } label: {
       Label {
         Text(.notificationsRemindersAddTime)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       } icon: {
         Image(systemName: "plus.circle.fill")
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
     }
   }
@@ -238,20 +238,20 @@ struct NotificationSettingsView: View {
     switch viewModel.smartStatus {
     case .active(let scheduledCount, let workDays):
       Text(.notificationsSmartStatusActive(scheduledCount, workDays))
-        .foregroundColor(.tidexSuccess)
+        .foregroundStyle(Color.tidexSuccess)
 
     case .insufficientData(let weeksFound, let weeksRequired):
       let weeksNeeded = weeksRequired - weeksFound
       Text(.notificationsSmartStatusInsufficientData(weeksNeeded, weeksFound, weeksRequired))
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
 
     case .noShifts:
       Text(.notificationsSmartStatusNoShifts)
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
 
     case .noPatternDetected:
       Text(.notificationsSmartStatusNoPattern)
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
 
     case .disabled, .permissionDenied, nil:
       EmptyView()

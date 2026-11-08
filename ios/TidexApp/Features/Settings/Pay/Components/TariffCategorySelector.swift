@@ -11,7 +11,7 @@ struct TariffCategorySelector: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.tariffPayCategory)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
       Button {
         showsCategories = true
       } label: {
@@ -36,19 +36,19 @@ struct TariffCategorySelector: View {
       VStack(alignment: .leading, spacing: Spacing.xs) {
         Text(selected?.displayName ?? String(localized: .tariffChooseOption))
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .fixedSize(horizontal: false, vertical: true)
         if let selected {
           Text(verbatim: selected.formattedRate)
             .font(.tidexButton)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityIdentifier("pay-settings.hourly-wage")
         }
       }
       Spacer(minLength: Spacing.xs)
       Image(systemName: "chevron.up.chevron.down")
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
     }
     .padding(Spacing.sm)
@@ -98,16 +98,16 @@ private struct TariffCategorySheet: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
           Text(verbatim: level.displayName)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
             .fixedSize(horizontal: false, vertical: true)
           Text(verbatim: level.formattedRate)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
         Spacer(minLength: Spacing.xs)
         if level.level == selectedLevel {
           Image(systemName: "checkmark")
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityHidden(true)
         }
       }

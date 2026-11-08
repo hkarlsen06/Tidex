@@ -37,7 +37,7 @@ struct DurationPicker: View {
       HStack(spacing: Spacing.xs) {
         Text(.addShiftDuration)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .textCase(.uppercase)
           .accessibilityAddTraits(.isHeader)
 
@@ -132,7 +132,7 @@ private struct DurationTypeButton: View {
     Button(action: action) {
       Text(label)
         .font(isSelected ? .tidexLabelStrong : .tidexSubheadline)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+        .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
@@ -152,12 +152,12 @@ private struct IndefiniteDescription: View {
     HStack {
       Image(systemName: "infinity")
         .font(.system(size: iconSize))
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .accessibilityHidden(true)
 
       Text(.addShiftIndefiniteHint)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
     }
     .padding(Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -177,7 +177,7 @@ private struct MonthsSlider: View {
       HStack {
         Text(String(localized: .addShiftMonthPlural(value)))
           .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Spacer()
       }
@@ -212,7 +212,7 @@ private struct YearsSlider: View {
       HStack {
         Text(String(localized: .addShiftYearPlural(value)))
           .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Spacer()
       }
@@ -246,7 +246,7 @@ private struct EndDatePicker: View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.addShiftDurationEndDate)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       DatePicker(
         String(localized: .addShiftDurationEndDate),

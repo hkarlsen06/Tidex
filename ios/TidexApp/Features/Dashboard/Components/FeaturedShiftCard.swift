@@ -144,13 +144,13 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
         HStack(spacing: Spacing.xxs) {
           Text(dateParts.weekday)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           Text("·")
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityHidden(true)
           Text(dateParts.dayMonth)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .contentTransition(reduceMotion ? .identity : .numericText())
         }
         .animation(reduceMotion ? nil : .spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)  // swiftlint:disable:this line_length no_magic_numbers
@@ -163,7 +163,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
           if showIncreaseHighlight {
             Text("+")
               .font(.tidexTitle)
-              .foregroundColor(.tidexBlueText)
+              .foregroundStyle(Color.tidexBlueText)
           }
           CurrencyCountUpText(
             amount: displayAmount,
@@ -177,7 +177,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
             )
           )
           .font(.tidexTitle)
-          .foregroundColor(showIncreaseHighlight ? .tidexBlueText : .tidexTextPrimary)
+          .foregroundStyle(showIncreaseHighlight ? Color.tidexBlueText : Color.tidexTextPrimary)
         }
       } trailingBottom: {
         if showFooter, let text = displayedFooterText {
@@ -188,7 +188,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
               Text(text)
             }
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
           } else {
             ShiftCountdownBadge(
               text: text,
@@ -288,7 +288,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
       }
     }
     .font(.tidexSubheadline)
-    .foregroundColor(.tidexTextPrimary)
+    .foregroundStyle(Color.tidexTextPrimary)
     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
     .environment(\.layoutDirection, .leftToRight)
@@ -298,10 +298,10 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
     HStack(spacing: Spacing.xxxs) {
       Text(startTimeText)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
       Text(verbatim: "-")
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
       RoundedRectangle(cornerRadius: CornerRadius.xxs)
         .fill(Color.tidexTextMuted.opacity(0.22))  // swiftlint:disable:this no_magic_numbers
         .frame(width: 38, height: 12)  // swiftlint:disable:this no_magic_numbers
@@ -314,7 +314,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
   private var clockIcon: some View {
     Image(systemName: "clock")
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .accessibilityHidden(true)
   }
 

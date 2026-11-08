@@ -20,7 +20,7 @@ struct EventAllDayReminderPickerSheet: View {
         VStack(spacing: Spacing.sm) {
           Text(.eventsNotificationsAllDayPickerDescription)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .multilineTextAlignment(.center)
 
           HStack(spacing: Spacing.sm) {
@@ -89,7 +89,7 @@ struct EventAllDayReminderPickerSheet: View {
   private var previewLabel: some View {
     HStack(spacing: Spacing.xs) {
       Image(systemName: "bell.fill")
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .accessibilityHidden(true)
 
       Text(
@@ -99,7 +99,7 @@ struct EventAllDayReminderPickerSheet: View {
         )
       )
       .font(.tidexLabel)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
@@ -119,7 +119,7 @@ struct EventAllDayReminderPickerSheet: View {
         Text(.commonDelete)
           .font(.tidexButton)
       }
-      .foregroundColor(.tidexTextOnDanger)
+      .foregroundStyle(Color.tidexTextOnDanger)
       .frame(maxWidth: .infinity)
       .frame(minHeight: Spacing.buttonHeight)
       .background(Color.tidexError)

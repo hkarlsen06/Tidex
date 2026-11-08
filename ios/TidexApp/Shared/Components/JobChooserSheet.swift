@@ -93,7 +93,7 @@ struct JobChooserSheet: View {
             Image(systemName: "plus.circle.fill")
           }
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
         }
       }
     }
@@ -140,7 +140,7 @@ struct JobChooserSheet: View {
         if job.id == selectedJobId {
           Image(systemName: "checkmark")
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityHidden(true)
         }
       }
@@ -193,7 +193,7 @@ struct JobStatusBadges: View {
   private func badge(_ title: String, color: Color, textColor: Color) -> some View {
     Text(title)
       .font(.tidexCaptionStrong)
-      .foregroundColor(textColor)
+      .foregroundStyle(textColor)
       .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
       .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: false)
       .padding(.horizontal, Spacing.xsm)

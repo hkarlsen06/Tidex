@@ -41,7 +41,7 @@ internal struct DigitBox: View {
       if let digit {
         Text(digit)
           .font(.tidexMonoTitle)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       } else if isCurrentPosition, cursorVisible {
         // Blinking cursor
         RoundedRectangle(cornerRadius: inactiveBorderWidth)
@@ -108,7 +108,7 @@ internal struct OTPInputField: View {
       if let error, !error.isEmpty {
         Text(error)
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .multilineTextAlignment(.center)
           .announcesToVoiceOver(error)
           .transition(.opacity.combined(with: .move(edge: .top)))
@@ -170,7 +170,7 @@ internal struct OTPInputField: View {
       .keyboardType(.numberPad)
       .textContentType(.oneTimeCode)
       .focused($isFocused)
-      .foregroundColor(.clear)
+      .foregroundStyle(Color.clear)
       .tint(.clear)
       .accentColor(.clear)
       .frame(maxWidth: .infinity, maxHeight: .infinity)

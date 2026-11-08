@@ -56,7 +56,7 @@ struct TariffSetupSelector: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.tariffAgreement)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
       Button {
         showsAgreements = true
       } label: {
@@ -71,7 +71,7 @@ struct TariffSetupSelector: View {
       if selection.selectedFamily?.kind == .statutory {
         Text(.tariffStatutoryMinimums)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
     }
   }
@@ -80,18 +80,18 @@ struct TariffSetupSelector: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(verbatim: dimension.label)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
       if dimension.options.count == 1, let option = dimension.options.first {
         Text(verbatim: option.valueLabel)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       } else {
         dimensionMenu(dimension)
       }
       if let help = dimension.help, dimension.isEnabled {
         Text(verbatim: help)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
     }
   }
@@ -137,13 +137,13 @@ struct TariffSetupSelector: View {
     HStack(spacing: Spacing.sm) {
       Text(verbatim: value)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.leading)
         .fixedSize(horizontal: false, vertical: true)
       Spacer(minLength: Spacing.xs)
       Image(systemName: "chevron.up.chevron.down")
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
     }
     .padding(Spacing.sm)
@@ -176,7 +176,7 @@ private struct TariffAgreementSheet: View {
       List {
         if filtered.isEmpty {
           Text(.tariffNoAgreements)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .listRowBackground(Color.tidexBackground)
         }
         familySection(filtered.filter { $0.kind == .agreement }, title: .tariffCollectiveAgreements)
@@ -208,12 +208,12 @@ private struct TariffAgreementSheet: View {
           } label: {
             HStack(spacing: Spacing.sm) {
               Text(verbatim: family.displayName)
-                .foregroundColor(.tidexTextPrimary)
+                .foregroundStyle(Color.tidexTextPrimary)
                 .fixedSize(horizontal: false, vertical: true)
               Spacer(minLength: Spacing.xs)
               if selectedID == family.id {
                 Image(systemName: "checkmark")
-                  .foregroundColor(.tidexBlueText)
+                  .foregroundStyle(Color.tidexBlueText)
                   .accessibilityHidden(true)
               }
             }

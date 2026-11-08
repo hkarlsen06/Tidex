@@ -978,7 +978,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       } label: {
         Text(.commonCancel)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .padding(.horizontal, Spacing.md)
           .frame(minHeight: 44)
           .background(
@@ -1013,12 +1013,12 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           : String(localized: .shiftsMoving)
       )
       .font(.tidexLabel)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .frame(maxWidth: .infinity)
     } else {
       Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.up.and.down.and.arrow.left.and.right")
         .font(.tidexLabel)
-        .foregroundColor(isCopyMode ? .tidexTextSecondary : .tidexWarning)
+        .foregroundStyle(isCopyMode ? Color.tidexTextSecondary : Color.tidexWarning)
         .frame(width: 36)
 
       Text(
@@ -1027,7 +1027,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           : String(localized: .shiftsSelectMoveTarget)
       )
       .font(.tidexLabel)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .frame(maxWidth: .infinity)
     }
   }
@@ -1039,7 +1039,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     } label: {
       Text(.commonCopy)
         .font(.tidexLabelStrong)
-        .foregroundColor(copyTargetDates.isEmpty ? .tidexTextMuted : .tidexTextOnBrand)
+        .foregroundStyle(copyTargetDates.isEmpty ? Color.tidexTextMuted : Color.tidexTextOnBrand)
         .padding(.horizontal, Spacing.md)
         .frame(minHeight: 44)
         .background(
@@ -1108,7 +1108,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
             .font(.tidexLabel)
         }
       }
-      .foregroundColor(.tidexError)
+      .foregroundStyle(Color.tidexError)
       .frame(maxWidth: .infinity)
       .frame(minHeight: 44)
       .background(
@@ -1133,7 +1133,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     } label: {
       Image(systemName: systemImage)
         .font(.tidexLabel)
-        .foregroundColor(tint)
+        .foregroundStyle(tint)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 44)
         .background(
@@ -1164,7 +1164,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           Text(.shiftsActionsDelete)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 44)
         .background(
@@ -1185,7 +1185,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           Text(.commonCancel)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 44)
         .background(
@@ -1228,7 +1228,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
             .font(.tidexLabelStrong)
         }
       }
-      .foregroundColor(confirmingDelete ? .tidexTextOnBrand : .tidexError)
+      .foregroundStyle(confirmingDelete ? Color.tidexTextOnBrand : Color.tidexError)
       .frame(minWidth: confirmingDelete ? nil : 44, minHeight: 44)
       .frame(maxWidth: confirmingDelete ? .infinity : nil)
       .padding(.horizontal, confirmingDelete ? 16 : 0)
@@ -1253,7 +1253,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         Text(.commonCancel)
           .font(.tidexLabelStrong)
       }
-      .foregroundColor(.tidexTextOnBrand)
+      .foregroundStyle(Color.tidexTextOnBrand)
       .frame(maxWidth: .infinity)
       .frame(minHeight: 44)
       .background(Capsule().fill(Color.tidexBrandPrimary))

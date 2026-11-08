@@ -17,7 +17,7 @@ struct NativeTextField: View {
   var body: some View {
     TextField(placeholder, text: $text)
       .font(.tidexBody)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .keyboardType(keyboardType)
       .textContentType(textContentType)
       .textInputAutocapitalization(.never)
@@ -48,7 +48,7 @@ struct NativeSecureField: View {
       if isSecure {
         SecureField(placeholder, text: $text)
           .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .textContentType(.password)
           .focused($isFocused)
           .onSubmit {
@@ -57,7 +57,7 @@ struct NativeSecureField: View {
       } else {
         TextField(placeholder, text: $text)
           .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .textContentType(.password)
           .textInputAutocapitalization(.never)
           .autocorrectionDisabled()
@@ -79,7 +79,7 @@ struct NativeSecureField: View {
     } label: {
       Image(systemName: isSecure ? "eye" : "eye.slash")
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .frame(minWidth: 44, minHeight: 44)  // swiftlint:disable:this no_magic_numbers
         .contentShape(Rectangle())
     }

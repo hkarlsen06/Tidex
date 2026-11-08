@@ -27,7 +27,7 @@ struct ShiftCountdownBadge: View {
           RoundedRectangle(cornerRadius: CornerRadius.sm)
             .fill(Color.tidexSuccess.opacity(0.2))
         )
-        .foregroundColor(.tidexSuccess)
+        .foregroundStyle(Color.tidexSuccess)
         .contentTransition(reduceMotion ? .identity : .numericText())
         .animation(reduceMotion ? nil : .default, value: finalCountdownSeconds)
     } else {
@@ -40,7 +40,7 @@ struct ShiftCountdownBadge: View {
           RoundedRectangle(cornerRadius: CornerRadius.sm)
             .fill(backgroundColor)
         )
-        .foregroundColor(textColor)
+        .foregroundStyle(textColor)
         .contentTransition(reduceMotion ? .identity : .numericText())
         .animation(reduceMotion ? nil : .default, value: text)
     }

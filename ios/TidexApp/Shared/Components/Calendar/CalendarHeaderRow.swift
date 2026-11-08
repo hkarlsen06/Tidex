@@ -28,10 +28,10 @@ struct CalendarHeaderDeltaLabel<Amount: View>: View {
         Text(verbatim: "+")
         amount
       }
-      .foregroundColor(.tidexSuccess)
+      .foregroundStyle(Color.tidexSuccess)
 
       Text(isAfterTax ? .dashboardAfterTax : .dashboardBeforeTax)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .accessibilityElement(children: .combine)
   }
@@ -103,7 +103,7 @@ struct CalendarHeaderRow: View {
         animateFrom: lastDisplayedPrimary > 0 ? lastDisplayedPrimary : nil
       )
       .font(.tidexHeadline)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .accessibilityLabel(
         Text(.commonAccessibilityTotalAmount(CurrencyConfig.format(amount, currency: userCurrency)))
       )
@@ -118,7 +118,7 @@ struct CalendarHeaderRow: View {
     } else {
       Text("—")
         .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .accessibilityHidden(true)
     }
   }
@@ -147,7 +147,7 @@ struct CalendarHeaderRow: View {
         Text(.dashboardBeforeTax)
       }
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .accessibilityElement(children: .combine)
 
     case .delta:
@@ -163,7 +163,7 @@ struct CalendarHeaderRow: View {
           selectionCountText(selectionCount)
         }
         amountText
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
       .font(.tidexFootnote)
       .accessibilityElement(children: .combine)
@@ -173,7 +173,7 @@ struct CalendarHeaderRow: View {
   /// "(3)" on screen, "3 selected" for VoiceOver.
   private func selectionCountText(_ count: Int) -> some View {
     Text(verbatim: "(\(count))")
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .accessibilityLabel(Text(.commonAccessibilitySelectedCount(count)))
   }
 

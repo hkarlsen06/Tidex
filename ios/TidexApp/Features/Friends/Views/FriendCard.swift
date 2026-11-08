@@ -216,14 +216,14 @@ struct FriendCard: View {
     HStack(spacing: Spacing.xxxs) {
       Text(sharer.displayName)
         .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
       if unreadMessageCount > 0 {
         Text(verbatim: unreadMessageCount > 9 ? "9+" : "\(unreadMessageCount)")
           .font(.tidexCaptionStrong)
           .monospacedDigit()
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundStyle(Color.tidexTextOnBrand)
           .padding(.horizontal, Spacing.xxxs)
           .frame(minWidth: 20, minHeight: 20)
           .background(Color.tidexBlue, in: Capsule())
@@ -245,7 +245,7 @@ struct FriendCard: View {
           .accessibilityLabel(Text(spokenTimestamp(of: messagePreview, at: now)))
       }
       .font(.tidexCaptionRegular)
-      .foregroundColor(messagePreview.metaColor)
+      .foregroundStyle(messagePreview.metaColor)
       .lineLimit(1)
       .fixedSize()
     }
@@ -361,7 +361,7 @@ extension FriendCard {
         }
       }
     }
-    .foregroundColor(.tidexBlueText)
+    .foregroundStyle(Color.tidexBlueText)
     .monospacedDigit()
     .lineLimit(isStacked ? nil : 1)
     // A fixed width keeps the shift column aligned across cards. The full card height keeps the
@@ -382,7 +382,7 @@ extension FriendCard {
     } else if let timing = shiftTiming {
       Text(timing.statusText(at: now, compact: true))
         .font(.tidexCaptionStrong)
-        .foregroundColor(statusColor(timing.status(at: now)))
+        .foregroundStyle(statusColor(timing.status(at: now)))
         .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)
         .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 0 : statusBaselineOffset)
     }
@@ -403,7 +403,7 @@ extension FriendCard {
             crossesMidnight ? Text(.friendsCardEndsNextDay(endTime)) : Text(verbatim: endTime))
       }
       .font(.tidexSubheadline.weight(.semibold))
-      .foregroundColor(timing.status(at: now) == .past ? .tidexTextSecondary : .tidexTextPrimary)
+      .foregroundStyle(timing.status(at: now) == .past ? Color.tidexTextSecondary : Color.tidexTextPrimary)
     } else if isCalendarAvailable {
       Image(systemName: "calendar")
         .font(.tidexHeadline)
@@ -436,16 +436,16 @@ struct FriendsListEmptyState: View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "person.2.slash")
         .font(.system(size: iconSize))
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
 
       Text(.sharingNoSharers)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Text(.sharingNoSharersDescription)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .multilineTextAlignment(.center)
         .padding(.horizontal, Spacing.xl)
 
@@ -458,7 +458,7 @@ struct FriendsListEmptyState: View {
             Text(.sharingAddFriend)
               .font(.tidexLabelStrong)
           }
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundStyle(Color.tidexTextOnBrand)
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.xsm)
           .background(Color.tidexBlue)

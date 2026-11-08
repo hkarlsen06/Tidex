@@ -154,7 +154,7 @@ extension FriendProfileView {
             dismiss()
           }
           .font(.tidexHeadline)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .buttonStyle(.plain)
         }
 
@@ -169,14 +169,14 @@ extension FriendProfileView {
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(sharedUser.displayName)
               .font(.tidexTitle)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
               .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
               .truncationMode(.tail)
 
             if let contactInfo = sharedUser.contactInfo {
               Text(contactInfo)
                 .font(.tidexSubheadline)
-                .foregroundColor(.tidexTextMuted)
+                .foregroundStyle(Color.tidexTextMuted)
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 .truncationMode(.tail)
             }
@@ -338,7 +338,7 @@ extension FriendProfileView {
       Section {
         Text(friendsSinceText)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .center)
           .multilineTextAlignment(.center)
           .padding(.vertical, Spacing.xs)

@@ -884,7 +884,7 @@ struct FriendsThreadView: View {
       ProgressView()
       Text(.friendsChatLoading)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     .padding(.horizontal, Spacing.lg)
@@ -894,7 +894,7 @@ struct FriendsThreadView: View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "message")
         .font(.system(size: emptyStateIconSize, weight: .semibold))
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .accessibilityHidden(true)
         .padding(14)
         .background(
@@ -904,11 +904,11 @@ struct FriendsThreadView: View {
 
       Text(.friendsChatEmptyTitle)
         .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Text(String(localized: .friendsChatEmptyDescription(viewModel.route.displayName)))
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -922,7 +922,7 @@ struct FriendsThreadView: View {
 
       Text(.friendsChatLoading)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .frame(maxWidth: .infinity)
     .padding(.bottom, Spacing.xs)
@@ -961,7 +961,7 @@ struct FriendsThreadView: View {
           if unreadIncomingCount > 0 {
             Text("\(min(unreadIncomingCount, 99))")
               .font(.tidexMicro.weight(.semibold))
-              .foregroundColor(.tidexTextOnBrand)
+              .foregroundStyle(Color.tidexTextOnBrand)
               .padding(.horizontal, 6)
               .padding(.vertical, 3)
               .background(Capsule().fill(Color.tidexBrandPrimary))
@@ -969,7 +969,7 @@ struct FriendsThreadView: View {
           }
         }
       }
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .frame(minWidth: showsNewMessagesPill ? 0 : 44, minHeight: 44)
       .padding(.horizontal, showsNewMessagesPill ? Spacing.md : 0)
       .padding(.vertical, showsNewMessagesPill ? Spacing.sm : 0)
@@ -1741,7 +1741,7 @@ private struct FriendsThreadDateSeparator: View {
 
       Text(separatorText)
         .font(.tidexMicro)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)

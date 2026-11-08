@@ -66,7 +66,7 @@ struct EditWorkplaceSheet: View {
           VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(.settingsPayAddJobColorLabel)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
 
             WorkplaceColorGrid(selectedHex: Self.normalizedHex(from: selectedColor)) { hex in
               selectedColor = Self.colorFromHex(hex) ?? .tidexBlue
@@ -78,7 +78,7 @@ struct EditWorkplaceSheet: View {
           Section {
             Text(saveError)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
+              .foregroundStyle(Color.tidexError)
               .announcesToVoiceOver(saveError)
           }
         }
@@ -201,7 +201,7 @@ struct RequiredJobReselectionSheet: View {
           HStack(spacing: Spacing.xxxs) {
             Image(systemName: "building.2")
               .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexBlueText)
+              .foregroundStyle(Color.tidexBlueText)
               .accessibilityHidden(true)
             Text(.settingsPayChooseJobTitle)
           }

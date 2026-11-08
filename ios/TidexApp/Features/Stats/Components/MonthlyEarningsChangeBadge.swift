@@ -105,7 +105,7 @@ struct MonthlyEarningsChangeBadge: View {  // swiftlint:disable:this explicit_ac
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.8)  // swiftlint:disable:this no_magic_numbers
     }
-    .foregroundColor(tint)
+    .foregroundStyle(tint)
     .padding(.horizontal, Spacing.xs)
     .padding(.vertical, Spacing.xxxs)
     .background(

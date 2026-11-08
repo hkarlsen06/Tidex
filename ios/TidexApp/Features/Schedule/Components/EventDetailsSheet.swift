@@ -49,7 +49,7 @@ struct EventTimeRangeHint: View {
   var body: some View {
     Text(.addShiftSubmitRequirementsEventSameDay)
       .font(.tidexCaptionRegular)
-      .foregroundColor(.tidexError)
+      .foregroundStyle(Color.tidexError)
       .fixedSize(horizontal: false, vertical: true)
       .accessibilityIdentifier("event.time-range-hint")
   }
@@ -248,14 +248,14 @@ struct EventDetailsSheet: View {
             isEditing = false
           }
         }
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
       } else if let onDelete {
         Button(role: .destructive) {
           onDelete()
         } label: {
           Image(systemName: "trash")
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
         }
         .accessibilityLabel(Text(.eventsDeleteButton))
       }
@@ -267,14 +267,14 @@ struct EventDetailsSheet: View {
           triggerSave()
         }
         .font(.tidexButton)
-        .foregroundColor(canSave ? .tidexBlueText : .tidexTextMuted)
+        .foregroundStyle(canSave ? Color.tidexBlueText : Color.tidexTextMuted)
         .disabled(!canSave || isSaving)
       } else {
         Button(String(localized: .commonDone)) {
           dismiss()
         }
         .font(.tidexButton)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
       }
     }
   }
@@ -336,7 +336,7 @@ struct EventDetailsSheet: View {
       VStack(alignment: .leading, spacing: Spacing.md) {
         Text(event.note)
           .font(.tidexTitle2)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(.leading)
           .fixedSize(horizontal: false, vertical: true)
 
@@ -360,13 +360,13 @@ struct EventDetailsSheet: View {
     HStack(spacing: Spacing.sm) {
       Image(systemName: systemImage)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .frame(width: Spacing.iconSize)
         .accessibilityHidden(true)
 
       Text(text)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .fixedSize(horizontal: false, vertical: true)
     }
   }
@@ -378,20 +378,20 @@ struct EventDetailsSheet: View {
       HStack(spacing: Spacing.sm) {
         Image(systemName: "calendar.badge.clock")
           .font(.tidexBody)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .frame(width: Spacing.iconSize)
           .accessibilityHidden(true)
 
         Text(.calendarSubscriptionDetailCta)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(.leading)
 
         Spacer(minLength: Spacing.xs)
 
         Image(systemName: "chevron.right")
           .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .flipsForRightToLeftLayoutDirection(true)
           .accessibilityHidden(true)
       }
@@ -421,7 +421,7 @@ struct EventDetailsSheet: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.addShiftEventNoteTitle)
         .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
 
       TextField(
         String(localized: .addShiftSubmitRequirementsEventNote),
@@ -431,7 +431,7 @@ struct EventDetailsSheet: View {
       .focused($isTitleFieldFocused)
       .textFieldStyle(.plain)
       .font(.tidexBodyLarge)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .lineLimit(2...5)
       .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
       .padding(.horizontal, Spacing.md)
@@ -506,7 +506,7 @@ struct EventDetailsSheet: View {
     HStack(alignment: .center, spacing: Spacing.sm) {
       Text(.addShiftEventAllDay)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .accessibilityHidden(true)
 
       Spacer(minLength: Spacing.sm)
@@ -523,7 +523,7 @@ struct EventDetailsSheet: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(title)
         .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
 
       DatePicker(
         title,
@@ -547,7 +547,7 @@ struct EventDetailsSheet: View {
         .font(.tidexMicro)
         .fixedSize(horizontal: false, vertical: true)
     }
-    .foregroundColor(.tidexTextMuted)
+    .foregroundStyle(Color.tidexTextMuted)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
@@ -579,7 +579,7 @@ struct EventDetailsSheet: View {
   private func errorBanner(message: String) -> some View {
     Text(message)
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexError)
+      .foregroundStyle(Color.tidexError)
       .announcesToVoiceOver(message)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.md)

@@ -150,7 +150,7 @@ extension AddJobSheet {
           dismiss()
         }
         .font(.tidexBody)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .disabled(isSaving)
         Spacer()
       }
@@ -169,12 +169,12 @@ extension AddJobSheet {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.settingsPayAddJobCurrentWorkplaceTitle)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       VStack(alignment: .leading, spacing: Spacing.xs) {
         Text(.settingsPayAddJobName)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         nameField(text: $existingJobName)
       }
@@ -182,7 +182,7 @@ extension AddJobSheet {
       VStack(alignment: .leading, spacing: Spacing.xs) {
         Text(.settingsPayAddJobColorLabel)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         WorkplaceColorGrid(selectedHex: existingJobColorHex) { existingJobColorHex = $0 }
       }
@@ -194,7 +194,7 @@ extension AddJobSheet {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayAddJobName)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       nameField(text: $name)
     }
@@ -209,14 +209,14 @@ extension AddJobSheet {
       .submitLabel(.done)
       .focused($isNameFocused)
       .onSubmit { isNameFocused = false }
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
   }
 
   private var colorCard: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayAddJobColorLabel)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       WorkplaceColorGrid(selectedHex: selectedColorHex) { selectedColorHex = $0 }
     }
@@ -287,7 +287,7 @@ extension AddJobSheet {
             Text(.commonBack)
           }
           .font(.tidexBody)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
         }
         .disabled(isSaving)
 
@@ -297,7 +297,7 @@ extension AddJobSheet {
           dismiss()
         }
         .font(.tidexBody)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .disabled(isSaving)
       }
     } cards: {
@@ -310,7 +310,7 @@ extension AddJobSheet {
       dismiss()
     }
     .font(.tidexBodyMedium)
-    .foregroundColor(.tidexBlueText)
+    .foregroundStyle(Color.tidexBlueText)
     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)

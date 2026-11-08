@@ -75,7 +75,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
           Text(.dashboardPayrollDetailsEstimateHelp)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, Spacing.lg)
@@ -205,7 +205,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         if hasMixedTaxBasis {
           Text(.dashboardPayrollDetailsMixedBasisNote)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
       }
@@ -281,14 +281,14 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
         Text(ShiftCardFormatter.dateParts(for: breakdown.payoutDate).dayMonth)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
       }
 
       if let periodText = earningsPeriodText(for: breakdown) {
         Text(periodText)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
 
@@ -352,7 +352,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       if !breakdown.taxEnabled {
         Text(.settingsPayReviewTaxOff)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
 
@@ -372,14 +372,14 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           Spacer(minLength: 0)
           Image(systemName: "chevron.right")
             .font(.tidexCaption)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityHidden(true)
         }
         .frame(minHeight: 44)
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .accessibilityIdentifier("payroll-details.pay-settings")
     }
   }
@@ -443,7 +443,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
               Text(.dashboardPayrollDetailsAddAdjustment)
                 .font(.tidexLabel)
             }
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .padding(.vertical, Spacing.xs)
             .frame(maxWidth: .infinity)
             .background(Color.tidexBlue.opacity(0.08))  // swiftlint:disable:this no_magic_numbers
@@ -492,11 +492,11 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     return HStack(spacing: Spacing.xs) {
       Text(label)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       Image(systemName: "chevron.down")
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
         .accessibilityHidden(true)
 
@@ -504,7 +504,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       Text(total == 0 ? "–" : formatSignedCurrency(total, currency: breakdown.currency))
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .contentShape(Rectangle())
     .accessibilityElement(children: .combine)
@@ -554,12 +554,12 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           ? .shiftsSupplementsAndOvertime : .shiftsTotalSupplement
       )
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
 
       if showsChevron {
         Image(systemName: "chevron.down")
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
           .accessibilityHidden(true)
       }
@@ -568,7 +568,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       Text(formatSignedCurrency(breakdown.supplementPay, currency: breakdown.currency))
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .contentShape(Rectangle())
     .accessibilityElement(children: .combine)
@@ -628,12 +628,12 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     HStack(spacing: Spacing.xs) {
       Text(.shiftsBreakDeduction)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       if showsChevron {
         Image(systemName: "chevron.down")
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
           .accessibilityHidden(true)
       }
@@ -642,7 +642,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       Text("−\(formatCurrency(breakdown.postDeductions, currency: breakdown.currency))")
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .contentShape(Rectangle())
     .accessibilityElement(children: .combine)
@@ -707,7 +707,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           headerLayout {
             Text(adjustmentSubtitle(adjustment))
               .font(.tidexLabelStrong)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
               .lineLimit(isLargeText ? nil : 1)
 
             if !isLargeText {
@@ -716,7 +716,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
             Text(formatCurrency(adjustment.amount, currency: currency))
               .font(.tidexLabelStrong)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
               .lineLimit(isLargeText ? nil : 1)
               .layoutPriority(1)
           }
@@ -724,7 +724,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
           Text(adjustment.description)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .multilineTextAlignment(.leading)
             .lineLimit(isLargeText ? nil : 3)  // swiftlint:disable:this no_magic_numbers
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -772,7 +772,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   private func curatedAdjustmentText(_ text: String) -> some View {
     Text(text)
       .font(.tidexFootnote)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .multilineTextAlignment(.leading)
       .frame(maxWidth: .infinity, alignment: .leading)
       .fixedSize(horizontal: false, vertical: true)
@@ -878,11 +878,11 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     HStack {
       Text(label)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
       Spacer()
       Text(value)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .accessibilityElement(children: .combine)
   }
@@ -963,7 +963,7 @@ private struct PayrollAdjustmentCuratedSheet: View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
           Text(context.description)
             .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -971,10 +971,10 @@ private struct PayrollAdjustmentCuratedSheet: View {
             Link(destination: linkURL) {
               HStack(spacing: Spacing.xxs) {
                 Text(displayLinkTitle)
-                  .foregroundColor(.tidexBlueText)
+                  .foregroundStyle(Color.tidexBlueText)
                 Image(systemName: "arrow.up.right")
                   .font(.tidexFootnote)
-                  .foregroundColor(.tidexTextPrimary)
+                  .foregroundStyle(Color.tidexTextPrimary)
                   .accessibilityHidden(true)
               }
               .font(.tidexLabel)
@@ -1104,7 +1104,7 @@ struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_l
               if focusedField != .amount, !amountText.isEmpty {
                 Text(context.currency)
                   .font(.tidexBodyMedium)
-                  .foregroundColor(.tidexTextSecondary)
+                  .foregroundStyle(Color.tidexTextSecondary)
               }
             }
           }
@@ -1150,7 +1150,7 @@ struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_l
             .tint(.tidexBlue)
             Text(.dashboardPayrollDetailsAdjustmentEarnedRangeHelp)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
 
             if useEarnedRange {
               DatePicker(
@@ -1179,7 +1179,7 @@ struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_l
           if let errorMessage {
             Section {
               Text(errorMessage)
-                .foregroundColor(.tidexError)
+                .foregroundStyle(Color.tidexError)
                 .announcesToVoiceOver(errorMessage)
             }
           }
@@ -1311,12 +1311,12 @@ struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_l
       HStack {
         Text(label(for: option))
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
         Spacer()
         if category == option {
           Image(systemName: "checkmark")
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .accessibilityHidden(true)
         }
       }
@@ -1353,10 +1353,10 @@ struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_l
         VStack(alignment: .leading, spacing: Spacing.xxxs) {
           Text(label(for: option))
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           Text(helpText(for: option))
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
         }
 
@@ -1365,7 +1365,7 @@ struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_l
         if taxTreatment == option {
           Image(systemName: "checkmark")
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .accessibilityHidden(true)
         }
       }

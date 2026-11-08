@@ -324,12 +324,12 @@ struct FriendsThreadComposerHostedView: View {
         if let sendErrorMessage = configuration.sendErrorMessage {
           Text(sendErrorMessage)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
             .announcesToVoiceOver(sendErrorMessage)
         } else if let composerValidationMessage = configuration.composerValidationMessage {
           Text(composerValidationMessage)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
             .announcesToVoiceOver(composerValidationMessage)
         }
 
@@ -338,8 +338,8 @@ struct FriendsThreadComposerHostedView: View {
         if configuration.shouldShowCharacterCount {
           Text("\(configuration.draftCharacterCount)/\(configuration.draftCharacterLimit)")
             .font(.tidexFootnote)
-            .foregroundColor(
-              configuration.isDraftOverCharacterLimit ? .tidexError : .tidexTextMuted
+            .foregroundStyle(
+              configuration.isDraftOverCharacterLimit ? Color.tidexError : Color.tidexTextMuted
             )
             .monospacedDigit()
         }
@@ -437,12 +437,12 @@ extension FriendsThreadComposerHostedView {
     if configuration.isThreadReadOnly {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "hand.raised.fill")
-          .foregroundColor(.tidexWarning)
+          .foregroundStyle(Color.tidexWarning)
           .accessibilityHidden(true)
 
         Text(.friendsChatBlockedReadOnly)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         Spacer()
       }
@@ -716,8 +716,8 @@ private struct FriendsThreadComposerPlusButton: View {
     Button(action: action) {
       Image(systemName: "plus")
         .font(.system(size: iconSize, weight: .semibold))
-        .foregroundColor(
-          isDisabled ? .tidexTextMuted : (isOpen ? .tidexBlueText : .tidexTextPrimary)
+        .foregroundStyle(
+          isDisabled ? Color.tidexTextMuted : (isOpen ? Color.tidexBlueText : Color.tidexTextPrimary)
         )
         .rotationEffect(.degrees(isOpen ? 45 : 0))
         .frame(width: Spacing.buttonHeight, height: Spacing.buttonHeight)
@@ -883,8 +883,8 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
           .lineLimit(isRow ? 1 : 2)
           .minimumScaleFactor(isRow ? 0.8 : 1)
       }
-      .foregroundColor(
-        isUnavailable ? .tidexTextMuted : (isActive ? .tidexBlueText : .tidexTextPrimary)
+      .foregroundStyle(
+        isUnavailable ? Color.tidexTextMuted : (isActive ? Color.tidexBlueText : Color.tidexTextPrimary)
       )
       .frame(
         maxWidth: .infinity, minHeight: isRow ? 44 : 64, alignment: isRow ? .leading : .center
@@ -1035,7 +1035,7 @@ private struct FriendsThreadComposerImageThumbnail: View {
     Button(action: onRemove) {
       Image(systemName: "xmark")
         .font(.system(size: removeIconSize, weight: .bold))
-        .foregroundColor(.white)
+        .foregroundStyle(Color.white)
         .frame(minWidth: 24, minHeight: 24)
         .background(
           Circle()
@@ -1073,7 +1073,7 @@ private struct FriendsThreadComposerImageThumbnail: View {
         .overlay {
           Image(systemName: "photo")
             .font(.tidexTitle2)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityLabel(photoLabel)
         }
     }
@@ -1169,14 +1169,14 @@ private struct FriendsThreadComposerEditBanner: View {
     HStack(alignment: .center, spacing: Spacing.xs) {
       Image(systemName: "pencil")
         .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .accessibilityHidden(true)
 
       Text(
         String(localized: .friendsChatComposerEditingMessage)
       )
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
 
       Spacer(minLength: 0)
 
@@ -1202,7 +1202,7 @@ private struct FriendsThreadComposerCloseButton: View {
     Button(action: action) {
       Image(systemName: "xmark")
         .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .frame(width: diameter, height: diameter)
         .background(Circle().fill(Color.tidexTextPrimary.opacity(0.08)))
         // The visible circle stays small. The tap area is at least 44pt.

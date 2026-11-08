@@ -188,7 +188,7 @@ struct SignupView: View {
           .multilineTextAlignment(.center)
           .fixedSize(horizontal: false, vertical: true)
       }
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.xs)
       .frame(maxWidth: .infinity)
@@ -213,7 +213,7 @@ struct SignupView: View {
 
       Text(.loginSeparator)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
 
       Rectangle()
         .fill(Color.tidexSeparator)
@@ -243,7 +243,7 @@ struct SignupView: View {
     }) {
       Text(.signupLogin)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .multilineTextAlignment(.center)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, Spacing.xxs)
@@ -361,7 +361,7 @@ struct SignupForm: View {
     VStack(spacing: 0) {
       TextField(placeholder, text: text)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .textContentType(contentType)
         .textInputAutocapitalization(.words)
         .autocorrectionDisabled()
@@ -381,7 +381,7 @@ struct SignupForm: View {
     if let message {
       Text(message)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.xxs)
         .announcesToVoiceOver(message)

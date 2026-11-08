@@ -130,7 +130,7 @@ struct CustomPauseWindowsEditorSheet: View {
           if let validationMessage {
             Text(validationMessage)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
+              .foregroundStyle(Color.tidexError)
               .frame(maxWidth: .infinity, alignment: .leading)
               .announcesToVoiceOver(validationMessage)
           }
@@ -167,12 +167,12 @@ struct CustomPauseWindowsEditorSheet: View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "pause.circle")
         .font(.system(size: emptyIconSize))
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
 
       Text(.shiftsPauseEditorEmptyState)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity)
@@ -205,7 +205,7 @@ struct CustomPauseWindowsEditorSheet: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
             .accessibilityLabel(Text(.shiftsAccessibilityDeleteItem(pauseDescription(draft))))
           }
 
@@ -217,7 +217,7 @@ struct CustomPauseWindowsEditorSheet: View {
           HStack {
             Text(.shiftsPauseEditorDurationLabel)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
+              .foregroundStyle(Color.tidexTextMuted)
 
             Spacer()
 
@@ -229,7 +229,7 @@ struct CustomPauseWindowsEditorSheet: View {
               }
             }
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           }
         }
         .padding(Spacing.md)
@@ -246,9 +246,9 @@ struct CustomPauseWindowsEditorSheet: View {
     } label: {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "plus")
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
         Text(.shiftsPauseEditorAddWindow)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
       .font(.tidexLabelStrong)
       .frame(maxWidth: .infinity)

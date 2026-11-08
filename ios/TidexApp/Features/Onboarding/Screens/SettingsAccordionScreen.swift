@@ -111,7 +111,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
           Text(.commonBack)
             .font(.tidexBody)
         }
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .frame(minHeight: 44)
       }
       .buttonStyle(.plain)
@@ -126,13 +126,13 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     VStack(spacing: Spacing.sm) {
       Text(.onboardingSettingsTitle)
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 
       Text(.onboardingSettingsSubtitle)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
     .padding(.horizontal, Spacing.xl)
@@ -164,19 +164,19 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         Toggle(isOn: $data.breakEnabled) {
           Text(.onboardingSettingsBreakEnable)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
         }
         .tint(.tidexBrandPrimary)
 
         Text(.onboardingSettingsBreakHint)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .fixedSize(horizontal: false, vertical: true)
 
         if data.breakEnabled {
           Text(.onboardingSettingsBreakDefault)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -218,13 +218,13 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       Toggle(isOn: $data.taxEnabled) {
         Text(.onboardingSettingsTaxEnable)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
       .tint(.tidexBrandPrimary)
 
       Text(.onboardingSettingsTaxHint)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .fixedSize(horizontal: false, vertical: true)
 
       if data.taxEnabled {
@@ -237,7 +237,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSettingsTaxPercentage)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       taxPresetGrid
 
@@ -294,14 +294,14 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
 
       Text("%")
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
   }
 
   private var taxTextField: some View {
     TextField("", text: $taxInputText)
       .font(.tidexTitle2)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .keyboardType(.decimalPad)
       .multilineTextAlignment(.leading)
       .focused($isTaxInputFocused)
@@ -352,11 +352,11 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     HStack(spacing: Spacing.micro) {
       Text(formatTaxValue(data.taxPercentage))
         .font(.tidexTitle2)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .contentTransition(.numericText())
       Text("%")
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .padding(.horizontal, Spacing.xxxs)
     .padding(.vertical, Spacing.micro)
@@ -397,7 +397,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSettingsPaydayHint)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
 
       // Horizontal scroll with day options + custom input
       // Overlay with fade gradient to hint there's more content
@@ -420,7 +420,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
       if !payrollDayOptions.contains(data.payrollDay), !showingPaydayInput {
         Text(String(localized: .onboardingSettingsPaydayCustomValue(data.payrollDay)))
           .font(.tidexFootnote)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
     }
   }
@@ -455,7 +455,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     HStack(spacing: Spacing.xxs) {
       TextField("", text: $paydayInputText)
         .font(.tidexButton)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .keyboardType(.numberPad)
         .multilineTextAlignment(.center)
         .focused($isPaydayInputFocused)
@@ -501,7 +501,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         Text(.onboardingSettingsPaydayOther)
       }
       .font(isCustomDay ? .tidexLabelStrong : .tidexLabel)
-      .foregroundColor(isCustomDay ? .tidexTextOnBrand : .tidexTextSecondary)
+      .foregroundStyle(isCustomDay ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
       .frame(minWidth: 56, minHeight: 44)
       .padding(.horizontal, Spacing.xs)
       .background(isCustomDay ? Color.tidexBrandPrimary : Color.tidexBackground)
@@ -605,7 +605,7 @@ private struct TaxPresetButton: View {
     }) {
       Text("\(Int(value))%")
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+        .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
         .frame(maxWidth: .infinity, minHeight: 44)
@@ -636,7 +636,7 @@ private struct PaydayButton: View {
     }) {
       Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+        .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
         .frame(minWidth: 56, minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))

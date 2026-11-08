@@ -152,7 +152,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       HStack(spacing: Spacing.xxs) {
         Text(.onboardingSliderLabel)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         Spacer()
 
@@ -163,17 +163,17 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
           // Prefix currencies: "$200/hr"
           Text(currencySymbol)
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
           tappableValue(formatValueWithDecimals(value))
           Text(hourSuffix)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
         } else {
           // Suffix currencies: "200 kr/t"
           tappableValue(formatValueWithDecimals(value))
           Text("\(currencySymbol)\(hourSuffix)")
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
         }
       }
 
@@ -194,7 +194,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       // Label
       Text(.onboardingPersonalizeWageLabel)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       // Slider card
       VStack(spacing: Spacing.md) {
@@ -206,24 +206,24 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
             // Prefix currencies: "$200 per hour"
             Text(currencySymbol)
               .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
 
             tappableValueFull(formatValueWithDecimals(value))
 
             Text(.commonPerHour)
               .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextMuted)
+              .foregroundStyle(Color.tidexTextMuted)
           } else {
             // Suffix currencies: "200 kr per time"
             tappableValueFull(formatValueWithDecimals(value))
 
             Text(currencySymbol)
               .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
 
             Text(.commonPerHour)
               .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextMuted)
+              .foregroundStyle(Color.tidexTextMuted)
           }
 
           if !dynamicTypeSize.isAccessibilitySize {
@@ -242,7 +242,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       // Helper text
       Text(.onboardingPersonalizeWageHelper)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
   }
 
@@ -285,13 +285,13 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     HStack {
       Text(formatCurrencyLabel(minValue))
         .font(font)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
 
       Spacer()
 
       Text(formatCurrencyLabel(maxValue))
         .font(font)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
   }
 
@@ -326,7 +326,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     }) {
       Text(text)
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .contentTransition(.numericText())
         .padding(.horizontal, Spacing.xxs)
         .padding(.vertical, Spacing.micro)
@@ -347,7 +347,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     }) {
       Text(text)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .contentTransition(.numericText())
         .padding(.horizontal, Spacing.xxxs)
         .padding(.vertical, Spacing.micro)
@@ -366,7 +366,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     HStack(spacing: Spacing.xxs) {
       TextField("", text: $inputText)
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .keyboardType(.decimalPad)
         .multilineTextAlignment(.trailing)
         .focused($isInputFocused)
@@ -397,7 +397,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     HStack(spacing: Spacing.xxs) {
       TextField("", text: $inputText)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .keyboardType(.decimalPad)
         .multilineTextAlignment(.leading)
         .focused($isInputFocused)

@@ -215,7 +215,7 @@ struct LoginView: View {
     if let message {
       Text(message)
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.xxs)
         .announcesToVoiceOver(message)
@@ -244,7 +244,7 @@ struct LoginView: View {
           .multilineTextAlignment(.center)
           .fixedSize(horizontal: false, vertical: true)
       }
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.xs)
       .frame(maxWidth: .infinity)
@@ -270,7 +270,7 @@ struct LoginView: View {
 
       Text(.loginSeparator)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
 
       Rectangle()
         .fill(Color.tidexSeparator)

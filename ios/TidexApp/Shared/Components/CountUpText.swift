@@ -97,11 +97,11 @@ struct CurrencyCountUpText: View {
   VStack(spacing: Spacing.lg) {
     CurrencyCountUpText(amount: 24_650)
       .font(.system(size: 48, weight: .bold))
-      .foregroundColor(.tidexBlue)
+      .foregroundStyle(Color.tidexBlue)
 
     CurrencyCountUpText(amount: 31_200)
       .font(.system(size: 48, weight: .bold))
-      .foregroundColor(.tidexSuccess)
+      .foregroundStyle(Color.tidexSuccess)
   }
   .padding()
   .background(Color.tidexBackground)
@@ -110,7 +110,7 @@ struct CurrencyCountUpText: View {
 #Preview("Large Number") {
   CurrencyCountUpText(amount: 156_789)
     .font(.system(size: 72, weight: .bold))
-    .foregroundColor(.tidexBlue)
+    .foregroundStyle(Color.tidexBlue)
     .padding()
     .background(Color.tidexBackground)
 }
@@ -123,7 +123,7 @@ struct CurrencyCountUpText: View {
       VStack(spacing: Spacing.lg) {
         CurrencyCountUpText(amount: amount)
           .font(.system(size: 48, weight: .bold))
-          .foregroundColor(.tidexBlue)
+          .foregroundStyle(Color.tidexBlue)
 
         HStack(spacing: Spacing.md) {
           Button("-500") { amount = max(0, amount - 500) }

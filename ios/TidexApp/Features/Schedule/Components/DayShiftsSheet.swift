@@ -70,7 +70,7 @@ struct DayShiftsSheet: View {
             dismiss()
           }
           .font(.tidexButton)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
         }
       }
     }
@@ -88,10 +88,10 @@ struct DayShiftsSheet: View {
       VStack(spacing: Spacing.xxs) {
         Text(formattedHours(totalHours))
           .font(.tidexLargeTitle)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
         Text(.shiftsDaySheetHours)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       // Divider
@@ -106,10 +106,10 @@ struct DayShiftsSheet: View {
       VStack(spacing: Spacing.xxs) {
         Text(formatCurrency(totalEarnings))
           .font(.tidexLargeTitle)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
         Text(.shiftsDaySheetEarnings)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       if !dynamicTypeSize.isAccessibilitySize {
@@ -119,7 +119,7 @@ struct DayShiftsSheet: View {
       // Shift count badge
       Text("\(shifts.count)")
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xxxs)
         .background(
@@ -146,12 +146,12 @@ struct DayShiftsSheet: View {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(formatTimeRange(shift))
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
             .environment(\.layoutDirection, .leftToRight)
 
           Text(formattedHours(shift.paidHours))
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
 
         Spacer()
@@ -161,19 +161,19 @@ struct DayShiftsSheet: View {
           let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
           Text(formatCurrency(displayAmount))
             .font(.tidexHeadline)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           if shift.taxEnabled, shift.taxAmount > 0 {
             Text("-\(formatCurrency(shift.taxAmount))")
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
+              .foregroundStyle(Color.tidexTextMuted)
           }
         }
 
         // Chevron
         Image(systemName: "chevron.right")
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
       .padding(Spacing.md)
       .background(

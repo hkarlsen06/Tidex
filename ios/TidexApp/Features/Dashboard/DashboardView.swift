@@ -912,11 +912,11 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: "calendar")
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .accessibilityHidden(true)
         Text(.addShiftEventAllDay)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
       .frame(minHeight: 20)  // swiftlint:disable:this no_magic_numbers
     } else if let countdownText = state?.text {
@@ -1289,10 +1289,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .frame(maxWidth: .infinity)
       .frame(minHeight: 44)  // swiftlint:disable:this no_magic_numbers
       .padding(.vertical, Spacing.xxs)
-      .foregroundColor(
+      .foregroundStyle(
         isEnabled
-          ? .tidexTextPrimary
-          : .tidexTextMuted
+          ? Color.tidexTextPrimary
+          : Color.tidexTextMuted
       )
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
@@ -1700,16 +1700,16 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: errorIconSize))
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
         .accessibilityHidden(true)
 
       Text(.dashboardLoadError)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Text(message)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
 
       Button {
@@ -1717,7 +1717,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       } label: {
         Text(.commonRetry)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))  // swiftlint:disable:this no_magic_numbers
@@ -1831,13 +1831,13 @@ private struct ClockOutReviewSheet: View {
             Text(durationText)
               .font(.tidexAmountLarge)
               .monospacedDigit()
-              .foregroundColor(isValidRange ? .tidexTextPrimary : .tidexTextMuted)
+              .foregroundStyle(isValidRange ? Color.tidexTextPrimary : Color.tidexTextMuted)
               .contentTransition(reduceMotion ? .identity : .numericText())
               .animation(reduceMotion ? nil : .snappy, value: durationText)
             if let startTime {
               Text(startTime, format: .dateTime.weekday(.wide).day().month(.wide))
                 .font(.tidexSubheadline)
-                .foregroundColor(.tidexTextSecondary)
+                .foregroundStyle(Color.tidexTextSecondary)
             }
           }
           .frame(maxWidth: .infinity)
@@ -1860,7 +1860,7 @@ private struct ClockOutReviewSheet: View {
                 HStack(spacing: Spacing.sm) {
                   Text(.settingsPayChooseJobTitle)
                     .font(.tidexSubheadline)
-                    .foregroundColor(.tidexTextSecondary)
+                    .foregroundStyle(Color.tidexTextSecondary)
 
                   Spacer(minLength: Spacing.sm)
 
@@ -1879,7 +1879,7 @@ private struct ClockOutReviewSheet: View {
 
                   Image(systemName: "chevron.up.chevron.down")
                     .font(.tidexMicro)
-                    .foregroundColor(.tidexTextMuted)
+                    .foregroundStyle(Color.tidexTextMuted)
                     .accessibilityHidden(true)
                 }
                 .contentShape(Rectangle())
@@ -1897,18 +1897,18 @@ private struct ClockOutReviewSheet: View {
             HStack(spacing: Spacing.xs) {
               Image(systemName: "moon.fill")
                 .font(.tidexCaption)
-                .foregroundColor(.tidexTextSecondary)
+                .foregroundStyle(Color.tidexTextSecondary)
                 .accessibilityHidden(true)
               Text(.shiftsCrossMidnightInfo)
                 .font(.tidexFootnote)
-                .foregroundColor(.tidexTextSecondary)
+                .foregroundStyle(Color.tidexTextSecondary)
             }
           }
 
           if let errorMessage {
             Text(errorMessage)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
+              .foregroundStyle(Color.tidexError)
               .announcesToVoiceOver(errorMessage)
           }
         }
@@ -1942,7 +1942,7 @@ private struct ClockOutReviewSheet: View {
         } label: {
           Label(String(localized: .dashboardClockOutDiscardShift), systemImage: "trash")
             .font(.tidexLabel)
-            .foregroundColor(.tidexError)
+            .foregroundStyle(Color.tidexError)
             .frame(maxWidth: .infinity, minHeight: 44)  // swiftlint:disable:this no_magic_numbers
             .contentShape(Rectangle())
         }

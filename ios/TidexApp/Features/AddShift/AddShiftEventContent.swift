@@ -21,7 +21,7 @@ struct EventContent: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.addShiftEventNoteTitle)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       TextField(
         String(localized: .addShiftSubmitRequirementsEventNote),
@@ -31,7 +31,7 @@ struct EventContent: View {
       .focused($isTitleFieldFocused)
       .textFieldStyle(.plain)
       .font(.tidexBodyLarge)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .lineLimit(2...5)
       .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
       .padding(.horizontal, Spacing.md)
@@ -118,7 +118,7 @@ struct EventContent: View {
     HStack(alignment: .center, spacing: Spacing.sm) {
       Text(.addShiftEventAllDay)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .accessibilityHidden(true)
 
       Spacer(minLength: Spacing.sm)
@@ -140,7 +140,7 @@ struct EventContent: View {
         .font(.tidexMicro)
         .fixedSize(horizontal: false, vertical: true)
     }
-    .foregroundColor(.tidexTextMuted)
+    .foregroundStyle(Color.tidexTextMuted)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 

@@ -286,7 +286,7 @@ struct SharerListView: View {
 
       Text(.sharingLoading)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding(.vertical, 80)

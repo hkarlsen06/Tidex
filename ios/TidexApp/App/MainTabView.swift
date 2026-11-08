@@ -568,14 +568,14 @@ private struct MonthPickerControls: View {
     } label: {
       Image(systemName: showListView ? "calendar" : "list.bullet")
         .font(.tidexButton)
-        .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexTextPrimary)
+        .foregroundStyle(monthContext.hasConflictsInMonth ? Color.tidexWarning : Color.tidexTextPrimary)
         .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
         .overlay(alignment: .topTrailing) {
           // The icon color alone would be the only sign of conflicts, so add a badge shape.
           if monthContext.hasConflictsInMonth {
             Image(systemName: "exclamationmark.circle.fill")
               .font(.caption2.weight(.bold))
-              .foregroundColor(.tidexWarning)
+              .foregroundStyle(Color.tidexWarning)
               .padding(Spacing.xxs)
           }
         }
@@ -604,7 +604,7 @@ private struct MonthPickerControls: View {
     } label: {
       Image(systemName: "plus")
         .font(.tidexHeadline)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
         .contentShape(Rectangle())
         .accessibilityHidden(true)

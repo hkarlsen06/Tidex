@@ -406,16 +406,16 @@ struct TotalCardWidgetView: View {
     HStack(spacing: 8) {
       Image(systemName: icon)
         .font(.system(size: 24, weight: .medium))
-        .foregroundColor(accentColor)
+        .foregroundStyle(accentColor)
         .frame(width: 24)
 
       VStack(alignment: .leading, spacing: -2) {
         Text(value)
           .font(.system(size: 16, weight: .semibold))
-          .foregroundColor(primaryTextColor)
+          .foregroundStyle(primaryTextColor)
         Text(label)
           .font(.system(size: 11, weight: .regular))
-          .foregroundColor(secondaryTextColor)
+          .foregroundStyle(secondaryTextColor)
       }
     }
   }
@@ -429,7 +429,7 @@ struct TotalCardWidgetView: View {
     } else if let subtitle = subtitleText {
       Text(subtitle)
         .font(.system(size: 15, weight: .regular))
-        .foregroundColor(secondaryTextColor)
+        .foregroundStyle(secondaryTextColor)
     } else {
       Color.clear
         .frame(height: 18)
@@ -473,7 +473,7 @@ struct TotalCardWidgetView: View {
           .font(.system(size: 18, weight: .semibold))
       }
     }
-    .foregroundColor(
+    .foregroundStyle(
       entry.hasChange ? (entry.isPositive ? accentColor : secondaryTextColor) : mutedTextColor)
   }
 
@@ -488,7 +488,7 @@ struct TotalCardWidgetView: View {
       // Large amount display - sized for two-column layout
       Text(formatCurrency(entry.mainDisplayValue))
         .font(.system(size: 56, weight: .bold))
-        .foregroundColor(accentColor)
+        .foregroundStyle(accentColor)
         .minimumScaleFactor(0.4)
         .lineLimit(1)
     }

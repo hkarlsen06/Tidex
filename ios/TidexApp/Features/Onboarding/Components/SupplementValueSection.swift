@@ -25,7 +25,7 @@ struct SupplementValueSection: View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.onboardingSupplementsValueLabel)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       // Quick value buttons. They wrap into a grid when large text makes the row too wide.
       quickValueButtons
@@ -84,7 +84,7 @@ struct SupplementValueSection: View {
 
           Text(unitSuffix)
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
         }
         Spacer()
       }
@@ -115,14 +115,14 @@ struct SupplementValueSection: View {
 
       Text(unitSuffix)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
   }
 
   private var valueTextField: some View {
     TextField("", text: $valueInputText)
       .font(.tidexLargeTitle)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .keyboardType(.decimalPad)
       .multilineTextAlignment(.leading)
       .focused($isValueInputFocused)
@@ -162,7 +162,7 @@ struct SupplementValueSection: View {
     }) {
       Text(formatValueWithDecimals(rule.value))
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .contentTransition(.numericText())
         .padding(.horizontal, Spacing.xxs)
         .padding(.vertical, Spacing.micro)

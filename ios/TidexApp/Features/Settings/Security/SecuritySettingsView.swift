@@ -27,10 +27,10 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           Section {
             Label {
               Text(.securityOfflineManageUnavailable)
-                .foregroundColor(.tidexTextSecondary)
+                .foregroundStyle(Color.tidexTextSecondary)
             } icon: {
               Image(systemName: "wifi.slash")
-                .foregroundColor(.tidexTextMuted)
+                .foregroundStyle(Color.tidexTextMuted)
             }
             .font(.tidexFootnote)
           }
@@ -81,22 +81,22 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(title)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Text(detail)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
     } icon: {
       Image(systemName: icon)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
     }
   }
 
   private var disclosureChevron: some View {
     Image(systemName: "chevron.forward")
       .font(.tidexCaptionRegular)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .accessibilityHidden(true)
   }
 
@@ -130,7 +130,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           if !viewModel.hasPassword {
             Text(.securityPasswordSet)
               .font(.tidexLabel)
-              .foregroundColor(.tidexBlueText)
+              .foregroundStyle(Color.tidexBlueText)
           }
 
           disclosureChevron
@@ -225,12 +225,12 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           .controlSize(.small)
       } else if isConnected {
         Image(systemName: "checkmark.circle.fill")
-          .foregroundColor(.tidexSuccess)
+          .foregroundStyle(Color.tidexSuccess)
           .accessibilityHidden(true)
       } else {
         Text(.securityConnectionsConnect)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
     }
     .contentShape(Rectangle())
@@ -286,7 +286,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   private func sheetFooter(_ text: String) -> some View {
     if let error = viewModel.errorMessage {
       Text(error)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .announcesToVoiceOver(error)
     } else {
       Text(text)

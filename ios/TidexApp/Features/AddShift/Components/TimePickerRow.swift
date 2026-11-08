@@ -118,7 +118,7 @@ struct NumericTimeInput: View {
       if hasInvalidInput {
         Text(.addShiftTimeInputInvalid)
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .fixedSize(horizontal: false, vertical: true)
           .announcesToVoiceOver(String(localized: .addShiftTimeInputInvalid))
       }
@@ -146,7 +146,7 @@ struct NumericTimeInput: View {
   private var inputLabel: some View {
     Text(label)
       .font(.tidexCaptionStrong)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .textCase(.uppercase)
       .tracking(0.5)
       .fixedSize(horizontal: false, vertical: true)

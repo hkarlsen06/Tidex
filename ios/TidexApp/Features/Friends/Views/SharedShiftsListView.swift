@@ -243,11 +243,11 @@ extension SharedShiftsListView {
       VStack(spacing: Spacing.md) {
         Image(systemName: "calendar.badge.minus")
           .font(.system(size: emptyIconSize))
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
         Text(.shiftsEmptyNoShiftsThisMonth)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     } else {
@@ -342,7 +342,7 @@ extension SharedShiftsListView {
 
       Text(.sharingLoadingShifts)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding(.vertical, 60)

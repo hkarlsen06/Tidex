@@ -55,7 +55,7 @@ struct AddShiftBottomControls: View {
 
         Text(jobPickerTitle)
           .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
           .truncationMode(.tail)
           .frame(
@@ -66,7 +66,7 @@ struct AddShiftBottomControls: View {
 
         Image(systemName: "chevron.up.chevron.down")
           .font(.tidexCaption)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .accessibilityHidden(true)
       }
       .padding(.horizontal, Spacing.md)
@@ -103,7 +103,7 @@ struct AddShiftBottomControls: View {
     } label: {
       Image(systemName: "arrow.uturn.backward.circle.fill")
         .font(.tidexHeadline)
-        .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
+        .foregroundStyle(viewModel.hasContent ? Color.tidexTextPrimary : Color.tidexTextMuted)
         .frame(minWidth: MonthPickerLayout.height, minHeight: MonthPickerLayout.height)
         .contentShape(Rectangle())
         .accessibilityHidden(true)
@@ -132,7 +132,7 @@ struct AddShiftBottomControls: View {
       Label(String(localized: .addShiftSubmitButton), systemImage: "plus")
         .font(.tidexButton)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-        .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlueText : .tidexTextMuted)
+        .foregroundStyle(addShiftCoordinator.canSubmit ? Color.tidexBlueText : Color.tidexTextMuted)
         // Keep the width while saving so the month picker doesn't jump.
         .opacity(addShiftCoordinator.isLoading ? 0 : 1)
         .overlay {

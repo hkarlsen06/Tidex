@@ -38,7 +38,7 @@ struct SingleShiftContent: View {
             .font(.tidexMicro)
             .fixedSize(horizontal: false, vertical: true)
         }
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .frame(maxWidth: .infinity, alignment: .leading)
       }
 
@@ -127,7 +127,7 @@ struct RecurringShiftContent: View {
   private var titleSection: some View {
     Text(.addShiftRecurringHeader)
       .font(.tidexScreenTitle)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 }

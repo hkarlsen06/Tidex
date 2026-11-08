@@ -250,7 +250,7 @@ extension OnboardingView {
             .multilineTextAlignment(.center)
         }
       }
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .frame(maxWidth: .infinity)
       .padding(.vertical, showsTitle ? Spacing.xs : 0)
       .frame(minHeight: 54)
@@ -270,7 +270,7 @@ extension OnboardingView {
       Text(.onboardingGetstartedLogin)
         .fixedSize(horizontal: false, vertical: true)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xxs)

@@ -437,12 +437,12 @@ struct FriendsWidgetView: View {
       HStack(spacing: 6) {
         Image(systemName: "person.2.fill")
           .font(.system(size: 12, weight: .semibold))
-          .foregroundColor(initialsTextColor)
+          .foregroundStyle(initialsTextColor)
           .widgetAccentable()
           .accessibilityHidden(true)
         Text(headerTitle)
           .font(.system(size: 14, weight: .semibold))
-          .foregroundColor(secondaryTextColor)
+          .foregroundStyle(secondaryTextColor)
       }
 
       if let first = shiftFriends.first {
@@ -475,14 +475,14 @@ struct FriendsWidgetView: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(firstName(from: friend.displayName))
             .font(.system(size: 17, weight: .semibold))
-            .foregroundColor(primaryTextColor)
+            .foregroundStyle(primaryTextColor)
             .lineLimit(1)
           if isActive {
             activeBadge
           } else if let shiftDate = friend.shiftDate {
             Text(shiftDate)
               .font(.system(size: 13, weight: .medium))
-              .foregroundColor(secondaryTextColor)
+              .foregroundStyle(secondaryTextColor)
               .lineLimit(1)
           }
         }
@@ -493,7 +493,7 @@ struct FriendsWidgetView: View {
           Text(timeRange)
             .font(.system(size: 22, weight: .bold, design: .rounded))
             .monospacedDigit()
-            .foregroundColor(primaryTextColor)
+            .foregroundStyle(primaryTextColor)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
             .fixedSize(horizontal: true, vertical: false)
@@ -551,7 +551,7 @@ struct FriendsWidgetView: View {
         ForEach(["00", "06", "12", "18", "24"], id: \.self) { label in
           Text(label)
             .font(.system(size: 10, weight: .medium).monospacedDigit())
-            .foregroundColor(mutedTextColor)
+            .foregroundStyle(mutedTextColor)
           if label != "24" { Spacer(minLength: 0) }
         }
       }
@@ -580,13 +580,13 @@ struct FriendsWidgetView: View {
       VStack(alignment: .leading, spacing: 1) {
         Text(firstName(from: friend.displayName))
           .font(.system(size: 15, weight: .semibold))
-          .foregroundColor(primaryTextColor)
+          .foregroundStyle(primaryTextColor)
         if friend.status == .active {
           activeBadge
         } else if let shiftDate = friend.shiftDate {
           Text(shiftDate)
             .font(.system(size: 12, weight: .medium))
-            .foregroundColor(secondaryTextColor)
+            .foregroundStyle(secondaryTextColor)
         }
       }
       .lineLimit(1)
@@ -597,7 +597,7 @@ struct FriendsWidgetView: View {
         Text(timeRange)
           .font(.system(size: 15, weight: .semibold, design: .rounded))
           .monospacedDigit()
-          .foregroundColor(primaryTextColor)
+          .foregroundStyle(primaryTextColor)
           .fixedSize()
       }
     }
@@ -619,7 +619,7 @@ struct FriendsWidgetView: View {
       if overflow > 0 {
         Text("+\(overflow)")
           .font(.system(size: 11, weight: .semibold))
-          .foregroundColor(secondaryTextColor)
+          .foregroundStyle(secondaryTextColor)
           .frame(width: 28, height: 28)
           .background(Circle().fill(mutedTextColor.opacity(0.25)))
           .background(Circle().fill(WidgetPalette.background))
@@ -648,7 +648,7 @@ struct FriendsWidgetView: View {
       } else {
         Text(friend.initials)
           .font(.system(size: fontSize, weight: .semibold))
-          .foregroundColor(initialsTextColor)
+          .foregroundStyle(initialsTextColor)
           .frame(width: size, height: size)
           .background(Circle().fill(initialsBackground))
           .background(Circle().fill(WidgetPalette.background))
@@ -671,7 +671,7 @@ struct FriendsWidgetView: View {
       Text(.widgetActive)
         .font(.system(size: 12, weight: .semibold))
     }
-    .foregroundColor(activeColor)
+    .foregroundStyle(activeColor)
     .padding(.horizontal, 8)
     .padding(.vertical, 4)
     .background(Capsule().fill(activeColor.opacity(0.15)))
@@ -682,12 +682,12 @@ struct FriendsWidgetView: View {
     VStack(spacing: 12) {
       Image(systemName: "person.2.circle")
         .font(.system(size: 40))
-        .foregroundColor(mutedTextColor)
+        .foregroundStyle(mutedTextColor)
         .accessibilityHidden(true)
 
       Text(noFriendsText)
         .font(.system(size: 14, weight: .medium))
-        .foregroundColor(mutedTextColor)
+        .foregroundStyle(mutedTextColor)
         .multilineTextAlignment(.center)
         .padding(.horizontal, 24)
     }

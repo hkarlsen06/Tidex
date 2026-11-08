@@ -86,14 +86,14 @@ internal struct AcceptTermsView: View {
 
         Image(systemName: "doc.text.fill")
           .font(.system(size: documentIconSize))
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .accessibilityHidden(true)
       }
 
       // Title
       Text("Tidex")
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
   }
 
@@ -107,7 +107,7 @@ internal struct AcceptTermsView: View {
           : String(localized: .acceptTermsTitle)
       )
       .font(.tidexTitle)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .multilineTextAlignment(.center)
       .accessibilityAddTraits(.isHeader)
 
@@ -117,7 +117,7 @@ internal struct AcceptTermsView: View {
           : String(localized: .acceptTermsDescription)
       )
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .multilineTextAlignment(.center)
 
       Text(
@@ -126,7 +126,7 @@ internal struct AcceptTermsView: View {
           : String(localized: .acceptTermsExplanation)
       )
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .multilineTextAlignment(.center)
       .padding(.top, Spacing.xxs)
     }
@@ -172,7 +172,7 @@ internal struct AcceptTermsView: View {
       } label: {
         Text(.acceptTermsDeclineButton)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .multilineTextAlignment(.center)
           .frame(minHeight: 44)
           .contentShape(Rectangle())
@@ -204,11 +204,11 @@ internal struct AcceptTermsView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         Image(systemName: "arrow.up.right")
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.msm)
     }

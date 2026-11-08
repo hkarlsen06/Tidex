@@ -114,7 +114,7 @@ extension View {
     Color.tidexBackground.ignoresSafeArea()
 
     Text("Content behind overlay")
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
   }
   .loading(true, message: "Logging in...")
 }

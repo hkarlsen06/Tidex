@@ -70,7 +70,7 @@ struct AvatarView: View {
       .overlay(
         Text(initials)
           .font(.system(size: fontSize, weight: .semibold))
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       )
   }
 

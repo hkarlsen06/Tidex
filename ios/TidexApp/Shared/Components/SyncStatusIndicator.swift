@@ -26,7 +26,7 @@ struct SyncStatusIndicator: View {
 
         Text(.syncSyncing)
           .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
@@ -40,23 +40,23 @@ struct SyncStatusIndicator: View {
         Image(systemName: "exclamationmark.icloud")
           .accessibilityHidden(true)
           .font(.tidexLabel)
-          .foregroundColor(.tidexWarning)
+          .foregroundStyle(Color.tidexWarning)
           .accessibilityHidden(true)
 
         if let lastSync {
           Text(String(localized: .syncFailedWithLastSync(formatRelativeTime(lastSync))))
             .font(.tidexFootnoteMedium)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         } else {
           Text(.syncSyncFailed)
             .font(.tidexFootnoteMedium)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
 
         Button(action: onRetry) {
           Text(.commonRetry)
             .font(.tidexFootnoteStrong)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
         }
         .buttonStyle(.plain)
       }
@@ -74,12 +74,12 @@ struct SyncStatusIndicator: View {
         Image(systemName: "wifi.slash")
           .accessibilityHidden(true)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
 
         Text(.syncOffline)
           .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)

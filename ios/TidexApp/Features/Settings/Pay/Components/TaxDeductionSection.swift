@@ -20,14 +20,14 @@ struct TaxDeductionSection: View {
       Toggle(isOn: $enabled) {
         Text(.settingsPayEditorTaxTitle)
           .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
       .accessibilityIdentifier("pay-settings.tax-toggle")
       .tint(.tidexBrandPrimary)
 
       Text(.settingsPayEditorTaxDescription)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .fixedSize(horizontal: false, vertical: true)
 
       // Percentage input (only shown when enabled)
@@ -37,14 +37,14 @@ struct TaxDeductionSection: View {
 
         Text(.settingsPayEditorTaxFlatRateHint)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .fixedSize(horizontal: false, vertical: true)
           .transition(.opacity)
       }
 
       Text(.settingsPayReviewDateExplanation)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .fixedSize(horizontal: false, vertical: true)
     }
     .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: enabled)
@@ -57,7 +57,7 @@ struct TaxDeductionSection: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorTaxPercentage)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       VStack(spacing: Spacing.sm) {
         quickPercentageGrid
@@ -126,7 +126,7 @@ struct TaxDeductionSection: View {
 
       Text("%")
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
     }
   }
 
@@ -137,7 +137,7 @@ struct TaxDeductionSection: View {
       format: .number.precision(.fractionLength(0...1)).locale(.appLocale)
     )
     .font(.tidexTitle2)
-    .foregroundColor(.tidexBlueText)
+    .foregroundStyle(Color.tidexBlueText)
     .keyboardType(.decimalPad)
     .multilineTextAlignment(.trailing)
     .focused($isPercentageInputFocused)
@@ -185,12 +185,12 @@ struct TaxDeductionSection: View {
           percentage, format: .number.precision(.fractionLength(0...1)).locale(.appLocale)
         )
         .font(.tidexTitle2)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .contentTransition(reduceMotion ? .identity : .numericText())
 
         Text("%")
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
       .frame(minWidth: 44, minHeight: 44)
       .contentShape(Rectangle())
@@ -221,7 +221,7 @@ private struct QuickPercentageButton: View {
         Text("\(value)%")
       }
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+        .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xs)
         .frame(minHeight: 44)

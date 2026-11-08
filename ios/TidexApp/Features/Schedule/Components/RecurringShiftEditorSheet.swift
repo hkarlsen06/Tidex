@@ -204,14 +204,14 @@ struct RecurringShiftEditorSheet: View {
         dismiss()
       }
       .font(.tidexBodyMedium)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
     }
     ToolbarItem(placement: .topBarTrailing) {
       Button(String(localized: .commonSave)) {
         saveChanges()
       }
       .font(.tidexButton)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .disabled(isSaving || !hasChanges || !canSave)
       .opacity(isSaving || !hasChanges || !canSave ? 0.5 : 1)
     }
@@ -227,7 +227,7 @@ struct RecurringShiftEditorSheet: View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(title)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .textCase(.uppercase)
         .accessibilityAddTraits(.isHeader)
 
@@ -275,7 +275,7 @@ struct RecurringShiftEditorSheet: View {
       if editedExclusions.isEmpty {
         Text(.recurringExclusionsNone)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       } else {
         VStack(spacing: Spacing.xs) {
           ForEach(editedExclusions, id: \.self) { dateISO in
@@ -285,7 +285,7 @@ struct RecurringShiftEditorSheet: View {
 
         Text(.recurringExclusionsDescription)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
     }
   }
@@ -294,7 +294,7 @@ struct RecurringShiftEditorSheet: View {
     HStack(spacing: Spacing.sm) {
       Text(formattedExclusionDate(dateISO))
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Spacer()
 
@@ -303,7 +303,7 @@ struct RecurringShiftEditorSheet: View {
       } label: {
         Text(.recurringRestoreDateButton)
           .font(.tidexFootnoteStrong)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xxxs)
           .background(Color.tidexBlue.opacity(0.12))
@@ -325,7 +325,7 @@ struct RecurringShiftEditorSheet: View {
     } label: {
       Label(.recurringEditorDeleteButton, systemImage: "trash")
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexError.opacity(0.1))

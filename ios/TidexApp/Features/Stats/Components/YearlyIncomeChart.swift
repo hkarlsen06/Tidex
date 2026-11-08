@@ -121,7 +121,7 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
                 let isEmphasized = isCurrentMonthLabel || isSelected  // swiftlint:disable:this explicit_type_interface
                 Text(label)
                   .font(isEmphasized ? .tidexCaptionStrong : .tidexCaptionRegular)
-                  .foregroundColor(isEmphasized ? .tidexBlueText : .tidexTextSecondary)
+                  .foregroundStyle(isEmphasized ? Color.tidexBlueText : Color.tidexTextSecondary)
               }
             }
           }
@@ -176,11 +176,11 @@ private struct YearlyTooltipView: View {
     VStack(alignment: .center, spacing: Spacing.xxs) {
       Text(monthData.fullMonth)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Text(CurrencyConfig.format(monthData.earnings, currency: currency))
         .font(.tidexMonoBody)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)

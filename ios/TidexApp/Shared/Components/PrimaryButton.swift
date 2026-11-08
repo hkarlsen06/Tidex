@@ -39,7 +39,7 @@ struct PrimaryButton: View {
             ? Color.tidexBrandPrimary.opacity(0.5)
             : Color.tidexBrandPrimary
         )
-        .foregroundColor(.tidexTextOnBrand)
+        .foregroundStyle(Color.tidexTextOnBrand)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     }
     .buttonStyle(SnappyPrimaryButtonStyle(reduceMotion: reduceMotion))

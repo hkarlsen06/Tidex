@@ -12,11 +12,11 @@ struct OvertimeEditorSection: View {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(.settingsPayEditorOvertimeTitle)
             .font(.tidexButton)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           Text(.settingsPayEditorOvertimeSubtitle)
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
       }
       .tint(.tidexBrandPrimary)
@@ -58,7 +58,7 @@ struct OvertimeEditorSection: View {
               "\(rule.from) - \(rule.to), +\(rule.percent.formatted(.number.locale(.appLocale)))%")
         }
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
       }
     } label: {
       Text(.tariffCalendarRules)
@@ -78,7 +78,7 @@ struct OvertimeEditorSection: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorOvertimeThreshold)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       TextField(
         "",
@@ -122,7 +122,7 @@ private struct OvertimeRuleRow: View {
       Toggle(isOn: $rule.appliesOnHolidays) {
         Text(.settingsPayEditorOvertimeHolidayToggle)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
       .tint(.tidexBrandPrimary)
 
@@ -174,7 +174,7 @@ private struct OvertimeRuleRow: View {
           .lineLimit(1)
           .fixedSize(horizontal: true, vertical: false)
       }
-      .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+      .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
       .frame(minWidth: 30, minHeight: 28)
       .padding(.horizontal, Spacing.micro)
       .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
@@ -219,7 +219,7 @@ private struct OvertimeRuleRow: View {
 
       Button(action: onDelete) {
         Image(systemName: "trash")
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .frame(minWidth: 44, minHeight: 44)
           .contentShape(Rectangle())
           .accessibilityHidden(true)

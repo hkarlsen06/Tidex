@@ -234,7 +234,7 @@ private struct CurrencyPickerSheet: View {
       HStack {
         Text(group.localizedLabel)
           .font(.tidexFootnoteStrong)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .textCase(.uppercase)
           .accessibilityAddTraits(.isHeader)
         Spacer()
@@ -256,14 +256,14 @@ private struct CurrencyRow: View {
       HStack {
         Text(option.label)
           .font(isSelected ? .tidexHeadline : .tidexBody)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Spacer()
 
         if isSelected {
           Image(systemName: "checkmark")
             .font(.tidexButton)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityHidden(true)
         }
       }

@@ -48,7 +48,7 @@ internal struct NextShiftCountdownText: View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
       Text(countdownText(at: context.date))
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityAddTraits(.updatesFrequently)
     }
   }

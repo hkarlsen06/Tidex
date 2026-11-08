@@ -512,7 +512,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     if usesSavedTariffRates {
       Text(.settingsPayEditorSavedTariff)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
       Button(String(localized: .settingsPayEditorRefreshTariff)) {
         usesSavedTariffRates = false
         applyTariffOvertimeDefaultIfNeeded(force: true)
@@ -521,7 +521,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     } else if !isLoadingTariff, tariffTypeId != nil, tariffVersion == nil {
       Text(.settingsPayEditorTariffUnavailable)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
       Button(String(localized: .commonRetry)) {
         Task {
           await loadTariffVersion()
@@ -548,25 +548,25 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.settingsPayEditorFromDateLabel)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       if isBaseline {
         // Baseline indicator
         HStack {
           Image(systemName: "clock.arrow.circlepath")
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .accessibilityHidden(true)
 
           Text(.settingsPayEditorBaselineIndicator)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           Spacer()
         }
 
         Text(.settingsPayEditorBaselineHelp)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       } else {
         // Date picker
         DatePicker(selection: $fromDate, displayedComponents: .date) {
@@ -580,7 +580,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
         Text(.settingsPayEditorFromDateHelp)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       dateNotes
@@ -592,7 +592,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   private var dateNotes: some View {
     Text(mode == .edit ? .settingsPayEditorEditImpact : .settingsPayEditorCreateImpact)
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .fixedSize(horizontal: false, vertical: true)
 
     if let nextDate = nextChangeDate {
@@ -601,14 +601,14 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           nextDate.formatted(.dateTime.day().month().year().calendar(.gregorian)))
       )
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
       .fixedSize(horizontal: false, vertical: true)
     }
 
     if hasDateConflict {
       Text(.settingsPayEditorDateConflictHelp)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .announcesToVoiceOver(String(localized: .settingsPayEditorDateConflictHelp))
     }
   }
@@ -619,12 +619,12 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   private func errorBanner(_ message: String) -> some View {
     HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .accessibilityHidden(true)
 
       Text(message)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
 
       Spacer()
     }
@@ -652,7 +652,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         Text(.settingsPayEditorDelete)
           .font(.tidexButton)
       }
-      .foregroundColor(.tidexError)
+      .foregroundStyle(Color.tidexError)
       .frame(maxWidth: .infinity, minHeight: Spacing.buttonHeight)
       .contentShape(Rectangle())
     }

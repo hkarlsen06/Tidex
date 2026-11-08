@@ -226,13 +226,13 @@ struct AppearanceSettingsView: View {  // swiftlint:disable:this type_body_lengt
 
         Text(title)
           .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(.center)
           .fixedSize(horizontal: false, vertical: true)
 
         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
           .font(.tidexBody)
-          .foregroundColor(isSelected ? .tidexBlueText : .tidexTextMuted)
+          .foregroundStyle(isSelected ? Color.tidexBlueText : Color.tidexTextMuted)
       }
       .frame(maxWidth: .infinity)
       .contentShape(Rectangle())

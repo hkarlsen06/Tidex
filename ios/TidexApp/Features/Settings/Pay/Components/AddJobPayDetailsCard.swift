@@ -34,7 +34,7 @@ struct AddJobPayDetailsCard: View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(.settingsPayAddJobPayrollDay)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       LazyVGrid(columns: columns, spacing: Spacing.xs) {
         ForEach(payrollDayOptions, id: \.self) { day in
@@ -65,7 +65,7 @@ struct AddJobPayDetailsCard: View {
     TextField("", text: $paydayInputText, prompt: Text(.settingsPayAddJobPayrollDay))
       .accessibilityLabel(Text(.settingsPayAddJobPayrollDay))
       .font(.tidexButton)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .keyboardType(.numberPad)
       .multilineTextAlignment(.center)
       .focused(isPaydayInputFocused)
@@ -109,7 +109,7 @@ struct AddJobPayDetailsCard: View {
         }
       }
       .font(isCustomPayday ? .tidexLabelStrong : .tidexLabel)
-      .foregroundColor(isCustomPayday ? .tidexTextOnBrand : .tidexTextSecondary)
+      .foregroundStyle(isCustomPayday ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
       .frame(maxWidth: .infinity, minHeight: 44)
       .padding(.horizontal, Spacing.xs)
       .background(
@@ -133,7 +133,7 @@ private struct AddJobPaydayButton: View {
     Button(action: action) {
       Text(dayText)
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+        .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
         .lineLimit(1)
         .minimumScaleFactor(0.8)
         .frame(maxWidth: .infinity, minHeight: 44)

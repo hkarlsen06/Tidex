@@ -122,7 +122,7 @@ struct WelcomeScreen: View {
         // Large "amount" - the visual hook (locale-aware)
         Text(ghostedAmountText)
           .font(.tidexAmountLarge)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
 
         Spacer().frame(height: 8)
 
@@ -196,7 +196,7 @@ struct WelcomeScreen: View {
       if usesFlowingTitle {
         Text(.onboardingWelcomeTitle)
           .font(heroTitleFont)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(textAlignment)
           .frame(maxWidth: .infinity, alignment: frameAlignment)
       } else {
@@ -204,7 +204,7 @@ struct WelcomeScreen: View {
           ForEach(Array(titleLines.enumerated()), id: \.offset) { _, line in
             Text(line)
               .font(heroTitleFont)
-              .foregroundColor(.tidexTextPrimary)
+              .foregroundStyle(Color.tidexTextPrimary)
               .lineLimit(1)
               .minimumScaleFactor(0.78)
               .frame(maxWidth: .infinity, alignment: frameAlignment)
@@ -230,7 +230,7 @@ struct WelcomeScreen: View {
 
       Text(.onboardingWelcomeSubtitle)
         .font(heroSubtitleFont)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.leading)
         .lineSpacing(2)
         .lineLimit(usesFlowingTitle ? nil : 3)
@@ -241,7 +241,7 @@ struct WelcomeScreen: View {
 
       Text(.onboardingWelcomeFree)
         .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)

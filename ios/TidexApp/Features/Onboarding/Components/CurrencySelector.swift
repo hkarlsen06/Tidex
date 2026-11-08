@@ -12,7 +12,7 @@ struct CurrencySelector: View {
       // Label
       Text(.onboardingCurrencyLabel)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .accessibilityHidden(true)
 
       // Selector button
@@ -23,13 +23,13 @@ struct CurrencySelector: View {
         HStack {
           Text(CurrencyConfig.get(selectedCurrency).label)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           Spacer()
 
           Image(systemName: "chevron.down")
             .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityHidden(true)
         }
         .padding(.horizontal, Spacing.md)
@@ -71,12 +71,12 @@ struct OnboardingCurrencyCapsuleSelector: View {
       HStack(spacing: Spacing.xxxs) {
         Text(CurrencyConfig.get(selectedCurrency).value)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .lineLimit(1)
 
         Image(systemName: "chevron.down")
           .font(.caption.weight(.semibold))
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .accessibilityHidden(true)
       }
       .padding(.horizontal, Spacing.md)
@@ -144,7 +144,7 @@ struct OnboardingCurrencyPickerSheet: View {
             HStack {
               Text(group.localizedLabel)
                 .font(.tidexFootnoteStrong)
-                .foregroundColor(.tidexTextMuted)
+                .foregroundStyle(Color.tidexTextMuted)
                 .textCase(.uppercase)
                 .accessibilityAddTraits(.isHeader)
               Spacer()
@@ -172,14 +172,14 @@ private struct CurrencyRow: View {
       HStack {
         Text(option.label)
           .font(isSelected ? .tidexHeadline : .tidexBody)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Spacer()
 
         if isSelected {
           Image(systemName: "checkmark")
             .font(.tidexButton)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityHidden(true)
         }
       }

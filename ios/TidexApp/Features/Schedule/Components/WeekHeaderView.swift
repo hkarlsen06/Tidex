@@ -24,11 +24,11 @@ internal struct WeekHeaderView: View {
       HStack(spacing: Spacing.xxs) {
         Text(weekLabel)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         Text("\(weekNumber)")
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
 
       if !dynamicTypeSize.isAccessibilitySize {
@@ -38,7 +38,7 @@ internal struct WeekHeaderView: View {
       // Total earnings for the week
       Text(totalText)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .padding(.horizontal, Spacing.xxs)
     .padding(.vertical, Spacing.xs)

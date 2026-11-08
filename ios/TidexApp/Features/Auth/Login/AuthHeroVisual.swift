@@ -15,14 +15,14 @@ struct AuthHeroVisual: View {
       ghostedPaycheckPreview
       Text(title)
         .font(.tidexTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 
       if let subtitle {
         Text(subtitle)
           .font(.tidexBody)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .multilineTextAlignment(.center)
           .fixedSize(horizontal: false, vertical: true)
           .padding(.top, -Spacing.sm)

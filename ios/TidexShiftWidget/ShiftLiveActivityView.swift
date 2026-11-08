@@ -81,7 +81,7 @@ struct LockScreenLiveActivityView: View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
           Image(systemName: "clock.fill")
             .font(.system(size: 14))
-            .foregroundColor(tidexBlue)
+            .foregroundStyle(tidexBlue)
             .accessibilityHidden(true)
           shiftTimerText(context.attributes)
             .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -94,11 +94,11 @@ struct LockScreenLiveActivityView: View {
         if isTemporaryClock {
           Text("\(temporaryStartedLabel()) \(context.attributes.startTime)")
             .font(.system(size: 15, weight: .medium))
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
         } else {
           Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
             .font(.system(size: 15, weight: .medium))
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
             .accessibilityLabel(Text(verbatim: spokenTimeRange(context.attributes)))
         }
       }
@@ -111,19 +111,19 @@ struct LockScreenLiveActivityView: View {
         if isTemporaryClock {
           Text(.widgetActive)
             .font(.system(size: 20, weight: .bold, design: .rounded))
-            .foregroundColor(tidexBlue)
+            .foregroundStyle(tidexBlue)
         } else {
           // Primary amount (net or gross)
           Text(WidgetCurrencyFormatter.format(displayAmount, currency: currencySymbol))
             .font(.system(size: 22, weight: .bold, design: .rounded))
             .monospacedDigit()
-            .foregroundColor(tidexBlue)
+            .foregroundStyle(tidexBlue)
 
           // Before tax (only if tax is configured)
           if showBeforeTax {
             Text(beforeTaxText(context: context, currencySymbol: currencySymbol))
               .font(.system(size: 12))
-              .foregroundColor(.secondary)
+              .foregroundStyle(Color.secondary)
           }
         }
       }
@@ -143,7 +143,7 @@ struct CompactLeadingView: View {
     HStack(spacing: 4) {
       Image(systemName: "clock.fill")
         .font(.system(size: 12))
-        .foregroundColor(tidexBlue)
+        .foregroundStyle(tidexBlue)
         .accessibilityHidden(true)
       // SwiftUI timer automatically counts down
       shiftTimerText(context.attributes)
@@ -173,12 +173,12 @@ struct CompactTrailingView: View {
     if isTemporaryClock {
       Text(.widgetActive)
         .font(.system(size: 13, weight: .semibold, design: .rounded))
-        .foregroundColor(tidexBlue)
+        .foregroundStyle(tidexBlue)
     } else {
       Text(WidgetCurrencyFormatter.format(displayAmount, currency: currencySymbol))
         .font(.system(size: 13, weight: .semibold, design: .rounded))
         .monospacedDigit()
-        .foregroundColor(tidexBlue)
+        .foregroundStyle(tidexBlue)
     }
   }
 }
@@ -214,7 +214,7 @@ struct ExpandedView: View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
           Image(systemName: "clock.fill")
             .font(.system(size: 12))
-            .foregroundColor(tidexBlue)
+            .foregroundStyle(tidexBlue)
             .accessibilityHidden(true)
           shiftTimerText(context.attributes)
             .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -225,11 +225,11 @@ struct ExpandedView: View {
         if isTemporaryClock {
           Text("\(temporaryStartedLabel()) \(context.attributes.startTime)")
             .font(.system(size: 13, weight: .medium))
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
         } else {
           Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
             .font(.system(size: 13, weight: .medium))
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
             .accessibilityLabel(Text(verbatim: spokenTimeRange(context.attributes)))
         }
       }
@@ -242,19 +242,19 @@ struct ExpandedView: View {
         if isTemporaryClock {
           Text(.widgetActive)
             .font(.system(size: 16, weight: .bold, design: .rounded))
-            .foregroundColor(tidexBlue)
+            .foregroundStyle(tidexBlue)
         } else {
           // Net amount
           Text(WidgetCurrencyFormatter.format(displayAmount, currency: currencySymbol))
             .font(.system(size: 18, weight: .bold, design: .rounded))
             .monospacedDigit()
-            .foregroundColor(tidexBlue)
+            .foregroundStyle(tidexBlue)
 
           // Before tax (only if tax configured)
           if showBeforeTax {
             Text(beforeTaxText(context: context, currencySymbol: currencySymbol))
               .font(.system(size: 11))
-              .foregroundColor(.secondary)
+              .foregroundStyle(Color.secondary)
           }
         }
       }
@@ -271,7 +271,7 @@ struct MinimalView: View {
   var body: some View {
     Image(systemName: "briefcase.fill")
       .font(.system(size: 14))
-      .foregroundColor(tidexBlue)
+      .foregroundStyle(tidexBlue)
       .accessibilityLabel(Text(.widgetAccessibilityActiveShift))
   }
 }

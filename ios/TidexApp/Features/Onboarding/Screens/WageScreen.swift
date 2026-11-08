@@ -121,13 +121,13 @@ struct WageScreen: View {
           ? LocalizedStringResource.onboardingWageTitle : .onboardingWageSimpleTitle
       )
       .font(.tidexScreenTitle)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .multilineTextAlignment(.center)
       .accessibilityAddTraits(.isHeader)
 
       Text(.onboardingWageSubtitle)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
     .padding(.horizontal, Spacing.xl)

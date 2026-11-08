@@ -149,7 +149,7 @@ internal struct CalendarImportView: View {
             Section {
               Text(errorMessage)
                 .font(.tidexSubheadline)
-                .foregroundColor(.tidexError)
+                .foregroundStyle(Color.tidexError)
                 .announcesToVoiceOver(errorMessage)
             }
           }
@@ -218,10 +218,10 @@ internal struct CalendarImportView: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
           Text(verbatim: system.name)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           Text(system.text)
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
         .accessibilityElement(children: .combine)
       }
@@ -247,7 +247,7 @@ internal struct CalendarImportView: View {
     Section {
       if model.newShifts.isEmpty {
         Text(.calendarImportNothingNew)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
       ForEach(model.newShifts) { shift in
         VStack(alignment: .leading, spacing: 2) {
@@ -255,7 +255,7 @@ internal struct CalendarImportView: View {
             shift.start, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated).year()
           )
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           let detailLayout =
             dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
@@ -268,7 +268,7 @@ internal struct CalendarImportView: View {
             }
           }
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
         }
         .accessibilityElement(children: .combine)
       }

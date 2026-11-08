@@ -5,7 +5,7 @@ struct TariffOfflineHint: View {
   var body: some View {
     Text(.tariffUnavailable)
       .font(.tidexFootnote)
-      .foregroundColor(.tidexWarning)
+      .foregroundStyle(Color.tidexWarning)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
@@ -78,7 +78,7 @@ struct WageTopBar: View {
             Text(.commonBack)
               .font(.tidexBody)
           }
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .frame(minHeight: 44)
           .contentShape(Rectangle())
         }
@@ -107,7 +107,7 @@ struct WageGlassActionButton: View {
     Button(action: action) {
       Text(title)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .multilineTextAlignment(.center)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.xs)
@@ -143,7 +143,7 @@ struct WageTypeButton: View {
     }) {
       Text(title)
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
-        .foregroundColor(textColor)
+        .foregroundStyle(textColor)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xs)

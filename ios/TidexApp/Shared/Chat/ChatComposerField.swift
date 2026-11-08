@@ -121,7 +121,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
       )
       .textFieldStyle(.plain)
       .font(.tidexBody)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .lineLimit(1...7)
       .focused($isFocused)
       .disabled(disabled)
@@ -158,7 +158,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
         } else {
           Image(systemName: actionSystemImage)
             .font(.system(size: 16, weight: .bold))
-            .foregroundColor(canPerformAction ? actionForegroundColor : .tidexTextMuted)
+            .foregroundStyle(canPerformAction ? actionForegroundColor : Color.tidexTextMuted)
         }
       }
       .frame(width: sendButtonDiameter, height: sendButtonDiameter)

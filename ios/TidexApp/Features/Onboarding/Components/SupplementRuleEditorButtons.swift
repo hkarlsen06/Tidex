@@ -13,7 +13,7 @@ struct DayButton: View {
     Button(action: action) {
       Text(OnboardingWeekday.initial(for: day))
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+        .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
         .frame(width: circleSize, height: circleSize)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
         .clipShape(Circle())
@@ -44,7 +44,7 @@ struct QuickSelectButton: View {
     }) {
       Text(title)
         .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .multilineTextAlignment(.center)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
@@ -68,11 +68,11 @@ struct TypeButton: View {
       VStack(spacing: Spacing.xxs) {
         Text(title)
           .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-          .foregroundColor(isSelected ? .tidexTextPrimary : .tidexTextSecondary)
+          .foregroundStyle(isSelected ? Color.tidexTextPrimary : Color.tidexTextSecondary)
 
         Text(subtitle)
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.xs)
@@ -103,7 +103,7 @@ struct QuickValueButton: View {
     Button(action: action) {
       Text(type == .fixed ? "+\(Int(value))" : "\(Int(value))%")
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
+        .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextSecondary)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
         .frame(minHeight: 44)

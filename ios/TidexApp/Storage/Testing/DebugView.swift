@@ -86,14 +86,14 @@
           Text("Smart Notifications")
           Spacer()
           Text("\(pendingSmartCount) pending")
-            .foregroundColor(pendingSmartCount > 0 ? .green : .secondary)
+            .foregroundStyle(pendingSmartCount > 0 ? Color.green : Color.secondary)
         }
 
         HStack {
           Text("Shift Reminders")
           Spacer()
           Text("\(pendingReminderCount) pending")
-            .foregroundColor(pendingReminderCount > 0 ? .green : .secondary)
+            .foregroundStyle(pendingReminderCount > 0 ? Color.green : Color.secondary)
         }
 
         scheduledNotificationRows
@@ -127,7 +127,7 @@
       if let result = testNotificationResult {
         Text(result)
           .font(.caption)
-          .foregroundColor(result.contains("Failed") ? .red : .green)
+          .foregroundStyle(result.contains("Failed") ? Color.red : Color.green)
       }
     }
 
@@ -139,23 +139,23 @@
           switch result {
           case .success(let pattern):
             Text("\(pattern.typicalWorkDays.count) work days")
-              .foregroundColor(.green)
+              .foregroundStyle(Color.green)
 
           case .insufficientData(let weeksFound):
             Text("\(weeksFound)/\(WorkPatternAnalyzer.WorkPattern.minimumWeeksRequired) weeks")
-              .foregroundColor(.orange)
+              .foregroundStyle(Color.orange)
 
           case .noShifts:
             Text("No shifts")
-              .foregroundColor(.red)
+              .foregroundStyle(Color.red)
 
           case .noPatternDetected:
             Text("No pattern")
-              .foregroundColor(.orange)
+              .foregroundStyle(Color.orange)
           }
         } else {
           Text("Not loaded")
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
         }
       }
     }
@@ -168,23 +168,23 @@
             let label = notificationLabel(for: notification.id)
             Image(systemName: label.icon)
               .font(.caption)
-              .foregroundColor(label.color)
+              .foregroundStyle(label.color)
               .frame(width: 16)
 
             Text(label.text)
               .font(.caption)
-              .foregroundColor(.primary)
+              .foregroundStyle(Color.primary)
 
             Spacer()
 
             if let fireDate = notification.fireDate {
               Text(fireDate, style: .relative)
                 .font(.caption.monospaced())
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.secondary)
             } else {
               Text("—")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.secondary)
             }
           }
         }
@@ -296,11 +296,11 @@
               ProgressView()
                 .progressViewStyle(.circular)
               Text("Syncing...")
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.secondary)
             }
           } else {
             Text("Idle")
-              .foregroundColor(.green)
+              .foregroundStyle(Color.green)
           }
         }
 
@@ -309,10 +309,10 @@
           Spacer()
           if let lastAttempt = syncCoordinator.lastSyncAttemptedAt {
             Text(lastAttempt, style: .relative)
-              .foregroundColor(.secondary)
+              .foregroundStyle(Color.secondary)
           } else {
             Text("Never")
-              .foregroundColor(.orange)
+              .foregroundStyle(Color.orange)
           }
         }
 
@@ -321,10 +321,10 @@
           Spacer()
           if let lastSync = syncCoordinator.lastSyncedAt {
             Text(lastSync, style: .relative)
-              .foregroundColor(.secondary)
+              .foregroundStyle(Color.secondary)
           } else {
             Text("Never")
-              .foregroundColor(.orange)
+              .foregroundStyle(Color.orange)
           }
         }
 
@@ -333,11 +333,11 @@
           Spacer()
           if syncCoordinator.conflictCount > 0 {
             Text("\(syncCoordinator.conflictCount)")
-              .foregroundColor(.red)
+              .foregroundStyle(Color.red)
               .bold()
           } else {
             Text("0")
-              .foregroundColor(.green)
+              .foregroundStyle(Color.green)
           }
         }
 
@@ -346,7 +346,7 @@
             Text("Last Error")
             Spacer()
             Text(error)
-              .foregroundColor(.red)
+              .foregroundStyle(Color.red)
               .font(.caption)
               .lineLimit(2)
           }
@@ -362,7 +362,7 @@
           HStack {
             ProgressView()
             Text("Loading summary...")
-              .foregroundColor(.secondary)
+              .foregroundStyle(Color.secondary)
           }
         } else if let summary = syncStateSummary {
           // Sync State
@@ -403,7 +403,7 @@
             Divider()
             Text("Sync Cursors (revision)")
               .font(.caption.bold())
-              .foregroundColor(.secondary)
+              .foregroundStyle(Color.secondary)
               .padding(.top, Spacing.xxs)
             ForEach(SyncTable.allCases, id: \.self) { table in
               revisionCursorRow(table.displayName, revision: state.cursor(for: table))
@@ -411,7 +411,7 @@
           }
         } else {
           Text("No data loaded")
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
         }
       } header: {
         HStack {
@@ -435,17 +435,17 @@
           Text(label)
           Spacer()
           Text("\(total)")
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
         }
         HStack(spacing: Spacing.sm) {
           Label("\(clean)", systemImage: "checkmark.circle")
-            .foregroundColor(.green)
+            .foregroundStyle(Color.green)
             .font(.caption)
           Label("\(dirty)", systemImage: "pencil.circle")
-            .foregroundColor(.orange)
+            .foregroundStyle(Color.orange)
             .font(.caption)
           Label("\(conflict)", systemImage: "exclamationmark.triangle")
-            .foregroundColor(.red)
+            .foregroundStyle(Color.red)
             .font(.caption)
         }
       }
@@ -455,11 +455,11 @@
       HStack {
         Text(label)
           .font(.caption)
-          .foregroundColor(.secondary)
+          .foregroundStyle(Color.secondary)
         Spacer()
         Text("\(revision)")
           .font(.caption.monospaced())
-          .foregroundColor(.secondary)
+          .foregroundStyle(Color.secondary)
       }
     }
 
@@ -468,27 +468,27 @@
         switch status {
         case .clean:
           Image(systemName: "checkmark.circle.fill")
-            .foregroundColor(.green)
+            .foregroundStyle(Color.green)
           Text("Clean")
-            .foregroundColor(.green)
+            .foregroundStyle(Color.green)
 
         case .dirty:
           Image(systemName: "pencil.circle.fill")
-            .foregroundColor(.orange)
+            .foregroundStyle(Color.orange)
           Text("Dirty")
-            .foregroundColor(.orange)
+            .foregroundStyle(Color.orange)
 
         case .pendingDelete:
           Image(systemName: "trash.circle.fill")
-            .foregroundColor(.red)
+            .foregroundStyle(Color.red)
           Text("Pending Delete")
-            .foregroundColor(.red)
+            .foregroundStyle(Color.red)
 
         case .conflict:
           Image(systemName: "exclamationmark.triangle.fill")
-            .foregroundColor(.red)
+            .foregroundStyle(Color.red)
           Text("Conflict")
-            .foregroundColor(.red)
+            .foregroundStyle(Color.red)
         }
       }
       .font(.caption)
@@ -502,31 +502,31 @@
           HStack {
             ProgressView()
             Text("Running validation tests...")
-              .foregroundColor(.secondary)
+              .foregroundStyle(Color.secondary)
           }
         } else if !validationResults.isEmpty {
           ForEach(validationResults) { result in
             VStack(alignment: .leading, spacing: Spacing.xs) {
               HStack {
                 Image(systemName: result.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
-                  .foregroundColor(result.passed ? .green : .red)
+                  .foregroundStyle(result.passed ? Color.green : Color.red)
                 Text(result.testName)
                   .font(.subheadline.bold())
               }
 
               Text(result.details)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.secondary)
 
               if !result.issues.isEmpty {
                 ForEach(result.issues, id: \.self) { issue in
                   HStack(alignment: .top) {
                     Image(systemName: "exclamationmark.circle")
-                      .foregroundColor(.orange)
+                      .foregroundStyle(Color.orange)
                       .font(.caption)
                     Text(issue)
                       .font(.caption)
-                      .foregroundColor(.orange)
+                      .foregroundStyle(Color.orange)
                   }
                 }
               }
@@ -535,7 +535,7 @@
           }
         } else {
           Text("No validation tests run yet")
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
         }
 
         Button {
@@ -557,24 +557,24 @@
       Section {
         if testHelper.testLogs.isEmpty {
           Text("No logs yet")
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.secondary)
         } else {
           ForEach(testHelper.testLogs.suffix(20).reversed()) { entry in
             VStack(alignment: .leading, spacing: Spacing.micro) {
               HStack {
                 Text(entry.formattedTimestamp)
                   .font(.caption2.monospaced())
-                  .foregroundColor(.secondary)
+                  .foregroundStyle(Color.secondary)
                 Text("[\(entry.category.rawValue)]")
                   .font(.caption2.bold())
-                  .foregroundColor(colorForCategory(entry.category))
+                  .foregroundStyle(colorForCategory(entry.category))
               }
               Text(entry.message)
                 .font(.caption)
               if let details = entry.details {
                 Text(details)
                   .font(.caption2)
-                  .foregroundColor(.secondary)
+                  .foregroundStyle(Color.secondary)
               }
             }
             .padding(.vertical, Spacing.micro)
@@ -586,7 +586,7 @@
         } label: {
           Label("Clear Logs", systemImage: "trash")
         }
-        .foregroundColor(.red)
+        .foregroundStyle(Color.red)
       } header: {
         Text("Recent Logs (\(testHelper.testLogs.count))")
       }

@@ -54,7 +54,7 @@ struct FriendsComposerShiftCalendarPicker: View {
             Button(String(localized: .commonCancel)) {
               dismiss()
             }
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
           }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -130,11 +130,11 @@ struct FriendsComposerShiftCalendarPicker: View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "calendar.badge.minus")
         .font(.largeTitle)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .accessibilityHidden(true)
       Text(.shiftsEmptyNoShiftsThisMonth)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
     }
     .padding(Spacing.lg)
@@ -144,20 +144,20 @@ struct FriendsComposerShiftCalendarPicker: View {
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.largeTitle)
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
         .accessibilityHidden(true)
       Text(.shiftsLoadError)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
       Text(message)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
       Button(String(localized: .commonRetry)) {
         Task { await viewModel.loadShifts() }
       }
       .font(.tidexLabel)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
     }
     .padding(Spacing.lg)
   }

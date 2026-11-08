@@ -16,7 +16,7 @@ internal struct RepeatIntervalPicker: View {
     return layout {
       Text(.addShiftRepeat)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Menu {
         ForEach(0...Self.maxRepeatInterval, id: \.self) { intervalOption in
@@ -33,11 +33,11 @@ internal struct RepeatIntervalPicker: View {
         HStack(spacing: Spacing.xxs) {
           Text(ordinalLabel(interval))
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
 
           Image(systemName: "chevron.up.chevron.down")
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .accessibilityHidden(true)
         }
         .padding(.horizontal, Spacing.sm)

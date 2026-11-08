@@ -174,7 +174,7 @@ extension PaySettingsView {
 
       Text(.commonLoading)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
     }
   }
 
@@ -266,23 +266,23 @@ extension PaySettingsView {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Image(systemName: "exclamationmark.circle.fill")
         .font(.tidexTitle)
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
         .accessibilityHidden(true)
 
       Text(.settingsPaySetupFinishTitle)
         .font(.tidexTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Text(.settingsPaySetupFinishDescription)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       Button {
         paySetupJob = viewModel.selectedJob
       } label: {
         Text(.settingsPaySetupFinishButton)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundStyle(Color.tidexTextOnBrand)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
@@ -380,12 +380,12 @@ extension PaySettingsView {
     HStack(spacing: Spacing.sm) {
       Image(systemName: icon)
         .font(.tidexBodyMedium)
-        .foregroundColor(tint)
+        .foregroundStyle(tint)
         .frame(width: actionIconWidth)
 
       Text(title)
         .font(.tidexBodyMedium)
-        .foregroundColor(tint)
+        .foregroundStyle(tint)
 
       Spacer()
     }

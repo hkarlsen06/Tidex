@@ -47,12 +47,12 @@ struct TodayPlaceholderCard: View {
       HStack(spacing: Spacing.xxs) {
         Text(dateParts.weekday)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
         Text("·")
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
         Text(dateParts.dayMonth)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
     } leadingBottom: {
       EmptyView()

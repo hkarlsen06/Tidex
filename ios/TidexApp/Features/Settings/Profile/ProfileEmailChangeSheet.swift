@@ -48,7 +48,7 @@ struct ProfileEmailChangeSheet: View {
         } footer: {
           if let error = viewModel.errorMessage {
             Text(error)
-              .foregroundColor(.tidexError)
+              .foregroundStyle(Color.tidexError)
               .announcesToVoiceOver(error)
           } else {
             Text(.profileEmailChangeCodeInstructions)
@@ -112,7 +112,7 @@ struct ProfileEmailChangeSheet: View {
         } footer: {
           if let error = viewModel.errorMessage {
             Text(error)
-              .foregroundColor(.tidexError)
+              .foregroundStyle(Color.tidexError)
               .announcesToVoiceOver(error)
           }
         }

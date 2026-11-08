@@ -2039,10 +2039,10 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: "line.3.horizontal.decrease.circle")
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
         Text(.jobsFilterTitle)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       ScrollView(.horizontal, showsIndicators: false) {
@@ -2100,7 +2100,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       } else {
         Text(title)
           .font(.tidexFootnoteStrong)
-          .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextPrimary)
+          .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexTextPrimary)
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xs)
           .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
@@ -2177,16 +2177,16 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     VStack(spacing: Spacing.md) {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: errorIconSize))
-        .foregroundColor(.tidexWarning)
+        .foregroundStyle(Color.tidexWarning)
         .accessibilityHidden(true)
 
       Text(.shiftsLoadError)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       Text(message)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
         .announcesToVoiceOver(message)
 
@@ -2195,7 +2195,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       } label: {
         Text(.commonRetry)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))

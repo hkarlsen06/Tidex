@@ -164,7 +164,7 @@ internal struct ShiftHomeWidgetView: View {
       // Simple "No shifts" message
       Text(.widgetNoShifts)
         .font(.system(size: 15, weight: .medium))
-        .foregroundColor(mutedTextColor)
+        .foregroundStyle(mutedTextColor)
     }
   }
 
@@ -200,7 +200,7 @@ internal struct ShiftHomeWidgetView: View {
         Text("\(countdownTarget, style: .timer)  \(entry.netEarnings)")
           .font(.system(size: 15, weight: .semibold))
           .monospacedDigit()
-          .foregroundColor(accentColor)
+          .foregroundStyle(accentColor)
           .multilineTextAlignment(.center)
           .widgetAccentable()
           .lineLimit(1)
@@ -209,7 +209,7 @@ internal struct ShiftHomeWidgetView: View {
         Text("\(shiftEnd, style: .timer)  \(entry.netEarnings)")
           .font(.system(size: 15, weight: .semibold))
           .monospacedDigit()
-          .foregroundColor(accentColor)
+          .foregroundStyle(accentColor)
           .multilineTextAlignment(.center)
           .widgetAccentable()
           .lineLimit(1)
@@ -217,13 +217,13 @@ internal struct ShiftHomeWidgetView: View {
         HStack(spacing: 6) {
           Text(entry.shiftDate)
             .font(.system(size: 15, weight: .semibold))
-            .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+            .foregroundStyle(entry.hasShift ? accentColor : mutedTextColor)
             .widgetAccentable(entry.hasShift)
             .lineLimit(1)
 
           Text(entry.netEarnings)
             .font(.system(size: 15, weight: .semibold))
-            .foregroundColor(secondaryTextColor)
+            .foregroundStyle(secondaryTextColor)
             .lineLimit(1)
         }
       }
@@ -237,7 +237,7 @@ internal struct ShiftHomeWidgetView: View {
         // Show time range instead of salute for past/ended shifts
         Text("\(entry.startTime) – \(entry.endTime)")
           .font(.system(size: 14, weight: .medium, design: .default))
-          .foregroundColor(secondaryTextColor)
+          .foregroundStyle(secondaryTextColor)
           .lineLimit(1)
       } else {
         // Show motivational salute for active/upcoming shifts
@@ -245,7 +245,7 @@ internal struct ShiftHomeWidgetView: View {
         Text(entry.salute)
           .font(.system(size: 15, weight: .bold, design: .default))
           .italic()
-          .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+          .foregroundStyle(entry.hasShift ? accentColor : mutedTextColor)
           .widgetAccentable(entry.hasShift)
           .lineLimit(2)
           .multilineTextAlignment(.center)
@@ -267,7 +267,7 @@ internal struct ShiftHomeWidgetView: View {
         // Shift ended today - show "Done"
         Text(.widgetDoneCapitalized)
           .font(.system(size: 36, weight: .bold, design: .default))
-          .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+          .foregroundStyle(entry.hasShift ? primaryTextColor : mutedTextColor)
           .lineLimit(1)
           .minimumScaleFactor(0.7)
       } else {
@@ -277,7 +277,7 @@ internal struct ShiftHomeWidgetView: View {
             .system(size: 32, weight: entry.shiftHasStarted ? .medium : .bold, design: .default)
           )
           .monospacedDigit()
-          .foregroundColor(startTimeColor)
+          .foregroundStyle(startTimeColor)
           .lineLimit(1)
 
         // End time - emphasized after shift starts
@@ -286,7 +286,7 @@ internal struct ShiftHomeWidgetView: View {
             .system(size: 32, weight: entry.shiftHasStarted ? .bold : .medium, design: .default)
           )
           .monospacedDigit()
-          .foregroundColor(endTimeColor)
+          .foregroundStyle(endTimeColor)
           .lineLimit(1)
       }
     }
@@ -302,19 +302,19 @@ internal struct ShiftHomeWidgetView: View {
       Text("\(daysAgo)")
         .font(.system(size: 72, weight: .bold, design: .default))
         .monospacedDigit()
-        .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+        .foregroundStyle(entry.hasShift ? primaryTextColor : mutedTextColor)
         .lineLimit(1)
         .minimumScaleFactor(0.5)
 
       VStack(alignment: .leading, spacing: -4) {
         Text(daysText)
           .font(.system(size: 24, weight: .semibold, design: .default))
-          .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+          .foregroundStyle(entry.hasShift ? primaryTextColor : mutedTextColor)
           .lineLimit(1)
 
         Text(agoText)
           .font(.system(size: 24, weight: .semibold, design: .default))
-          .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+          .foregroundStyle(entry.hasShift ? primaryTextColor : mutedTextColor)
           .lineLimit(1)
       }
     }
@@ -339,7 +339,7 @@ internal struct ShiftHomeWidgetView: View {
       // BOTTOM: Time range
       Text("\(entry.startTime) – \(entry.endTime)")
         .font(.system(size: 14, weight: .medium, design: .default))
-        .foregroundColor(secondaryTextColor)
+        .foregroundStyle(secondaryTextColor)
         .lineLimit(1)
     }
     .padding(.horizontal, 16)
@@ -355,7 +355,7 @@ internal struct ShiftHomeWidgetView: View {
       Text("\(entry.daysRemaining)")
         .font(.system(size: 72, weight: .bold, design: .default))
         .monospacedDigit()
-        .foregroundColor(primaryTextColor)
+        .foregroundStyle(primaryTextColor)
         .lineLimit(1)
         .minimumScaleFactor(0.5)
 
@@ -363,12 +363,12 @@ internal struct ShiftHomeWidgetView: View {
       VStack(alignment: .leading, spacing: -4) {
         Text(daysLabel)
           .font(.system(size: 24, weight: .semibold, design: .default))
-          .foregroundColor(primaryTextColor)
+          .foregroundStyle(primaryTextColor)
           .lineLimit(1)
 
         Text(leftLabel)
           .font(.system(size: 24, weight: .semibold, design: .default))
-          .foregroundColor(primaryTextColor)
+          .foregroundStyle(primaryTextColor)
           .lineLimit(1)
       }
     }

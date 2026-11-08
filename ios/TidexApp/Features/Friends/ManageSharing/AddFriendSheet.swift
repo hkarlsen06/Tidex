@@ -235,13 +235,13 @@ private struct HiddenAndBlockedPeopleView: View {
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(friend.displayName)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
         if let contactInfo = friend.contactInfo {
           Text(contactInfo)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         }
       }

@@ -87,11 +87,11 @@ extension View {
         VStack(spacing: Spacing.mlg) {
           Text("Pull down to refresh")
             .font(.headline)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           Text("Refreshed \(refreshCount) times")
             .font(.subheadline)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
       }
       .pullToRefresh {

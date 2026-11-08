@@ -759,7 +759,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     } label: {
       Image(systemName: "square.and.arrow.up")
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .accessibilityLabel(Text(.shiftsShareTitle))
     }
 
@@ -769,7 +769,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       } label: {
         Image(systemName: isVirtualShift ? "minus.circle" : "trash")
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
       }
       .accessibilityLabel(
         Text(
@@ -789,7 +789,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           cancelEditing()
         }
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
       } else {
         shareAndDeleteButtons
       }
@@ -800,7 +800,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           saveChanges()
         }
         .font(.tidexButton)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .disabled(isSaving || !hasChanges)
         .opacity(isSaving || !hasChanges ? 0.5 : 1)
       } else {
@@ -808,7 +808,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           dismiss()
         }
         .font(.tidexButton)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
       }
     }
   }
@@ -1044,7 +1044,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
         Text(formattedDate)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         Spacer(minLength: 0)
 
@@ -1063,7 +1063,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
       Text(formattedTimeRange)
         .font(.tidexAmountLarge)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)
         .environment(\.layoutDirection, .leftToRight)
@@ -1076,7 +1076,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         }
       }
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextSecondary)
+      .foregroundStyle(Color.tidexTextSecondary)
     }
     .accessibilityElement(children: .combine)
   }
@@ -1085,13 +1085,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     HStack(alignment: .firstTextBaseline) {
       Text(headlinePayLabel)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       Spacer()
 
       Text(formatCurrency(headlinePay))
         .font(.tidexLargeTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .accessibilityElement(children: .combine)
   }
@@ -1242,20 +1242,20 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     HStack(spacing: Spacing.sm) {
       Image(systemName: item.systemImage)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .frame(width: Spacing.iconSize)
         .accessibilityHidden(true)
 
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(item.title)
           .font(.tidexBodyMedium)
-          .foregroundColor(item.titleColor)
+          .foregroundStyle(item.titleColor)
           .multilineTextAlignment(.leading)
 
         if let subtitle = item.subtitle {
           Text(subtitle)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .multilineTextAlignment(.leading)
         }
       }
@@ -1265,13 +1265,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       if let value = item.value {
         Text(value)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       if item.action != nil {
         Image(systemName: "chevron.right")
           .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .flipsForRightToLeftLayoutDirection(true)
           .accessibilityHidden(true)
       }
@@ -1290,7 +1290,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       HStack {
         Text(.shiftsDate)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
         Spacer()
         DatePicker(
           String(localized: .shiftsDate),
@@ -1315,10 +1315,10 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         HStack(spacing: Spacing.xs) {
           Image(systemName: "moon.fill")
             .font(.tidexCaption)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
           Text(.shiftsCrossMidnightInfo)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
           Spacer()
         }
         .padding(.top, Spacing.xxs)
@@ -1329,10 +1329,10 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         HStack(spacing: Spacing.xs) {
           Image(systemName: "info.circle")
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
           Text(.shiftsVirtualConversionInfo)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
           Spacer()
         }
         .padding(.top, Spacing.xxs)
@@ -1349,11 +1349,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     VStack(spacing: Spacing.md) {
       HStack(alignment: .center, spacing: Spacing.sm) {
         Image(systemName: "note.text")
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         Text(.shiftsDetailsNoteTitle)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         Spacer()
       }
@@ -1366,7 +1366,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       .focused($isNoteFieldFocused)
       .textFieldStyle(.plain)
       .font(.tidexBodyMedium)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .lineLimit(3...8)
       .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
       .padding(.horizontal, Spacing.md)
@@ -1399,11 +1399,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     HStack(spacing: Spacing.xs) {
       Image(systemName: "exclamationmark.triangle.fill")
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .accessibilityHidden(true)
       Text(message)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
       Spacer()
     }
     .announcesToVoiceOver(message)
@@ -1447,10 +1447,10 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: systemImage)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
         Text(title)
           .font(.tidexLabel)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       }
       .padding(.vertical, Spacing.xs)
       .frame(maxWidth: .infinity)
@@ -1508,12 +1508,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
                 ?? context.scheduledPayoutDate)
           )
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .frame(maxWidth: .infinity, alignment: .leading)
           if context.halfTaxApplied {
             Text(.settingsPayReviewHalfTax)
               .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
               .frame(maxWidth: .infinity, alignment: .leading)
           }
         }
@@ -1555,7 +1555,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
           Text(breakDeductionExplanation)
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, Spacing.xxxs)
         }
@@ -1618,12 +1618,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     HStack(spacing: Spacing.xs) {
       Text(breakDeductionLabel)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       if showsChevron {
         Image(systemName: "chevron.down")
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .rotationEffect(.degrees(isBreakDeductionExpanded ? 180 : 0))
       }
 
@@ -1631,7 +1631,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
       Text("−\(formatCurrency(breakdown.totalAmount))")
         .font(.tidexLabel)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
     }
     .contentShape(Rectangle())
   }
@@ -1671,13 +1671,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
         Text(.shiftsBreakDeductionPartSupplement)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
 
         Spacer()
 
         Text("\(formatHoursValue(part.hours)) / −\(formatCurrency(part.amount))")
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
     }
   }
@@ -1721,12 +1721,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       HStack(spacing: Spacing.xs) {
         Text(.shiftsTotalSupplement)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         if showsChevron {
           Image(systemName: "chevron.down")
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .rotationEffect(.degrees(isSupplementBreakdownExpanded ? 180 : 0))
             .accessibilityHidden(true)
         }
@@ -1734,7 +1734,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         if hasCustomSupplements {
           Text(.shiftsCustomized)
             .font(.tidexMicro)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .padding(.horizontal, Spacing.xs)
             .padding(.vertical, 3)
             .background(
@@ -1748,7 +1748,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
       Text(formatCurrency(displayedSupplementPay))
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .contentShape(Rectangle())
   }
@@ -1792,12 +1792,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       HStack(spacing: Spacing.xs) {
         Text(.shiftsOvertimeLabel)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         if showsChevron {
           Image(systemName: "chevron.down")
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .rotationEffect(.degrees(isOvertimeBreakdownExpanded ? 180 : 0))
             .accessibilityHidden(true)
         }
@@ -1807,7 +1807,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
       Text(formatCurrency(displayedOvertimePay))
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
     .contentShape(Rectangle())
   }
@@ -1904,13 +1904,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         }
       }
       .font(.tidexCaptionRegular)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
       .frame(maxWidth: .infinity)
       .padding(.top, Spacing.xs)
     } else if let updatedAt {
       Text(String(localized: .shiftsLastEdited) + " " + formattedShiftTimestamp(updatedAt))
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .frame(maxWidth: .infinity)
         .padding(.top, Spacing.xs)
     }
@@ -1998,7 +1998,7 @@ private struct ShareOptionsSheet: View {
         // Title
         Text(.shiftsShareTitle)
           .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .padding(.top, Spacing.md)
 
         VStack(spacing: Spacing.sm) {
@@ -2025,12 +2025,12 @@ private struct ShareOptionsSheet: View {
         HStack(spacing: Spacing.msm) {
           Image(systemName: systemImage)
             .font(.tidexTitle2)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .frame(minWidth: 28)
             .accessibilityHidden(true)
           Text(label)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           Spacer()
         }
         .padding(.horizontal, Spacing.mlg)
@@ -2065,7 +2065,7 @@ struct ShareDestinationSheet: View {
       VStack(spacing: Spacing.mlg) {
         Text(title)
           .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .padding(.top, Spacing.md)
 
         VStack(spacing: Spacing.sm) {
@@ -2073,12 +2073,12 @@ struct ShareDestinationSheet: View {
             HStack(spacing: Spacing.msm) {
               Image(systemName: "bubble.left.and.text.bubble.right")
                 .font(.tidexTitle2)
-                .foregroundColor(.tidexTextSecondary)
+                .foregroundStyle(Color.tidexTextSecondary)
                 .frame(minWidth: 28)
                 .accessibilityHidden(true)
               Text(.friendsChatSendToChat)
                 .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextPrimary)
+                .foregroundStyle(Color.tidexTextPrimary)
               Spacer()
             }
             .padding(.horizontal, Spacing.mlg)
@@ -2094,12 +2094,12 @@ struct ShareDestinationSheet: View {
             HStack(spacing: Spacing.msm) {
               Image(systemName: "photo.on.rectangle")
                 .font(.tidexTitle2)
-                .foregroundColor(.tidexTextSecondary)
+                .foregroundStyle(Color.tidexTextSecondary)
                 .frame(minWidth: 28)
                 .accessibilityHidden(true)
               Text(.shiftsShareAsImage)
                 .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextPrimary)
+                .foregroundStyle(Color.tidexTextPrimary)
               Spacer()
             }
             .padding(.horizontal, Spacing.mlg)

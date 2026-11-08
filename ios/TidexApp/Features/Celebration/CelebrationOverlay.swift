@@ -134,14 +134,14 @@ struct CelebrationOverlay: View {
       VStack(spacing: Spacing.sm) {
         Text(isPayday ? .celebrationPaydayTitle : .celebrationYouEarned)
           .font(.tidexHeadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .accessibilityAddTraits(.isHeader)
 
         // Large amount - same size as TotalCard (88pt) at regular sizes. At accessibility sizes it
         // uses a smaller base font and wraps instead of shrinking.
         Text(CurrencyConfig.format(displayedAmount, currency: data.currency))
           .font(usesAdaptiveLayout ? .tidexAmountLarge : .tidexHeroAmount)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .multilineTextAlignment(.center)
           .minimumScaleFactor(usesAdaptiveLayout ? 1 : 0.4)
           .lineLimit(usesAdaptiveLayout ? nil : 1)
@@ -151,7 +151,7 @@ struct CelebrationOverlay: View {
 
         Text(isPayday ? .celebrationPaydaySubtitle : .celebrationSoFarThisMonth)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
       .padding(.horizontal, Spacing.md)
       .padding(.top, Spacing.sm)
@@ -175,7 +175,7 @@ struct CelebrationOverlay: View {
 
           Text(messageText)
             .font(.tidexHeadline)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
             .multilineTextAlignment(.center)
         }
         .padding(.horizontal, Spacing.md)
@@ -197,7 +197,7 @@ struct CelebrationOverlay: View {
           .frame(maxWidth: .infinity)
           .frame(minHeight: Spacing.buttonHeight)
           .background(Color.tidexBrandPrimary)
-          .foregroundColor(.tidexTextOnBrand)
+          .foregroundStyle(Color.tidexTextOnBrand)
           .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
       }
       .buttonStyle(CelebrationButtonStyle())

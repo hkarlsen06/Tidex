@@ -10,11 +10,11 @@ internal struct FirstShiftPrompt: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(.firstShiftPromptTitle)
           .font(.tidexTitle2)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Text(.firstShiftPromptMessage)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .accessibilityElement(children: .combine)

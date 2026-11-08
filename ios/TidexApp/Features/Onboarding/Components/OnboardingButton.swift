@@ -26,7 +26,7 @@ struct OnboardingButton: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xs)
         .frame(minHeight: 54)
-        .foregroundColor(style == .primary ? .tidexTextOnBrand : .tidexBlueText)
+        .foregroundStyle(style == .primary ? Color.tidexTextOnBrand : Color.tidexBlueText)
         .background(
           Group {
             if style == .primary {

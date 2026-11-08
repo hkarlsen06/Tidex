@@ -384,7 +384,7 @@ private struct AddShiftCalendarDayCell: View {
         // Selected but no preview earnings yet (need times)
         Image(systemName: "checkmark")
           .font(.tidexButton)
-          .foregroundColor(hasConflict ? .tidexWarning : .tidexBlueText)
+          .foregroundStyle(hasConflict ? Color.tidexWarning : Color.tidexBlueText)
           .padding(.top, Spacing.xs)
       }
 

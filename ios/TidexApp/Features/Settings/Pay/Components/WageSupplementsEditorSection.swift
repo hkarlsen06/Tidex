@@ -18,7 +18,7 @@ struct SupplementsEditorSection: View {
       HStack {
         Text(.settingsPayEditorSupplementsTitle)
           .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .accessibilityAddTraits(.isHeader)
 
         Spacer()
@@ -27,7 +27,7 @@ struct SupplementsEditorSection: View {
           Button(action: onAdd) {
             Image(systemName: "plus")
               .font(.tidexBodyMedium)
-              .foregroundColor(.tidexBlueText)
+              .foregroundStyle(Color.tidexBlueText)
               .frame(minWidth: 44, minHeight: 44)
           }
           .accessibilityLabel(Text(.supplementsAddRule))
@@ -38,7 +38,7 @@ struct SupplementsEditorSection: View {
         // Read-only preset supplements (from tariff version or fallback)
         Text(.settingsPayEditorSupplementsTariff)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
         ForEach(presetRules.indices, id: \.self) { index in
           presetSupplementRow(presetRules[index])
@@ -57,7 +57,7 @@ struct SupplementsEditorSection: View {
     if supplements.isEmpty {
       Text(.settingsPayEditorSupplementsEmpty)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .padding(Spacing.sm)
         .frame(maxWidth: .infinity)
         .background(Color.tidexSurfaceSecondary)
@@ -75,11 +75,11 @@ struct SupplementsEditorSection: View {
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(formatDays(rule.days))
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Text("\(rule.from) - \(rule.to)")
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       if !dynamicTypeSize.isAccessibilitySize {
@@ -88,7 +88,7 @@ struct SupplementsEditorSection: View {
 
       Text(formatRuleValue(rule))
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(Spacing.xs)
@@ -109,11 +109,11 @@ struct SupplementsEditorSection: View {
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(rule.daysDescription)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Text(rule.timeDescription)
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       if !dynamicTypeSize.isAccessibilitySize {
@@ -122,7 +122,7 @@ struct SupplementsEditorSection: View {
 
       Text(rule.valueDescription(locale: Locale.current, currency: currency))
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
 
       HStack(spacing: 0) {
         editButton(for: rule)
@@ -142,7 +142,7 @@ struct SupplementsEditorSection: View {
     }) {
       Image(systemName: "pencil")
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .frame(minWidth: 44, minHeight: 44)
         .contentShape(Rectangle())
     }
@@ -158,7 +158,7 @@ struct SupplementsEditorSection: View {
     }) {
       Image(systemName: "trash")
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexError)
+        .foregroundStyle(Color.tidexError)
         .frame(minWidth: 44, minHeight: 44)
         .contentShape(Rectangle())
     }

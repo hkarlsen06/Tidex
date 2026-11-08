@@ -466,7 +466,7 @@ struct FriendsChatMessageRowContent: View {
     if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
       Text(senderFirstName)
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .padding(.horizontal, CornerRadius.bubble)
     }
   }
@@ -612,7 +612,7 @@ struct FriendsChatMessageRowContent: View {
     ) {
       Text(fallbackPreviewText)
         .font(.tidexBody)
-        .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+        .foregroundStyle(isCurrentUser ? Color.tidexTextOnBrand : Color.tidexTextPrimary)
         .multilineTextAlignment(.leading)
         .fixedSize(horizontal: false, vertical: true)
     } reaction: {
@@ -746,7 +746,7 @@ struct FriendsChatMessageRowContent: View {
       }
     }
     .font(.tidexMicro)
-    .foregroundColor(.tidexTextMuted)
+    .foregroundStyle(Color.tidexTextMuted)
     .fixedSize(horizontal: true, vertical: false)
   }
 
@@ -837,7 +837,7 @@ struct FriendsChatMessageRowContent: View {
 
       Text(message.createdAt.toHourMinuteString())
         .font(.tidexMicro)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
         .frame(width: FriendsChatTimestampRevealResolver.revealWidth, alignment: .trailing)
@@ -970,7 +970,7 @@ struct FriendsChatMessageRowContent: View {
 
       Image(systemName: "arrowshape.turn.up.left.fill")
         .font(.system(size: 15, weight: .semibold))
-        .foregroundColor(.tidexTextOnBrand)
+        .foregroundStyle(Color.tidexTextOnBrand)
         .accessibilityHidden(true)
     }
     .frame(width: 44, height: 32)
@@ -1135,7 +1135,7 @@ struct FriendsChatMessageRowContent: View {
       HStack(spacing: 3) {
         Image(systemName: "checkmark.circle.fill")
           .font(.tidexMicro.weight(.semibold))
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .accessibilityHidden(true)
 
         Text(.friendsChatStatusRead)
@@ -1148,11 +1148,11 @@ struct FriendsChatMessageRowContent: View {
       HStack(spacing: 4) {
         Image(systemName: "exclamationmark.circle.fill")
           .font(.tidexMicro.weight(.semibold))
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .accessibilityHidden(true)
 
         Text(.friendsChatStatusFailed)
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .lineLimit(1)
           .minimumScaleFactor(0.9)
           .fixedSize(horizontal: true, vertical: false)
@@ -1163,7 +1163,7 @@ struct FriendsChatMessageRowContent: View {
           onRetry()
         } label: {
           Text(.commonRetry)
-            .foregroundColor(.tidexBlueText)
+            .foregroundStyle(Color.tidexBlueText)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
         }
@@ -1226,7 +1226,7 @@ struct FriendsChatMessageRowContent: View {
             if reaction.count > 1 {
               Text("\(reaction.count)")
                 .font(.tidexCaptionRegular)
-                .foregroundColor(.tidexTextSecondary)
+                .foregroundStyle(Color.tidexTextSecondary)
             }
           }
           .padding(.horizontal, 2)
@@ -1551,7 +1551,7 @@ private struct FriendsChatDateSeparator: View {
 
       Text(separatorText)
         .font(.tidexMicro)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
@@ -1722,7 +1722,7 @@ struct FriendsChatReplyPreviewContent: View {
         if let iconSystemName = preview.iconPreviewKind?.friendsChatReplyIconSystemName {
           Image(systemName: iconSystemName)
             .font(.tidexCaptionRegular)
-            .foregroundColor(textColor)
+            .foregroundStyle(textColor)
             .accessibilityHidden(true)
         }
 
@@ -1734,7 +1734,7 @@ struct FriendsChatReplyPreviewContent: View {
   private var senderNameLabel: some View {
     Text(preview.senderName)
       .font(.tidexCaptionStrong)
-      .foregroundColor(accentColor)
+      .foregroundStyle(accentColor)
   }
 
   private var snippetText: String? {
@@ -1748,7 +1748,7 @@ struct FriendsChatReplyPreviewContent: View {
   private func snippetLabel(_ text: String) -> some View {
     Text(text)
       .font(.tidexFootnote)
-      .foregroundColor(textColor)
+      .foregroundStyle(textColor)
       .multilineTextAlignment(.leading)
       .lineLimit(snippetLineLimit)
   }
@@ -1783,7 +1783,7 @@ struct FriendsChatReplyPreviewContent: View {
               .overlay {
                 Text("+\(overflowImageCount)")
                   .font(.tidexCaptionStrong)
-                  .foregroundColor(.white)
+                  .foregroundStyle(Color.white)
               }
           }
         }
@@ -1893,7 +1893,7 @@ struct ChatShiftSnapshotCard: View {
   private var ownerName: some View {
     Text(snapshot.ownerFirstName)
       .font(.tidexCaptionStrong)
-      .foregroundColor(ownerPrimaryTextColor)
+      .foregroundStyle(ownerPrimaryTextColor)
       .lineLimit(1)
   }
 }
@@ -2727,7 +2727,7 @@ struct FriendsChatImageAttachmentCard: View {
         placeholder {
           Image(systemName: "photo")
             .font(.system(size: placeholderSymbolSize, weight: .medium))
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .accessibilityLabel(Text(.friendsChatPreviewImage))
         }
       } else {
@@ -2896,7 +2896,7 @@ struct FriendsChatImageGalleryOverlay: View {
         } label: {
           Image(systemName: saveButtonIconName)
             .font(.system(size: 30))
-            .foregroundColor(.white.opacity(0.88))
+            .foregroundStyle(Color.white.opacity(0.88))
             .frame(width: 44, height: 44)
             .background(
               Circle()
@@ -2917,7 +2917,7 @@ struct FriendsChatImageGalleryOverlay: View {
       } label: {
         Image(systemName: "xmark.circle.fill")
           .font(.system(size: 30))
-          .foregroundColor(.white.opacity(0.88))
+          .foregroundStyle(Color.white.opacity(0.88))
           .frame(width: 44, height: 44)
           .background(
             Circle()
@@ -2938,7 +2938,7 @@ struct FriendsChatImageGalleryOverlay: View {
           Text(.friendsAccessibilityPosition(selectedIndex + 1, attachments.count))
         )
         .font(.tidexFootnoteMedium)
-        .foregroundColor(.white.opacity(0.88))
+        .foregroundStyle(Color.white.opacity(0.88))
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
         .background(
@@ -3041,7 +3041,7 @@ struct FriendsChatImageGalleryUnavailableOverlay: View {
       } label: {
         Image(systemName: "xmark.circle.fill")
           .font(.system(size: 30))
-          .foregroundColor(.white.opacity(0.88))
+          .foregroundStyle(Color.white.opacity(0.88))
           .frame(width: 44, height: 44)
           .background(
             Circle()
@@ -3103,7 +3103,7 @@ private struct FriendsChatImageGalleryPage: View {
       } else {
         Image(systemName: "photo")
           .font(.system(size: 28, weight: .medium))
-          .foregroundColor(.white.opacity(0.6))
+          .foregroundStyle(Color.white.opacity(0.6))
           .accessibilityLabel(Text(.friendsChatPreviewImage))
       }
     }

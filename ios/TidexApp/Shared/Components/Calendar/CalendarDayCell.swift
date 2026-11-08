@@ -223,7 +223,7 @@ struct CalendarDayCell<Content: View>: View {
         Image(systemName: marker.systemImage)
           .font(.tidexMicro)
           .imageScale(.small)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .padding(2)
           .accessibilityHidden(true)
       }
@@ -251,18 +251,18 @@ struct CalendarDayCell<Content: View>: View {
       if let weekNum = dayInfo.weekNumber {
         Text("\(weekNum)")
           .font(.tidexMicro)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
       if showOverlapIndicator {
         Image(systemName: "person.2.fill")
           .font(.tidexMicro)
           .imageScale(.small)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
       } else if showSingleUserIndicator {
         Image(systemName: resolvedSingleUserSymbol)
           .font(.tidexMicro)
           .imageScale(.small)
-          .foregroundColor(singleUserIndicatorColor)
+          .foregroundStyle(singleUserIndicatorColor)
       }
     }
     .fixedSize()
@@ -290,14 +290,14 @@ struct CalendarDayCell<Content: View>: View {
       .font(.tidexBodyMedium)
       .fixedSize(horizontal: true, vertical: false)
       .monospacedDigit()
-      .foregroundColor(style.dayNumberColor)
+      .foregroundStyle(style.dayNumberColor)
   }
 
   private var todayBadgeView: some View {
     Text("\(dayInfo.dayNumber)")
       .font(.tidexBodyMedium)
       .fixedSize(horizontal: true, vertical: false)
-      .foregroundColor(.tidexTextOnBrand)
+      .foregroundStyle(Color.tidexTextOnBrand)
       .padding(.leading, todayBadgeLeadingInset)
       .padding(.trailing, todayBadgeTrailingInset)
       .padding(.top, todayBadgeTopInset)
@@ -407,7 +407,7 @@ struct CalendarDayCell<Content: View>: View {
     case .starIcon(let color):
       Image(systemName: "star.fill")
         .font(.footnote.weight(.bold))
-        .foregroundColor(color)
+        .foregroundStyle(color)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
     case .dot(let color):
@@ -493,7 +493,7 @@ struct CalendarDayCell<Content: View>: View {
   ) -> some View {
     Text(value)
       .font(.system(size: fontSize, weight: fontWeight))
-      .foregroundColor(color)
+      .foregroundStyle(color)
       .lineLimit(1)
       .minimumScaleFactor(0.7)
       .allowsTightening(true)

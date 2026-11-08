@@ -94,7 +94,7 @@ struct ShareableShiftCard: View {
           .frame(width: 14, height: 14)
         Text("Tidex")
           .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
     }
     .padding(Spacing.mlg)
@@ -109,7 +109,7 @@ struct ShareableShiftCard: View {
     VStack(spacing: Spacing.xs) {
       Text(formattedDate)
         .font(.tidexTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity)
@@ -123,10 +123,10 @@ struct ShareableShiftCard: View {
       // Section header
       HStack {
         Image(systemName: "clock")
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
         Text(.shiftsTimeSection)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
         Spacer()
       }
 
@@ -135,10 +135,10 @@ struct ShareableShiftCard: View {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
           Text(.shiftsTimeRange)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
           Text(formattedTimeRange)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
             .environment(\.layoutDirection, .leftToRight)
         }
 
@@ -147,10 +147,10 @@ struct ShareableShiftCard: View {
         VStack(alignment: .trailing, spacing: Spacing.xxs) {
           Text(.shiftsDuration)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
           Text(formattedHours)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
         }
       }
       .padding(Spacing.md)
@@ -168,10 +168,10 @@ struct ShareableShiftCard: View {
       // Section header
       HStack {
         Image(systemName: "creditcard")
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
         Text(.shiftsEarningsSection)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
         Spacer()
       }
 
@@ -239,12 +239,12 @@ struct ShareableShiftCard: View {
             shift.computed.overtimeApplied ? .shiftsSupplementsAndOvertime : .shiftsTotalSupplement
           )
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
 
           if hasCustomSupplements {
             Text(.shiftsCustomized)
               .font(.tidexMicro)
-              .foregroundColor(.tidexBlueText)
+              .foregroundStyle(Color.tidexBlueText)
               .padding(.horizontal, Spacing.xs)
               .padding(.vertical, 3)
               .background(
@@ -258,7 +258,7 @@ struct ShareableShiftCard: View {
 
         Text(formatCurrency(shift.computed.supplementPay))
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
 
       // Individual supplement segments
@@ -277,27 +277,27 @@ struct ShareableShiftCard: View {
       HStack {
         Text(segmentTimeRange(segment))
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .environment(\.layoutDirection, .leftToRight)
 
         Spacer()
 
         Text("\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))")
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
 
       // Supplement label and amount
       HStack {
         Text(segment.isOvertime ? .shiftsOvertimeLabel : .shiftsSupplementLabel)
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Spacer()
 
         Text(formatCurrency(segment.amount))
           .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
     }
     .padding(Spacing.sm)
@@ -319,13 +319,13 @@ struct ShareableShiftCard: View {
     HStack {
       Text(label)
         .font(isHighlighted ? .tidexLabel : .tidexSubheadline)
-        .foregroundColor(isHighlighted ? .tidexTextPrimary : .tidexTextSecondary)
+        .foregroundStyle(isHighlighted ? Color.tidexTextPrimary : Color.tidexTextSecondary)
 
       Spacer()
 
       Text(value)
         .font(.system(size: isHighlighted ? 20 : 15, weight: isHighlighted ? .semibold : .medium))
-        .foregroundColor(valueColor)
+        .foregroundStyle(valueColor)
     }
   }
 

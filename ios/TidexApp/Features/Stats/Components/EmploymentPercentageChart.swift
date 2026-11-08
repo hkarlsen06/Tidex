@@ -158,7 +158,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
 
             Text(label)
               .font(isEmphasized ? .tidexCaptionStrong : .tidexCaptionRegular)
-              .foregroundColor(
+              .foregroundStyle(
                 axisLabelColor(
                   isIncluded: isIncluded,
                   isCurrentMonth: isCurrentMonth,
@@ -176,7 +176,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
           if let amount = value.as(Double.self) {
             Text("\(Int(amount))%")
               .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextSecondary)
+              .foregroundStyle(Color.tidexTextSecondary)
           }
         }
       }
@@ -297,16 +297,16 @@ private struct TooltipView: View {
     VStack(alignment: .center, spacing: Spacing.xxs) {
       Text(monthData.fullMonth)
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
 
       HStack(spacing: Spacing.xxs) {
         Text(EmploymentPercentageChart.formatPercent(monthData.averagePercentage))
           .font(.tidexMonoBody)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
 
         Text(.statsChartsEmploymentEmployment)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
       }
     }
     .padding(.horizontal, Spacing.sm)
@@ -354,7 +354,7 @@ private struct InfoPopoverButton: View {
     } label: {
       Image(systemName: "info.circle")
         .font(.tidexBody)
-        .foregroundColor(.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextMuted)
         // 44pt hit area that doesn't add height to the header.
         .padding(Spacing.md)
         .contentShape(Rectangle())
@@ -365,7 +365,7 @@ private struct InfoPopoverButton: View {
     .popover(isPresented: popoverBinding) {
       Text(message)
         .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.leading)
         .fixedSize(horizontal: false, vertical: true)
         .padding()

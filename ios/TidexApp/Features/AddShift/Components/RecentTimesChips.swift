@@ -135,7 +135,7 @@ private struct RecentTimeChip: View {
       Text(timeRangeText)
         .font(.tidexMonoCaption)
         .fixedSize(horizontal: true, vertical: false)
-        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexBlueText)
+        .foregroundStyle(isSelected ? Color.tidexTextOnBrand : Color.tidexBlueText)
         .environment(\.layoutDirection, .leftToRight)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)

@@ -21,7 +21,7 @@ struct SyncConflictsView: View {
         if !viewModel.rows.isEmpty {
           Text(.syncConflictsIntro)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .listRowBackground(Color.clear)
         }
       }
@@ -60,18 +60,18 @@ struct SyncConflictsView: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(verbatim: row.title)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
 
         if let detail = row.detail {
           Text(verbatim: detail)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
 
         if !row.hasServerVersion {
           Text(.syncConflictsRejected)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
       }
       .padding(.vertical, Spacing.xxxs)

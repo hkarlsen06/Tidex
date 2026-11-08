@@ -1166,7 +1166,7 @@ private struct SharedShiftsDetailView: View {
           } label: {
             superimposeToggleLabel
               .font(.tidexFootnoteMedium)
-              .foregroundColor(viewModel.isSuperimposing ? .tidexBlueText : .tidexTextMuted)
+              .foregroundStyle(viewModel.isSuperimposing ? Color.tidexBlueText : Color.tidexTextMuted)
           }
         }
 

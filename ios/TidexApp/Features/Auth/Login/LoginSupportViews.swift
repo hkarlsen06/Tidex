@@ -10,13 +10,13 @@ struct AccountCreationPromptCard: View {
     VStack(alignment: .leading, spacing: Spacing.md) {
       HStack(alignment: .top, spacing: Spacing.sm) {
         Image(systemName: "exclamationmark.triangle.fill")
-          .foregroundColor(.tidexError)
+          .foregroundStyle(Color.tidexError)
           .font(.tidexBody)
           .accessibilityHidden(true)
 
         Text(message)
           .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(.leading)
 
         Spacer()
@@ -25,7 +25,7 @@ struct AccountCreationPromptCard: View {
           onDismiss()
         }) {
           Image(systemName: "xmark")
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
             .font(.tidexCaptionStrong)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
@@ -88,7 +88,7 @@ struct LoginFooterLinks: View {
     Button(action: action) {
       title
         .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlueText)
+        .foregroundStyle(Color.tidexBlueText)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
         .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.86)
         .multilineTextAlignment(.center)

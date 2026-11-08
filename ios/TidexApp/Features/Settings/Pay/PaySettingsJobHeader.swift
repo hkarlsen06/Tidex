@@ -29,7 +29,7 @@ struct PaySettingsJobHeader: View {
             Image(systemName: "checkmark.circle.fill")
           }
           .font(.tidexFootnote)
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
         } else if !isConfigured {
           Label {
             Text(.settingsPaySetupRequiredBadge)
@@ -37,7 +37,7 @@ struct PaySettingsJobHeader: View {
             Image(systemName: "exclamationmark.circle.fill")
           }
           .font(.tidexFootnote)
-          .foregroundColor(.tidexWarning)
+          .foregroundStyle(Color.tidexWarning)
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

@@ -212,7 +212,7 @@ extension PreAuthAddShiftSimulatorScreen {
       VStack(alignment: .center, spacing: Spacing.sm) {
         Text(simulatorSubtitle)
           .font(.tidexBody.weight(.bold))
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
           .multilineTextAlignment(.center)
           .accessibilityAddTraits(.isHeader)
           .fixedSize(horizontal: false, vertical: true)
@@ -337,7 +337,7 @@ extension PreAuthAddShiftSimulatorScreen {
     } label: {
       Image(systemName: systemName)
         .font(.footnote.weight(.semibold))
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .accessibilityHidden(true)
         .frame(width: 46, height: 34)
         .background(Color.tidexSurfaceSecondary)
@@ -406,7 +406,7 @@ extension PreAuthAddShiftSimulatorScreen {
         } label: {
           Image(systemName: "plus")
             .font(.tidexHeadline)
-            .foregroundColor(isAddButtonEnabled ? .tidexBlueText : .tidexTextMuted)
+            .foregroundStyle(isAddButtonEnabled ? Color.tidexBlueText : Color.tidexTextMuted)
             .accessibilityHidden(true)
             .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
             .contentShape(Rectangle())
@@ -445,7 +445,7 @@ extension PreAuthAddShiftSimulatorScreen {
         String(localized: .onboardingAddSimulatorAcknowledgeTotals)
       )
       .font(.tidexBodyMedium)
-      .foregroundColor(.tidexBlueText)
+      .foregroundStyle(Color.tidexBlueText)
       .multilineTextAlignment(.center)
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.xxxs)

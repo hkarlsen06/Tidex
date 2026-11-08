@@ -49,7 +49,7 @@ struct UserMenuButton: View {
       // First name only, truncates if too long
       Text(firstName)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(1)
         .truncationMode(.tail)
         .frame(maxWidth: maxNameWidth)

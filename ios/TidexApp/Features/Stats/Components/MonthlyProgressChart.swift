@@ -127,7 +127,7 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
               let isToday = data.first(where: { $0.day == day })?.isToday ?? false  // swiftlint:disable:this explicit_type_interface line_length
               Text("\(day)")
                 .font(isToday ? .tidexCaptionStrong : .tidexCaptionRegular)
-                .foregroundColor(isToday ? .tidexBlueText : .tidexTextSecondary)
+                .foregroundStyle(isToday ? Color.tidexBlueText : Color.tidexTextSecondary)
             }
           }
         }
@@ -190,7 +190,7 @@ private struct ProgressLegendItem: View {
 
       Text(label)
         .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     }
   }

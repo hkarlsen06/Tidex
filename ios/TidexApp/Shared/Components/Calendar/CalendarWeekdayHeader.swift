@@ -15,7 +15,7 @@ struct CalendarWeekdayHeader: View {
       ForEach(weekdaySymbols.indices, id: \.self) { index in
         Text(weekdaySymbols[index])
           .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .frame(maxWidth: .infinity)
       }
     }

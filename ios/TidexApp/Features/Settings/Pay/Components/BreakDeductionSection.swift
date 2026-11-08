@@ -18,13 +18,13 @@ struct BreakDeductionSection: View {
       Toggle(isOn: $enabled) {
         Text(.settingsPayEditorBreakTitle)
           .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
       .tint(.tidexBrandPrimary)
 
       Text(.settingsPayEditorBreakDescription)
         .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .fixedSize(horizontal: false, vertical: true)
 
       // Settings (only shown when enabled)
@@ -35,7 +35,7 @@ struct BreakDeductionSection: View {
               formatDeduction(deductionMinutes), formatThreshold(thresholdHours))
           )
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
           .frame(maxWidth: .infinity, alignment: .leading)
           .fixedSize(horizontal: false, vertical: true)
 
@@ -71,7 +71,7 @@ struct BreakDeductionSection: View {
 
           Text(.settingsPayEditorBreakMethodGuidance)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, Spacing.sm)
@@ -90,18 +90,18 @@ struct BreakDeductionSection: View {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(.settingsPayEditorBreakAdvanced)
             .font(.tidexLabel)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           Text(methodTitle(for: method))
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
 
         Spacer()
 
         Image(systemName: "chevron.down")
           .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .rotationEffect(.degrees(isAdvancedExpanded ? 180 : 0))
           .accessibilityHidden(true)
       }
@@ -124,7 +124,7 @@ struct BreakDeductionSection: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorBreakMethod)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       VStack(spacing: Spacing.xxxs) {
         ForEach(selectableBreakMethods, id: \.self) { breakMethod in
@@ -150,12 +150,12 @@ struct BreakDeductionSection: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorBreakThreshold)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       inputLayout {
         Text(formatThreshold(thresholdHours))
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .frame(maxWidth: .infinity, alignment: .leading)
 
         Stepper("", value: $thresholdHours, in: 1...12, step: 0.5)
@@ -190,12 +190,12 @@ struct BreakDeductionSection: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(.settingsPayEditorBreakDeduction)
         .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
 
       inputLayout {
         Text(formatDeduction(deductionMinutes))
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .frame(maxWidth: .infinity, alignment: .leading)
 
         Stepper("", value: $deductionMinutes, in: 5...120, step: 5)
@@ -258,11 +258,11 @@ private struct BreakMethodRow: View {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(methodTitle)
             .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
 
           Text(methodDescription)
             .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
             .fixedSize(horizontal: false, vertical: true)
         }
 

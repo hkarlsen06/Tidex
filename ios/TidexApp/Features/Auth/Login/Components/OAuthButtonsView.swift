@@ -56,7 +56,7 @@ private struct OAuthProviderButton<Icon: View>: View {
           .font(.tidexButton)
           .fixedSize(horizontal: false, vertical: true)
       }
-      .foregroundColor(colorScheme == .dark ? .black : .white)
+      .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
       .padding(.horizontal, Spacing.lg)
       .frame(maxWidth: .infinity, alignment: horizontalSizeClass == .regular ? .center : .leading)
       .padding(.vertical, Spacing.sm)

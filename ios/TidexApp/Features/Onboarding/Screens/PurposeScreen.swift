@@ -40,13 +40,13 @@ struct PurposeScreen: View {
     VStack(spacing: Spacing.sm) {
       Text(.onboardingPostAuthPurposeTitle)
         .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
 
       Text(.onboardingPostAuthPurposeSubtitle)
         .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
+        .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.center)
     }
     .padding(.horizontal, Spacing.xl)
@@ -147,7 +147,7 @@ struct PurposeScreen: View {
       }) {
         Text(.onboardingPostAuthPurposeFriendsOptionTitle)
           .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+          .foregroundStyle(Color.tidexTextPrimary)
           .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.xs)
@@ -185,7 +185,7 @@ private struct PreviewSection<Content: View>: View {
     VStack(spacing: Spacing.sm) {
       Text(title)
         .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
 

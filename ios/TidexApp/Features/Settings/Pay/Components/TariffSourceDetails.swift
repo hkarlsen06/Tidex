@@ -9,7 +9,7 @@ struct TariffSourceDetails: View {
         if let note = version.coverageNote, !note.isEmpty {
           Text(verbatim: note)
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundStyle(Color.tidexTextSecondary)
         }
         if let date = Date.fromISODateString(version.legalEffectiveDate ?? version.effective_date) {
           let formattedDate = date.formatted(.dateTime.day().month().year().locale(.appLocale))
@@ -17,14 +17,14 @@ struct TariffSourceDetails: View {
             "\(String(localized: .tariffPublishedDate)) \(formattedDate)"
           )
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundStyle(Color.tidexTextSecondary)
         }
         if let source = version.sourceURL {
           Link(destination: source) {
             Label(.tariffSource, systemImage: "arrow.up.right")
               .font(.tidexFootnote)
           }
-          .foregroundColor(.tidexBlueText)
+          .foregroundStyle(Color.tidexBlueText)
         }
       }
       .padding(.top, Spacing.xs)
@@ -46,7 +46,7 @@ struct TariffCalculationCoverage: View {
         ? LocalizedStringResource.tariffOvertimeManual : .tariffOvertimeWeekly
     )
     .font(.tidexFootnote)
-    .foregroundColor(.tidexTextSecondary)
+    .foregroundStyle(Color.tidexTextSecondary)
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityIdentifier("tariff.calculation-coverage")
   }

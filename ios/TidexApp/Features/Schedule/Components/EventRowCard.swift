@@ -105,12 +105,12 @@ struct EventRowCard: View {
         HStack(spacing: Spacing.xxs) {
           Text(dateParts.weekday)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundStyle(Color.tidexTextPrimary)
           Text("·")
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
           Text(dateParts.dayMonth)
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextMuted)
+            .foregroundStyle(Color.tidexTextMuted)
         }
       }
     } leadingBottom: {
@@ -119,7 +119,7 @@ struct EventRowCard: View {
       Text(event.note)
         .font(.tidexTitle)
         .tracking(-0.5)
-        .foregroundColor(.tidexTextPrimary)
+        .foregroundStyle(Color.tidexTextPrimary)
         .multilineTextAlignment(.trailing)
         .lineLimit(usesFixedCardHeight ? 2 : nil)
         .truncationMode(.tail)
@@ -129,7 +129,7 @@ struct EventRowCard: View {
       if isContinuingFromPreviousDay {
         Text(dateRangeText)
           .font(.tidexMicro)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundStyle(Color.tidexTextMuted)
           .multilineTextAlignment(.trailing)
           .lineLimit(usesFixedCardHeight ? 1 : nil)
           .frame(maxWidth: usesFixedCardHeight ? 170 : .infinity, alignment: .trailing)
@@ -166,7 +166,7 @@ struct EventRowCard: View {
   private var subtitleTextLabel: some View {
     Text(subtitleText)
       .font(.tidexSubheadline)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundStyle(Color.tidexTextPrimary)
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
       .environment(\.layoutDirection, .leftToRight)
@@ -175,6 +175,6 @@ struct EventRowCard: View {
   private var subtitleIcon: some View {
     Image(systemName: event.is_all_day ? "calendar" : "clock")
       .font(.tidexFootnote)
-      .foregroundColor(.tidexTextMuted)
+      .foregroundStyle(Color.tidexTextMuted)
   }
 }
