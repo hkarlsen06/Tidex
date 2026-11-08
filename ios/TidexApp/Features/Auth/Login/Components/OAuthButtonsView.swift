@@ -260,7 +260,7 @@ private struct GoogleRedPath: Shape {
     }
     .padding()
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.lg)
+    .clipShape(.rect(cornerRadius: CornerRadius.lg))
   }
   .padding()
   .background(Color.tidexBackground)

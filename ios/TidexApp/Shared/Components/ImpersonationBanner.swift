@@ -74,7 +74,7 @@ struct ImpersonationBanner: View {
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexError)
       .foregroundStyle(Color.tidexTextOnDanger)
-      .cornerRadius(CornerRadius.sm)
+      .clipShape(.rect(cornerRadius: CornerRadius.sm))
     }
     .padding(Spacing.sm)
     .background(Color.tidexWarning.opacity(0.15))

@@ -1721,7 +1721,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))  // swiftlint:disable:this no_magic_numbers
-          .cornerRadius(CornerRadius.sm)
+          .clipShape(.rect(cornerRadius: CornerRadius.sm))
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)

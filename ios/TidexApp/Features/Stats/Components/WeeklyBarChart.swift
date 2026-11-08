@@ -64,7 +64,7 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
             y: .value("Earnings", day.earnings)
           )
           .foregroundStyle(barColor(for: day, isSelected: selectedDay == day.date))
-          .cornerRadius(CornerRadius.xs)
+          .clipShape(.rect(cornerRadius: CornerRadius.xs))
           .annotation(
             position: .top,
             overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
@@ -182,7 +182,7 @@ private struct TooltipView: View {
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.sm)
+    .clipShape(.rect(cornerRadius: CornerRadius.sm))
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.sm)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)

@@ -462,7 +462,7 @@ struct FriendsListEmptyState: View {
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.xsm)
           .background(Color.tidexBlue)
-          .cornerRadius(CornerRadius.md)
+          .clipShape(.rect(cornerRadius: CornerRadius.md))
         }
         .buttonStyle(PlainButtonStyle())
         .padding(.top, Spacing.xxs)

@@ -424,7 +424,7 @@ struct StatsView: View {
           .padding(.horizontal, Spacing.lg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
-          .cornerRadius(CornerRadius.sm)
+          .clipShape(.rect(cornerRadius: CornerRadius.sm))
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)

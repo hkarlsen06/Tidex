@@ -122,7 +122,7 @@ struct ReminderTimePickerSheet: View {
       .frame(height: wheelHeight)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(CornerRadius.lg)
+      .clipShape(.rect(cornerRadius: CornerRadius.lg))
     }
     .padding(.horizontal)
   }
@@ -140,7 +140,7 @@ struct ReminderTimePickerSheet: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
-    .cornerRadius(CornerRadius.sm)
+    .clipShape(.rect(cornerRadius: CornerRadius.sm))
     .padding(.horizontal)
   }
 

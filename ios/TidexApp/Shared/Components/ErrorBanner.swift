@@ -162,7 +162,7 @@ struct SuccessBanner: View {
       RoundedRectangle(cornerRadius: cornerRadius)
         .stroke(borderColor, lineWidth: 1)
     )
-    .cornerRadius(cornerRadius)
+    .clipShape(.rect(cornerRadius: cornerRadius))
     .shadow(color: style == .toast ? Color.black.opacity(0.12) : .clear, radius: 10, y: 3)
     .announcesToVoiceOver(message)
   }

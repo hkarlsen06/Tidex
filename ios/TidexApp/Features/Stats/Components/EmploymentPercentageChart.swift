@@ -113,7 +113,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
           y: .value("Percentage", month.averagePercentage)
         )
         .foregroundStyle(barColor(for: month, isSelected: selectedMonth == month.month))
-        .cornerRadius(CornerRadius.xs)
+        .clipShape(.rect(cornerRadius: CornerRadius.xs))
         .annotation(
           position: .top,
           overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
@@ -312,7 +312,7 @@ private struct TooltipView: View {
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.sm)
+    .clipShape(.rect(cornerRadius: CornerRadius.sm))
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.sm)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)

@@ -2199,7 +2199,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(CornerRadius.sm)
+          .clipShape(.rect(cornerRadius: CornerRadius.sm))
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)

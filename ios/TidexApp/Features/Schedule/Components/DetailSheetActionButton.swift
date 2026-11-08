@@ -101,7 +101,7 @@ struct DetailSheetActionButton: View {
         RoundedRectangle(cornerRadius: CornerRadius.lg)
           .stroke(style.borderColor, lineWidth: 1)
       )
-      .cornerRadius(CornerRadius.lg)
+      .clipShape(.rect(cornerRadius: CornerRadius.lg))
     }
     .buttonStyle(.plain)
   }

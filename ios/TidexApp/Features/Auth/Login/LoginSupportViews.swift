@@ -47,7 +47,7 @@ struct AccountCreationPromptCard: View {
       RoundedRectangle(cornerRadius: CornerRadius.md)
         .stroke(Color.tidexError.opacity(0.3), lineWidth: 1)
     )
-    .cornerRadius(CornerRadius.md)
+    .clipShape(.rect(cornerRadius: CornerRadius.md))
     .announcesToVoiceOver(message)
   }
 }

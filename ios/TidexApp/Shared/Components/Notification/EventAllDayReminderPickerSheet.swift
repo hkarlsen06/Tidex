@@ -49,7 +49,7 @@ struct EventAllDayReminderPickerSheet: View {
           .frame(height: 180)
           .padding(.vertical, Spacing.xs)
           .background(Color.tidexSurfacePrimary)
-          .cornerRadius(CornerRadius.lg)
+          .clipShape(.rect(cornerRadius: CornerRadius.lg))
         }
         .padding(.horizontal)
 
@@ -103,7 +103,7 @@ struct EventAllDayReminderPickerSheet: View {
     }
     .padding(Spacing.sm)
     .background(Color.tidexSurfaceSecondary)
-    .cornerRadius(CornerRadius.sm)
+    .clipShape(.rect(cornerRadius: CornerRadius.sm))
     .padding(.horizontal)
   }
 

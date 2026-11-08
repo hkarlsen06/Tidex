@@ -183,7 +183,7 @@ struct JobBasicsOnboardingScreen: View {
         RoundedRectangle(cornerRadius: CornerRadius.md)
           .stroke(Color.tidexBorder, lineWidth: 1)
       )
-      .cornerRadius(CornerRadius.md)
+      .clipShape(.rect(cornerRadius: CornerRadius.md))
       .contentShape(Rectangle())
       .onSubmit {
         isJobNameFocused = false

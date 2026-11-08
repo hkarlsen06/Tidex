@@ -31,7 +31,7 @@ struct SyncStatusIndicator: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(CornerRadius.xxxl)
+      .clipShape(.rect(cornerRadius: CornerRadius.xxxl))
       .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
       .accessibilityElement(children: .combine)
 
@@ -67,7 +67,7 @@ struct SyncStatusIndicator: View {
         RoundedRectangle(cornerRadius: CornerRadius.xxxl)
           .stroke(Color.tidexWarning.opacity(0.25), lineWidth: 1)
       )
-      .cornerRadius(CornerRadius.xxxl)
+      .clipShape(.rect(cornerRadius: CornerRadius.xxxl))
 
     case .offline:
       HStack(spacing: Spacing.xs) {
@@ -84,7 +84,7 @@ struct SyncStatusIndicator: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
-      .cornerRadius(CornerRadius.xxxl)
+      .clipShape(.rect(cornerRadius: CornerRadius.xxxl))
       .accessibilityElement(children: .combine)
     }
   }
