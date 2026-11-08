@@ -437302,16 +437302,280 @@
       "comment" : "Blocking screen when the local database cannot open. Editing and syncing stop to protect offline changes. Reopening retries, while uninstalling would remove those changes.",
       "extractionState" : "manual",
       "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعذّر على Tidex فتح بياناتك المحفوظة. أُوقف التعديل والمزامنة مؤقتًا لحماية التغييرات غير المتزامنة. أغلق Tidex وأعد فتحه للمحاولة مجددًا. لا تحذف التطبيق."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex не можа да отвори запазените ви данни. Редактирането и синхронизирането са спрени, за да се защитят несинхронизираните промени. Затворете и отворете отново Tidex, за да опитате пак. Не деинсталирайте приложението."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex আপনার সংরক্ষিত ডেটা খুলতে পারেনি। সিঙ্ক না হওয়া পরিবর্তনগুলো সুরক্ষিত রাখতে সম্পাদনা ও সিঙ্ক সাময়িকভাবে বন্ধ আছে। আবার চেষ্টা করতে Tidex বন্ধ করে পুনরায় খুলুন। অ্যাপটি ইনস্টল করা রাখুন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex no ha pogut obrir les dades desades. L'edició i la sincronització s'han pausat per protegir els canvis no sincronitzats. Tanca i torna a obrir Tidex per provar-ho de nou. No desinstal·lis l'app."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex nemohl otevřít vaše uložená data. Úpravy a synchronizace jsou pozastaveny kvůli ochraně nesynchronizovaných změn. Zavřete a znovu otevřete Tidex. Aplikaci neodinstalovávejte."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex kunne ikke åbne dine gemte data. Redigering og synkronisering er sat på pause for at beskytte ændringer, der ikke er synkroniseret. Luk og åbn Tidex igen for at prøve igen. Behold appen installeret."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex konnte deine gespeicherten Daten nicht öffnen. Bearbeiten und Synchronisieren sind pausiert, um nicht synchronisierte Änderungen zu schützen. Schließe Tidex und öffne die App erneut. Lass die App installiert."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το Tidex δεν μπόρεσε να ανοίξει τα αποθηκευμένα δεδομένα σας. Η επεξεργασία και ο συγχρονισμός έχουν διακοπεί προσωρινά για την προστασία των μη συγχρονισμένων αλλαγών. Κλείστε και ανοίξτε ξανά το Tidex για να δοκιμάσετε πάλι. Μην απεγκαταστήσετε την εφαρμογή."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tidex couldn't open your saved data. Editing and syncing are paused to protect unsynced changes. Close and reopen Tidex to try again. Keep the app installed."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex no pudo abrir tus datos guardados. La edición y la sincronización están en pausa para proteger los cambios sin sincronizar. Cierra y vuelve a abrir Tidex para intentarlo de nuevo. No desinstales la app."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex ei saanud sinu salvestatud andmeid avada. Sünkroonimata muudatuste kaitsmiseks on muutmine ja sünkroonimine peatatud. Proovimiseks sulge Tidex ja ava see uuesti. Ära kustuta rakendust."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex نتوانست داده‌های ذخیره‌شده‌تان را باز کند. برای محافظت از تغییرات همگام‌نشده، ویرایش و همگام‌سازی متوقف شده‌اند. برای تلاش دوباره، Tidex را ببندید و باز کنید. برنامه را حذف نکنید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex ei voinut avata tallennettuja tietojasi. Muokkaus ja synkronointi on keskeytetty synkronoimattomien muutosten suojaamiseksi. Sulje Tidex ja avaa se uudelleen yrittääksesi uudelleen. Älä poista sovellusta."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hindi mabuksan ng Tidex ang naka-save mong data. Pansamantalang itinigil ang pag-edit at pag-sync para maprotektahan ang mga pagbabagong hindi pa naka-sync. Isara at buksan muli ang Tidex para subukang muli. Huwag i-uninstall ang app."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex n’a pas pu ouvrir vos données enregistrées. La modification et la synchronisation sont suspendues pour protéger les changements non synchronisés. Fermez puis rouvrez Tidex pour réessayer. Ne désinstallez pas l’app."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא ניתן לפתוח את הנתונים השמורים שלך ב-Tidex. העריכה והסנכרון הושהו כדי להגן על שינויים שלא סונכרנו. יש לסגור ולפתוח מחדש את Tidex כדי לנסות שוב. אין להסיר את האפליקציה."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex आपका सहेजा डेटा नहीं खोल सका। सिंक न किए गए बदलावों को सुरक्षित रखने के लिए संपादन और सिंक रुके हुए हैं। फिर से कोशिश करने के लिए Tidex बंद करके दोबारा खोलें। ऐप इंस्टॉल रहने दें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex nije mogao otvoriti vaše spremljene podatke. Uređivanje i sinkronizacija pauzirani su radi zaštite nesinkroniziranih promjena. Zatvorite i ponovno otvorite Tidex kako biste pokušali ponovno. Nemojte deinstalirati aplikaciju."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Tidex nem tudta megnyitni a mentett adatait. A nem szinkronizált módosítások védelme érdekében a szerkesztés és a szinkronizálás szünetel. Zárja be, majd nyissa meg újra a Tidexet. Ne távolítsa el az alkalmazást."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex tidak dapat membuka data tersimpan Anda. Pengeditan dan sinkronisasi dijeda untuk melindungi perubahan yang belum disinkronkan. Tutup lalu buka kembali Tidex untuk mencoba lagi. Jangan hapus aplikasi."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex gat ekki opnað vistuð gögn þín. Breytingar og samstilling eru í bið til að vernda ósamstilltar breytingar. Lokaðu Tidex og opnaðu aftur til að reyna á ný. Ekki fjarlægja appið."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex non è riuscita ad aprire i dati salvati. Modifiche e sincronizzazione sono in pausa per proteggere le modifiche non sincronizzate. Chiudi e riapri Tidex per riprovare. Non disinstallare l'app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidexで保存済みデータを開けませんでした。未同期の変更を保護するため、編集と同期を一時停止しています。Tidexを終了して再度開き、お試しください。アプリはアンインストールしないでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex가 저장된 데이터를 열지 못했습니다. 동기화되지 않은 변경 사항을 보호하기 위해 편집과 동기화가 일시 중지되었습니다. Tidex를 닫았다가 다시 열어 시도하세요. 앱을 삭제하지 마세요."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Tidex“ nepavyko atidaryti išsaugotų duomenų. Redagavimas ir sinchronizavimas sustabdyti, kad būtų apsaugoti nesinchronizuoti pakeitimai. Uždarykite ir vėl atidarykite „Tidex“. Neištrinkite programėlės."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex nevarēja atvērt jūsu saglabātos datus. Rediģēšana un sinhronizācija ir apturēta, lai aizsargātu nesinhronizētās izmaiņas. Aizveriet un vēlreiz atveriet Tidex, lai mēģinātu vēlreiz. Neatinstalējiet lietotni."
+          }
+        },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tidex kunne ikke åpne de lagrede dataene dine. Redigering og synkronisering er satt på pause for å beskytte usynkroniserte endringer. Lukk og åpne Tidex for å prøve igjen. Behold appen installert."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex kon je opgeslagen gegevens niet openen. Bewerken en synchroniseren zijn gepauzeerd om niet-gesynchroniseerde wijzigingen te beschermen. Sluit Tidex en open de app opnieuw om het nog eens te proberen. Laat de app geïnstalleerd."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex kunne ikkje opne dei lagra dataa dine. Redigering og synkronisering er sett på pause for å verne endringar som ikkje er synkroniserte. Lukk og opne Tidex på nytt for å prøve igjen. Ikkje avinstaller appen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex nie mógł otworzyć zapisanych danych. Edytowanie i synchronizacja są wstrzymane, aby chronić niezsynchronizowane zmiany. Zamknij i otwórz ponownie Tidex, aby spróbować jeszcze raz. Nie odinstalowuj aplikacji."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Tidex não conseguiu abrir seus dados salvos. A edição e a sincronização foram pausadas para proteger alterações não sincronizadas. Feche e reabra o Tidex para tentar novamente. Não desinstale o app."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex nu a putut deschide datele salvate. Editarea și sincronizarea sunt puse pe pauză pentru a proteja modificările nesincronizate. Închide și redeschide Tidex pentru a încerca din nou. Nu dezinstala aplicația."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex не удалось открыть сохранённые данные. Редактирование и синхронизация приостановлены, чтобы защитить несинхронизированные изменения. Закройте и снова откройте Tidex. Не удаляйте приложение."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex nemohol otvoriť vaše uložené údaje. Úpravy a synchronizácia sú pozastavené, aby sa ochránili nesynchronizované zmeny. Zatvorte a znova otvorte Tidex. Aplikáciu neodinštalujte."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex ni mogel odpreti vaših shranjenih podatkov. Urejanje in sinhronizacija sta začasno ustavljena, da se zaščitijo nesinhronizirane spremembe. Zaprite in znova odprite Tidex, da poskusite znova. Aplikacije ne odstranite."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex nije mogao da otvori vaše sačuvane podatke. Uređivanje i sinhronizacija su pauzirani da bi se zaštitile nesinhronizovane izmene. Zatvorite i ponovo otvorite Tidex da biste pokušali ponovo. Nemojte deinstalirati aplikaciju."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex kunde inte öppna dina sparade data. Redigering och synkronisering har pausats för att skydda osynkroniserade ändringar. Stäng och öppna Tidex igen för att försöka på nytt. Avinstallera inte appen."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex imeshindwa kufungua data zako zilizohifadhiwa. Kuhariri na kusawazisha kumesitishwa ili kulinda mabadiliko ambayo hayajasawazishwa. Funga Tidex kisha uifungue tena ili ujaribu upya. Usiondoe programu."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "சேமித்த தரவை Tidex-ஆல் திறக்க முடியவில்லை. ஒத்திசைக்கப்படாத மாற்றங்களைப் பாதுகாக்க, திருத்தமும் ஒத்திசைவும் தற்காலிகமாக நிறுத்தப்பட்டுள்ளன. மீண்டும் முயல Tidex-ஐ மூடித் திறக்கவும். செயலியை நிறுவியபடியே வைத்திருங்கள்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex เปิดข้อมูลที่บันทึกไว้ไม่ได้ การแก้ไขและการซิงค์ถูกพักไว้เพื่อปกป้องการเปลี่ยนแปลงที่ยังไม่ได้ซิงค์ ปิดแล้วเปิด Tidex อีกครั้งเพื่อลองใหม่ อย่าลบแอป"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex kayıtlı verilerinizi açamadı. Eşitlenmemiş değişiklikleri korumak için düzenleme ve eşitleme duraklatıldı. Yeniden denemek için Tidex'i kapatıp açın. Uygulamayı kaldırmayın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex не вдалося відкрити ваші збережені дані. Редагування й синхронізацію призупинено, щоб захистити несинхронізовані зміни. Закрийте й знову відкрийте Tidex, щоб повторити спробу. Не видаляйте застосунок."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex آپ کا محفوظ کردہ ڈیٹا نہیں کھول سکا۔ غیر مطابقت پذیر تبدیلیوں کو محفوظ رکھنے کے لیے ترمیم اور مطابقت پذیری روک دی گئی ہے۔ دوبارہ کوشش کے لیے Tidex بند کر کے کھولیں۔ ایپ اَن انسٹال نہ کریں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex không thể mở dữ liệu đã lưu của bạn. Việc chỉnh sửa và đồng bộ hóa tạm dừng để bảo vệ các thay đổi chưa đồng bộ. Đóng rồi mở lại Tidex để thử lại. Đừng gỡ cài đặt ứng dụng."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex 无法打开您保存的数据。为保护尚未同步的更改，编辑和同步已暂停。请关闭并重新打开 Tidex 重试。请勿卸载应用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex 無法開啟你儲存的資料。為保護尚未同步的變更，編輯與同步已暫停。請關閉並重新開啟 Tidex 再試一次。請勿解除安裝 App。"
           }
         }
       }
