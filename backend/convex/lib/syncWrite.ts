@@ -1,5 +1,5 @@
-import { ConvexError, v } from "convex/values";
-import type { Doc } from "../_generated/dataModel";
+import { ConvexError, v, type Validator, type VString } from "convex/values";
+import type { Doc, Id } from "../_generated/dataModel";
 import { type MutationCtx, mutation } from "../_generated/server";
 import schema from "../schema";
 import { requireViewer } from "./auth";
@@ -29,24 +29,27 @@ export type IdTable =
   | "wage_snapshots"
   | "payroll_adjustments";
 
+type SyncedDoc<T extends IdTable> = { [K in IdTable]: Doc<K> }[T];
+type SyncedRow<T extends IdTable> = { [K in IdTable]: Omit<Doc<K>, "_id" | "_creationTime"> }[T];
+
 export type Hooks<T extends IdTable> = {
   /** Values for columns with a Postgres default, used when the insert leaves them out. */
-  defaults?: (ctx: MutationCtx, userId: string) => Promise<Partial<Doc<T>>>;
+  defaults?: (ctx: MutationCtx, userId: string) => Promise<Partial<SyncedRow<T>>>;
   /** Throws via reject() when the row breaks a rule. `prev` is null on insert. */
   check?: (
     ctx: MutationCtx,
-    row: Doc<T>,
-    prev: Doc<T> | null,
+    row: SyncedRow<T>,
+    prev: SyncedDoc<T> | null,
     changed: ReadonlySet<string>,
   ) => Promise<void>;
   /** Runs after an insert only, after afterWrite. */
-  afterInsert?: (ctx: MutationCtx, row: Doc<T>) => Promise<void>;
+  afterInsert?: (ctx: MutationCtx, row: SyncedDoc<T>) => Promise<void>;
   /** Runs after an insert or update. Every other row it changes needs nextRevision(). */
-  afterWrite?: (ctx: MutationCtx, row: Doc<T>, changed: ReadonlySet<string>) => Promise<void>;
-  beforeRemove?: (ctx: MutationCtx, row: Doc<T>) => Promise<void>;
-  afterRemove?: (ctx: MutationCtx, row: Doc<T>) => Promise<void>;
+  afterWrite?: (ctx: MutationCtx, row: SyncedDoc<T>, changed: ReadonlySet<string>) => Promise<void>;
+  beforeRemove?: (ctx: MutationCtx, row: SyncedDoc<T>) => Promise<void>;
+  afterRemove?: (ctx: MutationCtx, row: SyncedDoc<T>) => Promise<void>;
   /** Extra fields a remove sets, such as is_default: false on jobs. */
-  removePatch?: Partial<Doc<T>>;
+  removePatch?: Partial<SyncedRow<T>>;
 };
 
 export function reject(code: string, message?: string): never {
@@ -73,9 +76,9 @@ export function syncedTable<T extends IdTable>(
   hooks: Hooks<T> = {},
   defaultable: string[] = [],
 ) {
-  // The generic table type is too wide for the validator and index types, so this file
-  // works on loose types. The argument validators still check every call at runtime.
-  const all = (schema.tables[table].validator as any).omit(...serverFields);
+  const fields: Record<string, Validator<unknown, "required" | "optional">> & { id: VString<string> } =
+    schema.tables[table].validator.fields;
+  const all = v.object(fields).omit(...serverFields);
   const insertRow = defaultable.length
     ? all
         .omit(...defaultable)
@@ -87,9 +90,9 @@ export function syncedTable<T extends IdTable>(
   // JSON can't carry undefined, so updates list the fields to clear.
   const clearable = v.array(v.union(...optionalFields.map((k) => v.literal(k))));
 
-  const db = (ctx: MutationCtx): any => ctx.db;
-  const byUuid = async (ctx: MutationCtx, id: string): Promise<any> =>
-    await db(ctx).query(table).withIndex("by_uuid", (q: any) => q.eq("id", id)).unique();
+  // The fixed table name keeps each query tied to T; Convex resolves shared indexes on the union.
+  const byUuid = async (ctx: MutationCtx, id: string) =>
+    await ctx.db.query(table as IdTable).withIndex("by_uuid", (q) => q.eq("id", id)).unique() as SyncedDoc<T> | null;
 
   const insert = mutation({
     args: { row: insertRow, expected_user_id: v.string(), payroll_revision: v.optional(v.string()) },
@@ -116,13 +119,13 @@ export function syncedTable<T extends IdTable>(
         created_at: now,
         updated_at: now,
         revision,
-      } as unknown as Doc<T>;
+      } as SyncedRow<T>;
       const changed = new Set(Object.keys(row));
       await hooks.check?.(ctx, doc, null, changed);
-      const saved: Doc<T> = await db(ctx).get(await db(ctx).insert(table, doc));
+      const saved = (await ctx.db.get(await ctx.db.insert(table as IdTable, doc)))! as SyncedDoc<T>;
       await hooks.afterWrite?.(ctx, saved, changed);
       await hooks.afterInsert?.(ctx, saved);
-      return { status: "ok" as const, row: publicRow(saved as any) };
+      return { status: "ok" as const, row: publicRow(saved) };
     },
   });
 
@@ -163,10 +166,10 @@ export function syncedTable<T extends IdTable>(
       const next = { ...prev, ...patch };
       for (const k of Object.keys(cleared)) delete next[k];
       await hooks.check?.(ctx, next, prev, changed);
-      await db(ctx).patch(prev._id, patch);
-      const saved: Doc<T> = await db(ctx).get(prev._id);
+      await ctx.db.patch(prev._id as Id<IdTable>, patch);
+      const saved = (await ctx.db.get(prev._id))! as SyncedDoc<T>;
       await hooks.afterWrite?.(ctx, saved, changed);
-      return { status: "ok" as const, row: publicRow(saved as any) };
+      return { status: "ok" as const, row: publicRow(saved) };
     },
   });
 
@@ -185,10 +188,10 @@ export function syncedTable<T extends IdTable>(
       await hooks.beforeRemove?.(ctx, prev);
       const now = new Date().toISOString();
       const revision = await nextRevision(ctx);
-      await db(ctx).patch(prev._id, { ...hooks.removePatch, deleted_at: now, updated_at: now, revision });
-      const saved: Doc<T> = await db(ctx).get(prev._id);
+      await ctx.db.patch(prev._id as Id<IdTable>, { ...hooks.removePatch, deleted_at: now, updated_at: now, revision });
+      const saved = (await ctx.db.get(prev._id))! as SyncedDoc<T>;
       await hooks.afterRemove?.(ctx, saved);
-      return { status: "ok" as const, row: publicRow(saved as any) };
+      return { status: "ok" as const, row: publicRow(saved) };
     },
   });
 

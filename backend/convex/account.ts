@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { DataModel, Doc, Id, TableNames } from "./_generated/dataModel";
 import { action, internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { getViewer, userByUuid } from "./lib/auth";
 import { deleteClerkUser } from "./lib/clerk";
@@ -15,7 +15,7 @@ const BATCH = 400;
 type Step = (ctx: MutationCtx, user: Doc<"users">, budget: number) => Promise<number>;
 
 /** Deletes up to `budget` documents, plus their stored files. Returns how many it touched. */
-async function remove(ctx: MutationCtx, docs: { _id: Id<any> }[], budget: number, files: (d: any) => Id<"_storage">[] = () => []) {
+async function remove<D extends { _id: Id<TableNames> }>(ctx: MutationCtx, docs: D[], budget: number, files: (d: D) => Id<"_storage">[] = () => []) {
   const batch = docs.slice(0, budget);
   for (const d of batch) {
     for (const file of files(d)) await ctx.storage.delete(file);
@@ -24,15 +24,21 @@ async function remove(ctx: MutationCtx, docs: { _id: Id<any> }[], budget: number
   return batch.length;
 }
 
-const byUserRevision = (table: any): Step => async (ctx, user, budget) =>
+type TablesWithUserIndex<I extends string> = {
+  [T in TableNames]: I extends keyof DataModel[T]["indexes"]
+    ? DataModel[T]["indexes"][I] extends ["user_id", ...string[]] ? T : never
+    : never;
+}[TableNames];
+
+const byUserRevision = (table: TablesWithUserIndex<"by_user_revision">): Step => async (ctx, user, budget) =>
   remove(
     ctx,
-    await (ctx.db.query(table) as any).withIndex("by_user_revision", (q: any) => q.eq("user_id", user.id)).take(budget),
+    await ctx.db.query(table).withIndex("by_user_revision", (q) => q.eq("user_id", user.id)).take(budget),
     budget,
   );
 
-const byUser = (table: any): Step => async (ctx, user, budget) =>
-  remove(ctx, await (ctx.db.query(table) as any).withIndex("by_user", (q: any) => q.eq("user_id", user.id)).take(budget), budget);
+const byUser = (table: TablesWithUserIndex<"by_user">): Step => async (ctx, user, budget) =>
+  remove(ctx, await ctx.db.query(table).withIndex("by_user", (q) => q.eq("user_id", user.id)).take(budget), budget);
 
 /** A thread and everything in it: memberships, state, messages, images, reactions, typing. */
 async function removeThread(ctx: MutationCtx, threadId: string, budget: number): Promise<number> {
@@ -62,7 +68,7 @@ async function removeThread(ctx: MutationCtx, threadId: string, budget: number):
     if (used >= budget) return used;
   }
   for (const table of ["thread_memberships", "thread_user_state", "typing_indicators"] as const) {
-    for (const row of await (ctx.db.query(table) as any).withIndex("by_thread_user", (q: any) => q.eq("thread_id", threadId)).collect()) {
+    for (const row of await ctx.db.query(table).withIndex("by_thread_user", (q) => q.eq("thread_id", threadId)).collect()) {
       await ctx.db.delete(row._id);
       used += 1;
     }

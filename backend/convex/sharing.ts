@@ -226,14 +226,12 @@ async function liveRows<T extends "recurring_shifts" | "wage_snapshots">(
   ctx: QueryCtx,
   table: T,
   userId: string,
-): Promise<Doc<T>[]> {
-  // Both tables have this index, but TypeScript can't see that through the generic.
-  const db = ctx.db as any;
-  const rows: Doc<T>[] = await db
-    .query(table)
-    .withIndex("by_user_revision", (q: any) => q.eq("user_id", userId))
+): Promise<{ [K in "recurring_shifts" | "wage_snapshots"]: Doc<K> }[T][]> {
+  const rows = await ctx.db
+    .query(table as "recurring_shifts" | "wage_snapshots")
+    .withIndex("by_user_revision", (q) => q.eq("user_id", userId))
     .collect();
-  return rows.filter((r) => r.deleted_at === undefined);
+  return rows.filter((r) => r.deleted_at === undefined) as { [K in "recurring_shifts" | "wage_snapshots"]: Doc<K> }[T][];
 }
 
 async function sharesWith(ctx: QueryCtx, userId: string) {

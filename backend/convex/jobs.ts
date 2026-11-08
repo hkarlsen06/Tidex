@@ -35,7 +35,7 @@ function validPayPeriod(value: unknown): boolean {
   return false;
 }
 
-const isLive = (job: Doc<"jobs">) => job.deleted_at === undefined && job.archived_at === undefined;
+const isLive = (job: Pick<Doc<"jobs">, "deleted_at" | "archived_at">) => job.deleted_at === undefined && job.archived_at === undefined;
 
 async function userJobs(ctx: MutationCtx, userId: string) {
   return await ctx.db
