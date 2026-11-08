@@ -1,9 +1,3 @@
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable line_length superfluous_disable_command
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable cyclomatic_complexity explicit_acl explicit_top_level_acl explicit_type_interface
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable no_magic_numbers sorted_enum_cases vertical_whitespace_between_cases
 import UIKit
 
 /// Haptic feedback types for different interactions
@@ -19,11 +13,9 @@ enum HapticType {
   case release  // Soft, gentle feedback (like releasing a press)
 }
 
-/// Centralized haptic feedback manager
-/// Provides consistent haptic feedback across the app
 @MainActor
 enum Haptics {
-  /// Play haptic feedback of the specified type
+  // swiftlint:disable:next cyclomatic_complexity
   static func play(_ type: HapticType) {
     switch type {
     case .success:

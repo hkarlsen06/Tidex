@@ -802,27 +802,3 @@ enum FriendsThreadChatViewportRequestResolver {
     )
   }
 }
-
-enum FriendsThreadVisibleMessageResolver {
-  static func messageID(
-    for presentedMessageID: String?,
-    messages: [FriendMessage],
-    viewerUserId: String
-  ) -> String? {
-    guard let presentedMessageID else {
-      return nil
-    }
-    guard presentedMessageID != FriendsThreadExyteMessageFactory.typingIndicatorMessageID else {
-      return nil
-    }
-
-    if let message = messages.first(where: {
-      FriendsThreadMessagePresentationID.make(for: $0, viewerUserId: viewerUserId)
-        == presentedMessageID
-    }) {
-      return message.id
-    }
-
-    return presentedMessageID.replacingOccurrences(of: "message:", with: "")
-  }
-}

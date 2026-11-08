@@ -290,9 +290,6 @@ extension SharedShiftsListView {
       .scrollContentBackground(.hidden)
       .background(Color.clear)
       .contentMargins(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent)
-      .refreshable {
-        // Pull-to-refresh is a no-op here; shifts are fetched by the parent
-      }
     }
   }
 

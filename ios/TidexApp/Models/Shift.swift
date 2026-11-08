@@ -272,24 +272,6 @@ enum ShiftNoteSupport {
   }
 }
 
-// MARK: - Shifts Aggregates
-
-/// Aggregated statistics for a collection of shifts
-struct ShiftsAggregates: Equatable {
-  let totalHours: Double
-  let totalGross: Double
-
-  /// Calculate net total with tax settings
-  func netTotal(taxEnabled: Bool, taxPercentage: Double) -> Double {
-    guard taxEnabled else { return totalGross }
-    return totalGross * (1 - taxPercentage / 100)
-  }
-
-  internal static var zero: Self {
-    Self(totalHours: 0, totalGross: 0)
-  }
-}
-
 // MARK: - Shift Totals
 
 /// Monthly totals summary with half-tax and conflict exclusion support

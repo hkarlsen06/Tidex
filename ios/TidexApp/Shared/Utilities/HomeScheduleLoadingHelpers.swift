@@ -385,62 +385,6 @@ extension SyncCompletionSummary {
   }
 }
 
-enum HomeScheduleMonthLoadDecision: Equatable {
-  case none
-  case loadNow(ShiftChangeAffectedMonth)
-  case deferUntilVisible(ShiftChangeAffectedMonth)
-}
-
-struct HomeScheduleMonthLoadingGate: Equatable {
-  private(set) var isVisible: Bool
-  private(set) var pendingMonth: ShiftChangeAffectedMonth?
-
-  init(isVisible: Bool = true, pendingMonth: ShiftChangeAffectedMonth? = nil) {
-    self.isVisible = isVisible
-    self.pendingMonth = pendingMonth
-  }
-
-  mutating func setVisible(_ visible: Bool) -> HomeScheduleMonthLoadDecision {
-    let wasVisible = isVisible
-    isVisible = visible
-
-    guard visible, !wasVisible, let pendingMonth else {
-      return .none
-    }
-
-    self.pendingMonth = nil
-    return .loadNow(pendingMonth)
-  }
-
-  mutating func monthDidChange(to month: ShiftChangeAffectedMonth) -> HomeScheduleMonthLoadDecision
-  {
-    requestLoad(for: month)
-  }
-
-  mutating func dataDidChange(
-    payload: ShiftChangeNotificationPayload,
-    currentMonth: ShiftChangeAffectedMonth
-  ) -> HomeScheduleMonthLoadDecision {
-    guard payload.requiresFullReload || payload.affectedMonths.contains(currentMonth) else {
-      return .none
-    }
-
-    return requestLoad(for: currentMonth)
-  }
-
-  private mutating func requestLoad(
-    for month: ShiftChangeAffectedMonth
-  ) -> HomeScheduleMonthLoadDecision {
-    guard isVisible else {
-      pendingMonth = month
-      return .deferUntilVisible(month)
-    }
-
-    pendingMonth = nil
-    return .loadNow(month)
-  }
-}
-
 enum HomeScheduleAffectedMonthResolver {
   static func dashboardDisplayedMonthDepends(
     on affectedMonths: Set<ShiftChangeAffectedMonth>,

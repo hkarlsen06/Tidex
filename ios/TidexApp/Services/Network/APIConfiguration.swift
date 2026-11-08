@@ -3,26 +3,6 @@ import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "APIConfiguration")
 
-/// Errors that can occur when loading API configuration
-enum APIConfigurationError: Error, LocalizedError {
-  case missingSupabaseURL
-  case invalidSupabaseURL(String)
-  case missingSupabaseAnonKey
-
-  var errorDescription: String? {
-    switch self {
-    case .missingSupabaseURL:
-      return "SUPABASE_URL not found in Info.plist"
-
-    case .invalidSupabaseURL(let urlString):
-      return "Invalid SUPABASE_URL in Info.plist: \(urlString)"
-
-    case .missingSupabaseAnonKey:
-      return "SUPABASE_ANON_KEY not found in Info.plist"
-    }
-  }
-}
-
 /// API configuration loaded from Info.plist
 /// Required keys: SUPABASE_URL, SUPABASE_ANON_KEY
 enum APIConfiguration {

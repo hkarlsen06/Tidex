@@ -827,11 +827,3 @@ extension PaySettingsViewModel {
     errorTitle = nil
   }
 }
-
-// MARK: - Errors
-
-enum PaySettingsError: Error {
-  case notAuthenticated
-  case dateConflict
-  case cannotDeleteBaseline
-}
