@@ -85,8 +85,15 @@ struct SharedKeychainAccessTokenPayload: Equatable {
 final class AuthSessionManager {
   static let shared = AuthSessionManager()
 
-  /// Maximum time to wait for a token or the user lookup.
-  private let sessionOperationTimeout: Duration = .seconds(20)
+  private enum SessionPhase: String {
+    case clerkToken = "clerk_token"
+    case userLookup = "user_lookup"
+  }
+
+  @MainActor
+  private final class SessionProgress {
+    var phase = SessionPhase.clerkToken
+  }
 
   private static let cachedUserKey = "auth.currentUser"
 
@@ -147,9 +154,13 @@ final class AuthSessionManager {
         return AppStoreScreenshotFixture.session
       }
     #endif
+    let startedAt = Date()
+    let progress = SessionProgress()
     do {
       let generation = userGeneration
-      let session = try await withTimeout { try await self.resolveSession(skipCache: false) }
+      let session = try await withTimeout {
+        try await self.resolveSession(skipCache: false, progress: progress)
+      }
       guard activeSessionId() == session.clerkSessionId else {
         throw AuthSessionManagerError.notSignedIn
       }
@@ -171,6 +182,8 @@ final class AuthSessionManager {
         metadata: [
           "is_missing_session_error": .bool(isMissing),
           "is_transient_network_error": .bool(isTransientNetworkError(error)),
+          "session_resolution_phase": .string(progress.phase.rawValue),
+          "session_resolution_elapsed_seconds": .double(Date().timeIntervalSince(startedAt)),
         ]
       )
       throw error
@@ -255,6 +268,7 @@ final class AuthSessionManager {
     #endif
     guard let session = Clerk.shared.session else { return nil }
     let token = try await session.getToken(.init(skipCache: forceRefresh))
+    try Task.checkCancellation()
     guard activeSessionId() == session.id else { return nil }
     if let token { remember(token: token, sessionId: session.id) }
     return token
@@ -348,18 +362,23 @@ final class AuthSessionManager {
 }
 
 extension AuthSessionManager {
-  private func resolveSession(skipCache: Bool) async throws -> AuthSession {
+  private func resolveSession(skipCache: Bool, progress: SessionProgress? = nil) async throws
+    -> AuthSession
+  {
     guard let clerkSession = Clerk.shared.session else {
       throw AuthSessionManagerError.notSignedIn
     }
     guard let token = try await clerkSession.getToken(.init(skipCache: skipCache)) else {
       throw AuthSessionManagerError.notSignedIn
     }
+    try Task.checkCancellation()
     guard activeSessionId() == clerkSession.id else {
       throw AuthSessionManagerError.notSignedIn
     }
+    progress?.phase = .userLookup
     let user = try await currentUser(
       clerkUserId: clerkSession.clerkUserId, sessionId: clerkSession.id)
+    try Task.checkCancellation()
     guard activeSessionId() == clerkSession.id else {
       throw AuthSessionManagerError.notSignedIn
     }
@@ -401,6 +420,7 @@ extension AuthSessionManager {
       }
       throw error
     }
+    try Task.checkCancellation()
     guard activeSessionId() == sessionId else { throw AuthSessionManagerError.notSignedIn }
     guard userGeneration == generation else {
       return try await currentUser(clerkUserId: clerkUserId, sessionId: sessionId)
@@ -451,24 +471,6 @@ extension AuthSessionManager {
     }
   }
 
-}
-
-extension AuthSessionManager {
-  fileprivate func withTimeout<T: Sendable>(
-    _ operation: @escaping @MainActor @Sendable () async throws -> T
-  ) async throws -> T {
-    let timeout = sessionOperationTimeout
-    return try await withThrowingTaskGroup(of: T.self) { group in
-      group.addTask { try await operation() }
-      group.addTask {
-        try await Task.sleep(for: timeout)
-        throw AuthSessionManagerError.sessionFetchTimedOut
-      }
-      defer { group.cancelAll() }
-      guard let value = try await group.next() else { throw CancellationError() }
-      return value
-    }
-  }
 }
 
 extension Session {

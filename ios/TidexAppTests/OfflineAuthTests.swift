@@ -256,3 +256,103 @@ final class OfflineAuthTests: XCTestCase {
     XCTAssertTrue(isLegacyGoTrueRefusal(try goTrueError(status: 400, code: "user_banned")))
   }
 }
+
+extension OfflineAuthTests {
+  @MainActor
+  func testSessionWaitPreservesSuccessfulResponsesAndNetworkErrors() async throws {
+    let manager = AuthSessionManager()
+    let value = try await manager.withTimeout { "token" }
+    XCTAssertEqual(value, "token")
+    do {
+      _ = try await manager.withTimeout { () -> String in
+        throw URLError(.notConnectedToInternet)
+      }
+      XCTFail("The network error was lost")
+    } catch { XCTAssertEqual((error as? URLError)?.code, .notConnectedToInternet) }
+  }
+
+  @MainActor
+  func testCancelledUserLookupDoesNotPublishALateIdentity() async throws {
+    let started = expectation(description: "user lookup started")
+    var pending: CheckedContinuation<AuthUser, Never>?
+    let user = authUser("known-user")
+    let suite = "OfflineAuthTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let manager = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-user" },
+      defaults: defaults,
+      lookupUser: {
+        await withCheckedContinuation {
+          pending = $0
+          started.fulfill()
+        }
+      })
+    let request = Task {
+      try await manager.currentUser(clerkUserId: "clerk-user", sessionId: "session")
+    }
+    await fulfillment(of: [started], timeout: 2)
+    request.cancel()
+    pending?.resume(returning: user)
+    do {
+      _ = try await request.value
+      XCTFail("A cancelled lookup published its late identity")
+    } catch { XCTAssertTrue(error is CancellationError) }
+    XCTAssertNil(manager.localPresentationSession())
+  }
+
+  @MainActor
+  func testSessionTimeoutReturnsWhileTheSDKRequestIsStillWaiting() async throws {
+    let started = expectation(description: "SDK request started")
+    let finished = expectation(description: "session deadline returned")
+    var pending: CheckedContinuation<String, Never>?
+    let manager = AuthSessionManager()
+    let request = Task {
+      do {
+        _ = try await manager.withTimeout(timeout: .milliseconds(50)) {
+          await withCheckedContinuation {
+            pending = $0
+            started.fulfill()
+          }
+        }
+        XCTFail("A late SDK response must not replace the timeout")
+      } catch {
+        guard case AuthSessionManagerError.sessionFetchTimedOut = error else {
+          XCTFail("Unexpected error: \(error)")
+          finished.fulfill()
+          return
+        }
+      }
+      finished.fulfill()
+    }
+    await fulfillment(of: [started], timeout: 2)
+    await fulfillment(of: [finished], timeout: 1)
+    pending?.resume(returning: "late token")
+    await request.value
+  }
+
+  @MainActor
+  func testCancelledSessionWaitReturnsWithoutCancellingTheSharedSDKRequest() async throws {
+    let started = expectation(description: "SDK request started")
+    let finished = expectation(description: "cancelled waiter returned")
+    var pending: CheckedContinuation<String, Never>?
+    let manager = AuthSessionManager()
+    let request = Task {
+      do {
+        _ = try await manager.withTimeout {
+          await withCheckedContinuation {
+            pending = $0
+            started.fulfill()
+          }
+        }
+        XCTFail("A cancelled session waiter returned a token")
+      } catch { XCTAssertTrue(error is CancellationError) }
+      finished.fulfill()
+    }
+    await fulfillment(of: [started], timeout: 2)
+    request.cancel()
+    await fulfillment(of: [finished], timeout: 1)
+    pending?.resume(returning: "shared SDK response")
+    await request.value
+  }
+}
