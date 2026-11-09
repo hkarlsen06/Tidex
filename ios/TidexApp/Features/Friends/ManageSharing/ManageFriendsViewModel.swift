@@ -137,11 +137,6 @@ final class ManageSharingViewModel {
     isLoading = false
   }
 
-  /// Refresh friends data
-  func refresh() async {
-    await loadFriends()
-  }
-
   func applyManagementSnapshot(_ snapshot: FriendsManagementSnapshot) {
     friends = snapshot.friends
     blockedFriends = snapshot.blockedFriends
