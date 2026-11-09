@@ -1,8 +1,10 @@
 # iOS 3.1.2 release preparation
 
-Build `20261109.2228`, archived from signed commit `4f8243a7`, passed the device privacy retest. Its archive and both exports passed without warnings or errors, and Apple binary validation passed. A subsequent stalled-network check exposed delayed Schedule updates after local saves, so a new archive and device retest are required before submission. The earlier build `20261109.2113` failed the privacy check and must not be submitted.
+Build `20261109.2228`, archived from signed commit `4f8243a7`, passed the device privacy retest. Its archive and both exports passed without warnings or errors, and Apple binary validation passed. Subsequent connection checks exposed delayed Schedule updates after local saves and incorrect job setup after a failed first sync. Both fixes require a new archive and device retests before submission. The earlier build `20261109.2113` failed the privacy check and must not be submitted.
 
 Hjalmar clarified that his earlier decision deferred further Siri checks only. The Admin offline-refresh, Schedule Copy and calendar hint checks passed during release preparation. [RELEASE_CHECKS.md](../RELEASE_CHECKS.md) records the remaining checks. Keep that file until the release ships.
+
+After the connection checks, Hjalmar also deferred the extra-phone checks for queued messages across another 3.1.1 upgrade and smaller physical iPhone layout. These remain unverified. That decision does not mark the two newly discovered offline failures as passed.
 
 ## Metadata
 
@@ -85,3 +87,15 @@ On build `20261109.2228`, Hjalmar closed Tidex for two minutes, left Wi-Fi conne
 The repository writes each shift locally before starting background sync. Schedule then clears its cached user ID on a local reload and asks for a fresh session before reading those rows. Home already uses the stored normal-account identity for local reads. Schedule now uses the same guard. Stored impersonated identities still require remote verification.
 
 Before the fix, the new regression failed with `Schedule could not reload its owner's local shifts without a fresh token: notSignedIn`. The separate stored-impersonation check passed. After the fix, all 73 focused auth, local loading, Add Shift, sync and shift UI tests passed on Shared iPhone. The final six loading tests also passed after removing a lint warning from the test setup. Sol review found no issues. Lint reports no errors and retains the existing Schedule file-size, complexity and naming warnings. The corrected archive and a repeat of the device save/display check remain pending.
+
+## Failed first sync
+
+On build `20261109.2228`, Hjalmar signed out after syncing, enabled Network Link Conditioner's Edge profile and signed back into his own account. When Home showed its loading skeleton, he switched to `100% Loss`. Home then showed the job-setup placeholder instead of a sync error and Retry. His screenshot shows the setup card and action with no visible sync warning. Disabling the conditioner restored his existing jobs, shifts and totals without setting up a new job. Recovery passed, but the failed-sync presentation did not.
+
+The coordinator marks the initial sync complete even when the sync times out or fails. Work setup then treats an incomplete local cache as an account without jobs. The archive containing only the Schedule fix was stopped during export after this result. Both fixes will be included in the next candidate.
+
+The new Home UI test reproduced the same setup prompt before the fix and failed because Retry was absent. Full-sync completion is now recorded separately from finishing an attempt and belongs to a specific user. Failed and targeted downloads cannot confirm that jobs are missing. A successful full retry can confirm that state, and a failed later refresh keeps an already established local account usable. The offline indicator also offers Retry while initial data remains unconfirmed. That UI regression now passes.
+
+Sol review found a completion race across account resets. The completion write now receives the reset generation captured when its sync started. A stale completion cannot replace the current account's successful sync. All 80 final auth, loading, work-setup, sync and shift UI tests passed on Shared iPhone, including the failed-first-sync UI check. Lint reports no errors and one existing UI test class-size warning. The combined archive and device retests remain pending.
+
+Without the generation guard, the new regression failed with `A late completion made the current account look unsynced`. Adding the guard rejects that previous account's completion at the write itself.

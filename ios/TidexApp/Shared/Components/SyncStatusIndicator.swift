@@ -11,7 +11,18 @@ import SwiftUI
 struct SyncStatusIndicator: View {
   let syncStatusManager = SyncStatusManager.shared
 
+  var showsOfflineRetry = false
   var onRetry: () -> Void
+
+  private var retryButton: some View {
+    Button(action: onRetry) {
+      Text(.commonRetry)
+        .font(.tidexFootnoteStrong)
+        .foregroundStyle(Color.tidexBlueText)
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("sync.retry")
+  }
 
   var body: some View {
     switch syncStatusManager.status {
@@ -53,12 +64,7 @@ struct SyncStatusIndicator: View {
             .foregroundStyle(Color.tidexTextSecondary)
         }
 
-        Button(action: onRetry) {
-          Text(.commonRetry)
-            .font(.tidexFootnoteStrong)
-            .foregroundStyle(Color.tidexBlueText)
-        }
-        .buttonStyle(.plain)
+        retryButton
       }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
@@ -80,12 +86,16 @@ struct SyncStatusIndicator: View {
         Text(.syncOffline)
           .font(.tidexFootnoteMedium)
           .foregroundStyle(Color.tidexTextMuted)
+
+        if showsOfflineRetry {
+          retryButton
+        }
       }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
       .clipShape(.rect(cornerRadius: CornerRadius.xxxl))
-      .accessibilityElement(children: .combine)
+      .accessibilityElement(children: showsOfflineRetry ? .contain : .combine)
     }
   }
 

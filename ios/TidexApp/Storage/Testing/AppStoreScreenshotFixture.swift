@@ -18,6 +18,8 @@
     internal static let userId: String = "00000000-0000-4000-8000-000000000027"
     // The screenshot UI test sets these per App Store locale.
     private static let environment: [String: String] = ProcessInfo.processInfo.environment
+    internal static let simulatesFailedInitialSync =
+      environment["TIDEX_TEST_FIRST_SYNC_FAILURE"] == "1"
     internal static let displayName: String = environment["TIDEX_SCREENSHOT_NAME"] ?? "Emma"
     internal static let avatarURL: String? = environment["TIDEX_SCREENSHOT_AVATAR"].map {
       URL(fileURLWithPath: $0).absoluteString
@@ -45,6 +47,10 @@
     @MainActor
     internal static func seed() throws {
       precondition(isActive)
+      if simulatesFailedInitialSync {
+        SyncStatusManager.shared.syncFailed(message: String(localized: .syncSyncFailed))
+        return
+      }
       let context: ModelContext = LocalStore.shared.mainContext
       let settings: LocalUserSettings = .init(
         userId: userId, profilePictureUrl: avatarURL, payrollDay: 15, theme: "dark",

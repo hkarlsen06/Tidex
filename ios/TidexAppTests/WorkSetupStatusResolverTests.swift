@@ -3,6 +3,69 @@ import XCTest
 @testable import Tidex
 
 final class WorkSetupStatusResolverTests: XCTestCase {
+  @MainActor
+  func testFailedFirstSyncDoesNotTreatUnknownJobsAsMissingAndRetryCanConfirmSetup() {
+    let status = WorkSetupStatusResolver.resolve(activeJobs: []) { _ in false }
+    let sync = SyncStatusManager()
+    sync.recordSyncResult(
+      SyncResult(outcome: .timedOut), reason: .appLaunch,
+      userId: "owner", tables: SyncTable.allCases, generation: sync.initialSyncGeneration)
+
+    XCTAssertEqual(
+      WorkSetupPresentationStateResolver.resolve(
+        status: status, initialSyncComplete: sync.hasCompletedInitialSync(for: "owner")),
+      .loading, "An interrupted download does not prove that the account has no jobs")
+
+    sync.recordSyncResult(
+      SyncResult(outcome: .completed), reason: .remoteChange,
+      userId: "owner", tables: [.jobs], generation: sync.initialSyncGeneration)
+    XCTAssertFalse(sync.hasCompletedInitialSync(for: "owner"))
+
+    sync.recordSyncResult(
+      SyncResult(outcome: .completed), reason: .manualRefresh,
+      userId: "owner", tables: SyncTable.allCases, generation: sync.initialSyncGeneration)
+    XCTAssertEqual(
+      WorkSetupPresentationStateResolver.resolve(
+        status: status, initialSyncComplete: sync.hasCompletedInitialSync(for: "owner")),
+      .incomplete(status), "A successful full retry can confirm that setup is actually missing")
+  }
+
+  @MainActor
+  func testFailedRefreshKeepsKnownDataButCannotConfirmAnotherAccountsSetup() {
+    let sync = SyncStatusManager()
+    sync.recordSyncResult(
+      SyncResult(outcome: .completed), reason: .appLaunch,
+      userId: "owner", tables: SyncTable.allCases, generation: sync.initialSyncGeneration)
+    sync.recordSyncResult(
+      SyncResult(outcome: .failed(message: "unavailable")), reason: .manualRefresh,
+      userId: "owner", tables: SyncTable.allCases, generation: sync.initialSyncGeneration)
+
+    XCTAssertTrue(sync.hasCompletedInitialSync(for: "owner"))
+    XCTAssertFalse(sync.hasCompletedInitialSync(for: "another-owner"))
+    XCTAssertFalse(sync.hasCompletedInitialSync(for: nil))
+
+    sync.reset()
+    XCTAssertFalse(sync.hasCompletedInitialSync(for: "owner"))
+  }
+
+  @MainActor
+  func testLateCompletionFromThePreviousAccountCannotUndoTheCurrentAccountsSync() {
+    let sync = SyncStatusManager()
+    let oldGeneration = sync.initialSyncGeneration
+    sync.reset()
+    sync.recordSyncResult(
+      SyncResult(outcome: .completed), reason: .appLaunch, userId: "current-owner",
+      tables: SyncTable.allCases, generation: sync.initialSyncGeneration)
+    sync.recordSyncResult(
+      SyncResult(outcome: .completed), reason: .appLaunch, userId: "previous-owner",
+      tables: SyncTable.allCases, generation: oldGeneration)
+
+    XCTAssertTrue(
+      sync.hasCompletedInitialSync(for: "current-owner"),
+      "A late completion made the current account look unsynced")
+    XCTAssertFalse(sync.hasCompletedInitialSync(for: "previous-owner"))
+  }
+
   func testResolveReturnsIncompleteStatusWhenNoActiveJobsExist() {
     let status = WorkSetupStatusResolver.resolve(activeJobs: []) { _ in
       XCTFail("Baseline lookup should not run without an active job")

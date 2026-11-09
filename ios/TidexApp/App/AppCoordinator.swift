@@ -161,8 +161,10 @@ final class AppCoordinator {
 
   // MARK: - Sync State
 
-  /// Whether initial sync has completed after authentication
-  private(set) var initialSyncComplete = false
+  /// Whether this account has completed a full sync, rather than only finishing an attempt.
+  var initialSyncComplete: Bool {
+    SyncStatusManager.shared.hasCompletedInitialSync(for: userId)
+  }
   private(set) var initialSyncNeedsLocalReload = true
 
   // MARK: - Dependencies
@@ -210,7 +212,12 @@ final class AppCoordinator {
         userDisplayName = AppStoreScreenshotFixture.displayName
         userAvatarUrl = AppStoreScreenshotFixture.avatarURL
         appState = .authenticated
-        initialSyncComplete = true
+        if !AppStoreScreenshotFixture.simulatesFailedInitialSync {
+          SyncStatusManager.shared.recordSyncResult(
+            SyncResult(outcome: .completed), reason: .appLaunch,
+            userId: AppStoreScreenshotFixture.userId, tables: SyncTable.allCases,
+            generation: SyncStatusManager.shared.initialSyncGeneration)
+        }
         hasFinishedOnboardingRemotely = true
         return
       }
@@ -608,7 +615,7 @@ final class AppCoordinator {
     let user = session.user
     // Load onboarding state before the state change so post-auth onboarding doesn't flash.
     loadOnboardingStateFromUser(user)
-    initialSyncComplete = false
+    SyncStatusManager.shared.resetInitialSync()
     if let local = AuthSessionManager.shared.localPresentationSession(),
       local.normalizedUserId == user.normalizedId
     {
@@ -860,29 +867,41 @@ final class AppCoordinator {
 
   /// Trigger initial sync after authentication
   private func triggerInitialSync(userId: String) {
-    initialSyncComplete = false
+    SyncStatusManager.shared.resetInitialSync()
     initialSyncNeedsLocalReload = true
-    let coordinator = syncCoordinator
 
     runTrackedTask { [weak self] in
-      await coordinator.loadTrackingState(userId: userId)
-      let result = await coordinator.sync(reason: .appLaunch, userId: userId)
-      if result.outcome == .alreadyRunning {
-        // That sync pulls this user's data, so the first screen waits for it too.
-        _ = await coordinator.waitForIdle()
-      }
+      guard let self else { return }
+      let result = await syncInitialData(userId: userId)
       await FriendsMessageOutbox.shared.drain(userId: userId)
 
-      guard let self, self.userId == userId else { return }
+      guard self.userId == userId else { return }
       initialSyncNeedsLocalReload =
         result.outcome != .completed
         || SyncCompletionSummary(
           reason: .appLaunch, userId: userId,
           tableResults: result.tableResults, pushResults: result.pushResults
         ).hasLocalReadModelChanges
-      initialSyncComplete = true
       applyCachedSettings(userId: userId)
     }
+  }
+
+  private func syncInitialData(userId: String) async -> SyncResult {
+    await syncCoordinator.loadTrackingState(userId: userId)
+    let result = await syncCoordinator.sync(reason: .appLaunch, userId: userId)
+    if result.outcome == .alreadyRunning {
+      _ = await syncCoordinator.waitForIdle()
+    }
+    guard self.userId == userId, !Task.isCancelled else {
+      return SyncResult(outcome: .cancelled)
+    }
+    if !initialSyncComplete,
+      result.outcome == .alreadyRunning || result.outcome == .skippedRecentSync
+    {
+      // A targeted sync may have occupied the slot without downloading all account data.
+      return await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
+    }
+    return result
   }
 
   /// Delay before foreground work starts. iOS 26 and later can post didBecomeActive
@@ -1103,7 +1122,7 @@ final class AppCoordinator {
     isTermsUpdate = false
     // Reset initialSyncComplete BEFORE setting authenticated state
     // This ensures DashboardView shows loading instead of empty state
-    initialSyncComplete = false
+    SyncStatusManager.shared.resetInitialSync()
     appState = .authenticated
     runTrackedTask { [weak self] in
       await self?.updateUserProfile()
@@ -1283,7 +1302,7 @@ final class AppCoordinator {
     await syncCoordinator.resetForUserChange()
 
     retainLocalData(for: retainedUserId)
-    initialSyncComplete = false
+    SyncStatusManager.shared.resetInitialSync()
   }
 
   private static let retainedLocalDataUserIdKey = "auth.retained_local_data_user_id"
@@ -1354,7 +1373,7 @@ final class AppCoordinator {
     userDisplayName = ""
     userAvatarUrl = nil
     hasFinishedOnboardingRemotely = false
-    initialSyncComplete = false
+    SyncStatusManager.shared.resetInitialSync()
     NotificationService.shared.setApplicationBadgeCount(0)
   }
 
@@ -1532,10 +1551,8 @@ final class AppCoordinator {
       }
 
       // Run sync and WAIT for it to complete (unlike normal flow which runs in background)
-      initialSyncComplete = false
-      await syncCoordinator.loadTrackingState(userId: currentUserId)
-      _ = await syncCoordinator.sync(reason: .appLaunch, userId: currentUserId)
-      initialSyncComplete = true
+      SyncStatusManager.shared.resetInitialSync()
+      _ = await syncInitialData(userId: currentUserId)
       applyCachedSettings(userId: currentUserId)
     } catch {
       userDisplayName = "User"
@@ -1554,7 +1571,10 @@ final class AppCoordinator {
       self.userDisplayName = displayName
       self.userAvatarUrl = avatarUrl
       self.hasFinishedOnboardingRemotely = true
-      self.initialSyncComplete = true
+      SyncStatusManager.shared.recordSyncResult(
+        SyncResult(outcome: .completed), reason: .appLaunch,
+        userId: userId, tables: SyncTable.allCases,
+        generation: SyncStatusManager.shared.initialSyncGeneration)
       self.appState = .authenticated
       self.pendingDeepLink = nil
     }

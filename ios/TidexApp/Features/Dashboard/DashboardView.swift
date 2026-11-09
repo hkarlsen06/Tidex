@@ -385,7 +385,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
         if !shouldShowWorkSetupRequiredPlaceholder {
           VStack {
-            SyncStatusIndicator {
+            SyncStatusIndicator(showsOfflineRetry: !coordinator.initialSyncComplete) {
               Task {
                 await viewModel.refresh()
               }

@@ -259,10 +259,11 @@ final class SyncCoordinator: Sendable {
 
     let startTime = Date()
 
-    await MainActor.run {
+    let initialSyncGeneration = await MainActor.run {
       isSyncing = true
       lastError = nil
       lastSyncAttemptedAt = startTime
+      return SyncStatusManager.shared.initialSyncGeneration
     }
     // Fire and forget. The call can take up to the request timeout, and the sync must not hold
     // the syncing lock for that long.
@@ -321,6 +322,9 @@ final class SyncCoordinator: Sendable {
         break
       }
       isSyncing = false
+      SyncStatusManager.shared.recordSyncResult(
+        result, reason: reason, userId: userId, tables: uniqueTables,
+        generation: initialSyncGeneration)
     }
     await notifyWorkSetupDataChangedIfNeeded(for: result, reason: reason, userId: userId)
 

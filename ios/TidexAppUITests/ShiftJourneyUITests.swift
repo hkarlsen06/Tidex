@@ -9,6 +9,23 @@ final class ShiftJourneyUITests: XCTestCase {
     continueAfterFailure = false
   }
 
+  func testFailedFirstSyncShowsRetryInsteadOfJobSetup() {
+    let app = XCUIApplication()
+    app.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+      "-defaultStartupTab", "home",
+    ]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    app.launchEnvironment["TIDEX_TEST_FIRST_SYNC_FAILURE"] = "1"
+    app.launch()
+
+    let retry = app.buttons["sync.retry"]
+    XCTAssertTrue(
+      retry.waitForExistence(timeout: timeout),
+      "A failed first sync must offer Retry instead of treating an empty cache as missing job setup.\n"
+        + app.debugDescription)
+  }
+
   /// Adds a shift on an empty day, checks that the schedule shows it with its pay, then deletes it.
   /// This runs the Add screen, the local store, the payroll engine and the schedule together.
   @MainActor
