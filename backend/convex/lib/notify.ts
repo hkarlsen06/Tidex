@@ -629,6 +629,7 @@ export async function queueAbuseReport(ctx: MutationCtx, report: Doc<"abuse_repo
 
 // Hjalmar's account, as in the Postgres trigger. Users keep their Supabase uuid.
 const DIAGNOSTIC_ALERT_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+const DIAGNOSTIC_ALERT_COOLDOWN_MS = 15 * 60_000;
 const quietDiagnostics = new Set(["initial_session_missing", "signed_out_received", "user_initiated_sign_out"]);
 
 /** queue_auth_diagnostic_notification: pages the developer on warnings and errors. */
@@ -637,6 +638,20 @@ export async function queueAuthDiagnostic(ctx: MutationCtx, event: Doc<"auth_dia
   if (quietDiagnostics.has(event.event_type)) return;
   if (event.event_type === "auth_state_changed" && event.auth_event === "signedOut") return;
   if ((event.severity !== "warning" && event.severity !== "error") || event.user_id === undefined) return;
+  // Keep every diagnostic, but page once when concurrent session callers fail together.
+  // Severity is part of the key so an error still alerts after a warning.
+  const now = Date.now();
+  const bucket = Math.floor(now / DIAGNOSTIC_ALERT_COOLDOWN_MS);
+  const alertKey = JSON.stringify([
+    "auth_diagnostic_event", recipient, event.user_id, event.event_type,
+    event.severity, event.error_kind ?? null, event.auth_event ?? null,
+  ]);
+  // Check the preceding bucket too, so a burst across a clock boundary stays quiet.
+  const previous = await ctx.db
+    .query("notifications_outbox")
+    .withIndex("by_idempotency_key", (q) => q.eq("idempotency_key", `${alertKey}:${bucket - 1}`))
+    .first();
+  if (previous !== null && Date.parse(previous.created_at) > now - DIAGNOSTIC_ALERT_COOLDOWN_MS) return;
   let body = `${event.severity} · ${event.user_id}`;
   if (event.app_version !== undefined) body += ` · v${event.app_version}`;
   if (event.error_message !== undefined) body += ` · ${event.error_message.slice(0, 120)}`;
@@ -661,6 +676,6 @@ export async function queueAuthDiagnostic(ctx: MutationCtx, event: Doc<"auth_dia
       occurred_at: event.occurred_at,
       deeplink: `tidex://admin?tab=diagnostics&eventId=${event.id}`,
     },
-    idempotency_key: `auth_diagnostic_event:${event.id}:${recipient}`,
+    idempotency_key: `${alertKey}:${bucket}`,
   });
 }
