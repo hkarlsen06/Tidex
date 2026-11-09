@@ -31,6 +31,17 @@ Paths are under `ios/TidexApp/` unless they start with `ios/`.
 
 `Storage/LocalStoreSchema.swift` defines `SchemaV1` and `LocalStoreMigrationPlan`. Before changing a persisted model, preserve the released model definitions under their versioned schema, add `SchemaV2`, and append a V1-to-V2 migration stage to the plan. Keep V1's entity names and stored properties unchanged. Every persisted schema change needs a version and stage, including additive fields, renames, type or optionality changes, constraints and relationships. Use a lightweight stage when SwiftData can preserve the data itself, and a custom stage when values need conversion or backfilling. Test an on-disk upgrade with dirty rows, pending deletes and queued messages. A failed store must stay on disk, with editing and sync blocked until it opens again.
 
+## State
+
+Model a lifecycle as one enum whose cases carry their data, so contradictory flag combinations cannot exist. When a new `Bool` or optional would have to change together with an existing one, write the enum instead. Copy these:
+
+- `SyncOutcome` in `Storage/Sync/SyncResultModels.swift` says how an operation ended. Callers switch on it instead of comparing error strings.
+- `Presentation` in `Features/Celebration/ShiftCompletionCelebrationManager.swift` holds a sheet's idle, showing and dismissing states. Dismissing exists because a sheet binding turns false before its `onDismiss` runs.
+- `LoadState` in `Features/Schedule/Components/SendShiftToChatSheet.swift` separates a failed load from an empty one.
+- `SyncStateStore` with `SyncStartDecision` is an actor with a generation counter, for work an account switch must cancel.
+
+A singleton that holds per-user state gets a `resetForUserChange()` that `clearAllCachedData` in `App/AppCoordinator.swift` calls.
+
 ## Project file
 
 App and extension folders are synchronized groups. `ios/Shared` is synchronized into the app, share extension and Siri target, while the widget and notification service include selected Shared files through per-target `membershipExceptions` lists in `project.pbxproj`, so add new dependencies there explicitly. `TidexAppTests` and `TidexAppUITests` are the exceptions. A new test file needs a `PBXBuildFile`, a `PBXFileReference`, a group child and a Sources entry in `ios/Tidex.xcodeproj/project.pbxproj`. Copy the pattern of an existing test file. A file without them never compiles or runs, and nothing warns you. Seven test files sat outside the target from September to October 2026. This prints any test file missing from the target:
