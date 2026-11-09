@@ -5,5 +5,7 @@
 
 #include "production-backend.xcconfig"
 
+#include "SiriAIPreview.xcconfig"
+
 // ConvexMobile ships only arm64 simulator slices, so simulator builds skip x86_64.
 EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
