@@ -6,21 +6,45 @@ import Observation
 final class ShiftCompletionCelebrationManager {
   static let shared = ShiftCompletionCelebrationManager()
 
-  var shouldShowCelebration: Bool = false
-  var celebrationData: CelebrationData?
+  /// The month's state to save once the sheet closes, under the key it was read from. The month
+  /// can change while the sheet is open. Payday has none.
+  private typealias PendingSave = (state: CelebrationState, key: String)
 
-  @ObservationIgnored private var pendingState: CelebrationState?
-  /// Where `pendingState` is saved on dismiss. The month can change while the sheet is open.
-  @ObservationIgnored private var pendingStateKey: String?
+  private enum Presentation {
+    case idle
+    case showing(CelebrationData, PendingSave?)
+    /// The sheet binding turns false before its onDismiss runs. The sheet keeps its content
+    /// while it slides away, and no new celebration starts until onDismiss.
+    case dismissing(CelebrationData, PendingSave?)
+  }
+
+  private var presentation = Presentation.idle
   @ObservationIgnored private var checkTask: Task<Void, Never>?
   /// Checks again when the next shift ends, so a shift that ends while the app is open is celebrated.
   @ObservationIgnored private var nextShiftEndTask: Task<Void, Never>?
 
   private init() {}
 
-  /// The sheet binding turns false before its onDismiss runs, so the data counts as showing too.
+  var isSheetPresented: Bool {
+    get {
+      if case .showing = presentation { return true }
+      return false
+    }
+    set {
+      guard !newValue, case .showing(let data, let save) = presentation else { return }
+      presentation = .dismissing(data, save)
+    }
+  }
+
+  var celebrationData: CelebrationData? {
+    switch presentation {
+    case .idle: nil
+    case .showing(let data, _), .dismissing(let data, _): data
+    }
+  }
+
   private var isBusy: Bool {
-    shouldShowCelebration || celebrationData != nil
+    celebrationData != nil
   }
 
   func checkForCelebration(
@@ -81,9 +105,7 @@ final class ShiftCompletionCelebrationManager {
     guard UserDefaults.standard.string(forKey: key) != payoutDateISO else { return }
     UserDefaults.standard.set(payoutDateISO, forKey: key)
 
-    pendingState = nil
-    pendingStateKey = nil
-    celebrationData = CelebrationData(
+    let data = CelebrationData(
       previousDisplayValue: 0,
       newDisplayValue: amount,
       featuredShift: nil,
@@ -92,7 +114,7 @@ final class ShiftCompletionCelebrationManager {
       animateFrom: nil,
       message: .payday
     )
-    shouldShowCelebration = true
+    presentation = .showing(data, nil)
   }
 
   /// Checks the month the shift belongs to, so a shift that ends after midnight on the
@@ -146,20 +168,26 @@ final class ShiftCompletionCelebrationManager {
     }
   }
 
-  func dismissCelebration(userId: String) {
-    guard !userId.isEmpty else { return }
+  /// Runs from the sheet's onDismiss. `userId` is nil when the account signed out meanwhile.
+  func dismissCelebration(userId: String?) {
+    switch presentation {
+    case .showing(_, let save), .dismissing(_, let save):
+      if let save { CelebrationPersistence.saveState(save.state, forKey: save.key) }
 
-    if let pendingState, let pendingStateKey {
-      CelebrationPersistence.saveState(pendingState, forKey: pendingStateKey)
+    case .idle:
+      break
     }
-
-    pendingState = nil
-    pendingStateKey = nil
-    celebrationData = nil
-    shouldShowCelebration = false
+    presentation = .idle
 
     // A timed check that fired while the sheet was open was skipped, so check again and re-arm it.
-    checkForCelebrationFromLocal(userId: userId)
+    if let userId { checkForCelebrationFromLocal(userId: userId) }
+  }
+
+  /// The next account must not see this account's earnings, or wait behind its open sheet.
+  func resetForUserChange() {
+    checkTask?.cancel()
+    nextShiftEndTask?.cancel()
+    presentation = .idle
   }
 
   #if DEBUG
@@ -180,17 +208,10 @@ final class ShiftCompletionCelebrationManager {
         // App Store captures happen whenever the fixture month overlaps today.
         if AppStoreScreenshotFixture.isActive { return }
       #endif
-      pendingState = state
-      pendingStateKey = stateKey
-      celebrationData = data
-      shouldShowCelebration = true
+      presentation = .showing(data, (state, stateKey))
 
     case .store(let state):
       CelebrationPersistence.saveState(state, forKey: stateKey)
-      pendingState = nil
-      pendingStateKey = nil
-      celebrationData = nil
-      shouldShowCelebration = false
 
     case .none:
       break

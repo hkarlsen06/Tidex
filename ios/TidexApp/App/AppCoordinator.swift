@@ -1213,6 +1213,7 @@ final class AppCoordinator {
 
     CalendarSubscriptionStore.shared.resetForUserChange()
     CalendarSubscriptionStore.clearStoredTokensForUserReset()
+    ShiftCompletionCelebrationManager.shared.resetForUserChange()
 
     // Clear all local data (shifts, settings, sync state, etc.)
     if retainedUserId == nil {

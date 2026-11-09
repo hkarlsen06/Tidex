@@ -213,10 +213,10 @@ struct MainTabView: View {
       }
     }
     .sheet(
-      isPresented: $celebrationManager.shouldShowCelebration,
+      isPresented: $celebrationManager.isSheetPresented,
       onDismiss: {
+        celebrationManager.dismissCelebration(userId: coordinator.userId)
         guard let userId = coordinator.userId else { return }
-        celebrationManager.dismissCelebration(userId: userId)
         ReviewRequestManager.shared.requestReviewIfEligible(
           userId: userId,
           requestReview: { requestReview() }
