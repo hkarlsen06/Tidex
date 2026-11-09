@@ -114,8 +114,11 @@ final class SharingViewModel: MonthNavigable {
   /// Whether the selected sharer's shift content has resolved from cache or network.
   private(set) var hasResolvedSelectedSharerShifts = true
 
-  /// Current error state
-  private(set) var error: Error?
+  /// Why the friend list failed to load. The list shows it when it has nobody to show.
+  private(set) var sharersLoadErrorMessage: String?
+
+  /// Why the selected friend's month failed to load.
+  private(set) var sharedShiftsLoadErrorMessage: String?
 
   /// Last cache time for currently displayed shifts
   private(set) var lastCacheTime: Date?
@@ -282,6 +285,10 @@ final class SharingViewModel: MonthNavigable {
       }
   }
 
+  func retrySelectedSharerShifts() {
+    startSelectedSharerLoadTask()
+  }
+
   private func startSelectedSharerLoadTask() {
     selectedSharerLoadTask?.cancel()
     selectedSharerLoadTask = Task { [weak self] in
@@ -328,7 +335,7 @@ final class SharingViewModel: MonthNavigable {
   // swiftlint:disable:next cyclomatic_complexity function_body_length
   private func performSharersLoad(forceRefreshPreviews: Bool) async {
     _ = forceRefreshPreviews
-    error = nil
+    sharersLoadErrorMessage = nil
 
     do {
       guard let userId = try await getCurrentUserId() else {
@@ -406,7 +413,8 @@ final class SharingViewModel: MonthNavigable {
       }
 
       logger.error("Failed to load sharers: \(error.localizedDescription)")
-      self.error = SharingError.loadFailed(underlying: error)
+      sharersLoadErrorMessage = ErrorTranslations.translate(
+        SharingError.loadFailed(underlying: error), fallback: .commonErrorGeneric)
       if sharers.isEmpty, hiddenSharers.isEmpty {
         hasFinishedInitialSharersLoad = true
         chatOnlyUserIds = []
@@ -643,6 +651,7 @@ final class SharingViewModel: MonthNavigable {
     selectedSharerLoadTask?.cancel()
     selectedSharerLoadTask = nil
     inFlightRequestKey = nil
+    sharedShiftsLoadErrorMessage = nil
     selectedSharer = nil
     hasResolvedSelectedSharerShifts = true
     sharedShifts = []
@@ -685,7 +694,8 @@ final class SharingViewModel: MonthNavigable {
       logger.info("Shared shifts network request cancelled")
     } else {
       logger.error("Failed to load shared shifts: \(error.localizedDescription)")
-      self.error = SharingError.loadFailed(underlying: error)
+      sharedShiftsLoadErrorMessage = ErrorTranslations.translate(
+        SharingError.loadFailed(underlying: error), fallback: .commonErrorLoadFailed)
       hasResolvedSelectedSharerShifts = true
     }
   }
@@ -794,7 +804,7 @@ final class SharingViewModel: MonthNavigable {
   func loadShiftsForSelectedSharer() async {
     guard let sharer = selectedSharer else { return }
 
-    error = nil
+    sharedShiftsLoadErrorMessage = nil
 
     do {
       guard let userId = try await getCurrentUserId() else {

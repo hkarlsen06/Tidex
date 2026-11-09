@@ -247,6 +247,9 @@ struct SharerListView: View {
   // swiftlint:disable:next explicit_acl
   var openingThreadUserId: String?
   var onAddFriend: (() -> Void)?
+  /// Shown instead of the empty state when loading failed and nobody is cached.
+  var loadErrorMessage: String?
+  var onRetry: (() -> Void)?
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -271,12 +274,30 @@ struct SharerListView: View {
         || (isLoading && sharers.isEmpty && hiddenSharers.isEmpty)
       {
         loadingState
+      } else if sharers.isEmpty, hiddenSharers.isEmpty, let loadErrorMessage {
+        loadErrorState(message: loadErrorMessage)
       } else if sortedVisibleSharers.isEmpty {
         FriendsListEmptyState(onAddFriend: onAddFriend)
       } else {
         sharersList
       }
     }
+  }
+
+  private func loadErrorState(message: String) -> some View {
+    ContentUnavailableView {
+      Label(String(localized: .sharingErrorLoadFriends), systemImage: "wifi.exclamationmark")
+    } description: {
+      Text(message)
+    } actions: {
+      if let onRetry {
+        Button(String(localized: .commonRetry), action: onRetry)
+          .buttonStyle(.borderedProminent)
+          .tint(.tidexBlue)
+      }
+    }
+    .padding(.vertical, Spacing.xl)
+    .announcesToVoiceOver(message)
   }
 
   private var loadingState: some View {

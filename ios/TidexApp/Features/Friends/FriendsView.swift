@@ -468,6 +468,10 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
           openingThreadUserId: openingThreadUserId,
           onAddFriend: {
             showAddFriendSheet = true
+          },
+          loadErrorMessage: viewModel.sharersLoadErrorMessage,
+          onRetry: {
+            Task { await refreshFriendsTab() }
           }
         )
       }
@@ -1102,6 +1106,15 @@ private struct SharedShiftsDetailView: View {
     viewModel.sharedCurrency ?? fallbackCurrency
   }
 
+  @ViewBuilder
+  private var loadErrorBanner: some View {
+    if viewModel.sharedShifts.isEmpty, let message = viewModel.sharedShiftsLoadErrorMessage {
+      ErrorBanner(message: message, onRetry: { viewModel.retrySelectedSharerShifts() })
+        .padding(.horizontal, Spacing.mlg)
+        .padding(.bottom, Spacing.sm)
+    }
+  }
+
   var body: some View {
     ZStack {
       Color.tidexBackground
@@ -1136,6 +1149,7 @@ private struct SharedShiftsDetailView: View {
       .frame(maxWidth: .infinity)
       .environment(\.userCurrency, effectiveCurrency)
     }
+    .safeAreaInset(edge: .bottom) { loadErrorBanner }
     .onAppear {
       SensitiveContentPresentationState.shared.setVisibleContext(
         .sharedCalendar(ownerId: sharer.id, ownerToken: visibleContextOwnerToken)
