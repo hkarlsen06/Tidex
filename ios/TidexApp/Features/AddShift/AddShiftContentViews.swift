@@ -226,9 +226,8 @@ struct AddShiftScreenContent: View {
           focusedTimeField: $focusedTimeField,
           scrollProxy: scrollProxy,
           availableWidth: geometry.size.width,
-          availableHeight: max(
-            0, geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
-          )
+          // The reader's size already excludes the safe areas, though it still reports them.
+          availableHeight: geometry.size.height
         )
         .onTapGesture(perform: onBackgroundTap)
       }
@@ -278,6 +277,18 @@ struct AddShiftModeContent: View {
     availableWidth >= 700 && !dynamicTypeSize.isAccessibilitySize
   }
 
+  /// Full width, like the Schedule calendar, unless a full-width month would push the time
+  /// fields off a short screen such as a folded iPhone Duo.
+  private var singleCalendarMaxWidth: CGFloat {
+    if usesColumns {
+      return 400
+    }
+    // A six-week month, plus the header and time fields at the default text size.
+    let gridHeightPerWidth = 6 / (7 * CalendarGridHelper.cellAspectRatio)
+    let heightAroundGrid: CGFloat = 210
+    return max(336, (availableHeight - heightAroundGrid) / gridHeightPerWidth)
+  }
+
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
   var body: some View {
@@ -304,7 +315,7 @@ struct AddShiftModeContent: View {
           viewModel: viewModel, scrollProxy: scrollProxy,
           focusedTimeField: $focusedTimeField,
           usesColumns: usesColumns,
-          calendarMaxWidth: usesColumns ? 400 : min(500, max(336, availableHeight * 0.6))
+          calendarMaxWidth: singleCalendarMaxWidth
         )
         .frame(maxWidth: usesColumns ? 820 : AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
