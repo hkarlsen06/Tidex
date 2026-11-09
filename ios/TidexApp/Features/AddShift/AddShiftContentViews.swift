@@ -16,7 +16,8 @@ struct SingleShiftContent: View {
       ? AnyLayout(HStackLayout(spacing: Spacing.xl))
       : AnyLayout(VStackLayout(spacing: Spacing.xs))
     layout {
-      VStack(spacing: Spacing.xs) {
+      // No gap under the header row, as on Schedule.
+      VStack(spacing: 0) {
         CalendarHeaderRow(totals: viewModel.toolbarTotals, secondaryStyle: .delta)
         AddShiftCalendarView(viewModel: viewModel)
       }
@@ -304,12 +305,15 @@ struct AddShiftModeContent: View {
     }
   }
 
-  /// Single mode: centered calendar that only scrolls when it doesn't fit.
+  /// Single mode: the month sits where Schedule's does on a phone and is centered in columns.
+  /// It only scrolls when it doesn't fit.
   /// No pull-to-refresh, so dragging down never fights the back gesture.
   private var singleContent: some View {
     ScrollView {
       VStack(spacing: 0) {
-        Spacer()
+        if usesColumns {
+          Spacer()
+        }
 
         SingleShiftContent(
           viewModel: viewModel, scrollProxy: scrollProxy,
@@ -319,6 +323,7 @@ struct AddShiftModeContent: View {
         )
         .frame(maxWidth: usesColumns ? 820 : AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
+        .padding(.top, usesColumns ? 0 : CalendarGridHelper.phoneMonthTopPadding)
         .onGeometryChange(for: CGSize.self) {
           $0.size
         } action: { _ in

@@ -22,6 +22,9 @@ enum CalendarGridHelper {
   /// Width:height ratio for calendar cells. The cell text is sized by the cell width,
   /// so this height still fits two lines of times or earnings at full size.
   static let cellAspectRatio: CGFloat = 1 / 1.08
+  /// Space between the top bar and the month on Schedule and on Add. Both phone layouts start
+  /// their month here, so Add opens from a tapped day with every day where it was.
+  static let phoneMonthTopPadding: CGFloat = Spacing.xs
 
   // MARK: - Days in Month
 

@@ -1,5 +1,6 @@
 import Observation
 import SwiftUI
+import UIKit
 
 /// Tracks which tab's navigation stack shows the Add screen.
 /// Only one tab shows it at a time, so there is a single draft on screen.
@@ -11,8 +12,34 @@ internal final class AddShiftNavigator {
   /// The tab whose stack has the Add screen pushed, if any.
   internal var hostTab: MainTabView.Tab?
 
+  @ObservationIgnored private var isPushingWithoutAnimation = false
+
   private init() {
     // Singleton.
+  }
+
+  /// Pushes Add onto `tab` with no slide. The push ignores `Transaction.disablesAnimations`,
+  /// so UIKit animations stay off until Add appears, or for a second if it never does.
+  internal func presentWithoutAnimation(on tab: MainTabView.Tab) {
+    isPushingWithoutAnimation = true
+    UIView.setAnimationsEnabled(false)
+    hostTab = tab
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+      self?.restoreAnimations()
+    }
+  }
+
+  /// Called when Add appears. The push has started by then.
+  internal func addDidAppear() {
+    DispatchQueue.main.async { [weak self] in
+      self?.restoreAnimations()
+    }
+  }
+
+  private func restoreAnimations() {
+    guard isPushingWithoutAnimation else { return }
+    isPushingWithoutAnimation = false
+    UIView.setAnimationsEnabled(true)
   }
 }
 

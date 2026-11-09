@@ -100,6 +100,7 @@ struct AddShiftView: View {
       await loadAddShiftContent()
     }
     .onAppear {
+      AddShiftNavigator.shared.addDidAppear()
       refreshWorkSetupPresentationState()
       prepareVisibleAddShiftContent()
     }

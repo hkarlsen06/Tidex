@@ -340,8 +340,9 @@ extension ShiftsView {
       await refreshShiftsContent()
     }) {  // swiftlint:disable:this closure_body_length
       GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
+        let isWide = geometry.size.width >= 700
         let calendarWidth =
-          geometry.size.width >= 700
+          isWide
           ? min(AdaptiveMaxWidth.tabContent, max(350, geometry.size.height * 0.7))
           : AdaptiveMaxWidth.tabContent
         // Calendar only - no list below. Tapping days opens day sheet.
@@ -356,9 +357,12 @@ extension ShiftsView {
             }
             .accessibilityHidden(true)
 
-          // Calendar content - centered between toolbar and month picker
+          // On a phone the month starts where Add's does, so a tapped day opens Add
+          // without the days moving. Wider screens center it above the month picker.
           VStack {  // swiftlint:disable:this closure_body_length
-            Spacer()
+            if isWide {
+              Spacer()
+            }
             ShiftsCalendarView(
               shifts: viewModel.shifts,
               eventCoverageByDate: viewModel.eventCoverageByDate,
@@ -470,6 +474,7 @@ extension ShiftsView {
             )
             .frame(maxWidth: calendarWidth)
             .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
+            .padding(.top, isWide ? 0 : CalendarGridHelper.phoneMonthTopPadding)
             if !hasAnyShifts {
               FirstShiftPrompt { openAddShift() }
                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -827,13 +832,15 @@ extension ShiftsView {
   /// Opens the Add screen in single mode, optionally with a date selected.
   /// A date opens it directly, because this view re-renders whenever `pendingDeepLink`
   /// changes, and Add would set and then clear it. Add switches to single mode for the date.
+  /// It appears without the push animation, with the month where it was here, so the next
+  /// taps select more days instead of landing mid-transition.
   private func openAddShift(preselectedDate dateISO: String? = nil) {
     guard let dateISO else {
       coordinator.pendingDeepLink = .addShift(mode: .single, date: nil)
       return
     }
     SharedMonthContext.shared.preselectedDate = dateISO
-    AddShiftNavigator.shared.hostTab = .shifts
+    AddShiftNavigator.shared.presentWithoutAnimation(on: .shifts)
   }
 
   private func listCoveredDateISO(for event: EventRow) -> String {
