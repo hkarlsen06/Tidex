@@ -57,6 +57,7 @@ struct AuthSession: Sendable {
   /// Unix time when `accessToken` expires.
   let expiresAt: TimeInterval
   let clerkSessionId: String
+  var identityGeneration: Int?
 
   var normalizedUserId: String { user.normalizedId }
 }
@@ -223,6 +224,32 @@ final class AuthSessionManager {
     return session
   }
 
+  /// Drops remote verification across app activations while preserving the stored account.
+  /// Returns whether the stored identity requires fresh impersonation verification.
+  @discardableResult
+  func invalidateRemoteIdentity() -> Bool {
+    #if DEBUG
+      if AppStoreScreenshotFixture.isActive { return false }
+    #endif
+    let wasImpersonating =
+      activeClerkUserId().flatMap { storedUser(clerkUserId: $0) }?.isImpersonating == true
+    userGeneration += 1
+    cachedUser = nil
+    cachedUserSessionId = nil
+    userTask = nil
+    userTaskSessionId = nil
+    return wasImpersonating
+  }
+
+  func isCurrentForPresentation(_ session: AuthSession) -> Bool {
+    if let local = localPresentationSession(), local.user == session.user {
+      return local.clerkSessionId == session.clerkSessionId
+    }
+    guard activeSessionId() == session.clerkSessionId else { return false }
+    return session.identityGeneration == userGeneration
+      && cachedUserSessionId == session.clerkSessionId && cachedUser == session.user
+  }
+
   /// Like `getSessionIfAvailable`, but a transient failure (offline, timeout) falls back to
   /// the stored session, so a signed-in user keeps working offline.
   func getSessionOrLocal(allowProactiveRefresh: Bool = true) async -> AuthSession? {
@@ -248,10 +275,7 @@ final class AuthSessionManager {
   /// server, such as accepting terms or starting an impersonation.
   @discardableResult
   func forceRefresh() async throws -> AuthSession {
-    userGeneration += 1
-    cachedUser = nil
-    cachedUserSessionId = nil
-    userTask = nil
+    invalidateRemoteIdentity()
     let generation = userGeneration
     let session = try await withTimeout { try await self.resolveSession(skipCache: true) }
     guard activeSessionId() == session.clerkSessionId else {
@@ -282,11 +306,8 @@ final class AuthSessionManager {
 
   /// Forgets the cached user. Sign-out and impersonation changes call it.
   func clearCachedUser() {
-    userGeneration += 1
-    cachedUser = nil
+    invalidateRemoteIdentity()
     cachedUserClerkId = nil
-    cachedUserSessionId = nil
-    userTask = nil
     lastToken = nil
     defaults.removeObject(forKey: Self.cachedUserKey)
     WidgetAppGroup.storeSignedInUserId(nil)
@@ -387,7 +408,8 @@ extension AuthSessionManager {
       user: user,
       accessToken: token,
       expiresAt: lastToken?.expiresAt ?? 0,
-      clerkSessionId: clerkSession.id
+      clerkSessionId: clerkSession.id,
+      identityGeneration: userGeneration
     )
   }
 

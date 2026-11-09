@@ -151,10 +151,11 @@ final class OfflineAuthTests: XCTestCase {
     XCTAssertEqual(newUser.id, current.id)
   }
 
-  private func authUser(_ id: String) -> AuthUser {
+  private func authUser(_ id: String, isImpersonating: Bool = false) -> AuthUser {
     AuthUser(
       id: id, email: nil, name: nil, avatarUrl: nil, role: nil, termsAcceptedAt: nil,
-      finishedOnboarding: true, isImpersonating: false, actorId: id)
+      finishedOnboarding: true, isImpersonating: isImpersonating,
+      actorId: isImpersonating ? "administrator" : id)
   }
 
   // MARK: - Sign-out user id
@@ -254,6 +255,106 @@ final class OfflineAuthTests: XCTestCase {
     XCTAssertTrue(
       isLegacyGoTrueRefusal(try goTrueError(status: 400, code: "refresh_token_not_found")))
     XCTAssertTrue(isLegacyGoTrueRefusal(try goTrueError(status: 400, code: "user_banned")))
+  }
+}
+
+extension OfflineAuthTests {
+  func testLoadingRecoveryCannotPresentAnUnverifiedTargetOrAnotherVerifiedAccount() {
+    XCTAssertEqual(
+      AppCoordinator.recoverableAuthState(
+        previousState: .loading, currentUserId: "target", localUserId: nil, hasSession: true),
+      .sessionUnavailable)
+    XCTAssertEqual(
+      AppCoordinator.recoverableAuthState(
+        previousState: .authenticated, currentUserId: "target", localUserId: "administrator",
+        hasSession: true),
+      .sessionUnavailable)
+  }
+
+  func testRecoveryKeepsAnOwnedAccountAvailableOffline() {
+    XCTAssertEqual(
+      AppCoordinator.recoverableAuthState(
+        previousState: .loading, currentUserId: "owner", localUserId: "owner", hasSession: true),
+      .authenticated)
+  }
+
+  @MainActor
+  func testOfflineActivationCannotReuseAnImpersonatedIdentityFromTheSameProcess() async throws {
+    let suite = "OfflineAuthTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let target = authUser("target", isImpersonating: true)
+    var online = true
+    let manager = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-admin" }, defaults: defaults,
+      lookupUser: {
+        guard online else { throw URLError(.notConnectedToInternet) }
+        return target
+      })
+    _ = try await manager.currentUser(clerkUserId: "clerk-admin", sessionId: "session")
+    XCTAssertEqual(manager.localSession()?.normalizedUserId, "target")
+
+    online = false
+    manager.invalidateRemoteIdentity()
+    do {
+      _ = try await manager.currentUser(clerkUserId: "clerk-admin", sessionId: "session")
+      XCTFail("An offline activation reused the impersonated account")
+    } catch { XCTAssertEqual((error as? URLError)?.code, .notConnectedToInternet) }
+    XCTAssertNil(manager.localSession())
+    XCTAssertNil(manager.offlineUserIdFallback())
+  }
+
+  @MainActor
+  func testPreBackgroundLookupCannotRestoreAnImpersonatedAccountAfterActivation() async throws {
+    let suite = "OfflineAuthTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let started = expectation(description: "lookup before backgrounding")
+    var pending: CheckedContinuation<AuthUser, Never>?
+    var first = true
+    let target = authUser("target", isImpersonating: true)
+    let manager = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-admin" }, defaults: defaults,
+      lookupUser: {
+        if first {
+          first = false
+          return await withCheckedContinuation {
+            pending = $0
+            started.fulfill()
+          }
+        }
+        throw URLError(.notConnectedToInternet)
+      })
+    let lookup = Task {
+      try await manager.currentUser(clerkUserId: "clerk-admin", sessionId: "session")
+    }
+    await fulfillment(of: [started], timeout: 2)
+    manager.invalidateRemoteIdentity()
+    pending?.resume(returning: target)
+
+    do {
+      _ = try await lookup.value
+      XCTFail("A lookup from the previous activation restored the impersonated account")
+    } catch { XCTAssertEqual((error as? URLError)?.code, .notConnectedToInternet) }
+    XCTAssertNil(manager.localSession())
+    XCTAssertNil(manager.offlineUserIdFallback())
+  }
+
+  @MainActor
+  func testNormalAccountRemainsAvailableOfflineAcrossActivation() async throws {
+    let suite = "OfflineAuthTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let user = authUser("owner")
+    let manager = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-owner" }, defaults: defaults,
+      lookupUser: { user })
+    _ = try await manager.currentUser(clerkUserId: "clerk-owner", sessionId: "session")
+    manager.invalidateRemoteIdentity()
+
+    let local = try XCTUnwrap(manager.localPresentationSession())
+    XCTAssertEqual(local.normalizedUserId, "owner")
+    XCTAssertTrue(manager.isCurrentForPresentation(local))
   }
 }
 

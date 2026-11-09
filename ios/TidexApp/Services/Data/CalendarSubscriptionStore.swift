@@ -295,6 +295,19 @@ final class CalendarSubscriptionStore {
   }
 }
 
+extension CalendarSubscriptionStore {
+  func prepareForUser(_ userId: String, replacing previousUserId: String?) {
+    let stored = defaults.data(forKey: Self.lastKnownStateKey).flatMap {
+      try? JSONDecoder().decode(LastKnownState.self, from: $0)
+    }
+    if let previousUserId, previousUserId != userId {
+      resetForUserChange()
+    } else if let stored, stored.userId != userId {
+      resetForUserChange()
+    }
+  }
+}
+
 enum CalendarSubscriptionStoreError: Error, LocalizedError, Equatable {
   case operationInProgress
   case noActiveSubscription

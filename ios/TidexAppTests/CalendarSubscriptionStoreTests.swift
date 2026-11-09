@@ -262,6 +262,60 @@ final class CalendarSubscriptionStoreTests: XCTestCase {
 }
 
 extension CalendarSubscriptionStoreTests {
+  func testVerifiedAccountChangeClearsThePreviousSubscriptionAndFallbackURL() async {
+    let service = MockCalendarSubscriptionService(
+      state: CalendarSubscriptionState(metadata: makeMetadata()),
+      activeAfterDuplicate: .inactive, createError: nil)
+    var userId = "target"
+    let store = CalendarSubscriptionStore(
+      service: service, tokenStore: InMemoryCalendarSubscriptionTokenStore(),
+      defaults: makeDefaults(), userIdProvider: { userId })
+    await store.refresh()
+    store.fallbackHTTPSURL = URL(string: "https://example.com/private-target-calendar.ics")
+
+    userId = "administrator"
+    store.prepareForUser(userId, replacing: "target")
+    XCTAssertNil(store.activeMetadata)
+    XCTAssertNil(store.fallbackHTTPSURL)
+    service.getOverride = { .inactive }
+    await store.refreshIfNeeded()
+    XCTAssertFalse(store.isActive)
+    XCTAssertTrue(store.canOfferSetup)
+  }
+
+  func testOfflineLaunchCannotRestoreAnotherAccountsStoredSubscription() async {
+    let defaults = makeDefaults()
+    let online = MockCalendarSubscriptionService(
+      state: CalendarSubscriptionState(metadata: makeMetadata()),
+      activeAfterDuplicate: .inactive, createError: nil)
+    await makeStore(service: online, defaults: defaults, userId: "target").refresh()
+    let offline = MockCalendarSubscriptionService(
+      state: .inactive, activeAfterDuplicate: .inactive, createError: nil)
+    offline.getError = URLError(.notConnectedToInternet)
+    let store = CalendarSubscriptionStore(
+      service: offline, tokenStore: InMemoryCalendarSubscriptionTokenStore(), defaults: defaults,
+      userIdProvider: { throw URLError(.notConnectedToInternet) })
+    store.prepareForUser("administrator", replacing: nil)
+    await store.refresh()
+
+    XCTAssertNil(store.activeMetadata)
+    XCTAssertTrue(store.isStateUnknown)
+  }
+
+  func testPreparingTheSameAccountKeepsItsOfflineSubscriptionState() async {
+    let service = MockCalendarSubscriptionService(
+      state: CalendarSubscriptionState(metadata: makeMetadata()),
+      activeAfterDuplicate: .inactive, createError: nil)
+    let store = makeStore(service: service, defaults: makeDefaults())
+    await store.refresh()
+    store.prepareForUser("user-1", replacing: nil)
+    service.getError = URLError(.notConnectedToInternet)
+    await store.refreshIfNeeded()
+
+    XCTAssertTrue(store.isActive)
+    XCTAssertFalse(store.isStateUnknown)
+  }
+
   fileprivate func makeDefaults() -> UserDefaults {
     let suiteName = "CalendarSubscriptionStoreTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName) ?? .standard

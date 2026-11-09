@@ -37,7 +37,7 @@ final class AppCoordinator {
 
   // MARK: - Navigation State
 
-  enum AppState: Equatable {
+  enum AppState: Equatable, Sendable {
     case loading  // Initial app load, checking session
     case sessionUnavailable  // The SDK has a session, but its identity needs remote verification
     case unauthenticated  // No valid session, show login
@@ -110,6 +110,10 @@ final class AppCoordinator {
     didSet {
       if oldValue != userId {
         resetPayrollCaches()
+        if let userId {
+          CalendarSubscriptionStore.shared.prepareForUser(userId, replacing: oldValue)
+          if oldValue != nil { ShiftCompletionCelebrationManager.shared.resetForUserChange() }
+        }
       }
       syncFriendsRealtimeForCurrentUser()
     }
@@ -304,7 +308,7 @@ final class AppCoordinator {
     if let session {
       launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
-      await enterAuthenticatedState(user: session.user)
+      await enterAuthenticatedState(session: session)
     } else if Clerk.shared.session != nil {
       appState = .sessionUnavailable
     } else {
@@ -473,7 +477,9 @@ final class AppCoordinator {
 
     // The first sign-in on this device resolves the Tidex user, which the wipe check needs.
     _ = await AuthSessionManager.shared.getSessionOrLocal()
+    guard authStateUpdateToken == token else { return }
     await discardRetainedLocalDataIfUserChanged()
+    guard authStateUpdateToken == token else { return }
 
     let stateBeforeCheck = appState
     let didComplete = await withTaskGroup(of: Bool.self) { group in
@@ -490,7 +496,7 @@ final class AppCoordinator {
       return result
     }
 
-    guard !didComplete else { return }
+    guard authStateUpdateToken == token, !didComplete else { return }
     // The terms check may have been cut short. Check again on the next foreground.
     isTermsRecheckPending = true
 
@@ -498,11 +504,12 @@ final class AppCoordinator {
     // on their own. Routing again would repeat the profile load and the initial sync.
     guard appState == stateBeforeCheck || appState == .loading else { return }
 
-    // This method is only called when a session is known to exist, so default to
-    // authenticated rather than kicking the user to the login screen.
+    // Preserve the SDK session after a timeout. Presentation still requires a current
+    // identity or the owner's local session.
     launchLog.error("[Launch] Auth check timed out after 10s, proceeding to authenticated")
     let session = await AuthSessionManager.shared.getSessionOrLocal()
-    await enterAuthenticatedState(user: session?.user)
+    guard authStateUpdateToken == token else { return }
+    await enterAuthenticatedState(session: session)
   }
 
   // MARK: - Terms Acceptance Check
@@ -513,6 +520,7 @@ final class AppCoordinator {
     initialSession: AuthSession? = nil,
     allowProactiveRefresh: Bool = true
   ) async {
+    let updateToken = authStateUpdateToken
     do {
       let session: AuthSession
       if let initialSession {
@@ -547,6 +555,9 @@ final class AppCoordinator {
         guard AuthSessionManager.shared.localSession() != nil else { return }
       }
 
+      guard authStateUpdateToken == updateToken,
+        AuthSessionManager.shared.isCurrentForPresentation(session)
+      else { return }
       if needsReAcceptanceImmediate {
         // User definitely needs to accept terms (based on cached/fallback version)
         self.isTermsUpdate = termsAcceptedAt != nil
@@ -566,31 +577,35 @@ final class AppCoordinator {
             "needs_terms_reacceptance_immediate": .bool(needsReAcceptanceImmediate),
           ]) { current, _ in current }
         )
-        await enterAuthenticatedState(user: user)
+        await enterAuthenticatedState(session: session)
 
         // Check in background if API has a newer terms version
         // This handles the case where terms were updated but we're using stale cache
         self.checkTermsVersionInBackground(termsAcceptedAt: termsAcceptedAt)
       }
     } catch {
+      guard authStateUpdateToken == updateToken else { return }
       // If we can't check terms, proceed to authenticated and let backend handle it
       let session = await AuthSessionManager.shared.getSessionOrLocal(
         allowProactiveRefresh: allowProactiveRefresh
       )
+      guard authStateUpdateToken == updateToken else { return }
       if let session {
         AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       }
-      await enterAuthenticatedState(user: session?.user)
+      await enterAuthenticatedState(session: session)
     }
   }
 
   /// Publishes the known local identity and starts sync together. A fresh profile is still
   /// required before presenting an impersonated account or an identity not stored locally.
-  private func enterAuthenticatedState(user: AuthUser?) async {
-    guard let user else {
+  private func enterAuthenticatedState(session: AuthSession?) async {
+    guard let session else {
       appState = Clerk.shared.session == nil ? .unauthenticated : .sessionUnavailable
       return
     }
+    guard AuthSessionManager.shared.isCurrentForPresentation(session) else { return }
+    let user = session.user
     // Load onboarding state before the state change so post-auth onboarding doesn't flash.
     loadOnboardingStateFromUser(user)
     initialSyncComplete = false
@@ -598,7 +613,7 @@ final class AppCoordinator {
       local.normalizedUserId == user.normalizedId
     {
       await discardRetainedLocalDataIfUserChanged()
-      guard Clerk.shared.session?.id == local.clerkSessionId else {
+      guard AuthSessionManager.shared.isCurrentForPresentation(session) else {
         return
       }
       applyUserProfile(user)
@@ -709,20 +724,13 @@ final class AppCoordinator {
   }
 
   /// Recover from transient auth/session failures without forcing a destructive sign-out.
-  /// If we were previously in a stable state, restore it; otherwise pick a safe fallback.
+  /// Only the owner's local identity can restore authenticated state after a failure.
   private func applyRecoverableAuthFailureFallback(previousState: AppState) {
-    let fallbackState: AppState
-    switch previousState {
-    case .authenticated, .termsRequired, .unauthenticated, .sessionUnavailable:
-      fallbackState = previousState
-
-    case .loading:
-      if Clerk.shared.session != nil, userId == nil {
-        fallbackState = .sessionUnavailable
-      } else {
-        fallbackState = userId != nil ? .authenticated : .unauthenticated
-      }
-    }
+    let fallbackState = Self.recoverableAuthState(
+      previousState: previousState, currentUserId: userId,
+      localUserId: AuthSessionManager.shared.localPresentationSession()?.normalizedUserId,
+      hasSession: Clerk.shared.session != nil
+    )
 
     if self.appState != fallbackState {
       launchLog.warning(
@@ -730,6 +738,17 @@ final class AppCoordinator {
       )
       self.appState = fallbackState
     }
+  }
+
+  nonisolated static func recoverableAuthState(
+    previousState: AppState, currentUserId: String?, localUserId: String?, hasSession: Bool
+  ) -> AppState {
+    guard hasSession else { return .unauthenticated }
+    guard let localUserId else { return .sessionUnavailable }
+    if previousState == .termsRequired, currentUserId == nil || currentUserId == localUserId {
+      return .termsRequired
+    }
+    return currentUserId == localUserId ? .authenticated : .sessionUnavailable
   }
 
   /// Load onboarding completion state from the user row
@@ -873,6 +892,10 @@ final class AppCoordinator {
   /// Called when app returns to foreground
   /// Triggers a sync with interval guard (won't sync if recent sync occurred)
   func handleAppForeground() {
+    if AuthSessionManager.shared.invalidateRemoteIdentity(), appState != .unauthenticated {
+      authStateUpdateToken = nil
+      appState = .sessionUnavailable
+    }
     if appState == .sessionUnavailable {
       runTrackedTask { [weak self] in await self?.checkSession() }
       return
@@ -934,6 +957,18 @@ final class AppCoordinator {
   func cancelForegroundWork() {
     foregroundTask?.cancel()
     foregroundTask = nil
+  }
+
+  /// Hide an impersonated account before background snapshots or later offline activation.
+  @discardableResult
+  func handleAppInactive() -> Bool {
+    cancelForegroundWork()
+    let wasImpersonating = AuthSessionManager.shared.invalidateRemoteIdentity()
+    if wasImpersonating { authStateUpdateToken = nil }
+    if wasImpersonating, appState == .authenticated || appState == .termsRequired {
+      appState = .sessionUnavailable
+    }
+    return wasImpersonating
   }
 
   private static func hasForegroundActiveScene() -> Bool {
@@ -1325,17 +1360,24 @@ final class AppCoordinator {
 
   /// Force a session check (useful for debugging or manual refresh)
   func checkSession() async {
+    guard authStateUpdateToken == nil else { return }
+    let token = UUID()
+    authStateUpdateToken = token
+    defer { if authStateUpdateToken == token { authStateUpdateToken = nil } }
     let previousState = appState
     appState = .loading
 
     do {
-      if try await authService.getSession() != nil {
+      let session = try await authService.getSession()
+      guard authStateUpdateToken == token else { return }
+      if session != nil {
         resetLaunchSessionTimeoutCount()
         await checkTermsAndUpdateState()
       } else {
         appState = .unauthenticated
       }
     } catch {
+      guard authStateUpdateToken == token else { return }
       if isLaunchSessionTimeoutError(error) {
         if handleRepeatedLaunchSessionTimeoutIfNeeded(previousState: previousState) {
           return

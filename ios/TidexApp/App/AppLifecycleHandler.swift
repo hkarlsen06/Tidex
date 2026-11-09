@@ -32,14 +32,14 @@ final class AppLifecycleHandler {
     hasHandledInitialActivation = true
 
     AppearanceManager.shared.applyToWindows()
-    PrivacyBlurManager.hide()
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
       .endBackgroundTaskIfNeeded()
     clockSessionReconciliationTask?.cancel()
     NotificationCenter.default.post(name: .tidexDidBecomeActive, object: nil)
 
+    AppCoordinator.shared.handleAppForeground()
+    PrivacyBlurManager.hide()
     if !isInitialActivation {
-      AppCoordinator.shared.handleAppForeground()
       Task { await AppGate.shared.refresh() }
     }
     recordAppActivity()
@@ -51,10 +51,10 @@ final class AppLifecycleHandler {
   }
 
   func handleWillResignActive() {
-    AppCoordinator.shared.cancelForegroundWork()
+    let wasImpersonating = AppCoordinator.shared.handleAppInactive()
     clockSessionReconciliationTask?.cancel()
     clockSessionReconciliationTask = nil
-    if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
+    if wasImpersonating || SensitiveContentPresentationState.shared.isSensitiveContentVisible {
       PrivacyBlurManager.showIfNeeded()
     }
   }
@@ -73,12 +73,12 @@ final class AppLifecycleHandler {
   }
 
   func handleDidEnterBackground() {
-    AppCoordinator.shared.cancelForegroundWork()
+    let wasImpersonating = AppCoordinator.shared.handleAppInactive()
     clockSessionReconciliationTask?.cancel()
     clockSessionReconciliationTask = nil
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.startBackgroundTask()
     // Defensive: ensure blur is shown when entering background.
-    if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
+    if wasImpersonating || SensitiveContentPresentationState.shared.isSensitiveContentVisible {
       PrivacyBlurManager.showIfNeeded()
     }
   }
