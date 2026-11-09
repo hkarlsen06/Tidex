@@ -12,10 +12,7 @@ private enum ProfileAvatarLayout {
 struct ProfileAvatarButton: View {
   let viewModel: ProfileSettingsViewModel
   let isDisabled: Bool
-  @Binding var showAvatarActionDialog: Bool
-  @Binding var showImageSourcePicker: Bool
-  @Binding var showCamera: Bool
-  @Binding var showGalleryPicker: Bool
+  @Binding var avatarFlow: AvatarFlow
   @Binding var selectedPhotoItem: PhotosPickerItem?
   let onTap: () -> Void
   let onChooseImageSource: () -> Void
@@ -84,11 +81,11 @@ struct ProfileAvatarButton: View {
     }
     .confirmationDialog(
       String(localized: .profilePersonalInfoProfilePicture),
-      isPresented: $showAvatarActionDialog,
+      isPresented: $avatarFlow.isAt(.actions),
       titleVisibility: .visible
     ) {
       Button(uploadButtonText) {
-        showAvatarActionDialog = false
+        avatarFlow = .idle
         Task { @MainActor in
           await Task.yield()
           onChooseImageSource()
@@ -97,7 +94,7 @@ struct ProfileAvatarButton: View {
 
       if viewModel.profilePictureUrl != nil {
         Button(String(localized: .profilePersonalInfoRemoveImage), role: .destructive) {
-          showAvatarActionDialog = false
+          avatarFlow = .idle
           Task {
             await viewModel.removeProfilePicture()
           }
@@ -105,37 +102,61 @@ struct ProfileAvatarButton: View {
       }
 
       Button(String(localized: .commonCancel), role: .cancel) {
-        showAvatarActionDialog = false
+        avatarFlow = .idle
       }
     }
     .confirmationDialog(
       String(localized: .profilePersonalInfoChooseImageSource),
-      isPresented: $showImageSourcePicker,
+      isPresented: $avatarFlow.isAt(.sourcePicker),
       titleVisibility: .visible
     ) {
       Button(String(localized: .profilePersonalInfoTakePhoto)) {
-        showImageSourcePicker = false
+        avatarFlow = .idle
         Task { @MainActor in
           // Defer until dialog dismissal has settled.
           await Task.yield()
-          showCamera = false
-          showCamera = true
+          avatarFlow = .camera
         }
       }
       Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
-        showImageSourcePicker = false
+        avatarFlow = .idle
         Task { @MainActor in
           // Reset to ensure picker can always re-open after cancel.
           selectedPhotoItem = nil
-          showGalleryPicker = false
           // Defer until dialog dismissal has settled.
           await Task.yield()
-          showGalleryPicker = true
+          avatarFlow = .library
         }
       }
       Button(String(localized: .commonCancel), role: .cancel) {
-        showImageSourcePicker = false
+        avatarFlow = .idle
       }
     }
+  }
+}
+
+/// The profile picture change, one step at a time, so rapid taps cannot stack dialogs or pickers.
+enum AvatarFlow: Equatable {
+  case idle
+  case actions
+  case sourcePicker
+  case camera
+  case library
+  case cropping(UIImage)
+
+  var imageToCrop: UIImage? {
+    if case .cropping(let image) = self { return image }
+    return nil
+  }
+}
+
+extension Binding where Value == AvatarFlow {
+  /// True while the flow is at `step`. Dismissing that step's dialog or picker returns to idle,
+  /// unless the flow has already moved on.
+  func isAt(_ step: AvatarFlow) -> Binding<Bool> {
+    Binding<Bool>(
+      get: { wrappedValue == step },
+      set: { if !$0, wrappedValue == step { wrappedValue = .idle } }
+    )
   }
 }

@@ -24,18 +24,7 @@ struct ProfileSettingsView: View {
 
   /// Photo picker selection
   @State private var selectedPhotoItem: PhotosPickerItem?
-  /// Whether to show profile picture actions
-  @State private var showAvatarActionDialog = false
-  /// Whether to show the image source picker (camera vs gallery)
-  @State private var showImageSourcePicker = false
-  /// Whether to show the gallery picker
-  @State private var showGalleryPicker = false
-  /// Whether to show the camera picker
-  @State private var showCamera = false
-  /// Image pending crop (from camera or gallery)
-  @State private var pendingImage: UIImage?
-  /// Whether to show the crop sheet
-  @State private var showCropSheet = false
+  @State private var avatarFlow = AvatarFlow.idle
   /// Whether sign out is in progress
   @State private var isSigningOut = false
   /// Whether global sign out is in progress
@@ -55,11 +44,15 @@ struct ProfileSettingsView: View {
   /// Draft username while the edit alert is open
   @State private var draftUsername = ""
 
-  /// Prevent conflicting avatar modal presentations from rapid repeated taps
   private var isAvatarActionInProgress: Bool {
-    viewModel.isUploadingAvatar || showAvatarActionDialog || showImageSourcePicker
-      || showGalleryPicker
-      || showCamera || showCropSheet
+    viewModel.isUploadingAvatar || avatarFlow != .idle
+  }
+
+  private var isCropping: Binding<Bool> {
+    Binding(
+      get: { avatarFlow.imageToCrop != nil },
+      set: { if !$0, avatarFlow.imageToCrop != nil { avatarFlow = .idle } }
+    )
   }
 
   var body: some View {
@@ -188,32 +181,29 @@ struct ProfileSettingsView: View {
       Text(.profileSignOutUnsyncedMessage)
     }
     .photosPicker(
-      isPresented: $showGalleryPicker,
+      isPresented: $avatarFlow.isAt(.library),
       selection: $selectedPhotoItem,
       matching: .images,
       photoLibrary: .shared()
     )
-    .fullScreenCover(isPresented: $showCamera) {
+    .fullScreenCover(isPresented: $avatarFlow.isAt(.camera)) {
       CameraPicker { image in
-        pendingImage = image
-        showCropSheet = true
+        avatarFlow = .cropping(image)
       }
       .ignoresSafeArea()
     }
-    .fullScreenCover(isPresented: $showCropSheet) {
-      if let image = pendingImage {
+    .fullScreenCover(isPresented: isCropping) {
+      if let image = avatarFlow.imageToCrop {
         ProfileImageCropSheet(
           image: image,
           onCrop: { croppedImage in
             Task {
               await handleCroppedImage(croppedImage)
             }
-            showCropSheet = false
-            pendingImage = nil
+            avatarFlow = .idle
           },
           onCancel: {
-            showCropSheet = false
-            pendingImage = nil
+            avatarFlow = .idle
           }
         )
         .ignoresSafeArea()
@@ -255,10 +245,7 @@ extension ProfileSettingsView {
         ProfileAvatarButton(
           viewModel: viewModel,
           isDisabled: isAvatarActionInProgress || viewModel.isOfflineProfileFallback,
-          showAvatarActionDialog: $showAvatarActionDialog,
-          showImageSourcePicker: $showImageSourcePicker,
-          showCamera: $showCamera,
-          showGalleryPicker: $showGalleryPicker,
+          avatarFlow: $avatarFlow,
           selectedPhotoItem: $selectedPhotoItem,
           onTap: presentAvatarActionDialog,
           onChooseImageSource: presentImageSourcePicker
@@ -393,19 +380,18 @@ extension ProfileSettingsView {
     if viewModel.profilePictureUrl == nil {
       presentImageSourcePicker()
     } else {
-      showAvatarActionDialog = true
+      avatarFlow = .actions
     }
   }
 
   private func presentImageSourcePicker() {
     guard !viewModel.isOfflineProfileFallback, !viewModel.isUploadingAvatar,
-      !showImageSourcePicker, !showGalleryPicker, !showCamera, !showCropSheet
+      avatarFlow == .idle || avatarFlow == .actions
     else {
       return
     }
 
-    showAvatarActionDialog = false
-    showImageSourcePicker = true
+    avatarFlow = .sourcePicker
   }
 
   private func signOut(discardingUnsyncedChanges: Bool = false) async {
@@ -449,9 +435,7 @@ extension ProfileSettingsView {
         return
       }
 
-      // Show crop sheet with the selected image
-      pendingImage = uiImage
-      showCropSheet = true
+      avatarFlow = .cropping(uiImage)
 
       // Clear selection
       selectedPhotoItem = nil
