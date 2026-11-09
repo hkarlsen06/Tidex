@@ -5,6 +5,7 @@ import SwiftUI
 /// Shows empty panels while the data loads.
 struct AdminActiveUsersCharts: View {
   let chart: AdminActiveUsersChart?
+  let openUsers: (AdminUserQuery) -> Void
 
   var body: some View {
     HStack(spacing: Spacing.xs) {
@@ -48,8 +49,8 @@ struct AdminActiveUsersCharts: View {
   ) -> some View {
     // Whole-number ticks, so one or two users don't get a 0.5 gridline.
     let top: Int = max(buckets.map(\.users).max() ?? 0, 1)
-    return NavigationLink {
-      AdminUsersView(query: AdminUserQuery(sort: .lastActive, openedSince: buckets.first?.time))
+    return Button {
+      openUsers(AdminUserQuery(sort: .lastActive, openedSince: buckets.first?.time))
     } label: {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(title)

@@ -62,6 +62,7 @@ struct AdminSettingsView: View {
   @State private var summary = Summary()
   @State private var errorMessage: String?
   @State private var activeUsers: AdminActiveUsersChart?
+  @State private var activeUsersQuery: AdminUserQuery?
   @Environment(\.dismiss) private var dismiss
 
   private struct Summary {
@@ -112,6 +113,9 @@ struct AdminSettingsView: View {
     .navigationDestination(item: $deepLinkedTab) { tab in
       AdminDestination(tab: tab, initialReportID: deepLinkedReportID)
     }
+    .navigationDestination(item: $activeUsersQuery) { query in
+      AdminUsersView(query: query)
+    }
     .onChange(of: deepLinkedTab) { _, tab in
       // The deep-linked report opens once. Later taps show the plain list.
       if tab == nil { deepLinkedReportID = nil }
@@ -134,7 +138,7 @@ struct AdminSettingsView: View {
 
   private var activeUsersSection: some View {
     Section("Users who opened the app") {
-      AdminActiveUsersCharts(chart: activeUsers)
+      AdminActiveUsersCharts(chart: activeUsers) { activeUsersQuery = $0 }
         .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
     }
