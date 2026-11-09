@@ -144,11 +144,25 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   /// Whether the note editor is focused
   @FocusState var isNoteFieldFocused: Bool
 
-  /// Edited custom supplements (nil = unchanged, set to clear or modify)
-  @State private var editedSupplements: CustomSupplementsData?
+  private enum SupplementsEdit {
+    case unchanged
+    /// Nil keeps the tariff's supplements. An empty rule list means none.
+    case changed(CustomSupplementsData?)
 
-  /// Whether supplements were edited (to track changes)
-  @State private var supplementsWereEdited = false
+    var isChanged: Bool {
+      if case .changed = self { return true }
+      return false
+    }
+
+    /// What `ShiftEditResult.customSupplements` sends. Nil leaves the supplements as they are.
+    var saved: CustomSupplementsData? {
+      if case .changed(let supplements) = self { return supplements }
+      return nil
+    }
+  }
+
+  /// Supplements chosen in edit mode, saved when the user taps Save.
+  @State private var supplementsEdit = SupplementsEdit.unchanged
 
   /// Edited note text
   @State private var editedNote = ""
@@ -163,7 +177,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   @State private var hasOptimisticNoteOverride = false
 
   /// Whether currently saving
-  @State private var isSaving = false
+  @State var isSaving = false
 
   /// Error message to display
   @State private var errorMessage: String?
@@ -549,41 +563,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         currency: currency,
         tariffRules: tariffRules,
         onSave: { customSupplements in
-          // Update the edited supplements state
-          editedSupplements = customSupplements
-          supplementsWereEdited = true
           showingSupplementsEditor = false
-
-          // If we're not already in edit mode, immediately save with just supplements
-          // (Otherwise, wait for user to click Save in edit mode)
-          if !isEditing {
-            guard let onUpdate else {
-              errorMessage = ShiftSaveError.unavailable.localizedDescription
-              return
-            }
-
-            let editResult = ShiftEditResult(
-              shiftId: shift.id,
-              shiftDate: shift.shiftDate,
-              startTime: shift.startTime,
-              endTime: shift.endTime,
-              isVirtualShiftConversion: isVirtualShift,
-              recurringId: shift.shift.recurring_id,
-              originalDate: shift.shiftDate,
-              note: noteWasEdited ? trimmedEditedNote : nil,
-              noteWasEdited: noteWasEdited,
-              customSupplements: customSupplements
-            )
-            isSaving = true
-            Task {
-              do {
-                try await onUpdate(editResult)
-                dismiss()
-              } catch {
-                errorMessage = ErrorTranslations.translate(error)
-              }
-              isSaving = false
-            }
+          if isEditing {
+            // Saved with the other edits when the user taps Save.
+            supplementsEdit = .changed(customSupplements)
+          } else {
+            saveSupplements(customSupplements)
           }
         },
         onCancel: {
@@ -809,6 +794,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Initialize edit state from the shift data
   private func initializeEditState() {
+    supplementsEdit = .unchanged
+
     // Parse shift date
     if let date = Date.fromISODateString(shift.shiftDate) {
       editedDate = date
@@ -843,7 +830,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     let newEndTime = ShiftTimeFieldFormat.storedTime(from: end, original: shift.endTime)
 
     return newDate != shift.shiftDate || newStartTime != String(shift.startTime.prefix(5))
-      || newEndTime != String(shift.endTime.prefix(5)) || supplementsWereEdited || noteWasEdited
+      || newEndTime != String(shift.endTime.prefix(5)) || supplementsEdit.isChanged || noteWasEdited
   }
 
   private var trimmedEditedNote: String? {
@@ -916,7 +903,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       newDate == shift.shiftDate
       && newStartTime == String(shift.startTime.prefix(5))
       && newEndTime == String(shift.endTime.prefix(5))
-      && !supplementsWereEdited
+      && !supplementsEdit.isChanged
       && noteWasEdited
 
     // Create the edit result with all necessary information
@@ -930,7 +917,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       originalDate: shift.shiftDate,
       note: noteWasEdited ? trimmedEditedNote : nil,
       noteWasEdited: noteWasEdited,
-      customSupplements: supplementsWereEdited ? editedSupplements : nil
+      customSupplements: supplementsEdit.saved
     )
 
     Task {
@@ -953,6 +940,40 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         errorMessage = ErrorTranslations.translate(error)
       }
 
+      isSaving = false
+    }
+  }
+
+  /// Outside edit mode a supplements change saves at once. It leaves no draft behind, so a
+  /// failed save is not sent again with a later note edit.
+  private func saveSupplements(_ customSupplements: CustomSupplementsData?) {
+    guard !isSaving else { return }
+    guard let onUpdate else {
+      errorMessage = ShiftSaveError.unavailable.localizedDescription
+      return
+    }
+
+    let editResult = ShiftEditResult(
+      shiftId: shift.id,
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      isVirtualShiftConversion: isVirtualShift,
+      recurringId: shift.shift.recurring_id,
+      originalDate: shift.shiftDate,
+      note: noteWasEdited ? trimmedEditedNote : nil,
+      noteWasEdited: noteWasEdited,
+      customSupplements: customSupplements
+    )
+    errorMessage = nil
+    isSaving = true
+    Task {
+      do {
+        try await onUpdate(editResult)
+        dismiss()
+      } catch {
+        errorMessage = ErrorTranslations.translate(error)
+      }
       isSaving = false
     }
   }

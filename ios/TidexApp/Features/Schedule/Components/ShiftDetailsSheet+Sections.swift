@@ -177,6 +177,7 @@ extension ShiftDetailsSheet {
   }
 
   func openSupplementsEditor() {
+    guard !isSaving else { return }
     impactHaptic.impactOccurred()
     showingSupplementsEditor = true
   }
