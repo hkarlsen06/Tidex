@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
+import { isOpenDelivery } from "./lib/liveActivityDelivery";
 import { reject } from "./lib/syncWrite";
 import { literals } from "./lib/validators";
 
@@ -203,7 +204,7 @@ export const registerLiveActivityUpdateToken = mutation({
       .collect();
     // ActivityKit is the source of truth for the current activity on this device.
     for (const d of deliveries) {
-      if (d.shift_id !== args.shift_id && ["starting", "active", "ending"].includes(d.status)) {
+      if (d.shift_id !== args.shift_id && isOpenDelivery(d.status)) {
         await ctx.db.patch(d._id, {
           status: "failed",
           claimed_at: undefined,
@@ -280,7 +281,7 @@ export const unregisterLiveActivityDevice = mutation({
         .query("live_activity_deliveries")
         .withIndex("by_push_device_shift", (q) => q.eq("push_device_id", device.id))
         .collect()) {
-        if (!["starting", "active", "ending"].includes(d.status)) continue;
+        if (!isOpenDelivery(d.status)) continue;
         await ctx.db.patch(d._id, {
           status: "failed",
           claimed_at: undefined,

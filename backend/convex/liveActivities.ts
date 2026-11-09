@@ -15,6 +15,7 @@ import {
   projectedRecurringShifts,
   zonedShiftRange,
 } from "./lib/shared/liveActivityScheduling";
+import { isOpenDelivery } from "./lib/liveActivityDelivery";
 import { computeLiveActivityShift, overtimeWeekStart } from "./lib/shared/liveActivityPay";
 import type { UserSettings, WageSnapshot } from "./lib/shared/payroll/types";
 import { allowedRecipients, apnsConfigured, mayPush, sendToApns } from "./push";
@@ -27,7 +28,6 @@ import { allowedRecipients, apnsConfigured, mayPush, sendToApns } from "./push";
 
 const MAX_ATTEMPTS = 10;
 const STALE_CLAIM_MS = 15 * 60_000;
-const OPEN = ["starting", "active", "ending"] as const;
 
 type Snapshot = WageSnapshot & { user_id: string; job_id: string | null };
 
@@ -169,7 +169,7 @@ export const inputs = internalQuery({
           .query("live_activity_deliveries")
           .withIndex("by_push_device_shift", (q) => q.eq("push_device_id", d.id))
           .collect()
-      ).find((x) => (OPEN as readonly string[]).includes(x.status));
+      ).find((x) => isOpenDelivery(x.status));
       if (d.live_activity_push_to_start_token === undefined && open === undefined) continue;
       devices.push({
         id: d.id,
@@ -244,7 +244,7 @@ export const claimStart = internalMutation({
       .withIndex("by_push_device_shift", (q) => q.eq("push_device_id", push_device_id))
       .collect();
     // One open activity per device, as the partial unique index required.
-    if (deliveries.some((d) => d.shift_id !== shift_id && (OPEN as readonly string[]).includes(d.status))) return null;
+    if (deliveries.some((d) => d.shift_id !== shift_id && isOpenDelivery(d.status))) return null;
     const now = new Date();
     const iso = now.toISOString();
     const existing = deliveries.find((d) => d.shift_id === shift_id);

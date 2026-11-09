@@ -219,18 +219,17 @@ export const record = internalMutation({
       if (d !== null && d.apns_environment !== environment) await ctx.db.patch(d._id, { apns_environment: environment });
     }
     for (const broadcastId of broadcasts) {
-      const open = (
-        await ctx.db
-          .query("notifications_outbox")
-          .withIndex("by_broadcast", (q) => q.eq("broadcast_id", broadcastId))
-          .collect()
-      ).some((n) => n.status === "pending" || n.status === "sending");
-      if (open) continue;
+      const rows = await ctx.db
+        .query("notifications_outbox")
+        .withIndex("by_broadcast", (q) => q.eq("broadcast_id", broadcastId))
+        .collect();
+      if (rows.some((n) => n.status === "pending" || n.status === "sending")) continue;
       const b = await ctx.db
         .query("admin_broadcasts")
         .withIndex("by_uuid", (q) => q.eq("id", broadcastId))
         .unique();
-      if (b?.status === "queued") await ctx.db.patch(b._id, { status: "complete" });
+      const status = rows.some((n) => n.status === "failed") ? "partial_failure" : "complete";
+      if (b?.status === "queued") await ctx.db.patch(b._id, { status });
     }
   },
 });
