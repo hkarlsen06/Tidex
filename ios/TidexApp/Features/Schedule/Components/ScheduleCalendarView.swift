@@ -22,6 +22,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   let showEarnings: Bool
   let jobs: [Job]
   let showsActionBar: Bool
+  /// Puts the action bar at the bottom of the space this view is given, above the month picker.
+  let pinsActionBarToBottom: Bool
 
   /// Transition phase for header text animations
   var phase: MonthTransitionPhase?
@@ -127,6 +129,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     showEarnings: Bool,
     jobs: [Job],
     showsActionBar: Bool = true,
+    pinsActionBarToBottom: Bool = false,
     phase: MonthTransitionPhase? = nil,
     onDayTapped: ((String, [ShiftWithComputations]) -> Void)? = nil,
     onSwipeLeft: (() -> Void)? = nil,
@@ -173,6 +176,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     self.showEarnings = showEarnings
     self.jobs = jobs
     self.showsActionBar = showsActionBar
+    self.pinsActionBarToBottom = pinsActionBarToBottom
     self.phase = phase
     self.onDayTapped = onDayTapped
     self.onSwipeLeft = onSwipeLeft
@@ -338,8 +342,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       calendarGrid
 
       if showsActionBar {
-        actionBar
-          .padding(.top, Spacing.sm)
+        actionBarSlot
       }
     }
     .onChange(of: selectedDates) { _, _ in
@@ -905,6 +908,21 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     dynamicTypeSize.isAccessibilitySize
       ? AnyShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       : AnyShape(Capsule())
+  }
+
+  /// Under the month, or above the month picker with the tab bar's width. Pinned only on a
+  /// phone, where this view sits `Spacing.xs` from the screen edges.
+  @ViewBuilder
+  private var actionBarSlot: some View {
+    if pinsActionBarToBottom {
+      Spacer(minLength: Spacing.sm)
+      actionBar
+        .padding(.horizontal, MonthPickerLayout.tabBarAlignedHorizontalPadding - Spacing.xs)
+        .padding(.bottom, MonthPickerLayout.bottomPadding)
+    } else {
+      actionBar
+        .padding(.top, Spacing.sm)
+    }
   }
 
   @ViewBuilder

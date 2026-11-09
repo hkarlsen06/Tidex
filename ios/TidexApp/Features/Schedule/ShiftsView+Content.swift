@@ -341,6 +341,9 @@ extension ShiftsView {
     }) {  // swiftlint:disable:this closure_body_length
       GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
         let isWide = geometry.size.width >= 700
+        // With shifts, the action bar sits above the month picker. Without, the first-shift
+        // prompt follows the month instead.
+        let pinsActionBar = !isWide && hasAnyShifts
         let calendarWidth =
           isWide
           ? min(AdaptiveMaxWidth.tabContent, max(350, geometry.size.height * 0.7))
@@ -373,6 +376,7 @@ extension ShiftsView {
               currency: viewModel.currency,
               showEarnings: true,
               jobs: viewModel.activeJobs,
+              pinsActionBarToBottom: pinsActionBar,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
                 if viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay) {
@@ -481,7 +485,9 @@ extension ShiftsView {
                 .padding(.horizontal, Spacing.lg)
                 .padding(.top, Spacing.md)
             }
-            Spacer()
+            if !pinsActionBar {
+              Spacer()
+            }
           }
           // Offset for month picker overlay so content centers in available space
           .padding(.bottom, MonthPickerLayout.totalBottomInset)
