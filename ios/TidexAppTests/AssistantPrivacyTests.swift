@@ -8,8 +8,9 @@ import XCTest
 @MainActor
 final class AssistantPrivacyTests: XCTestCase {
   private let userId = "user-1"
-  private let now = Calendar.gregorianCurrent.date(
-    from: DateComponents(year: 2_026, month: 11, day: 4, hour: 12)) ?? .distantPast
+  private let now =
+    Calendar.gregorianCurrent.date(
+      from: DateComponents(year: 2_026, month: 11, day: 4, hour: 12)) ?? .distantPast
   private let jobs = [TestFixtures.job(id: "cafe", isDefault: true)]
   private var shifts: [ShiftWithComputations] {
     [
@@ -80,6 +81,32 @@ final class AssistantPrivacyTests: XCTestCase {
       }
     }
     XCTAssertEqual(AssistantAccess(session: session(isImpersonating: false)), .user(id: userId))
+  }
+
+  func testSearchQueriesReturnNoSuggestionsOrMatchesWithoutPersonalAccess() async throws {
+    for access: AssistantAccess in [.signedOut, .impersonating] {
+      let shifts = ShiftEntityQuery(access: access)
+      let jobs = JobEntityQuery(access: access)
+      let friends = FriendEntityQuery(access: access)
+
+      let suggestedJobs = try await jobs.suggestedEntities()
+      let jobsByID = try jobs.entities(for: ["cafe"])
+      let jobsByName = try jobs.entities(matching: "Café")
+      let suggestedShifts = try await shifts.suggestedEntities()
+      let matchingShifts = try await shifts.entities(for: ["tomorrow"])
+      let suggestedFriends = try await friends.suggestedEntities()
+      let friendsByID = try friends.entities(for: ["friend-1"])
+      let friendsByName = try friends.entities(matching: "Sam")
+
+      XCTAssertTrue(suggestedJobs.isEmpty)
+      XCTAssertTrue(jobsByID.isEmpty)
+      XCTAssertTrue(jobsByName.isEmpty)
+      XCTAssertTrue(suggestedShifts.isEmpty)
+      XCTAssertTrue(matchingShifts.isEmpty)
+      XCTAssertTrue(suggestedFriends.isEmpty)
+      XCTAssertTrue(friendsByID.isEmpty)
+      XCTAssertTrue(friendsByName.isEmpty)
+    }
   }
 
   private func session(isImpersonating: Bool) -> AuthSession {

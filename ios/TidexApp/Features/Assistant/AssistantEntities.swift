@@ -53,16 +53,22 @@ struct ShiftEntity: IndexedEntity {
 }
 
 struct ShiftEntityQuery: EntityQuery {
+  var access: AssistantAccess?
+
   @MainActor
   func entities(for identifiers: [ShiftEntity.ID]) async throws -> [ShiftEntity] {
+    let access = access ?? .current
+    guard case .user = access else { return [] }
     let ids = Set(identifiers)
-    return try await AssistantShifts.entities(access: .current).filter { ids.contains($0.id) }
+    return try await AssistantShifts.entities(access: access).filter { ids.contains($0.id) }
   }
 
   @MainActor
   func suggestedEntities() async throws -> [ShiftEntity] {
+    let access = access ?? .current
+    guard case .user = access else { return [] }
     let now = Date()
-    return try await AssistantShifts.entities(access: .current).filter { $0.end > now }
+    return try await AssistantShifts.entities(access: access).filter { $0.end > now }
   }
 }
 
@@ -86,6 +92,8 @@ struct JobEntity: IndexedEntity {
 }
 
 struct JobEntityQuery: EntityStringQuery {
+  var access: AssistantAccess?
+
   @MainActor
   func entities(for identifiers: [JobEntity.ID]) throws -> [JobEntity] {
     let ids = Set(identifiers)
@@ -104,7 +112,7 @@ struct JobEntityQuery: EntityStringQuery {
 
   @MainActor
   private func activeJobs() throws -> [JobEntity] {
-    let userId = try AssistantAccess.current.requireUserId()
+    guard case .user(let userId) = access ?? .current else { return [] }
     return JobsRepository.shared.getActiveJobs(for: userId).map(JobEntity.init)
   }
 }
@@ -130,6 +138,8 @@ struct FriendEntity: AppEntity {
 }
 
 struct FriendEntityQuery: EntityStringQuery {
+  var access: AssistantAccess?
+
   @MainActor
   func entities(for identifiers: [FriendEntity.ID]) throws -> [FriendEntity] {
     let ids = Set(identifiers)
@@ -148,7 +158,7 @@ struct FriendEntityQuery: EntityStringQuery {
 
   @MainActor
   private func sharers() throws -> [FriendEntity] {
-    let userId = try AssistantAccess.current.requireUserId()
+    guard case .user(let userId) = access ?? .current else { return [] }
     return SharedShiftsRepository.shared.getSharers(for: userId).map(FriendEntity.init)
   }
 }
