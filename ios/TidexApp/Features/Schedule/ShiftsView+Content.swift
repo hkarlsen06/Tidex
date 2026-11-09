@@ -824,10 +824,16 @@ extension ShiftsView {
     }
   }
 
-  /// Opens the Add sheet in single mode, optionally with a date selected.
+  /// Opens the Add screen in single mode, optionally with a date selected.
+  /// A date opens it directly, because this view re-renders whenever `pendingDeepLink`
+  /// changes, and Add would set and then clear it. Add switches to single mode for the date.
   private func openAddShift(preselectedDate dateISO: String? = nil) {
+    guard let dateISO else {
+      coordinator.pendingDeepLink = .addShift(mode: .single, date: nil)
+      return
+    }
     SharedMonthContext.shared.preselectedDate = dateISO
-    coordinator.pendingDeepLink = .addShift(mode: .single, date: dateISO)
+    AddShiftNavigator.shared.hostTab = .shifts
   }
 
   private func listCoveredDateISO(for event: EventRow) -> String {
