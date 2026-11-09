@@ -69,7 +69,7 @@ final class SyncCoordinator: Sendable {
 
   /// Maximum time a sync operation can run before being cancelled (in nanoseconds).
   /// Prevents zombie syncs from holding the syncing lock indefinitely.
-  private static let syncTimeout: UInt64 = 30_000_000_000  // 30 seconds
+  private static let syncTimeout: Duration = .seconds(30)
 
   // MARK: - Private State
 
@@ -203,33 +203,13 @@ final class SyncCoordinator: Sendable {
     updateWidgetStorage: Bool = true
   ) async -> SyncResult {
     guard await MainActor.run(body: { !LocalStore.shared.isStorageUnavailable }) else {
-      return SyncResult(
-        success: false,
-        tableResults: [],
-        pushResults: [],
-        totalRowsProcessed: 0,
-        totalRowsPushed: 0,
-        totalConflicts: 0,
-        totalAutoMerged: 0,
-        duration: 0,
-        error: String(localized: .storageUnavailableMessage)
-      )
+      return SyncResult(outcome: .failed(message: String(localized: .storageUnavailableMessage)))
     }
 
     var seenTables = Set<SyncTable>()
     let uniqueTables = tables.filter { seenTables.insert($0).inserted }
     guard !uniqueTables.isEmpty else {
-      return SyncResult(
-        success: true,
-        tableResults: [],
-        pushResults: [],
-        totalRowsProcessed: 0,
-        totalRowsPushed: 0,
-        totalConflicts: 0,
-        totalAutoMerged: 0,
-        duration: 0,
-        error: nil
-      )
+      return SyncResult(outcome: .completed)
     }
 
     var decision: SyncStartDecision = .alreadySyncing(generation: 0)
@@ -250,17 +230,7 @@ final class SyncCoordinator: Sendable {
         var finished = false
         for await ready in updates { finished = ready }
         guard finished, !Task.isCancelled else {
-          return SyncResult(
-            success: false,
-            tableResults: [],
-            pushResults: [],
-            totalRowsProcessed: 0,
-            totalRowsPushed: 0,
-            totalConflicts: 0,
-            totalAutoMerged: 0,
-            duration: 0,
-            error: nil
-          )
+          return SyncResult(outcome: .cancelled)
         }
         continue syncStartLoop
       }
@@ -272,17 +242,7 @@ final class SyncCoordinator: Sendable {
     switch decision {
     case .alreadySyncing:
       syncCoordinatorLogger.info("Sync already in progress, skipping \(reason.rawValue)")
-      return SyncResult(
-        success: false,
-        tableResults: [],
-        pushResults: [],
-        totalRowsProcessed: 0,
-        totalRowsPushed: 0,
-        totalConflicts: 0,
-        totalAutoMerged: 0,
-        duration: 0,
-        error: "Sync already in progress"
-      )
+      return SyncResult(outcome: .alreadyRunning)
 
     case .skippedInterval:
       // Keep the server's copy of the app locale current even when full sync is interval-skipped.
@@ -293,17 +253,7 @@ final class SyncCoordinator: Sendable {
       await MainActor.run {
         AppDelegate.shared?.checkAndStartLiveActivityIfNeeded()
       }
-      return SyncResult(
-        success: false,
-        tableResults: [],
-        pushResults: [],
-        totalRowsProcessed: 0,
-        totalRowsPushed: 0,
-        totalConflicts: 0,
-        totalAutoMerged: 0,
-        duration: 0,
-        error: nil
-      )
+      return SyncResult(outcome: .skippedRecentSync)
 
     case .started(let started):
       generation = started
@@ -329,79 +279,49 @@ final class SyncCoordinator: Sendable {
 
     // Race the sync work against a timeout to prevent zombie syncs
     // from holding the syncing lock indefinitely.
-    // swiftlint:disable:next closure_body_length
-    let result: SyncResult = await withTaskGroup(of: SyncResult?.self) { group in
-      group.addTask {
-        let work = Task {
-          await self.performSyncWork(
-            reason: reason,
-            userId: userId,
-            startTime: startTime,
-            tables: uniqueTables,
-            updateWidgetStorage: updateWidgetStorage
-          )
-        }
-        self.runningWork.withLock { $0 = work }
-        defer {
-          self.runningWork.withLock { running in
-            if running == work { running = nil }
-          }
-        }
-        return await withTaskCancellationHandler {
-          await work.value
-        } onCancel: {
-          work.cancel()
-        }
-      }
-      group.addTask {
-        try? await Task.sleep(for: .nanoseconds(Int64(Self.syncTimeout)))
-        return nil  // timeout signal
-      }
-      guard let first = await group.next() else {
-        group.cancelAll()
-        return SyncResult(
-          success: false,
-          tableResults: [],
-          pushResults: [],
-          totalRowsProcessed: 0,
-          totalRowsPushed: 0,
-          totalConflicts: 0,
-          totalAutoMerged: 0,
-          duration: Date().timeIntervalSince(startTime),
-          error: "Sync timed out"
+    let result = await Self.race(timeout: Self.syncTimeout, startTime: startTime) {
+      let work = Task {
+        await self.performSyncWork(
+          reason: reason,
+          userId: userId,
+          startTime: startTime,
+          tables: uniqueTables,
+          updateWidgetStorage: updateWidgetStorage
         )
       }
-      group.cancelAll()
-      return first
-        ?? SyncResult(
-          success: false,
-          tableResults: [],
-          pushResults: [],
-          totalRowsProcessed: 0,
-          totalRowsPushed: 0,
-          totalConflicts: 0,
-          totalAutoMerged: 0,
-          duration: Date().timeIntervalSince(startTime),
-          error: "Sync timed out"
-        )
+      self.runningWork.withLock { $0 = work }
+      defer {
+        self.runningWork.withLock { running in
+          if running == work { running = nil }
+        }
+      }
+      return await withTaskCancellationHandler {
+        await work.value
+      } onCancel: {
+        work.cancel()
+      }
     }
 
     // resetForUserChange ran during this sync, so it belongs to the previous user. The state and
     // the status shown now are the next user's.
     guard
       let needsFollowUpSync = await stateStore.endSync(
-        success: result.success, generation: generation)
+        success: result.outcome == .completed, generation: generation)
     else { return result }
 
-    if result.error == "Sync timed out" {
-      syncCoordinatorLogger.error("Sync timed out after 30s, cancelling")
-      await MainActor.run {
+    await MainActor.run {
+      switch result.outcome {
+      case .timedOut:
+        syncCoordinatorLogger.error("Sync timed out after 30s, cancelling")
         lastError = "Sync timed out"
         SyncStatusManager.shared.syncFailed(message: "Sync timed out")
-      }
-    }
 
-    await MainActor.run {
+      case .cancelled:
+        SyncStatusManager.shared.syncCancelled()
+
+      case .completed, .alreadyRunning, .skippedRecentSync, .failed:
+        break
+      }
       isSyncing = false
     }
     await notifyWorkSetupDataChangedIfNeeded(for: result, reason: reason, userId: userId)
@@ -504,6 +424,28 @@ final class SyncCoordinator: Sendable {
   /// Whether the error means the device has no usable connection, so more requests would fail.
   private static func isNetworkError(_ error: Error) async -> Bool {
     await MainActor.run { AuthSessionManager.shared.isTransientNetworkError(error) }
+  }
+
+  /// Returns the result of `work`, or `.timedOut` once `timeout` passes. A caller cancelled
+  /// before either gets `.cancelled`.
+  static func race(
+    timeout: Duration,
+    startTime: Date,
+    work: @escaping @Sendable () async -> SyncResult
+  ) async -> SyncResult {
+    await withTaskGroup(of: SyncResult.self) { group in
+      group.addTask { await work() }
+      group.addTask {
+        let slept = (try? await Task.sleep(for: timeout)) != nil
+        return SyncResult(
+          outcome: slept ? .timedOut : .cancelled,
+          duration: Date().timeIntervalSince(startTime)
+        )
+      }
+      let first = await group.next() ?? SyncResult(outcome: .cancelled)
+      group.cancelAll()
+      return first
+    }
   }
 
   /// Whether the error comes from cancelling the sync, including a cancelled URL request.
@@ -694,15 +636,14 @@ final class SyncCoordinator: Sendable {
       }
 
       return SyncResult(
-        success: true,
+        outcome: .completed,
         tableResults: tableResults,
         pushResults: pushResults,
         totalRowsProcessed: totalRows,
         totalRowsPushed: totalPushed,
         totalConflicts: totalConflicts,
         totalAutoMerged: totalAutoMerged,
-        duration: duration,
-        error: nil
+        duration: duration
       )
     } catch let error where Self.isCancellation(error) {
       // Rows pushed before the cancellation are marked clean only in memory. Save them, or a
@@ -710,17 +651,7 @@ final class SyncCoordinator: Sendable {
       try? await storeActor.save()
       let duration = Date().timeIntervalSince(startTime)
       syncCoordinatorLogger.warning("Sync cancelled after \(String(format: "%.1f", duration))s")
-      return SyncResult(
-        success: false,
-        tableResults: [],
-        pushResults: [],
-        totalRowsProcessed: 0,
-        totalRowsPushed: 0,
-        totalConflicts: 0,
-        totalAutoMerged: 0,
-        duration: duration,
-        error: "Sync timed out"
-      )
+      return SyncResult(outcome: .cancelled, duration: duration)
     } catch {
       return await recordSyncFailure(
         error, userId: userId, startTime: startTime, storeActor: storeActor)
@@ -776,7 +707,7 @@ final class SyncCoordinator: Sendable {
     }
 
     return SyncResult(
-      success: false,
+      outcome: .failed(message: userFriendlyMessage),
       tableResults: tableResults,
       pushResults: pushResults,
       totalRowsProcessed: tableResults.reduce(0) { $0 + $1.rowsProcessed },
@@ -784,8 +715,7 @@ final class SyncCoordinator: Sendable {
       totalConflicts: tableResults.reduce(0) { $0 + $1.newConflicts }
         + pushResults.reduce(0) { $0 + $1.newConflicts },
       totalAutoMerged: tableResults.reduce(0) { $0 + $1.autoMerged },
-      duration: duration,
-      error: userFriendlyMessage
+      duration: duration
     )
   }
 

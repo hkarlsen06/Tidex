@@ -838,11 +838,15 @@ final class AppCoordinator {
     runTrackedTask { [weak self] in
       await coordinator.loadTrackingState(userId: userId)
       let result = await coordinator.sync(reason: .appLaunch, userId: userId)
+      if result.outcome == .alreadyRunning {
+        // That sync pulls this user's data, so the first screen waits for it too.
+        _ = await coordinator.waitForIdle()
+      }
       await FriendsMessageOutbox.shared.drain(userId: userId)
 
       guard let self, self.userId == userId else { return }
       initialSyncNeedsLocalReload =
-        !result.success
+        result.outcome != .completed
         || SyncCompletionSummary(
           reason: .appLaunch, userId: userId,
           tableResults: result.tableResults, pushResults: result.pushResults

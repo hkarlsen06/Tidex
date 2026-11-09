@@ -212,7 +212,7 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
       let syncResult = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
       isSyncing = false
 
-      if !syncResult.success, let error = syncResult.error {
+      if case .failed(let error) = syncResult.outcome {
         kLogger.warning("Sync had issues before export: \(error)")
         // Continue with export anyway - user might want old data
       }

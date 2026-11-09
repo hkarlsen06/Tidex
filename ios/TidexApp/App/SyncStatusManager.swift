@@ -38,6 +38,7 @@ final class SyncStatusManager {
   private(set) var status: SyncIndicatorStatus = .synced
   private(set) var lastSuccessfulSync: Date?
   private(set) var lastSuccessfulSyncSummary: SyncCompletionSummary?
+  @ObservationIgnored private var statusBeforeSync: SyncIndicatorStatus = .synced
 
   init() {}
 
@@ -46,7 +47,14 @@ final class SyncStatusManager {
   /// Called when sync starts. Background syncs keep an offline status so the pill does not flicker.
   func syncStarted(isBackground: Bool = false) {
     if isBackground, status == .offline { return }
+    if status != .syncing { statusBeforeSync = status }
     status = .syncing
+  }
+
+  /// Called when the user cancels a sync, for example by leaving a refreshing screen.
+  /// Puts back the status from before it started, because nothing failed.
+  func syncCancelled() {
+    if status == .syncing { status = statusBeforeSync }
   }
 
   /// Called when sync completes successfully
@@ -84,6 +92,7 @@ final class SyncStatusManager {
   /// Reset all state (e.g., on logout)
   func reset() {
     status = .synced
+    statusBeforeSync = .synced
     lastSuccessfulSync = nil
     lastSuccessfulSyncSummary = nil
   }

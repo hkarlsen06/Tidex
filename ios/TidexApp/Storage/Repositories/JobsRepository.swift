@@ -578,7 +578,7 @@ extension JobsRepository {
 
   private func syncBeforeJobDeletion(userId: String, jobId: String) async throws {
     let result = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
-    guard result.success else {
+    guard result.outcome == .completed else {
       throw JobsRepositoryError.deletionSyncRequired
     }
     try await localStore.storeActor.validateArchivedJobDeletion(userId: userId, jobId: jobId)

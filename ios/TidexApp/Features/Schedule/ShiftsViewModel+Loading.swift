@@ -84,7 +84,7 @@ extension ShiftsViewModel {
       // Trigger sync to pull/push changes
       let syncResult = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
 
-      if !syncResult.success, let errorMessage = syncResult.error {
+      if case .failed(let errorMessage) = syncResult.outcome {
         kScheduleLogger.warning("⚠️ Sync had issues: \(errorMessage)")
         // Continue anyway - we still want to show local data
       }

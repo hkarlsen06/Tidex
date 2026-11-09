@@ -317,6 +317,41 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     XCTAssertFalse(completed)
   }
 
+  // MARK: - Sync outcome
+
+  /// Stands in for the sync work, which returns `.cancelled` when its task is cancelled.
+  private nonisolated static func slowSync() async -> SyncResult {
+    let finished = (try? await Task.sleep(for: .seconds(60))) != nil
+    return SyncResult(outcome: finished ? .completed : .cancelled)
+  }
+
+  /// SwiftUI cancels a refresh when the user leaves the screen. That used to show "Sync timed out".
+  internal func testCancelledSyncIsNotReportedAsTimeout() async {
+    let sync = Task {
+      await SyncCoordinator.race(timeout: .seconds(30), startTime: Date()) {
+        await Self.slowSync()
+      }
+    }
+    sync.cancel()
+    let result = await sync.value
+    XCTAssertEqual(result.outcome, .cancelled)
+  }
+
+  internal func testSyncPastTheTimeLimitTimesOut() async {
+    let result = await SyncCoordinator.race(timeout: .milliseconds(50), startTime: Date()) {
+      await Self.slowSync()
+    }
+    XCTAssertEqual(result.outcome, .timedOut)
+  }
+
+  internal func testCancelledRefreshRestoresTheEarlierStatus() {
+    let status = SyncStatusManager()
+    status.setOffline()
+    status.syncStarted()
+    status.syncCancelled()
+    XCTAssertEqual(status.status, .offline, "A cancelled refresh neither fails nor claims a sync")
+  }
+
   /// An account switch resets the store while the old user's sync is still winding down. When
   /// that sync ends, the new user's sync must keep running, so a second one can't start beside it.
   internal func testSyncFromBeforeResetDoesNotEndTheNextUsersSync() async {

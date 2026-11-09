@@ -375,7 +375,7 @@
 
     /// Log a sync operation complete
     func logSyncComplete(result: SyncResult) {
-      if result.success {
+      if result.outcome == .completed {
         log(
           .sync, "Sync completed successfully",
           details: """
@@ -386,7 +386,7 @@
             Conflicts: \(result.totalConflicts)
             """)
       } else {
-        log(.error, "Sync failed", details: result.error ?? "Unknown error")
+        log(.error, "Sync failed", details: String(describing: result.outcome))
       }
     }
 

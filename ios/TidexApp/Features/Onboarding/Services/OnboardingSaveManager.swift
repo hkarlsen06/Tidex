@@ -113,11 +113,11 @@ final class OnboardingSaveManager {
       }
 
       let syncResult = await syncCoordinator.sync(reason: .localChange, userId: userId)
-      if syncResult.success {
+      if syncResult.outcome == .completed {
         logger.info("Sync completed successfully")
       } else {
         // Non-blocking - sync will retry later
-        logger.warning("Sync had issues but continuing: \(syncResult.error ?? "unknown")")
+        logger.warning("Sync had issues but continuing: \(String(describing: syncResult.outcome))")
       }
 
       status = .success

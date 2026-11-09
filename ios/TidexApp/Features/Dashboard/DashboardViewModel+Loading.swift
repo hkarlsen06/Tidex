@@ -260,7 +260,7 @@ extension DashboardViewModel {
       // Trigger sync to pull/push changes
       let syncResult = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)  // swiftlint:disable:this explicit_type_interface line_length
 
-      if !syncResult.success, let errorMessage = syncResult.error {
+      if case .failed(let errorMessage) = syncResult.outcome {
         dashboardViewModelLogger.warning("⚠️ Sync had issues: \(errorMessage)")
         // Continue anyway - we still want to show local data
       }

@@ -339,7 +339,7 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
         userId: session.normalizedUserId
       )
 
-      if !syncResult.success, let errorMessage = syncResult.error {
+      if case .failed(let errorMessage) = syncResult.outcome {
         logger.warning("Stats refresh sync had issues: \(errorMessage)")
       }
     } catch {

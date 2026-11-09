@@ -16,21 +16,32 @@ internal struct TablePullResult {
   internal let affectedMonths: Set<ShiftChangeAffectedMonth>
 }
 
+/// How a sync request ended.
+internal enum SyncOutcome: Equatable {
+  /// The sync ran to the end, or there was nothing to sync.
+  case completed
+  /// Another sync was running and this request did not wait for it.
+  case alreadyRunning
+  /// A recent successful sync made this one unnecessary.
+  case skippedRecentSync
+  /// The caller's task was cancelled, or the account changed while the request waited.
+  case cancelled
+  /// The sync ran past its time limit and was stopped.
+  case timedOut
+  /// The sync stopped on an error. `message` is the text shown to the user.
+  case failed(message: String)
+}
+
 /// Overall sync result
 internal struct SyncResult {
-  internal let success: Bool
-  internal let tableResults: [TablePullResult]
-  internal let pushResults: [TablePushResult]
-  internal let totalRowsProcessed: Int
-  internal let totalRowsPushed: Int
-  internal let totalConflicts: Int
-  internal let totalAutoMerged: Int
-  internal let duration: TimeInterval
-  internal let error: String?
-
-  internal var hasConflicts: Bool {
-    totalConflicts > 0
-  }
+  internal let outcome: SyncOutcome
+  internal var tableResults: [TablePullResult] = []
+  internal var pushResults: [TablePushResult] = []
+  internal var totalRowsProcessed = 0
+  internal var totalRowsPushed = 0
+  internal var totalConflicts = 0
+  internal var totalAutoMerged = 0
+  internal var duration: TimeInterval = 0
 }
 
 // MARK: - Push Result Types
