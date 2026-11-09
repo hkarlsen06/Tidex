@@ -176,8 +176,16 @@ final class AppCoordinator {
   @ObservationIgnored private var backgroundTasks: [UUID: Task<Void, Never>] = [:]
   @ObservationIgnored private var foregroundTask: Task<Void, Never>?
   @ObservationIgnored private var didReceiveInitialSession = false
-  @ObservationIgnored private var isUpdatingAuthState = false
-  @ObservationIgnored private var isUserInitiatedSignOutInProgress = false
+  /// The sign-in check that is running. A check releases only its own token, because the
+  /// launch timeout can release it early and let a second check start.
+  @ObservationIgnored private var authStateUpdateToken: UUID?
+  /// Why this app is signing out, so the signedOut event that follows counts as expected.
+  @ObservationIgnored private var signOutInProgress: SignOutCause?
+
+  private enum SignOutCause {
+    case user
+    case revokedSession
+  }
   /// Set when the terms check could not reach the manifest. Cleared by `recheckTermsIfPending`.
   @ObservationIgnored private var isTermsRecheckPending = false
 
@@ -208,7 +216,7 @@ final class AppCoordinator {
       appState: String(describing: appState),
       metadata: [
         "did_receive_initial_session": .bool(didReceiveInitialSession),
-        "is_updating_auth_state": .bool(isUpdatingAuthState),
+        "is_updating_auth_state": .bool(authStateUpdateToken != nil),
         "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
       ]
     )
@@ -287,7 +295,7 @@ final class AppCoordinator {
   /// Runs outside the tracked tasks, so a sign-out that cancels them can't cut this short
   /// halfway. Sign-out can still cancel the wait before this.
   private func leaveLoadingAfterTimeout() async {
-    isUpdatingAuthState = false
+    authStateUpdateToken = nil
 
     let session = await AuthSessionManager.shared.getSessionOrLocal()
     // The normal launch flow may have finished while the stored session loaded.
@@ -310,7 +318,7 @@ final class AppCoordinator {
           "reason": .string("hard_loading_timeout"),
           "timeout_ms": .integer(Int(Self.maxLoadingTimeout / 1_000_000)),
           "did_receive_initial_session": .bool(didReceiveInitialSession),
-          "is_updating_auth_state": .bool(isUpdatingAuthState),
+          "is_updating_auth_state": .bool(authStateUpdateToken != nil),
           "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
         ]
       )
@@ -423,7 +431,7 @@ final class AppCoordinator {
 
   /// Clerk ended the session, by a sign-out here or because the server revoked it.
   private func handleSignedOutEvent() {
-    let isExpectedSignOut = isUserInitiatedSignOutInProgress || appState == .unauthenticated
+    let isExpectedSignOut = signOutInProgress != nil || appState == .unauthenticated
     AuthDiagnosticsReporter.shared.record(
       .signedOutReceived,
       severity: isExpectedSignOut ? .info : .warning,
@@ -431,7 +439,7 @@ final class AppCoordinator {
       appState: String(describing: appState),
       authEvent: "signed_out",
       metadata: [
-        "is_user_initiated_sign_out_in_progress": .bool(isUserInitiatedSignOutInProgress),
+        "is_user_initiated_sign_out_in_progress": .bool(signOutInProgress == .user),
         "is_expected_sign_out": .bool(isExpectedSignOut),
       ]
     )
@@ -453,13 +461,14 @@ final class AppCoordinator {
   // MARK: - Sign-In Check
 
   /// Resolves the user after a sign-in and routes to terms or the main app.
-  /// Uses isUpdatingAuthState flag to prevent concurrent state updates from race conditions.
+  /// `authStateUpdateToken` keeps a second check from running beside it.
   /// Wraps the actual check in a timeout to prevent hanging on slow/unresponsive networks.
   private func checkSignInAndUpdateState() async {
     // Prevent concurrent state updates from timeout vs auth listener race
-    guard !isUpdatingAuthState else { return }
-    isUpdatingAuthState = true
-    defer { isUpdatingAuthState = false }
+    guard authStateUpdateToken == nil else { return }
+    let token = UUID()
+    authStateUpdateToken = token
+    defer { if authStateUpdateToken == token { authStateUpdateToken = nil } }
 
     // The first sign-in on this device resolves the Tidex user, which the wipe check needs.
     _ = await AuthSessionManager.shared.getSessionOrLocal()
@@ -992,7 +1001,7 @@ final class AppCoordinator {
         // The refresh token is gone, so unsynced changes can't push. Keep them for the same
         // user's next sign-in. Read this before the local sign-out removes the session.
         let unsyncedUserId = await userIdWithUnsyncedChanges()
-        isUserInitiatedSignOutInProgress = true
+        signOutInProgress = .revokedSession
         do {
           try await Clerk.shared.auth.signOut()
         } catch {
@@ -1159,7 +1168,7 @@ final class AppCoordinator {
   private func performSignOut(global: Bool, retainingLocalDataFor retainedUserId: String? = nil)
     async
   {
-    isUserInitiatedSignOutInProgress = true
+    signOutInProgress = .user
     AuthDiagnosticsReporter.shared.record(
       .userInitiatedSignOut,
       severity: .info,
@@ -1302,7 +1311,7 @@ final class AppCoordinator {
 
   private func applySignedOutState() {
     resetLaunchSessionTimeoutCount()
-    isUserInitiatedSignOutInProgress = false
+    signOutInProgress = nil
     appState = .unauthenticated
     pendingDeepLink = nil
     userId = nil
@@ -1397,7 +1406,7 @@ final class AppCoordinator {
       "previous_app_state": .string(String(describing: previousState)),
       "current_app_state": .string(String(describing: appState)),
       "did_receive_initial_session": .bool(didReceiveInitialSession),
-      "is_updating_auth_state": .bool(isUpdatingAuthState),
+      "is_updating_auth_state": .bool(authStateUpdateToken != nil),
       "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
       "is_revoked_error": .bool(AuthSessionManager.shared.isSessionRevokedError(error)),
       "is_transient_network_error": .bool(AuthSessionManager.shared.isTransientNetworkError(error)),
