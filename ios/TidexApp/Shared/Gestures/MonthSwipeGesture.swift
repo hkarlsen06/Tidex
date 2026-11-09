@@ -219,6 +219,16 @@ private struct SwipeGestureView: UIViewRepresentable {
         }
       }
 
+      // A segmented control handles horizontal drags itself, so a swipe that starts on one
+      // never changes month.
+      var hitView = view.hitTest(location, with: nil)
+      while let current = hitView, current !== view {
+        if current is UISegmentedControl {
+          return false
+        }
+        hitView = current.superview
+      }
+
       let velocity = pan.velocity(in: view)
       let absHorizontal = abs(velocity.x)
       let absVertical = abs(velocity.y)
