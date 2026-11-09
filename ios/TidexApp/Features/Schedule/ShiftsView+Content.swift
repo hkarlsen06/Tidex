@@ -383,14 +383,6 @@ extension ShiftsView {
                   presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
                 }
               },
-              onSwipeLeft: {
-                AppearanceTracker.shared.reset()
-                viewModel.goToNextMonth()
-              },
-              onSwipeRight: {
-                AppearanceTracker.shared.reset()
-                viewModel.goToPreviousMonth()
-              },
               selectedDates: $viewModel.selectedDates,
               confirmingDelete: viewModel.confirmingDelete,
               isDeleting: viewModel.isDeleting,
@@ -493,6 +485,18 @@ extension ShiftsView {
           .padding(.bottom, MonthPickerLayout.totalBottomInset)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The month sits at the top of a phone screen, so a swipe anywhere below it
+        // changes month too.
+        .monthSwipeGesture(
+          onSwipeLeft: {
+            AppearanceTracker.shared.reset()
+            viewModel.goToNextMonth()
+          },
+          onSwipeRight: {
+            AppearanceTracker.shared.reset()
+            viewModel.goToPreviousMonth()
+          }
+        )
       }
     }
   }
