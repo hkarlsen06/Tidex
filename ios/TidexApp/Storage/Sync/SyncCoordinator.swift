@@ -250,9 +250,7 @@ final class SyncCoordinator: Sendable {
       Task { await self.updateAppLocaleIfNeeded(userId: userId) }
       // Keep foreground Live Activity state fresh without running full widget
       // storage recomputation on the main thread when sync is interval-skipped.
-      await MainActor.run {
-        AppDelegate.shared?.checkAndStartLiveActivityIfNeeded()
-      }
+      await AppDelegate.shared?.checkAndStartLiveActivityIfNeeded()
       return SyncResult(outcome: .skippedRecentSync)
 
     case .started(let started):

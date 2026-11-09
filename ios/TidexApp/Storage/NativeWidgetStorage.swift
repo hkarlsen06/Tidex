@@ -257,10 +257,10 @@ enum NativeWidgetStorage {
   }
 
   private static func checkLiveActivityState() async {
-    await MainActor.run {
-      ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
-        .checkAndStartLiveActivityIfNeeded()
+    let delegate = await MainActor.run {
+      (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
     }
+    await delegate?.checkAndStartLiveActivityIfNeeded()
   }
 
   private static func clearAfterEmptyRefresh(for userId: String, generation: Int, jobs: [Job])

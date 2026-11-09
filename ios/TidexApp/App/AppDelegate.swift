@@ -33,8 +33,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   /// Prevents duplicate APNs registration calls while one is in flight
   private var apnsRegistrationInFlight = false
   /// Collapses rapid foreground/sync/auth triggers into one serialized maintenance run.
-  private var liveActivityMaintenanceInFlight = false
+  private var liveActivityMaintenanceTask: Task<Void, Never>?
   private var liveActivityMaintenancePending = false
+  private var liveActivityRequestGeneration = 0
 
   override init() {
     super.init()
@@ -228,25 +229,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   /// - After widget storage update (when shifts are synced/edited)
   ///
   /// This ensures the Live Activity starts whenever the app is active and data is refreshed.
-  func checkAndStartLiveActivityIfNeeded() {
-    Task { @MainActor [weak self] in
-      guard let self else { return }
-      if liveActivityMaintenanceInFlight {
-        liveActivityMaintenancePending = true
-        return
-      }
+  func checkAndStartLiveActivityIfNeeded() async {
+    if let task = liveActivityMaintenanceTask {
+      liveActivityMaintenancePending = true
+      await task.value
+      return
+    }
 
-      liveActivityMaintenanceInFlight = true
+    let task = Task { @MainActor [weak self] in
+      guard let self else { return }
       repeat {
         liveActivityMaintenancePending = false
         await performLiveActivityMaintenance()
-      } while liveActivityMaintenancePending
-      liveActivityMaintenanceInFlight = false
+      } while liveActivityMaintenancePending && !Task.isCancelled
+      liveActivityMaintenanceTask = nil
     }
+    liveActivityMaintenanceTask = task
+    await task.value
   }
 
   @MainActor
   private func performLiveActivityMaintenance() async {
+    guard !Task.isCancelled else { return }
     // Check if Live Activities are enabled
     let authInfo = ActivityAuthorizationInfo()
     guard authInfo.areActivitiesEnabled else {
@@ -266,7 +270,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // Read upcoming shifts from shared storage
     let shifts = await loadStoredShiftsFromSharedDefaults()
-    guard !shifts.isEmpty else {
+    guard !Task.isCancelled, !shifts.isEmpty else {
       return
     }
 
@@ -275,7 +279,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // Find the ongoing shift without verbose per-shift logging
     if let ongoingShift = shifts.first(where: { isShiftOngoing($0, at: now) }) {
-      startLiveActivityForShift(ongoingShift)
+      await startLiveActivityForShift(ongoingShift)
     }
     // Silent when no ongoing shift - this is the normal case
   }
@@ -353,12 +357,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
       // Re-check immediately so replacement activities can start without waiting
       // for another foreground/sync trigger.
-      self?.checkAndStartLiveActivityIfNeeded()
+      await self?.checkAndStartLiveActivityIfNeeded()
     }
   }
 
   @MainActor
   func endAllLiveActivities(reason _: String = "user context changed") async {
+    liveActivityRequestGeneration += 1
+    liveActivityMaintenancePending = false
+    liveActivityMaintenanceTask?.cancel()
     let activities = Activity<ShiftActivityAttributes>.activities
     guard !activities.isEmpty else { return }
 
@@ -420,23 +427,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       progressPercent: 0
     )
 
-    let maxAttempts = 3
-    for attempt in 1...maxAttempts {
-      do {
-        _ = try Activity.request(
-          attributes: attributes,
-          content: .init(state: initialState, staleDate: nil),
-          pushType: nil
-        )
-        return
-      } catch {
-        guard attempt < maxAttempts else {
-          return
-        }
-        // Activity.request can still reject immediately after an end. No rejection-ready event exists.
-        do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
-      }
-    }
+    _ = await requestLiveActivity(
+      attributes: attributes, content: .init(state: initialState, staleDate: nil), pushType: nil)
   }
 
   private func isShiftOngoing(_ shift: StoredShift, at date: Date) -> Bool {
@@ -488,7 +480,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       || abs(attributes.endDate.timeIntervalSince(range.endDate)) > 1
   }
 
-  private func startLiveActivityForShift(_ shift: StoredShift) {
+  private func startLiveActivityForShift(_ shift: StoredShift) async {
     let now = Date()
     guard let range = shiftDateRange(for: shift) else {
       return
@@ -531,17 +523,38 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       progressPercent: progress
     )
 
-    do {
-      let activity = try Activity.request(
-        attributes: attributes,
-        content: .init(state: initialState, staleDate: endDate),
-        pushType: .token
-      )
+    if let activity = await requestLiveActivity(
+      attributes: attributes, content: .init(state: initialState, staleDate: endDate),
+      pushType: .token
+    ) {
       LiveActivityPushTokenService.shared.observe(activity, locallyStarted: true)
-    } catch {
-      launchLog.error(
-        "Failed to start Live Activity: \(error.localizedDescription, privacy: .private)")
     }
+  }
+
+  private func requestLiveActivity(
+    attributes: ShiftActivityAttributes,
+    content: ActivityContent<ShiftActivityAttributes.ContentState>,
+    pushType: PushType?
+  ) async -> Activity<ShiftActivityAttributes>? {
+    let generation = liveActivityRequestGeneration
+    let maxAttempts = 3
+    for attempt in 1...maxAttempts {
+      guard !Task.isCancelled, generation == liveActivityRequestGeneration else { return nil }
+      do {
+        let activity = try Activity.request(
+          attributes: attributes, content: content, pushType: pushType)
+        return activity
+      } catch {
+        guard attempt < maxAttempts else {
+          launchLog.error(
+            "Failed to start Live Activity: \(error.localizedDescription, privacy: .private)")
+          return nil
+        }
+        // ActivityKit can briefly reject a replacement just after the previous activity ends.
+        do { try await Task.sleep(for: .milliseconds(300)) } catch { return nil }
+      }
+    }
+    return nil
   }
 
   func applicationWillTerminate(_: UIApplication) {

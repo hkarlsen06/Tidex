@@ -129,7 +129,8 @@ enum ClockSessionRules {  // swiftlint:disable:this explicit_acl explicit_top_le
     let endTime: String = String(shift.end_time.prefix(5))  // swiftlint:disable:this no_magic_numbers
     guard
       let start = Date.fromDateAndTime(shift.shift_date, time: startTime),
-      let end = Date.shiftEndDate(shiftDate: shift.shift_date, startTime: startTime, endTime: endTime)
+      let end = Date.shiftEndDate(
+        shiftDate: shift.shift_date, startTime: startTime, endTime: endTime)
     else {
       return nil
     }
@@ -226,7 +227,7 @@ final class ClockSessionReconciler {  // swiftlint:disable:this explicit_acl exp
     if Self.hasExceededMaxDuration(temporarySession, at: referenceDate) {
       cancelTemporarySession(temporarySession)
       notifyShiftsDidChange(context: .affecting(date: temporarySession.startedAt))
-      ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
+      await ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
         .checkAndStartLiveActivityIfNeeded()
       return
     }
@@ -261,7 +262,7 @@ final class ClockSessionReconciler {  // swiftlint:disable:this explicit_acl exp
     cancelTemporarySession(temporarySession)
 
     notifyShiftsDidChange(context: .affecting(isoDate: sessionDate))
-    ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
+    await ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
       .checkAndStartLiveActivityIfNeeded()
   }
 
