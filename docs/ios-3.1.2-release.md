@@ -1,6 +1,8 @@
-# iOS 3.1.2 review submission
+# iOS 3.1.2 release status
 
-Version `3.1.2`, build `20261109.2324`, was submitted at `2026-11-09T22:44:58.943Z`. The app version and review submission are both `WAITING_FOR_REVIEW`. Release remains `MANUAL`, with no phased release. The app has not been published.
+Version `3.1.2`, build `20261109.2324`, was withdrawn at Hjalmar's request on November 10 before publication. Apple confirms `DEVELOPER_REJECTED`, and the review submission is `COMPLETE`. Release remains `MANUAL`, with no phased release. The app has not been published. Do not resubmit this build while the Friends time-zone issue is unresolved.
+
+The original submission was accepted at `2026-11-09T22:44:58.943Z`. Withdrawal was independently verified at `2026-11-09T23:37:58.212Z`, November 10 in Europe/Oslo. Private receipts are `review-withdrawal.json` and `withdrawal-verified.json` alongside the final archive.
 
 The build was archived from signed commit `e5544021`. Its archive, exports and Apple binary validation passed. It includes the offline Schedule and failed-first-sync fixes. Both focused device retests passed on Depressed Harbor. Earlier builds `20261109.2113` and `20261109.2228` were not submitted.
 
@@ -23,6 +25,12 @@ Final App Store validation with public URL checks and the attached IPA reports z
 Final build `20261109.2324`, ID `1389b554-fe22-4905-a754-fadb1eef1895`, replaced build `20261109.2228` on the submitted version. Review submission ID is `bda67e96-4594-41f6-a957-3967410da1d0`. Only the existing internal TestFlight group containing Hjalmar's account was added. Automatic tester notifications are disabled.
 
 The metadata source had a stale comment saying that the generator writes TXT files. It now describes the native asc JSON output.
+
+## Friends time-zone release hold
+
+Hjalmar reported that at 00:30 in his time zone, a friend's 05:00 shift in Great Britain showed a four-and-a-half-hour countdown. With the stated one-hour difference, that shift starts at 06:00 for him and is five and a half hours away. The current shared timing code interprets the stored clock time using the viewer's calendar. The shared payload does not carry the friend's reported time zone.
+
+The existing admin user details expose `user_app_activity.time_zone`. The fix should use that named zone and the viewer's current zone, without a Norway-specific offset. Hjalmar requested market research to choose the least confusing time display before implementation. Existing shift and pay data must retain their original meaning.
 
 ## Initial binary and verification
 
