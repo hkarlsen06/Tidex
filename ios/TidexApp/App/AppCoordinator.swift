@@ -398,6 +398,7 @@ final class AppCoordinator {
         appState: String(describing: appState),
         authEvent: "initial_session"
       )
+      await AssistantSpotlight.removeAll()
       appState = .unauthenticated
       if exchangeOutcome == .retryLater { retryLegacyExchange() }
       return
