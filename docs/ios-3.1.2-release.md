@@ -1,8 +1,8 @@
 # iOS 3.1.2 release preparation
 
-Version 3.1.2, build `20261109.2113`, has a signed Release archive and an App Store IPA. Apple binary validation passed without errors on 2026-11-09. Submission remains on hold while the non-Siri manual checks continue.
+Version 3.1.2, build `20261109.2113`, has a signed Release archive and an App Store IPA. Apple binary validation passed without errors on 2026-11-09. Apple processed the upload as `VALID`, and the build is attached to the 3.1.2 draft. Submission remains on hold while the non-Siri manual checks continue.
 
-Hjalmar clarified that his earlier decision deferred further Siri checks only. The Admin offline-refresh and Schedule Copy checks passed during release preparation. [RELEASE_CHECKS.md](../RELEASE_CHECKS.md) records the remaining checks. Keep that file until the release ships.
+Hjalmar clarified that his earlier decision deferred further Siri checks only. The Admin offline-refresh, Schedule Copy and calendar hint checks passed during release preparation. [RELEASE_CHECKS.md](../RELEASE_CHECKS.md) records the remaining checks. Keep that file until the release ships.
 
 ## Metadata
 
@@ -14,7 +14,9 @@ Hjalmar clarified that his earlier decision deferred further Siri checks only. T
 - Confirmed that all 330 screenshots in 66 sets have individual delivery state `COMPLETE`.
 - Inspected representative English and Norwegian iPhone, iPad and Duo artwork.
 
-App Store validation with public URL checks reports no metadata warnings. The draft retains manual release after approval. App Privacy publication cannot be verified through the public API because no cached Apple web session is available.
+App Store validation with public URL checks and the attached IPA reports zero blockers and no metadata warnings. The draft retains manual release after approval. Deep validation reports one warning because no cached Apple web session is available. App Privacy publication remains unverified through the public API.
+
+The build ID is `c6e36a7d-5f14-48cc-afa8-4df6a444cdc7`. It is available to the existing internal TestFlight group containing Hjalmar's account only. Automatic tester notifications are disabled. No App Review submission has been created.
 
 The metadata source had a stale comment saying that the generator writes TXT files. It now describes the native asc JSON output.
 
@@ -37,3 +39,11 @@ Existing tests ran through `scripts/xcode-test-agent.sh`:
 The archive uses app source at `aa09a692` and the pre-existing Xcode project and string-catalog edits in the main checkout. Those unrelated edits remain uncommitted. Release metadata is committed as `9eff64fb`.
 
 Private artifacts and receipts are in `/Users/hkarlsen06/Library/Developer/TidexReleases/3.1.2-20261109/`. The archive is `Tidex-3.1.2.xcarchive`, and the IPA is `export/Tidex.ipa`.
+
+## In-place upgrade check
+
+Depressed Harbor initially had App Store 3.1.1, build `20261106.0018`. Hjalmar cached a friend's shared month, synced two temporary shifts, then went offline, edited one shift and deleted the other. He could not queue a test message, so message preservation across the upgrade remains unverified.
+
+The ad hoc export from the same release archive installed over the existing app without an uninstall. A device readback confirmed 3.1.2, build `20261109.2113`. iOS blocked the first launch because the ad hoc distribution certificate required online verification. Tidex had not opened, so that result does not indicate a store-migration failure.
+
+The phone has no cellular service and no developer-verification entry in Settings. The test continues by replacing the unopened ad hoc installation through TestFlight. Tidex stays closed while the phone downloads the Apple-processed build, then its first launch takes place offline.
