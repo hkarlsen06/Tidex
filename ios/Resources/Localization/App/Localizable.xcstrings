@@ -417535,6 +417535,570 @@
         }
       }
     },
+    "shifts.selectionTip.message" : {
+      "comment" : "Message of a one-time tip under the Schedule tab's month calendar. Holding a day with a shift selects it and shows buttons to move, copy, edit or delete it. Dragging after the hold selects more days.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط مطولًا على وردية لنقلها أو نسخها أو تعديلها أو حذفها. اسحب لتحديد عدة ورديات."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Натиснете и задръжте смяна, за да я преместите, копирате, редактирате или изтриете. Плъзнете, за да изберете няколко."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "শিফট সরাতে, কপি করতে, সম্পাদনা করতে বা মুছতে চেপে ধরে রাখুন। একাধিক নির্বাচন করতে টেনে নিন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén premut un torn per moure'l, copiar-lo, editar-lo o suprimir-lo. Arrossega per seleccionar-ne més."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podržením směnu vyberete a můžete ji přesunout, zkopírovat, upravit nebo smazat. Tažením vyberete více směn."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tryk og hold på en vagt for at flytte, kopiere, redigere eller slette den. Træk for at vælge flere."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schicht gedrückt halten, um sie zu verschieben, zu kopieren, zu bearbeiten oder zu löschen. Ziehen, um mehrere auszuwählen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πατήστε παρατεταμένα μια βάρδια για μετακίνηση, αντιγραφή, επεξεργασία ή διαγραφή. Σύρετε για να επιλέξετε περισσότερες."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold a shift to move, copy, edit or delete it. Drag to select several."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsado un turno para moverlo, copiarlo, editarlo o eliminarlo. Arrastra para seleccionar varios."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vahetuse teisaldamiseks, kopeerimiseks, muutmiseks või kustutamiseks hoia seda all. Mitme valimiseks lohista."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای جابه‌جایی، کپی، ویرایش یا حذف شیفت، آن را نگه دارید. برای انتخاب چند شیفت، بکشید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valitse vuoro pitämällä sitä painettuna. Voit siirtää, kopioida, muokata tai poistaa sen. Valitse useita vetämällä."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindutin nang matagal ang isang shift para ilipat, kopyahin, i-edit o i-delete ito. I-drag para pumili ng marami."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenez un service appuyé pour le déplacer, le copier, le modifier ou le supprimer. Faites glisser pour en sélectionner plusieurs."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לחצו לחיצה ארוכה על משמרת כדי להזיז, להעתיק, לערוך או למחוק אותה. גררו כדי לבחור כמה משמרות."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शिफ्ट को दबाकर रखें ताकि उसे स्थानांतरित, कॉपी, संपादित या हटाया जा सके। कई चुनने के लिए खींचें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodirnite i držite smjenu za premještanje, kopiranje, uređivanje ili brisanje. Povucite za odabir više smjena."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tartsd lenyomva a műszakot az áthelyezéshez, másoláshoz, szerkesztéshez vagy törléshez. Több kijelöléséhez húzd végig az ujjad."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekan lama shift untuk memindahkan, menyalin, mengedit, atau menghapusnya. Seret untuk memilih beberapa."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haltu inni á vakt til að færa, afrita, breyta eða eyða henni. Dragðu til að velja fleiri."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tieni premuto un turno per spostarlo, copiarlo, modificarlo o eliminarlo. Trascina per selezionarne altri."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シフトを長押しして移動、コピー、編集、削除。ドラッグで複数選択できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "근무를 길게 눌러 이동, 복사, 수정 또는 삭제하세요. 드래그하면 여러 개를 선택할 수 있습니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palaikykite nuspaudę pamainą, kad ją perkeltumėte, nukopijuotumėte, redaguotumėte ar ištrintumėte. Vilkite, kad pasirinktumėte kelias."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pieskarieties maiņai un turiet, lai to pārvietotu, kopētu, rediģētu vai dzēstu. Velciet, lai atlasītu vairākas."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold på en vakt for å flytte, kopiere, redigere eller slette den. Dra for å velge flere."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Houd een dienst ingedrukt om deze te verplaatsen, kopiëren, bewerken of verwijderen. Sleep om meerdere te selecteren."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trykk og hald på ei vakt for å flytte, kopiere, redigere eller slette henne. Dra for å velje fleire."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przytrzymaj zmianę, aby ją przenieść, skopiować, edytować lub usunąć. Przeciągnij, aby zaznaczyć więcej."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque e segure um turno para mover, copiar, editar ou excluir. Arraste para selecionar vários."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ține apăsat pe o tură pentru a o muta, copia, edita sau șterge. Glisează pentru a selecta mai multe."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите и удерживайте смену, чтобы переместить, скопировать, изменить или удалить её. Проведите пальцем, чтобы выбрать несколько смен."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podržte zmenu, ak ju chcete presunúť, skopírovať, upraviť alebo odstrániť. Potiahnutím vyberiete viacero zmien."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pritisnite in pridržite izmeno, da jo premaknete, kopirate, uredite ali izbrišete. Povlecite za izbiro več izmen."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodirnite i zadržite smenu da je premestite, kopirate, izmenite ili obrišete. Prevucite da izaberete više smena."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tryck och håll på ett pass för att flytta, kopiera, redigera eller radera det. Dra för att välja flera."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonyeza na ushikilie zamu ili kuihamisha, kuinakili, kuihariri au kuifuta. Buruta ili kuchagua kadhaa."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ஒரு ஷிஃப்டை நகர்த்த, நகலெடுக்க, திருத்த அல்லது நீக்க அழுத்திப் பிடிக்கவும். பலவற்றைத் தேர்ந்தெடுக்க இழுக்கவும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แตะกะงานค้างไว้เพื่อย้าย คัดลอก แก้ไข หรือลบ ลากเพื่อเลือกหลายรายการ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taşımak, kopyalamak, düzenlemek veya silmek için vardiyaya basılı tutun. Birden fazlasını seçmek için sürükleyin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Натисніть і утримуйте зміну, щоб перемістити, скопіювати, змінити або видалити її. Проведіть пальцем, щоб вибрати кілька."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شفٹ کو منتقل، کاپی، ترمیم یا حذف کرنے کے لیے دبا کر رکھیں۔ متعدد منتخب کرنے کے لیے گھسیٹیں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhấn giữ ca làm để di chuyển, sao chép, sửa hoặc xóa. Kéo để chọn nhiều ca."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "长按班次可移动、复制、编辑或删除。拖动可选择多个班次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "長按班次即可移動、複製、編輯或刪除。拖曳可選取多個班次。"
+          }
+        }
+      }
+    },
+    "shifts.selectionTip.title" : {
+      "comment" : "Title of a one-time tip under the Schedule tab's month calendar. Teaches that touching and holding a day with a shift selects it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المس مطولًا للتحديد"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Докоснете и задръжте, за да изберете"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নির্বাচন করতে স্পর্শ করে ধরে রাখুন"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén premut per seleccionar"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyberte podržením"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tryk og hold for at vælge"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Auswählen gedrückt halten"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πατήστε παρατεταμένα για επιλογή"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold to select"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsado para seleccionar"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valimiseks puuduta ja hoia all"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای انتخاب، لمس کنید و نگه دارید"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valitse pitämällä painettuna"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindutin nang matagal para pumili"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenez le doigt appuyé pour sélectionner"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "געו והחזיקו כדי לבחור"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चुनने के लिए छूकर दबाए रखें"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodirnite i držite za odabir"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kijelöléshez érintsd meg és tartsd lenyomva"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sentuh dan tahan untuk memilih"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snertu og haltu inni til að velja"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocca e tieni premuto per selezionare"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "長押しして選択"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "길게 눌러 선택"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palieskite ir palaikykite, kad pasirinktumėte"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pieskarieties un turiet, lai atlasītu"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trykk og hold for å velge"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Houd ingedrukt om te selecteren"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trykk og hald for å velje"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dotknij i przytrzymaj, aby zaznaczyć"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque e segure para selecionar"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atinge și ține apăsat pentru a selecta"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите и удерживайте для выбора"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Výber podržaním"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pritisnite in pridržite za izbiro"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodirnite i zadržite za izbor"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tryck och håll för att välja"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gusa na ushikilie ili kuchagua"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "தேர்ந்தெடுக்கத் தொட்டுப் பிடிக்கவும்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แตะค้างไว้เพื่อเลือก"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seçmek için dokunup basılı tutun"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Натисніть і утримуйте, щоб вибрати"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "منتخب کرنے کے لیے چھو کر دبا کر رکھیں"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chạm và giữ để chọn"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "长按以选择"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "長按以選取"
+          }
+        }
+      }
+    },
     "shifts.selectMoveTarget" : {
       "comment" : "Instruction in the calendar bar while moving a shift. The user taps the target date.",
       "extractionState" : "manual",

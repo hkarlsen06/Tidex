@@ -2,6 +2,7 @@
 // swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface
 import Intents
 import SwiftUI
+import TipKit
 
 @main
 struct TidexApp: App {
@@ -17,6 +18,14 @@ struct TidexApp: App {
     .publisher(for: UIApplication.willResignActiveNotification)
   private let didEnterBackground = NotificationCenter.default
     .publisher(for: UIApplication.didEnterBackgroundNotification)
+
+  init() {
+    // UI journeys and the App Store screenshots must not show tips.
+    if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
+      Tips.hideAllTipsForTesting()
+    }
+    try? Tips.configure()
+  }
 
   var body: some Scene {
     WindowGroup {

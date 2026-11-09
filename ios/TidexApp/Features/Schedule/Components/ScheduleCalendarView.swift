@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 import UIKit
 
 // MARK: - Shifts Calendar View
@@ -117,6 +118,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   private let warningHaptic = UINotificationFeedbackGenerator()
 
   private let calendar = Calendar.gregorianCurrent
+  private let selectionTip = ShiftSelectionTip()
 
   init(
     shifts: [ShiftWithComputations],
@@ -893,6 +895,40 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     else { return }
     Haptics.play(.selection)
     onDragSelect?(selection)
+    selectionTip.invalidate(reason: .actionPerformed)
+  }
+
+  // MARK: - Selection Tip
+
+  private var showsSelectionTip: Bool {
+    guard onDragSelect != nil, selectedDates.isEmpty, !isCopyMode, !isMoveMode else {
+      return false
+    }
+    return CalendarGridHelper.daysInMonth(year: year, month: monthNumber).contains { day in
+      !day.isOutsideMonth && day.dateISO.map { shiftsByDate[$0]?.isEmpty == false } == true
+    }
+  }
+
+  private var selectionTipView: some View {
+    TipView(selectionTip)
+      .tipBackground(Color.tidexSurfaceSecondary)
+      .tint(Color.tidexBlueText)
+  }
+
+  /// Fills the gap above the pinned bar only when the whole tip fits, so the grid and bar never move.
+  private var pinnedSelectionTip: some View {
+    ZStack(alignment: .top) {
+      if showsSelectionTip {
+        ViewThatFits(in: .vertical) {
+          selectionTipView
+            .padding(.vertical, Spacing.sm)
+          Color.clear
+        }
+        .transition(.opacity)
+      }
+    }
+    .padding(.horizontal, MonthPickerLayout.tabBarAlignedHorizontalPadding - Spacing.xs)
+    .animation(MotionTokens.optionalAnimation(.subtle, reduceMotion: reduceMotion), value: showsSelectionTip)
   }
 
   // MARK: - Action Bar
@@ -916,10 +952,16 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   private var actionBarSlot: some View {
     if pinsActionBarToBottom {
       Spacer(minLength: Spacing.sm)
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .top) { pinnedSelectionTip }
       actionBar
         .padding(.horizontal, MonthPickerLayout.tabBarAlignedHorizontalPadding - Spacing.xs)
         .padding(.bottom, MonthPickerLayout.bottomPadding)
     } else {
+      if showsSelectionTip {
+        selectionTipView
+          .padding(.top, Spacing.sm)
+      }
       actionBar
         .padding(.top, Spacing.sm)
     }
