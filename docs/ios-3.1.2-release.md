@@ -1,6 +1,8 @@
-# iOS 3.1.2 release preparation
+# iOS 3.1.2 review submission
 
-The final candidate is `3.1.2`, build `20261109.2324`, archived from signed commit `e5544021`. Its archive and exports passed, and Apple binary validation passed. It includes the offline Schedule and failed-first-sync fixes. Both focused device retests passed on Depressed Harbor. It is uploaded for App Store processing. Earlier builds `20261109.2113` and `20261109.2228` must not be submitted.
+Version `3.1.2`, build `20261109.2324`, was submitted at `2026-11-09T22:44:58.943Z`. The app version and review submission are both `WAITING_FOR_REVIEW`. Release remains `MANUAL`, with no phased release. The app has not been published.
+
+The build was archived from signed commit `e5544021`. Its archive, exports and Apple binary validation passed. It includes the offline Schedule and failed-first-sync fixes. Both focused device retests passed on Depressed Harbor. Earlier builds `20261109.2113` and `20261109.2228` were not submitted.
 
 Hjalmar clarified that his earlier decision deferred further Siri checks only. The Admin offline-refresh, Schedule Copy and calendar hint checks passed during release preparation. [RELEASE_CHECKS.md](../RELEASE_CHECKS.md) records the remaining checks. Keep that file until the release ships.
 
@@ -16,9 +18,9 @@ After the connection checks, Hjalmar also deferred the extra-phone checks for qu
 - Confirmed that all 330 screenshots in 66 sets have individual delivery state `COMPLETE`.
 - Inspected representative English and Norwegian iPhone, iPad and Duo artwork.
 
-App Store validation with public URL checks and the attached IPA reports zero blockers and no metadata warnings. The draft retains manual release after approval. Deep validation reports one warning because no cached Apple web session is available. App Privacy publication remains unverified through the public API.
+Final App Store validation with public URL checks and the attached IPA reports zero errors or blockers and no metadata warnings. Manual release after approval is retained. Deep validation reports one warning because no cached Apple web session is available. App Privacy publication remains unverified through the public API. Apple accepted the review submission.
 
-The previous corrected build `20261109.2228` has ID `6ee2c937-7991-46e7-a11c-d5cd608a3337` and was attached in place of build `20261109.2113`. Final build `20261109.2324` will replace it after Apple processing. The existing internal TestFlight group contains Hjalmar's account only. Automatic tester notifications are disabled on the previously distributed builds. No App Review submission has been created.
+Final build `20261109.2324`, ID `1389b554-fe22-4905-a754-fadb1eef1895`, replaced build `20261109.2228` on the submitted version. Review submission ID is `bda67e96-4594-41f6-a957-3967410da1d0`. Only the existing internal TestFlight group containing Hjalmar's account was added. Automatic tester notifications are disabled.
 
 The metadata source had a stale comment saying that the generator writes TXT files. It now describes the native asc JSON output.
 
@@ -92,7 +94,7 @@ Before the fix, the new regression failed with `Schedule could not reload its ow
 
 On build `20261109.2228`, Hjalmar signed out after syncing, enabled Network Link Conditioner's Edge profile and signed back into his own account. When Home showed its loading skeleton, he switched to `100% Loss`. Home then showed the job-setup placeholder instead of a sync error and Retry. His screenshot shows the setup card and action with no visible sync warning. Disabling the conditioner restored his existing jobs, shifts and totals without setting up a new job. Recovery passed, but the failed-sync presentation did not.
 
-The coordinator marks the initial sync complete even when the sync times out or fails. Work setup then treats an incomplete local cache as an account without jobs. The archive containing only the Schedule fix was stopped during export after this result. Both fixes will be included in the next candidate.
+The old coordinator marked the initial sync complete even when the sync timed out or failed. Work setup then treated an incomplete local cache as an account without jobs. The archive containing only the Schedule fix was stopped during export after this result. Both fixes are included in the submitted build.
 
 The new Home UI test reproduced the same setup prompt before the fix and failed because Retry was absent. Full-sync completion is now recorded separately from finishing an attempt and belongs to a specific user. Failed and targeted downloads cannot confirm that jobs are missing. A successful full retry can confirm that state, and a failed later refresh keeps an already established local account usable. The offline indicator also offers Retry while initial data remains unconfirmed. That UI regression now passes.
 
@@ -110,6 +112,6 @@ The App Store IPA SHA-256 is `28c91617e2777b2cbb5989c92accf9edbf3d47ee14477cd51b
 
 Hjalmar repeated both connection checks on this build. With `100% Loss`, a newly added shift appeared in Schedule immediately, survived a full offline relaunch and had no duplicate after reconnecting. For first sign-in, he repeated the Edge-to-`100% Loss` interruption. Error or Offline offered Retry, and his existing jobs, shifts and totals returned after reconnecting. Both retests passed.
 
-The App Store upload was committed at `2026-11-09T22:30:46Z`, upload ID `1389b554-fe22-4905-a754-fadb1eef1895`. Apple still reports `PROCESSING`. The separate validation placeholder is not the committed binary upload.
+The App Store upload was committed at `2026-11-09T22:30:46Z`, upload ID `1389b554-fe22-4905-a754-fadb1eef1895`. Apple processed it as `VALID`. The separate validation placeholder is not the committed binary upload. Private submission, preflight and independent readback receipts are stored with the final artifacts.
 
 The owner-side comparison of shared overlapping shifts and overtime gross/net totals remains unverified in `RELEASE_CHECKS.md` before manual release. The lower-level 20-second auth request deadline is covered by automated tests; the device stall check confirmed immediate cached presentation rather than measuring that request directly. Review submission does not publish the app or close those records.
