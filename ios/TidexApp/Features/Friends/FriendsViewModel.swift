@@ -104,8 +104,12 @@ final class SharingViewModel: MonthNavigable {
   /// Prevents an empty-state flash on first frame before cache/network hydration starts.
   private(set) var hasFinishedInitialSharersLoad = false
 
+  /// The request waiting on a month with nothing cached. A month change cancels that request,
+  /// and the cancelled one must not clear the loading state of the request that replaced it.
+  private var loadingShiftsRequestKey: String?
+
   /// Whether shifts are being loaded
-  private(set) var isLoadingShifts = false
+  var isLoadingShifts: Bool { loadingShiftsRequestKey != nil }
 
   /// Whether the selected sharer's shift content has resolved from cache or network.
   private(set) var hasResolvedSelectedSharerShifts = true
@@ -736,7 +740,7 @@ final class SharingViewModel: MonthNavigable {
     } else {
       // Never fetched - DON'T clear shifts or update committed state
       // Keep showing previous month until new data is ready
-      isLoadingShifts = true
+      loadingShiftsRequestKey = request.key
     }
   }
 
@@ -808,7 +812,7 @@ final class SharingViewModel: MonthNavigable {
       }
       inFlightRequestKey = requestKey
       defer {
-        isLoadingShifts = false
+        if loadingShiftsRequestKey == requestKey { loadingShiftsRequestKey = nil }
         if inFlightRequestKey == requestKey {
           inFlightRequestKey = nil
         }
