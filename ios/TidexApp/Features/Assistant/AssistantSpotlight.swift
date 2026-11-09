@@ -49,11 +49,31 @@ enum AssistantSpotlight {
 
   /// Sign-out and account switches call this, so the next account never finds these items.
   static func removeAll(index: any AssistantSearchIndex = CSSearchableIndex.default()) async {
-    TidexShortcuts.updateAppShortcutParameters()
     do {
       try await index.deleteAllSearchableItems()
     } catch {
       logger.error("Spotlight cleanup failed: \(error.localizedDescription, privacy: .public)")
     }
+
+    // Siri and Shortcuts also save performed actions independently of the search index.
+    var intentTypes: [any AppIntent.Type] = [
+      NextShiftIntent.self, EarningsIntent.self, HoursWorkedIntent.self, EarnedSoFarIntent.self,
+      StopClockIntent.self, ExtendShiftIntent.self, AddShiftIntent.self, MoveShiftIntent.self,
+      FriendScheduleIntent.self, OpenShiftIntent.self, OpenJobIntent.self,
+    ]
+    if #available(iOS 27, *) {
+      intentTypes += [SendFriendMessageIntent.self, DraftFriendMessageIntent.self]
+    }
+    for intentType in intentTypes {
+      do {
+        try await IntentDonationManager.shared.deleteDonations(matching: .intentType(intentType))
+      } catch {
+        let name = String(describing: intentType)
+        logger.error(
+          "Shortcut cleanup failed for \(name, privacy: .public): \(error.localizedDescription, privacy: .public)"
+        )
+      }
+    }
+    TidexShortcuts.updateAppShortcutParameters()
   }
 }

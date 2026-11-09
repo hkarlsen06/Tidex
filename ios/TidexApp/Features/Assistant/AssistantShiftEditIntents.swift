@@ -9,14 +9,19 @@ struct AddShiftIntent: AppIntent {
   @Parameter(title: "assistant.shift.job", description: "assistant.addShift.job.description")
   var job: JobEntity?
 
-  @Parameter(title: "assistant.addShift.date", description: "assistant.addShift.date.description", kind: .date)
-  var date: Date
+  @Parameter(
+    title: "assistant.addShift.date", description: "assistant.addShift.date.description",
+    kind: .date)
+  var date: Date?
 
-  @Parameter(title: "assistant.shift.start", description: "assistant.addShift.start.description", kind: .time)
-  var start: Date
+  @Parameter(
+    title: "assistant.shift.start", description: "assistant.addShift.start.description", kind: .time
+  )
+  var start: Date?
 
-  @Parameter(title: "assistant.shift.end", description: "assistant.addShift.end.description", kind: .time)
-  var end: Date
+  @Parameter(
+    title: "assistant.shift.end", description: "assistant.addShift.end.description", kind: .time)
+  var end: Date?
 
   init() {}
 
@@ -30,11 +35,16 @@ struct AddShiftIntent: AppIntent {
   @MainActor
   func perform() async throws -> some IntentResult & ProvidesDialog {
     let userId = try AssistantAccess.current.requireUserId()
+    guard let date else { throw $date.needsValueError() }
+    guard let start else { throw $start.needsValueError() }
+    guard let end else { throw $end.needsValueError() }
     let jobs = JobsRepository.shared.getActiveJobs(for: userId)
-    let chosenJob = job.flatMap { job in jobs.first { $0.id == job.id } }
+    let chosenJob =
+      job.flatMap { job in jobs.first { $0.id == job.id } }
       ?? jobs.first(where: \.is_default) ?? jobs.first
     let schedule = ShiftSchedule(day: date, start: start, end: end)
-    guard let shiftDate = Date.fromISODateString(schedule.shiftDate), let interval = schedule.interval
+    guard let shiftDate = Date.fromISODateString(schedule.shiftDate),
+      let interval = schedule.interval
     else {
       throw AssistantError.invalidTimes
     }

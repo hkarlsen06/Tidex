@@ -63,6 +63,18 @@ final class AssistantPrivacyTests: XCTestCase {
     XCTAssertTrue(index.deletedAll)
   }
 
+  func testSignOutRemovesDonatedJobActions() async throws {
+    let donations = IntentDonationManager.shared
+    let intent = AddShiftIntent(
+      job: JobEntity(jobs[0]), date: now, start: now, end: now.addingTimeInterval(3_600))
+    let identifier = try await donations.donate(intent: intent)
+
+    await AssistantSpotlight.removeAll(index: RecordingIndex())
+
+    let remaining = try await donations.deleteDonations(matching: .donationIdentifier(identifier))
+    XCTAssertTrue(remaining.isEmpty, "Sign-out left a personal action in Siri's donation store")
+  }
+
   func testImpersonatingAdminsAndSignedOutDevicesGetNoShifts() async {
     let access = [
       AssistantAccess(session: session(isImpersonating: true)),
