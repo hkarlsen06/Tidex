@@ -184,6 +184,7 @@ final class ShiftsViewModel: MonthNavigable {
   let recurringShiftsRepository: RecurringShiftsRepository
   let monthlyPayrollReadService: MonthlyPayrollReadService
   let syncCoordinator: SyncCoordinator
+  let authSessionManager: AuthSessionManager
   let monthContext: SharedMonthContext
 
   // MARK: - Published State
@@ -572,6 +573,7 @@ final class ShiftsViewModel: MonthNavigable {
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
     monthlyPayrollReadService: MonthlyPayrollReadService? = nil,
     syncCoordinator: SyncCoordinator? = nil,
+    authSessionManager: AuthSessionManager? = nil,
     monthContext: SharedMonthContext? = nil
   ) {
     // Use provided repositories or default to shared instances
@@ -592,6 +594,7 @@ final class ShiftsViewModel: MonthNavigable {
         jobsRepository: self.jobsRepository
       )
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    self.authSessionManager = authSessionManager ?? AuthSessionManager.shared
     self.monthContext = monthContext ?? SharedMonthContext.shared
 
     // Initialize committed state to current month context values
@@ -697,43 +700,43 @@ final class ShiftsViewModel: MonthNavigable {
     }
   }
 
-// MARK: - Month Cache Entry
+  // MARK: - Month Cache Entry
 
-/// Cache entry for a single month's computed shifts
-struct MonthCacheEntry {
-  private static let validityDuration: TimeInterval = 300
+  /// Cache entry for a single month's computed shifts
+  struct MonthCacheEntry {
+    private static let validityDuration: TimeInterval = 300
 
-  let year: Int
-  let month: Int
-  let shifts: [ShiftWithComputations]
-  let events: [EventRow]
-  let visibleRange: (start: Date, end: Date)
-  let timestamp: Date
-  /// Last access time for LRU eviction
-  var lastAccessed: Date
+    let year: Int
+    let month: Int
+    let shifts: [ShiftWithComputations]
+    let events: [EventRow]
+    let visibleRange: (start: Date, end: Date)
+    let timestamp: Date
+    /// Last access time for LRU eviction
+    var lastAccessed: Date
 
-  var key: String { "\(year)-\(month)" }
+    var key: String { "\(year)-\(month)" }
 
-  /// Check if cache entry is still valid (within 5 minutes)
-  var isValid: Bool {
-    Date().timeIntervalSince(timestamp) < Self.validityDuration
+    /// Check if cache entry is still valid (within 5 minutes)
+    var isValid: Bool {
+      Date().timeIntervalSince(timestamp) < Self.validityDuration
+    }
+
+    init(
+      year: Int,
+      month: Int,
+      shifts: [ShiftWithComputations],
+      events: [EventRow],
+      visibleRange: (start: Date, end: Date),
+      timestamp: Date
+    ) {
+      self.year = year
+      self.month = month
+      self.shifts = shifts
+      self.events = events
+      self.visibleRange = visibleRange
+      self.timestamp = timestamp
+      self.lastAccessed = timestamp
+    }
   }
-
-  init(
-    year: Int,
-    month: Int,
-    shifts: [ShiftWithComputations],
-    events: [EventRow],
-    visibleRange: (start: Date, end: Date),
-    timestamp: Date
-  ) {
-    self.year = year
-    self.month = month
-    self.shifts = shifts
-    self.events = events
-    self.visibleRange = visibleRange
-    self.timestamp = timestamp
-    self.lastAccessed = timestamp
-  }
-}
 }  // swiftlint:disable:this file_length

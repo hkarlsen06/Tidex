@@ -1,6 +1,6 @@
 # iOS 3.1.2 release preparation
 
-The corrected 3.1.2 candidate is build `20261109.2228`, archived from signed commit `4f8243a7`. Its archive and both exports passed without warnings or errors, and Apple binary validation passed. The device privacy retest passed. Submission remains on hold for the remaining manual checks. The earlier build `20261109.2113` failed the privacy check and must not be submitted.
+Build `20261109.2228`, archived from signed commit `4f8243a7`, passed the device privacy retest. Its archive and both exports passed without warnings or errors, and Apple binary validation passed. A subsequent stalled-network check exposed delayed Schedule updates after local saves, so a new archive and device retest are required before submission. The earlier build `20261109.2113` failed the privacy check and must not be submitted.
 
 Hjalmar clarified that his earlier decision deferred further Siri checks only. The Admin offline-refresh, Schedule Copy and calendar hint checks passed during release preparation. [RELEASE_CHECKS.md](../RELEASE_CHECKS.md) records the remaining checks. Keep that file until the release ships.
 
@@ -77,3 +77,11 @@ For the retest, Hjalmar loaded the same test account with reason `Release 3.1.2 
 ## iPad layout
 
 On TestFlight build `20261109.2113`, Hjalmar checked November and December in portrait and landscape. The month picker, calendar and action bar remained reachable without clipping or overlap. Add Shift's time fields and save action stayed usable with the keyboard visible. He also confirmed that the narrowest available window and largest text size remained usable. The privacy fix does not change those layout implementations. The iPad layout checks passed.
+
+## Stalled-network Schedule updates
+
+On build `20261109.2228`, Hjalmar closed Tidex for two minutes, left Wi-Fi connected and enabled Network Link Conditioner's `100% Loss` profile. His own cached data appeared immediately. Add Shift cleared after saving, but Schedule did not display the new shifts until the conditioner was disabled. There was no visible error while the shifts were missing. The immediate cached launch passed, but this result does not measure the session request's 20-second deadline.
+
+The repository writes each shift locally before starting background sync. Schedule then clears its cached user ID on a local reload and asks for a fresh session before reading those rows. Home already uses the stored normal-account identity for local reads. Schedule now uses the same guard. Stored impersonated identities still require remote verification.
+
+Before the fix, the new regression failed with `Schedule could not reload its owner's local shifts without a fresh token: notSignedIn`. The separate stored-impersonation check passed. After the fix, all 73 focused auth, local loading, Add Shift, sync and shift UI tests passed on Shared iPhone. The final six loading tests also passed after removing a lint warning from the test setup. Sol review found no issues. Lint reports no errors and retains the existing Schedule file-size, complexity and naming warnings. The corrected archive and a repeat of the device save/display check remain pending.

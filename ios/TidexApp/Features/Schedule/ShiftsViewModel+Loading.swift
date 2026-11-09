@@ -817,18 +817,22 @@ extension ShiftsViewModel {
 
   // MARK: - Private Helpers
 
-  /// Get current authenticated user ID
+  /// Resolve the owner for local reads without waiting for a token refresh.
   func getCurrentUserId() async throws -> String? {
+    if let local = authSessionManager.localPresentationSession() {
+      return local.normalizedUserId
+    }
+
     do {
       // Use AuthSessionManager to prevent concurrent refresh race conditions
-      let session = try await AuthSessionManager.shared.getSession()
+      let session = try await authSessionManager.getSession()
       return session.normalizedUserId
     } catch {
-      guard AuthSessionManager.shared.isTransientSessionResolutionError(error) else {
+      guard authSessionManager.isTransientSessionResolutionError(error) else {
         throw error
       }
 
-      if let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() {
+      if let offlineUserId = authSessionManager.offlineUserIdFallback() {
         kScheduleLogger.info("Using offline user id fallback")
         return offlineUserId
       }

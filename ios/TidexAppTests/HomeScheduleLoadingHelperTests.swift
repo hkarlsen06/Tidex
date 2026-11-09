@@ -4,6 +4,53 @@ import XCTest
 
 final class HomeScheduleLoadingHelperTests: XCTestCase {
 
+  @MainActor
+  func testScheduleResolvesItsLocalOwnerWithoutAFreshToken() async throws {
+    let suite = "HomeScheduleLoadingHelperTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let manager = try await storedIdentity(isImpersonating: false, defaults: defaults)
+    let model = ShiftsViewModel(authSessionManager: manager)
+
+    do {
+      let owner = try await model.getCurrentUserId()
+      XCTAssertEqual(owner, "schedule-owner")
+    } catch {
+      XCTFail("Schedule could not reload its owner's local shifts without a fresh token: \(error)")
+    }
+  }
+
+  @MainActor
+  func testScheduleCannotResolveAStoredImpersonatedTargetAfterActivation() async throws {
+    let suite = "HomeScheduleLoadingHelperTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let manager = try await storedIdentity(isImpersonating: true, defaults: defaults)
+    let model = ShiftsViewModel(authSessionManager: manager)
+
+    let owner = try? await model.getCurrentUserId()
+    XCTAssertNil(owner, "Schedule must verify an impersonated account remotely before reading it")
+  }
+
+  @MainActor
+  private func storedIdentity(isImpersonating: Bool, defaults: UserDefaults) async throws
+    -> AuthSessionManager
+  {
+    let user = AuthUser(
+      id: "schedule-owner", email: nil, name: nil, avatarUrl: nil, role: nil,
+      termsAcceptedAt: nil, finishedOnboarding: true, isImpersonating: isImpersonating,
+      actorId: isImpersonating ? "administrator" : "schedule-owner")
+    let writer = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-user" },
+      defaults: defaults, lookupUser: { user })
+    _ = try await writer.currentUser(clerkUserId: "clerk-user", sessionId: "session")
+    let offline = AuthSessionManager(
+      activeSessionId: { "session" }, activeClerkUserId: { "clerk-user" },
+      defaults: defaults, lookupUser: { throw URLError(.notConnectedToInternet) })
+    offline.invalidateRemoteIdentity()
+    return offline
+  }
+
   func testShiftChangeContextBuildsAllAffectedMonthsForDateRange() throws {
     let january: ShiftChangeAffectedMonth = try XCTUnwrap(
       ShiftChangeAffectedMonth(year: 2_026, month: 1)
