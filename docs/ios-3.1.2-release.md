@@ -1,6 +1,6 @@
 # iOS 3.1.2 release preparation
 
-Build `20261109.2228`, archived from signed commit `4f8243a7`, passed the device privacy retest. Its archive and both exports passed without warnings or errors, and Apple binary validation passed. Subsequent connection checks exposed delayed Schedule updates after local saves and incorrect job setup after a failed first sync. Both fixes require a new archive and device retests before submission. The earlier build `20261109.2113` failed the privacy check and must not be submitted.
+The final candidate is `3.1.2`, build `20261109.2324`, archived from signed commit `e5544021`. Its archive and exports passed, and Apple binary validation passed. It includes the offline Schedule and failed-first-sync fixes. Both focused device retests passed on Depressed Harbor. It is uploaded for App Store processing. Earlier builds `20261109.2113` and `20261109.2228` must not be submitted.
 
 Hjalmar clarified that his earlier decision deferred further Siri checks only. The Admin offline-refresh, Schedule Copy and calendar hint checks passed during release preparation. [RELEASE_CHECKS.md](../RELEASE_CHECKS.md) records the remaining checks. Keep that file until the release ships.
 
@@ -18,7 +18,7 @@ After the connection checks, Hjalmar also deferred the extra-phone checks for qu
 
 App Store validation with public URL checks and the attached IPA reports zero blockers and no metadata warnings. The draft retains manual release after approval. Deep validation reports one warning because no cached Apple web session is available. App Privacy publication remains unverified through the public API.
 
-The corrected build ID is `6ee2c937-7991-46e7-a11c-d5cd608a3337`. Apple processing is `VALID`, and this build is attached to the 3.1.2 draft in place of build `20261109.2113`. It is available to the existing internal TestFlight group containing Hjalmar's account only. Automatic tester notifications are disabled. No App Review submission has been created.
+The previous corrected build `20261109.2228` has ID `6ee2c937-7991-46e7-a11c-d5cd608a3337` and was attached in place of build `20261109.2113`. Final build `20261109.2324` will replace it after Apple processing. The existing internal TestFlight group contains Hjalmar's account only. Automatic tester notifications are disabled on the previously distributed builds. No App Review submission has been created.
 
 The metadata source had a stale comment saying that the generator writes TXT files. It now describes the native asc JSON output.
 
@@ -56,7 +56,7 @@ Hjalmar loaded a test account on Depressed Harbor using the reason `Release 3.1.
 
 On the first offline reopen, the target account's data remained visible and usable. A second force-close and reopen blocked on the Norwegian session-timeout screen. Hjalmar confirmed that he had fully closed the app before the first reopen and that the visible data was not just a launch snapshot.
 
-A device readback confirmed build `20261109.2113`. A read-only preferences copy confirmed that `auth.currentUser` remained marked as impersonation, with a different actor and presented user. The candidate remains unsubmitted.
+A device readback confirmed build `20261109.2113`. A read-only preferences copy confirmed that `auth.currentUser` remained marked as impersonation, with a different actor and presented user. This failed candidate was not submitted.
 
 The device log identifies the first failing return as a resumed process. PID `27123` logged at `21:40:33` and again at `21:45:42`, when the foreground session check failed offline and kept the authenticated screen. The subsequent blocked launch used PID `27214`. These times are Europe/Oslo on 2026-11-09. After reconnecting, Hjalmar confirmed that Retry restored his own account with no impersonation banner.
 
@@ -86,7 +86,7 @@ On build `20261109.2228`, Hjalmar closed Tidex for two minutes, left Wi-Fi conne
 
 The repository writes each shift locally before starting background sync. Schedule then clears its cached user ID on a local reload and asks for a fresh session before reading those rows. Home already uses the stored normal-account identity for local reads. Schedule now uses the same guard. Stored impersonated identities still require remote verification.
 
-Before the fix, the new regression failed with `Schedule could not reload its owner's local shifts without a fresh token: notSignedIn`. The separate stored-impersonation check passed. After the fix, all 73 focused auth, local loading, Add Shift, sync and shift UI tests passed on Shared iPhone. The final six loading tests also passed after removing a lint warning from the test setup. Sol review found no issues. Lint reports no errors and retains the existing Schedule file-size, complexity and naming warnings. The corrected archive and a repeat of the device save/display check remain pending.
+Before the fix, the new regression failed with `Schedule could not reload its owner's local shifts without a fresh token: notSignedIn`. The separate stored-impersonation check passed. After the fix, all 73 focused auth, local loading, Add Shift, sync and shift UI tests passed on Shared iPhone. The final six loading tests also passed after removing a lint warning from the test setup. Sol review found no issues. Lint reports no errors and retains the existing Schedule file-size, complexity and naming warnings. The final combined archive and its device save/display retest passed, as recorded below.
 
 ## Failed first sync
 
@@ -96,6 +96,20 @@ The coordinator marks the initial sync complete even when the sync times out or 
 
 The new Home UI test reproduced the same setup prompt before the fix and failed because Retry was absent. Full-sync completion is now recorded separately from finishing an attempt and belongs to a specific user. Failed and targeted downloads cannot confirm that jobs are missing. A successful full retry can confirm that state, and a failed later refresh keeps an already established local account usable. The offline indicator also offers Retry while initial data remains unconfirmed. That UI regression now passes.
 
-Sol review found a completion race across account resets. The completion write now receives the reset generation captured when its sync started. A stale completion cannot replace the current account's successful sync. All 80 final auth, loading, work-setup, sync and shift UI tests passed on Shared iPhone, including the failed-first-sync UI check. Lint reports no errors and one existing UI test class-size warning. The combined archive and device retests remain pending.
+Sol review found a completion race across account resets. The completion write now receives the reset generation captured when its sync started. A stale completion cannot replace the current account's successful sync. All 80 final auth, loading, work-setup, sync and shift UI tests passed on Shared iPhone, including the failed-first-sync UI check. Lint reports no errors and one existing UI test class-size warning. The combined archive and both device retests passed, as recorded below.
 
 Without the generation guard, the new regression failed with `A late completion made the current account look unsynced`. Adding the guard rejects that previous account's completion at the write itself.
+
+## Final combined archive
+
+Build `20261109.2324` uses signed commit `e55440215e50193b1f9f848275b42d9c5e0fe566`. Archive and exports completed through the shared Xcode wrapper in 210, 25 and 20 seconds. Apple binary validation passed in 67 seconds. There were no build warnings or errors, source drift or unrelated-file drift.
+
+The App Store and ad hoc exports passed strict signatures and distribution profiles for the app and all four extensions. Version, build and executable UUIDs match the archive. The device export includes Depressed Harbor. The exported app uses production Clerk, Convex and APNs configuration, with debugging disabled. The archive itself uses development signing before distribution export.
+
+The App Store IPA SHA-256 is `28c91617e2777b2cbb5989c92accf9edbf3d47ee14477cd51b9583b127de5212`. Artifacts and private receipts are in `/Users/hkarlsen06/Library/Developer/TidexReleases/3.1.2-20261109/combined-offline-fix/`. An in-place install and independent device readback confirmed version `3.1.2`, build `20261109.2324`. The existing app was not deleted. Metadata validation still passes.
+
+Hjalmar repeated both connection checks on this build. With `100% Loss`, a newly added shift appeared in Schedule immediately, survived a full offline relaunch and had no duplicate after reconnecting. For first sign-in, he repeated the Edge-to-`100% Loss` interruption. Error or Offline offered Retry, and his existing jobs, shifts and totals returned after reconnecting. Both retests passed.
+
+The App Store upload was committed at `2026-11-09T22:30:46Z`, upload ID `1389b554-fe22-4905-a754-fadb1eef1895`. Apple still reports `PROCESSING`. The separate validation placeholder is not the committed binary upload.
+
+The owner-side comparison of shared overlapping shifts and overtime gross/net totals remains unverified in `RELEASE_CHECKS.md` before manual release. The lower-level 20-second auth request deadline is covered by automated tests; the device stall check confirmed immediate cached presentation rather than measuring that request directly. Review submission does not publish the app or close those records.
