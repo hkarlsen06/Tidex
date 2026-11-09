@@ -1,6 +1,6 @@
 # iOS 3.1.2 release preparation
 
-Version 3.1.2, build `20261109.2113`, has a signed Release archive and an App Store IPA. Apple binary validation passed without errors on 2026-11-09. Apple processed the upload as `VALID`, and the build is attached to the 3.1.2 draft. A failed expired-impersonation privacy check blocks submission. This build must not be submitted while that failure remains unresolved.
+The corrected 3.1.2 candidate is build `20261109.2228`, archived from signed commit `4f8243a7`. Its archive and both exports passed without warnings or errors, and Apple binary validation passed. The device privacy retest passed. Submission remains on hold for the remaining manual checks. The earlier build `20261109.2113` failed the privacy check and must not be submitted.
 
 Hjalmar clarified that his earlier decision deferred further Siri checks only. The Admin offline-refresh, Schedule Copy and calendar hint checks passed during release preparation. [RELEASE_CHECKS.md](../RELEASE_CHECKS.md) records the remaining checks. Keep that file until the release ships.
 
@@ -16,13 +16,13 @@ Hjalmar clarified that his earlier decision deferred further Siri checks only. T
 
 App Store validation with public URL checks and the attached IPA reports zero blockers and no metadata warnings. The draft retains manual release after approval. Deep validation reports one warning because no cached Apple web session is available. App Privacy publication remains unverified through the public API.
 
-The build ID is `c6e36a7d-5f14-48cc-afa8-4df6a444cdc7`. It is available to the existing internal TestFlight group containing Hjalmar's account only. Automatic tester notifications are disabled. No App Review submission has been created.
+The corrected build ID is `6ee2c937-7991-46e7-a11c-d5cd608a3337`. Apple processing is `VALID`, and this build is attached to the 3.1.2 draft in place of build `20261109.2113`. It is available to the existing internal TestFlight group containing Hjalmar's account only. Automatic tester notifications are disabled. No App Review submission has been created.
 
 The metadata source had a stale comment saying that the generator writes TXT files. It now describes the native asc JSON output.
 
-## Binary and verification
+## Initial binary and verification
 
-The archive and export ran through `scripts/xcode-build-agent.sh` with actions `archive` and `exportArchive`. Both succeeded without warnings or errors. The export preserves the archive's version and build number.
+The initial build `20261109.2113`, Apple build ID `c6e36a7d-5f14-48cc-afa8-4df6a444cdc7`, was archived and exported through `scripts/xcode-build-agent.sh` with actions `archive` and `exportArchive`. Both succeeded without warnings or errors. The export preserves the archive's version and build number. The corrected candidate is documented below.
 
 The IPA and all four extensions passed strict signature checks. They use App Store provisioning profiles for team `48ZSLD4RMP`, with debugging disabled. The app uses production Convex and Clerk configuration and the production APNs environment. The minimum supported system is iOS 26.0, and the IPA supports iPhone and iPad.
 
@@ -62,4 +62,18 @@ The fix invalidates remote identity verification across lifecycle transitions an
 
 With lifecycle invalidation disabled, the new tests failed with `An offline activation reused the impersonated account` and `A lookup from the previous activation restored the impersonated account`. Both returned a target session where none was allowed. With the old retry policy and calendar-owner behavior, the additional regressions exposed an authenticated fallback for the target and retained target calendar metadata and fallback URL.
 
-After the fixes, all 89 focused auth, privacy, Home, calendar-subscription, shared-token, sync and calendar UI tests passed. Lint reports no errors. The auth-manager complexity warning predates this fix; the added regressions take two existing test files over their size limit. A corrected archive and device retest remain pending.
+After the fixes, all 89 focused auth, privacy, Home, calendar-subscription, shared-token, sync and calendar UI tests passed. Lint reports no errors. The auth-manager complexity warning predates this fix. The auth manager and two test files exceed their size guidelines. The corrected archive and device retest passed.
+
+## Corrected archive
+
+Build `20261109.2228` uses commit `4f8243a789bfaf13867b817d185dee35664f9a96`. Archive and exports completed through the shared Xcode wrapper, with no build or export warnings or errors. Source hashes did not change during the build. Both exports passed strict signature, profile, endpoint, entitlement, version and executable UUID checks. Apple binary validation returned `VERIFY SUCCEEDED with no errors`.
+
+The App Store IPA SHA-256 is `0439d81f3c41cea03e9285dfbcd876ca9ec5935ca7b6adc6f0ca92cd842e4510`. The corrected artifacts and receipt are in `/Users/hkarlsen06/Library/Developer/TidexReleases/3.1.2-20261109/privacy-fix/`. The ad hoc export installed over the existing app on Depressed Harbor, and a device readback confirmed build `20261109.2228`.
+
+Apple processed the corrected build as `VALID`, and it replaced the original build on the 3.1.2 draft. Final validation against the corrected IPA reports zero blockers. The only warning remains the unavailable cached Apple web session. Manual release is unchanged.
+
+For the retest, Hjalmar loaded the same test account with reason `Release 3.1.2 offline expiry retest`, returned to the Home Screen without terminating Tidex, and disconnected the phone. The existing server handler expired only that session at `2026-11-09T21:42:27.536Z`. He confirmed that the target data stayed hidden on the first return, Retry and a full force-close and reopen. Reconnecting restored his own account. The privacy retest passed.
+
+## iPad layout
+
+On TestFlight build `20261109.2113`, Hjalmar checked November and December in portrait and landscape. The month picker, calendar and action bar remained reachable without clipping or overlap. Add Shift's time fields and save action stayed usable with the keyboard visible. He also confirmed that the narrowest available window and largest text size remained usable. The privacy fix does not change those layout implementations. The iPad layout checks passed.
