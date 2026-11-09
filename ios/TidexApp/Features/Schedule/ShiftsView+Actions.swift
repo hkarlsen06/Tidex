@@ -4,6 +4,29 @@ import os.log
 
 extension ShiftsView {
 
+  func beginShiftOperation(_ operation: ScheduleShiftOperation) {
+    let shifts = viewModel.selectedDateShifts
+    guard let shift = shifts.first else { return }
+    if shifts.count == 1 {
+      startShiftOperation(operation, shift: shift)
+    } else {
+      selectedDayForSheet = DayItemSelection(
+        dateISO: shift.shiftDate,
+        items: shifts.map { .shift($0) },
+        operation: operation
+      )
+    }
+  }
+
+  func startShiftOperation(_ operation: ScheduleShiftOperation, shift: ShiftWithComputations) {
+    switch operation {
+    case .copy:
+      viewModel.initiateCopy(of: shift)
+    case .move:
+      viewModel.initiateMove(of: shift)
+    }
+  }
+
   // MARK: - Calendar Share
 
   func startCalendarShare() {
@@ -161,7 +184,8 @@ extension ShiftsView {
     }
 
     guard !shiftsOnDate.isEmpty else {
-      scheduleViewLogger.debug(" No shifts found for date: \(dateISO) (shifts loaded: \(shifts.count))")
+      scheduleViewLogger.debug(
+        " No shifts found for date: \(dateISO) (shifts loaded: \(shifts.count))")
       // Clear highlighted date - we're on the right month but there's no shift
       // This handles the case where the shift was deleted
       highlightedDateISO = nil

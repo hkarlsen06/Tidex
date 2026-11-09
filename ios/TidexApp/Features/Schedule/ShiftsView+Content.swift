@@ -131,7 +131,7 @@ extension ShiftsView {
                 viewModel.confirmingDelete = false
               },
               onCopy: {
-                viewModel.initiateCopy()
+                beginShiftOperation(.copy)
               },
               onDetails: {
                 handleSelectedDayDetails()
@@ -143,7 +143,7 @@ extension ShiftsView {
                 }
               },
               onMove: {
-                viewModel.initiateMove()
+                beginShiftOperation(.move)
               },
               onClearSelection: {
                 viewModel.clearSelection()
@@ -401,7 +401,7 @@ extension ShiftsView {
                 viewModel.confirmingDelete = false
               },
               onCopy: {
-                viewModel.initiateCopy()
+                beginShiftOperation(.copy)
               },
               onDetails: {
                 handleSelectedDayDetails()
@@ -414,7 +414,7 @@ extension ShiftsView {
                 }
               },
               onMove: {
-                viewModel.initiateMove()
+                beginShiftOperation(.move)
               },
               onClearSelection: {
                 viewModel.clearSelection()

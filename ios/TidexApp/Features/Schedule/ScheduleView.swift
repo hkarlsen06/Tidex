@@ -656,7 +656,8 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         // When shifts finish loading, check if we should highlight/select a date from deep link
         .onChange(of: viewModel.isLoading) { _, isLoading in
           if !isLoading, let dateISO = highlightedDateISO {
-            scheduleViewLogger.debug(" Shifts finished loading, checking for deep link date: \(dateISO)")
+            scheduleViewLogger.debug(
+              " Shifts finished loading, checking for deep link date: \(dateISO)")
             selectShiftFromDeepLink(
               dateISO: dateISO,
               shiftIds: highlightedShiftIds,
@@ -690,7 +691,11 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             showJobIndicators: viewModel.shouldShowJobIndicators,
             jobForShift: { shift in viewModel.jobForShift(shift) },
             onShiftTapped: { shift in
-              pendingSheetAction = .shiftDetails(shift)
+              if let operation = daySelection.operation {
+                startShiftOperation(operation, shift: shift)
+              } else {
+                pendingSheetAction = .shiftDetails(shift)
+              }
               selectedDayForSheet = nil
             },
             onEventTapped: { event in
@@ -698,7 +703,8 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
                 EventSheetSelection(event: event, startInEditMode: false))
               selectedDayForSheet = nil
             },
-            measuredContentHeight: $selectedDaySheetContentHeight
+            measuredContentHeight: $selectedDaySheetContentHeight,
+            title: daySelection.operation?.title
           )
           .presentationDetents([
             .height(ContentSizedSheetMetrics.detentHeight(for: selectedDaySheetContentHeight))
@@ -772,100 +778,113 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     )
   }
 
-/// An action queued to run once the sheet that triggered it has finished dismissing.
-/// Presenting a new sheet while another is still animating out is a no-op in SwiftUI,
-/// so this replaces `DispatchQueue.main.asyncAfter` guesswork with a real `onDismiss` hook.
-private enum PendingScheduleSheetAction {
-  case shiftDetails(ShiftWithComputations)
-  case eventDetails(EventSheetSelection)
-  case shiftDelete(ShiftWithComputations)
-  case eventDelete(EventRow)
-  case recurringEdit(RecurringShiftRow)
-  case calendarSubscriptionSettings
-}
+  /// An action queued to run once the sheet that triggered it has finished dismissing.
+  /// Presenting a new sheet while another is still animating out is a no-op in SwiftUI,
+  /// so this replaces `DispatchQueue.main.asyncAfter` guesswork with a real `onDismiss` hook.
+  private enum PendingScheduleSheetAction {
+    case shiftDetails(ShiftWithComputations)
+    case eventDetails(EventSheetSelection)
+    case shiftDelete(ShiftWithComputations)
+    case eventDelete(EventRow)
+    case recurringEdit(RecurringShiftRow)
+    case calendarSubscriptionSettings
+  }
 
-/// Helper struct for day sheet selection (must be Identifiable for .sheet(item:))
-struct DayItemSelection: Identifiable {
-  let id: UUID = UUID()
-  let dateISO: String
-  let items: [DayPresentationItem]
-}
+  /// Helper struct for day sheet selection (must be Identifiable for .sheet(item:))
+  struct DayItemSelection: Identifiable {
+    let id: UUID = UUID()
+    let dateISO: String
+    let items: [DayPresentationItem]
+    var operation: ScheduleShiftOperation?
+  }
 
-/// Represents an item in the shifts list - either a shift card or today's placeholder
-enum ShiftListItem: Identifiable {
-  case shift(ShiftWithComputations)
-  case event(EventPresentation)
-  case todayPlaceholder
+  enum ScheduleShiftOperation {
+    case copy
+    case move
 
-  var id: String {
-    switch self {
-    case .shift(let shift):
-      return shift.id
-
-    case .event(let event):
-      return "event-\(event.id)"
-
-    case .todayPlaceholder:
-      return "today-placeholder"
+    var title: LocalizedStringResource {
+      switch self {
+      case .copy: .commonCopy
+      case .move: .shiftsMove
+      }
     }
   }
 
-  /// The date for sorting purposes
-  var sortDate: String {
-    switch self {
-    case .shift(let shift):
-      return shift.shiftDate
+  /// Represents an item in the shifts list - either a shift card or today's placeholder
+  enum ShiftListItem: Identifiable {
+    case shift(ShiftWithComputations)
+    case event(EventPresentation)
+    case todayPlaceholder
 
-    case .event(let event):
-      return event.coveredDateISO
+    var id: String {
+      switch self {
+      case .shift(let shift):
+        return shift.id
 
-    case .todayPlaceholder:
-      return todayISO()
+      case .event(let event):
+        return "event-\(event.id)"
+
+      case .todayPlaceholder:
+        return "today-placeholder"
+      }
+    }
+
+    /// The date for sorting purposes
+    var sortDate: String {
+      switch self {
+      case .shift(let shift):
+        return shift.shiftDate
+
+      case .event(let event):
+        return event.coveredDateISO
+
+      case .todayPlaceholder:
+        return todayISO()
+      }
+    }
+
+    var startSortKey: String {
+      switch self {
+      case .shift(let shift):
+        return shift.startTime
+
+      case .event(let event):
+        return event.sortTime
+
+      case .todayPlaceholder:
+        return "99:99"
+      }
+    }
+
+    var sortPriority: Int {
+      switch self {
+      case .event(let event):
+        return event.isAllDay ? 0 : 1
+
+      case .shift:
+        return 1
+
+      case .todayPlaceholder:
+        return 2
+      }
     }
   }
 
-  var startSortKey: String {
-    switch self {
-    case .shift(let shift):
-      return shift.startTime
-
-    case .event(let event):
-      return event.sortTime
-
-    case .todayPlaceholder:
-      return "99:99"
-    }
+  struct EventSheetSelection: Identifiable {
+    let id: UUID = UUID()
+    let event: EventRow
+    let startInEditMode: Bool
   }
 
-  var sortPriority: Int {
-    switch self {
-    case .event(let event):
-      return event.isAllDay ? 0 : 1
+  struct ListWeekGroup: Identifiable {
+    let weekKey: String
+    let weekNumber: Int
+    let totalGross: Double
+    let items: [ShiftListItem]
+    let isOutsideMonth: Bool
 
-    case .shift:
-      return 1
-
-    case .todayPlaceholder:
-      return 2
-    }
+    var id: String { weekKey }
   }
-}
-
-struct EventSheetSelection: Identifiable {
-  let id: UUID = UUID()
-  let event: EventRow
-  let startInEditMode: Bool
-}
-
-struct ListWeekGroup: Identifiable {
-  let weekKey: String
-  let weekNumber: Int
-  let totalGross: Double
-  let items: [ShiftListItem]
-  let isOutsideMonth: Bool
-
-  var id: String { weekKey }
-}
 }
 
 // MARK: - Preview

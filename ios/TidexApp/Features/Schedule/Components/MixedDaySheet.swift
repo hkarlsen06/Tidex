@@ -10,6 +10,7 @@ struct MixedDaySheet: View {
   let onShiftTapped: (ShiftWithComputations) -> Void
   let onEventTapped: (EventRow) -> Void
   @Binding var measuredContentHeight: CGFloat
+  var title: LocalizedStringResource?
 
   @Environment(\.dismiss) private var dismiss
 
@@ -49,6 +50,8 @@ struct MixedDaySheet: View {
         .measureSheetContentHeight { measuredContentHeight = $0 }
       }
       .background(Color.tidexBackground)
+      .navigationTitle(title.map { String(localized: $0) } ?? "")
+      .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
           Button(String(localized: .commonDone)) {

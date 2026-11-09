@@ -106,20 +106,7 @@ extension ShiftsViewModel {
 
   // MARK: - Copy/Move Actions
 
-  /// Enter copy mode - prepares to copy the selected shift to a new date
-  func initiateCopy() {
-    guard selectedDates.count == 1,
-      let dateISO = selectedDates.first
-    else { return }
-
-    // Get the shift for this date
-    let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
-    guard shiftsOnDate.count == 1, let shift = shiftsOnDate.first else {
-      // Multiple shifts on date or no shift found - can't copy
-      return
-    }
-
-    // Store the shift and enter copy mode
+  func initiateCopy(of shift: ShiftWithComputations) {
     shiftForOperation = shift
     copyTargetDates.removeAll()
     isCopyMode = true
@@ -127,20 +114,7 @@ extension ShiftsViewModel {
     confirmingDelete = false
   }
 
-  /// Enter move mode - prepares to move the selected shift to a new date
-  func initiateMove() {
-    guard selectedDates.count == 1,
-      let dateISO = selectedDates.first
-    else { return }
-
-    // Get the shift for this date
-    let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
-    guard shiftsOnDate.count == 1, let shift = shiftsOnDate.first else {
-      // Multiple shifts on date or no shift found - can't move
-      return
-    }
-
-    // Store the shift and enter move mode
+  func initiateMove(of shift: ShiftWithComputations) {
     shiftForOperation = shift
     copyTargetDates.removeAll()
     isCopyMode = false
