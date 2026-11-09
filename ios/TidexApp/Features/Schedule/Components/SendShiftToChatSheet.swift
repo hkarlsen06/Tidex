@@ -122,11 +122,18 @@ enum SendAttachmentRecipientResolver {
 @MainActor
 @Observable
 private final class SendAttachmentToChatViewModel {
-  var recipients: [ShareRecipient] = []
+  enum LoadState {
+    case loading
+    case loaded([ShareRecipient])
+    /// Nobody to show: the fetch failed and no cached friend or thread exists.
+    case failed(message: String)
+  }
+
+  var loadState = LoadState.loading
   var recipientSelection = ShareRecipientSelectionState()
-  var isLoading = true
   var isSubmitting = false
-  var errorMessage: String?
+  /// Why the last tap on a recipient did not open the chat.
+  var submitErrorMessage: String?
 
   private let viewerUserId: String
   private let buildAttachment: (ShareRecipient) throws -> FriendsComposerAttachmentDraft
@@ -155,8 +162,13 @@ private final class SendAttachmentToChatViewModel {
     self.sharedShiftsRepository = sharedShiftsRepository
   }
 
+  var recipients: [ShareRecipient] {
+    if case .loaded(let recipients) = loadState { return recipients }
+    return []
+  }
+
   var canContinue: Bool {
-    selectedRecipient != nil && !isLoading && !isSubmitting
+    selectedRecipient != nil && !isSubmitting
   }
 
   var selectedRecipient: ShareRecipient? {
@@ -166,7 +178,7 @@ private final class SendAttachmentToChatViewModel {
   func beginSubmitting() -> Bool {
     guard !isSubmitting else { return false }
     isSubmitting = true
-    errorMessage = nil
+    submitErrorMessage = nil
     return true
   }
 
@@ -177,34 +189,36 @@ private final class SendAttachmentToChatViewModel {
   }
 
   func load() async {
-    isLoading = true
-    errorMessage = nil
+    loadState = .loading
     let threads = repository.getThreads(for: viewerUserId)
     let cachedFriends = sharedShiftsRepository.getCachedFriends(
       for: viewerUserId, includeHidden: true)
 
     do {
       let fetchedRecipients = try await ShareExtensionMessagingClient.fetchRecipients()
-      recipients = SendAttachmentRecipientResolver.mergedRecipients(
-        fetchedRecipients: fetchedRecipients,
-        cachedFriends: cachedFriends,
-        threads: threads,
-        includeLocalFallbacks: false
-      )
+      loadState = .loaded(
+        SendAttachmentRecipientResolver.mergedRecipients(
+          fetchedRecipients: fetchedRecipients,
+          cachedFriends: cachedFriends,
+          threads: threads,
+          includeLocalFallbacks: false
+        ))
       recipientSelection = ShareRecipientSelectionState()
     } catch {
-      recipients = SendAttachmentRecipientResolver.mergedRecipients(
+      let fallbackRecipients = SendAttachmentRecipientResolver.mergedRecipients(
         fetchedRecipients: [],
         cachedFriends: cachedFriends,
         threads: threads,
         includeLocalFallbacks: true
       )
-      if recipients.isEmpty {
-        errorMessage = userMessage(for: error)
+      if fallbackRecipients.isEmpty,
+        let message = ErrorTranslations.translate(error, fallback: .commonErrorLoadFailed)
+      {
+        loadState = .failed(message: message)
+      } else {
+        loadState = .loaded(fallbackRecipients)
       }
     }
-
-    isLoading = false
   }
 
   func continueToChat() async -> SendShiftToChatResult? {
@@ -224,7 +238,7 @@ private final class SendAttachmentToChatViewModel {
     do {
       let attachment = try buildAttachment(recipient)
       guard attachment.shiftSnapshot == nil || capabilities.canSendShiftSnapshots else {
-        errorMessage = String(localized: .friendsChatShiftSnapshotSendUnavailable)
+        submitErrorMessage = String(localized: .friendsChatShiftSnapshotSendUnavailable)
         return nil
       }
 
@@ -244,13 +258,9 @@ private final class SendAttachmentToChatViewModel {
       )
       return SendShiftToChatResult(thread: thread, recipient: recipient)
     } catch {
-      errorMessage = userMessage(for: error)
+      submitErrorMessage = ErrorTranslations.translate(error)
       return nil
     }
-  }
-
-  private func userMessage(for error: Error) -> String? {
-    ErrorTranslations.translate(error)
   }
 
 }
@@ -320,7 +330,8 @@ struct SendAttachmentToChatSheet: View {
 
   @ViewBuilder
   private var content: some View {
-    if viewModel.isLoading {
+    switch viewModel.loadState {
+    case .loading:
       VStack(spacing: Spacing.md) {
         ProgressView()
         Text(.friendsChatSendToChatLoading)
@@ -328,7 +339,22 @@ struct SendAttachmentToChatSheet: View {
           .foregroundStyle(Color.tidexTextMuted)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-    } else if viewModel.recipients.isEmpty {
+
+    case .failed(let message):
+      ContentUnavailableView {
+        Label(String(localized: .commonErrorLoadFailed), systemImage: "wifi.exclamationmark")
+      } description: {
+        Text(message)
+      } actions: {
+        Button(String(localized: .commonRetry)) {
+          Task { await viewModel.load() }
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.tidexBlue)
+      }
+      .announcesToVoiceOver(message)
+
+    case .loaded(let recipients) where recipients.isEmpty:
       VStack(spacing: Spacing.md) {
         Image(systemName: "person.2.slash")
           .font(.system(size: emptyIconSize, weight: .medium))
@@ -347,13 +373,14 @@ struct SendAttachmentToChatSheet: View {
         .multilineTextAlignment(.center)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-    } else {
+
+    case .loaded(let recipients):
       VStack(alignment: .leading, spacing: Spacing.md) {
         Text(.friendsChatSendToChatPrompt)
           .font(.tidexFootnote)
           .foregroundStyle(Color.tidexTextMuted)
 
-        if let errorMessage = viewModel.errorMessage {
+        if let errorMessage = viewModel.submitErrorMessage {
           Text(errorMessage)
             .font(.tidexFootnote)
             .foregroundStyle(Color.tidexError)
@@ -361,7 +388,7 @@ struct SendAttachmentToChatSheet: View {
         }
 
         ShareRecipientPickerList(
-          recipients: viewModel.recipients,
+          recipients: recipients,
           selectionState: Binding(
             get: { viewModel.recipientSelection },
             set: { viewModel.recipientSelection = $0 }
@@ -370,15 +397,9 @@ struct SendAttachmentToChatSheet: View {
             guard viewModel.beginSubmitting() else { return }
 
             Task {
-              guard
-                let result = await viewModel.continueToChat(
-                  recipient: recipient,
-                  beganSubmission: true
-                )
-              else { return }
-              await MainActor.run {
-                onCompleted(result)
-              }
+              let result = await viewModel.continueToChat(
+                recipient: recipient, beganSubmission: true)
+              if let result { onCompleted(result) }
             }
           }
         )
