@@ -54,11 +54,6 @@ protocol EmailAuthProviding: AnyObject {
 final class AuthService: EmailAuthProviding {
   static let shared = AuthService()
 
-  // MARK: - Published State
-
-  /// Loading indicator for auth operations
-  private(set) var isLoading = false
-
   // MARK: - Private State
 
   /// The sign-in that waits for an email code, and the sign-up that waits for its code.
@@ -89,8 +84,6 @@ final class AuthService: EmailAuthProviding {
   ///   a code that `verifySignInCode` must check.
   func signInWithPassword(email: String, password: String) async throws -> EmailSignInResult {
     LegacySessionExchange.manualSignInDidStart()
-    isLoading = true
-    defer { isLoading = false }
 
     let signIn = try await Clerk.shared.auth.signInWithPassword(
       identifier: email, password: password)
@@ -113,8 +106,6 @@ final class AuthService: EmailAuthProviding {
 
   /// Check the code from the second-factor email.
   func verifySignInCode(_ code: String) async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     guard let signIn = pendingSignIn ?? Clerk.shared.auth.currentSignIn else {
       throw AuthError.sessionMissing
@@ -126,8 +117,6 @@ final class AuthService: EmailAuthProviding {
 
   /// Send a new second-factor code.
   func resendSignInCode() async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     guard let signIn = pendingSignIn ?? Clerk.shared.auth.currentSignIn else {
       throw AuthError.sessionMissing
@@ -147,8 +136,6 @@ final class AuthService: EmailAuthProviding {
     lastName: String? = nil
   ) async throws -> EmailSignupResult {
     LegacySessionExchange.manualSignInDidStart()
-    isLoading = true
-    defer { isLoading = false }
 
     do {
       let signUp = try await Clerk.shared.auth.signUp(
@@ -170,8 +157,6 @@ final class AuthService: EmailAuthProviding {
 
   /// Verify the code from the signup email. Clerk stores the session it creates.
   func verifySignupCode(_ code: String) async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     guard let signUp = pendingSignUp ?? Clerk.shared.auth.currentSignUp else {
       throw AuthError.sessionMissing
@@ -183,8 +168,6 @@ final class AuthService: EmailAuthProviding {
 
   /// Send a new signup code.
   func resendSignupCode() async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     guard let signUp = pendingSignUp ?? Clerk.shared.auth.currentSignUp else {
       throw AuthError.sessionMissing
@@ -213,8 +196,6 @@ final class AuthService: EmailAuthProviding {
   /// Send a password reset code to the email address.
   func sendPasswordResetEmail(email: String) async throws {
     LegacySessionExchange.manualSignInDidStart()
-    isLoading = true
-    defer { isLoading = false }
 
     let signIn = try await Clerk.shared.auth.signIn(email)
     pendingSignIn = try await signIn.sendResetPasswordEmailCode()
@@ -222,8 +203,6 @@ final class AuthService: EmailAuthProviding {
 
   /// Verify the reset code. The sign-in then waits for a new password.
   func verifyPasswordResetCode(_ code: String) async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     guard let signIn = pendingSignIn ?? Clerk.shared.auth.currentSignIn else {
       throw AuthError.sessionMissing
@@ -235,8 +214,6 @@ final class AuthService: EmailAuthProviding {
 
   /// Set the new password after `verifyPasswordResetCode`. Clerk signs the user in with it.
   func resetPassword(newPassword: String) async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     guard let signIn = pendingSignIn ?? Clerk.shared.auth.currentSignIn else {
       throw AuthError.sessionMissing
@@ -248,8 +225,6 @@ final class AuthService: EmailAuthProviding {
 
   /// Change the password of the signed-in user. `currentPassword` is nil for a user who has none.
   func updatePassword(currentPassword: String?, newPassword: String) async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     guard let user = Clerk.shared.user else { throw AuthError.sessionMissing }
     try await user.updatePassword(
@@ -262,8 +237,6 @@ final class AuthService: EmailAuthProviding {
   /// - Parameter fullName: Name components from Apple, which sends them only on the first sign-in.
   func signInWithApple(idToken: String, fullName: PersonNameComponents? = nil) async throws {
     LegacySessionExchange.manualSignInDidStart()
-    isLoading = true
-    defer { isLoading = false }
 
     // The same order as Clerk's own Apple flow: a sign-up, which Clerk turns into a sign-in
     // for an existing account, and a plain sign-in only when sign-ups are closed. Starting
@@ -288,8 +261,6 @@ final class AuthService: EmailAuthProviding {
   /// Sign in with Google in a web sheet. Clerk has no native Google ID token path.
   func signInWithGoogle() async throws {
     LegacySessionExchange.manualSignInDidStart()
-    isLoading = true
-    defer { isLoading = false }
 
     let result = try await Clerk.shared.auth.signInWithOAuth(provider: .google)
     _ = try await finish(result)
@@ -318,8 +289,6 @@ final class AuthService: EmailAuthProviding {
   /// Sign out the current user from this device only
   /// Other devices will remain logged in
   func signOut() async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     try await Clerk.shared.auth.signOut()
   }
@@ -327,8 +296,6 @@ final class AuthService: EmailAuthProviding {
   /// Sign out the current user from ALL devices
   /// This revokes every other Clerk session of the user, then ends this one.
   func signOutGlobal() async throws {
-    isLoading = true
-    defer { isLoading = false }
 
     // Best-effort: this device still signs out when the session list is unavailable.
     if let user = Clerk.shared.user, let sessions = try? await user.getSessions() {
