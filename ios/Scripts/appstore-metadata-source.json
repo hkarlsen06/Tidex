@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$comment": "Source of truth for App Store metadata. Generator script creates .txt files from this.",
+  "$comment": "Source of truth for English and Norwegian App Store metadata. The generator writes native asc JSON.",
   "metadata": {
     "en": {
       "name": "Tidex – Payroll & Shifts",
