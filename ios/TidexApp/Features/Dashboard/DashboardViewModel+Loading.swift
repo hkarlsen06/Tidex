@@ -671,8 +671,7 @@ extension DashboardViewModel {
 
       // Sync completion reloads the local read model once settings have been saved.
       guard self.settings != nil else {
-        if expectedDisplayYM == nil {
-          // The initial-sync and sync-summary handlers retry after settings are saved.
+        if expectedDisplayYM == nil, AppCoordinator.shared.initialSyncComplete {
           dashboardViewModelLogger.error("❌ No local settings - cannot load dashboard")
           self.error = DashboardError.noLocalData
         } else {
