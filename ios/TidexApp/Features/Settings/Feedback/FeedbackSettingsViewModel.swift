@@ -222,7 +222,7 @@ internal final class FeedbackSettingsViewModel {
 
   /// Fetch user's feedback history
   private func fetchFeedbackHistory() async {
-    guard let userId else {
+    guard userId != nil else {
       return
     }
 
@@ -261,6 +261,7 @@ extension FeedbackItem {
   }
 
   private func formatDate(_ date: Date, locale: Locale) -> String {
-    date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale).calendar(.gregorian))
+    date.formatted(
+      Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale).calendar(.gregorian))
   }
 }
