@@ -48,6 +48,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @State var selectedPayrollDetailsVariant: PayrollCardVariant?  // swiftlint:disable:this type_contents_order
   /// False only for a user with no shifts at all, who sees the first-shift prompt.
   @State var hasAnyShifts = true  // swiftlint:disable:this explicit_type_interface type_contents_order
+  /// The pre-auth demo shift, when setup ended before the user kept or declined it.
+  @State var carriedDemoShift: CarriedDemoShift?  // swiftlint:disable:this type_contents_order
+  @State var payAssumptions: PayAssumptions?  // swiftlint:disable:this type_contents_order
 
   // Action to run once the currently-presented sheet finishes dismissing, so two sheets
   // never race to present at once (see `performPendingSheetAction`).
@@ -197,6 +200,43 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       for: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
     )
+    carriedDemoShift = hasAnyShifts ? nil : OnboardingFirstShiftCarryoverStore.read()
+    refreshPayAssumptions()
+  }
+
+  /// Shown after the first shift to a user who finished the shorter setup, until dismissed.
+  func refreshPayAssumptions() {  // swiftlint:disable:this type_contents_order
+    guard hasAnyShifts, let userId = coordinator.userId,
+      OnboardingCompletionStore.isPayAssumptionsReviewPending(userId: userId),
+      let job = JobsRepository.shared.getDefaultJob(for: userId),
+      let snapshot = SnapshotsRepository.shared.snapshotForDate(
+        Date().toISODateString(), userId: userId, jobId: job.id)
+    else {
+      payAssumptions = nil
+      return
+    }
+    payAssumptions = PayAssumptions(job: job, snapshot: snapshot)
+  }
+
+  /// Home features only a shift that hasn't ended this month. When a first shift added from
+  /// Home is not one, Schedule shows it with the highlight the Add screen gives new shifts.
+  private func showFirstShiftWhereHomeCannot() {  // swiftlint:disable:this type_contents_order
+    let dates = CelebrationManager.shared.newlyAddedDates.sorted()
+    guard selectedTab == .home, let userId = coordinator.userId,
+      let first = dates.first.flatMap({ Date.fromISODateString($0) }),
+      let last = dates.last.flatMap({ Date.fromISODateString($0) })
+    else { return }
+    let newShifts = ShiftsRepository.shared.getShifts(for: userId, startDate: first, endDate: last)
+      .filter { dates.contains($0.shift_date) }
+    // Recurring shifts have no stored rows here, and their next occurrence shows on Home.
+    guard !newShifts.isEmpty else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    let homeShowsOne = newShifts.contains { shift in
+      DashboardFeaturedItemSelector.canFeature(
+        shiftDate: shift.shift_date, startTime: shift.start_time, endTime: shift.end_time)
+    }
+    if !homeShowsOne {
+      coordinator.pendingDeepLink = .shifts(dates: dates, shiftIds: nil, action: .highlight)
+    }
   }
 
   private func handleInitialSyncCompleteChange(completed: Bool) {  // swiftlint:disable:this type_contents_order
@@ -458,6 +498,11 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         }
         .onChange(of: viewModel.dashboardData) { _, newData in
           handleDashboardDataChange(newData)
+        }
+        .onChange(of: hasAnyShifts) { hadShifts, hasShifts in
+          if !hadShifts, hasShifts {
+            showFirstShiftWhereHomeCannot()
+          }
         }
         .onChange(of: showFeaturedShiftActions) { _, isPresented in
           if !isPresented {

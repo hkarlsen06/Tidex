@@ -120953,6 +120953,42 @@
         }
       }
     },
+    "dashboard.firstShift.carriedButton" : {
+      "comment" : "Button on the Home card that opens the Add screen filled in with the shift the user tried before sign-up.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add the shift"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg inn vakten"
+          }
+        }
+      }
+    },
+    "dashboard.firstShift.carriedMessage" : {
+      "comment" : "Home card for a user with no shifts yet whose shift from the demo before sign-up is still unsaved. %@ is its dates and times, for example \"Wed 12 Nov 16:00–21:00\".",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shift you tried before signing up, %@, isn't saved yet."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vakten du prøvde før du lagde konto, %@, er ikke lagret ennå."
+          }
+        }
+      }
+    },
     "dashboard.futurePayout" : {
       "comment" : "Button on the dashboard payroll card that goes to a later payout.",
       "extractionState" : "manual",
@@ -121795,6 +121831,186 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下次支付"
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.break" : {
+      "comment" : "Part of the Home pay settings sentence. %1$lld is the break length in minutes, %2$@ the shift length in hours above which the break is deducted, for example 5.5.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a %1$lld-minute unpaid break on shifts over %2$@ hours"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld min ubetalt pause på vakter over %2$@ timer"
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.noBreak" : {
+      "comment" : "Part of the Home pay settings sentence when no unpaid break is deducted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no unpaid break"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ingen ubetalt pause"
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.noTax" : {
+      "comment" : "Part of the Home pay settings sentence when pay is shown before tax.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no tax withheld"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ingen skattetrekk"
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.payday" : {
+      "comment" : "Part of the Home pay settings sentence. %@ is an ordinal day of the month, such as 15th in English or 15. in Norwegian.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "payday on the %@ of each month"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lønning den %@ hver måned"
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.paydayLast" : {
+      "comment" : "Part of the Home pay settings sentence when pay comes on the last day of the month.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "payday on the last day of each month"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lønning siste dag i måneden"
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.review" : {
+      "comment" : "Button on the Home pay settings card that opens the job's pay settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se over"
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.summary" : {
+      "comment" : "Sentence on the Home pay settings card. %@ is a list of settings joined with commas and \"and\", for example \"a 30-minute unpaid break on shifts over 5.5 hours, no tax withheld and payday on the 15th of each month\".",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex assumes %@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex regner med %@."
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.supplements" : {
+      "comment" : "Second line on the Home pay settings card, for an hourly wage with no supplements. Suggests adding evening or weekend supplements.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you get evening or weekend supplements? Add them."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Har du kvelds- eller helgetillegg? Legg dem til."
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.tax" : {
+      "comment" : "Part of the Home pay settings sentence. %@ is a percentage such as 22%.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tax withheld"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ skattetrekk"
+          }
+        }
+      }
+    },
+    "dashboard.payAssumptions.title" : {
+      "comment" : "Title of a Home card shown once after setup. It lists the break, tax and payday settings Tidex used for the user's pay.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How Tidex works out your pay"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slik regner Tidex ut lønna"
           }
         }
       }

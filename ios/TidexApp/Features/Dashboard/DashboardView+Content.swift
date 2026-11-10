@@ -261,11 +261,32 @@ extension DashboardView {
             featuredShiftSection(data: data)
           }
         }
+
+        if let payAssumptions {
+          PayAssumptionsCard(
+            assumptions: payAssumptions,
+            onReview: {
+              finishPayAssumptionsReview()
+              coordinator.pendingDeepLink = .settings(destination: .pay(jobId: payAssumptions.jobId))
+            },
+            onDismiss: finishPayAssumptionsReview
+          )
+          .transition(.opacity)
+        }
       }
       .contentShape(Rectangle())
       .gesture(monthSwipeGesture())
     } else {
       EmptyView()
+    }
+  }
+
+  private func finishPayAssumptionsReview() {  // swiftlint:disable:this type_contents_order
+    if let userId = coordinator.userId {
+      OnboardingCompletionStore.setPayAssumptionsReviewPending(false, userId: userId)
+    }
+    withAnimation(.easeOut(duration: 0.2)) {  // swiftlint:disable:this no_magic_numbers
+      payAssumptions = nil
     }
   }
 
@@ -614,7 +635,10 @@ extension DashboardView {
           }
         }
       } else if !hasAnyShifts {
-        FirstShiftPrompt {
+        FirstShiftPrompt(carriedShift: carriedDemoShift) {
+          if carriedDemoShift != nil, OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft() {
+            OnboardingFunnelRecorder.shared.record("demo_shift_prefilled")
+          }
           coordinator.pendingDeepLink = .addShift(mode: nil, date: nil)
         }
       } else {

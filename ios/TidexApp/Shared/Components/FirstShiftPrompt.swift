@@ -2,7 +2,9 @@ import SwiftUI
 
 /// Card for a user who has never added a shift. Says what adding one gives them and
 /// has a full-width add button. Home shows it in place of the next-shift card.
+/// When the shift from the pre-auth demo is still unsaved, the card offers that shift.
 internal struct FirstShiftPrompt: View {
+  internal var carriedShift: CarriedDemoShift?
   internal let onAddShift: () -> Void
 
   internal var body: some View {
@@ -12,16 +14,39 @@ internal struct FirstShiftPrompt: View {
           .font(.tidexTitle2)
           .foregroundStyle(Color.tidexTextPrimary)
 
-        Text(.firstShiftPromptMessage)
-          .font(.tidexSubheadline)
-          .foregroundStyle(Color.tidexTextSecondary)
+        Group {
+          if let carriedShift {
+            Text(.dashboardFirstShiftCarriedMessage(Self.describe(carriedShift)))
+          } else {
+            Text(.firstShiftPromptMessage)
+          }
+        }
+        .font(.tidexSubheadline)
+        .foregroundStyle(Color.tidexTextSecondary)
+        .fixedSize(horizontal: false, vertical: true)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .accessibilityElement(children: .combine)
 
-      PrimaryButton(title: String(localized: .shiftsEmptyAddShift), action: onAddShift)
-        .accessibilityIdentifier("first-shift.add-shift")
+      PrimaryButton(
+        title: String(
+          localized: carriedShift == nil ? .shiftsEmptyAddShift : .dashboardFirstShiftCarriedButton),
+        action: onAddShift
+      )
+      .accessibilityIdentifier("first-shift.add-shift")
     }
+  }
+
+  /// "Wed 12 Nov 16:00–21:00", with one date per shift.
+  private static func describe(_ shift: CarriedDemoShift) -> String {
+    let dates = shift.dates.compactMap { Date.fromISODateString($0) }.map {
+      $0.formatted(
+        .dateTime.weekday(.abbreviated).day().month(.abbreviated).calendar(.gregorian)
+          .locale(.appLocale))
+    }
+    let times = ShiftCardFormatter.localizedTimeRange(
+      start: shift.startTime, end: shift.endTime, locale: .appLocale)
+    return "\(dates.formatted(.list(type: .and).locale(.appLocale))) \(times)"
   }
 }
 
