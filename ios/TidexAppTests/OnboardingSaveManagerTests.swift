@@ -131,13 +131,13 @@ final class CarriedDemoShiftSaveTests: XCTestCase {
   func testRetryAfterAFailedDateSavesEveryDateExactlyOnce() async throws {
     let carried = try carryOverOvernightShift(dates: ["2026-10-31", "2026-11-01"])
     var saved: [String] = []
-    var failNovember = true
+    var attempts = 0
     let manager = OnboardingSaveManager(defaults: defaults) { _, _, date, _, _ in
-      let iso = date.toISODateString()
-      if iso == "2026-11-01", failNovember {
+      attempts += 1
+      if attempts == 2 {
         throw Offline()
       }
-      saved.append(iso)
+      saved.append(date.toISODateString())
     }
 
     let firstAttempt = await manager.keepCarriedShift(carried, userId: "user-1", jobId: "job-1")
@@ -149,7 +149,6 @@ final class CarriedDemoShiftSaveTests: XCTestCase {
       OnboardingFirstShiftCarryoverStore.read(defaults: defaults),
       "An unsaved shift stays carried so it can still be saved")
 
-    failNovember = false
     let retry = await manager.keepCarriedShift(carried, userId: "user-1", jobId: "job-1")
 
     XCTAssertTrue(retry)

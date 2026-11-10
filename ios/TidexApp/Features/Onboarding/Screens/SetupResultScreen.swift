@@ -366,7 +366,10 @@ private struct CarriedShiftPayCard: View {
         numberFormatStyle: .number.precision(.fractionLength(0...2))
       ).locale(.appLocale))
     let rate = pay.workedHours > 0 ? pay.basePay / pay.workedHours : 0
-    return "\(hours) × \(format(rate))"
+    // A rate such as 213,50 keeps its øre, so the line still adds up.
+    let rateText = CurrencyConfig.format(
+      rate, currency: pay.currency, includeDecimals: rate != rate.rounded())
+    return "\(hours) × \(rateText)"
   }
 }
 
