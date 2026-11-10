@@ -29,19 +29,22 @@ final class OnboardingFunnelRecorder {
   static let installIdDefaultsKey = "onboardingFunnel.installId"
   static let anonymousSentDefaultsKey = "onboardingFunnel.anonymousSentSteps"
 
-  private let defaults: UserDefaults
-  private let currentUserId: @MainActor () -> String?
-  private let send: ([OnboardingFunnelStepRow]) async throws -> Void
-  private let sendPreAuth: (_ installId: String, _ step: String, _ reachedAt: String) async throws -> Void
-  private var isSending = false
-  private var hasQueuedSend = false
+  /// The two backend calls. Debug builds have none, so simulator runs, UI tests and fixtures
+  /// never write test rows into the production funnel.
+  struct Transport: Sendable {
+    let send: @Sendable ([OnboardingFunnelStepRow]) async throws -> Void
+    let sendPreAuth: @Sendable (_ installId: String, _ step: String, _ reachedAt: String) async throws -> Void
 
-  init(
-    defaults: UserDefaults = .standard,
-    currentUserId: @escaping @MainActor () -> String? = {
-      AuthSessionManager.shared.localSession()?.normalizedUserId
-    },
-    send: @escaping ([OnboardingFunnelStepRow]) async throws -> Void = { rows in
+    /// Built in every configuration, so a Debug build also compiles what Release sends.
+    static let production = Transport(send: sendSteps, sendPreAuth: sendPreAuthStep)
+
+    #if DEBUG
+      static let live: Transport? = nil
+    #else
+      static let live: Transport? = production
+    #endif
+
+    private static func sendSteps(_ rows: [OnboardingFunnelStepRow]) async throws {
       struct Step: Encodable, Sendable {
         let step: String
         let reachedAt: String
@@ -52,36 +55,50 @@ final class OnboardingFunnelRecorder {
       }
       struct Args: Encodable, Sendable { let steps: [Step] }
       let args = Args(steps: rows.map { Step(step: $0.step, reachedAt: $0.reached_at) })
-      _ = try await ConvexAPI.app.mutation(
-        "onboarding:recordSteps", args, as: ConvexAPI.Ignored.self)
-    },
-    sendPreAuth: @escaping (_ installId: String, _ step: String, _ reachedAt: String) async throws
-      -> Void = { installId, step, reachedAt in
-        struct Args: Encodable, Sendable {
-          let installId: String
-          let step: String
-          let reachedAt: String
-          enum CodingKeys: String, CodingKey {
-            case installId = "install_id"
-            case step
-            case reachedAt = "reached_at"
-          }
+      _ = try await ConvexAPI.app.mutation("onboarding:recordSteps", args, as: ConvexAPI.Ignored.self)
+    }
+
+    private static func sendPreAuthStep(installId: String, step: String, reachedAt: String) async throws {
+      struct Args: Encodable, Sendable {
+        let installId: String
+        let step: String
+        let reachedAt: String
+        enum CodingKeys: String, CodingKey {
+          case installId = "install_id"
+          case step
+          case reachedAt = "reached_at"
         }
-        _ = try await ConvexAPI.anonymous.mutation(
-          "onboarding:recordPreauthStep",
-          Args(installId: installId, step: step, reachedAt: reachedAt),
-          as: ConvexAPI.Ignored.self)
       }
+      _ = try await ConvexAPI.anonymous.mutation(
+        "onboarding:recordPreauthStep",
+        Args(installId: installId, step: step, reachedAt: reachedAt),
+        as: ConvexAPI.Ignored.self)
+    }
+  }
+
+  private let defaults: UserDefaults
+  private let currentUserId: @MainActor () -> String?
+  /// Without a transport the recorder keeps no state and sends nothing.
+  private let transport: Transport?
+  private var isSending = false
+  private var hasQueuedSend = false
+
+  init(
+    defaults: UserDefaults = .standard,
+    currentUserId: @escaping @MainActor () -> String? = {
+      AuthSessionManager.shared.localSession()?.normalizedUserId
+    },
+    transport: Transport? = Transport.live
   ) {
     self.defaults = defaults
     self.currentUserId = currentUserId
-    self.send = send
-    self.sendPreAuth = sendPreAuth
+    self.transport = transport
   }
 
   /// Sends a pre-auth page without a user and keeps it locally until post-auth onboarding
   /// records a step. Pages whose anonymous send failed are retried with the next page.
   func recordPreAuth(_ page: String) {
+    guard let transport else { return }
     addPending(Self.preAuthPrefix + page, userId: nil)
     let anonymousSent = Set(defaults.stringArray(forKey: Self.anonymousSentDefaultsKey) ?? [])
     let installId = self.installId
@@ -89,7 +106,7 @@ final class OnboardingFunnelRecorder {
     where step.hasPrefix(Self.preAuthPrefix) && !anonymousSent.contains(step) {
       Task {
         do {
-          try await sendPreAuth(installId, String(step.dropFirst(Self.preAuthPrefix.count)), reachedAt)
+          try await transport.sendPreAuth(installId, String(step.dropFirst(Self.preAuthPrefix.count)), reachedAt)
           let sent = Set(defaults.stringArray(forKey: Self.anonymousSentDefaultsKey) ?? [])
           defaults.set(Array(sent.union([step])), forKey: Self.anonymousSentDefaultsKey)
         } catch {
@@ -101,6 +118,7 @@ final class OnboardingFunnelRecorder {
 
   /// Records a post-auth onboarding step and sends everything pending.
   func record(_ step: String) {
+    guard transport != nil else { return }
     addPending(step, userId: currentUserId())
     sendPending()
   }
@@ -110,7 +128,7 @@ final class OnboardingFunnelRecorder {
   /// recorded separately as the "demo_shift_prefilled" step. Only users who went through tracked
   /// onboarding on this device count, so existing users do not get a late "first" shift.
   func recordShiftCreated(method: String) {
-    guard let userId = currentUserId() else { return }
+    guard transport != nil, let userId = currentUserId() else { return }
     let sent = sentSteps(for: userId)
     guard !sent.contains(Self.firstShiftStep) else { return }
     if pending[Self.firstShiftStep] == nil {
@@ -160,7 +178,7 @@ final class OnboardingFunnelRecorder {
       hasQueuedSend = true
       return
     }
-    guard let userId = currentUserId() else { return }
+    guard let transport, let userId = currentUserId() else { return }
 
     let snapshot = pending
     let sent = sentSteps(for: userId)
@@ -176,7 +194,7 @@ final class OnboardingFunnelRecorder {
     isSending = true
     Task {
       do {
-        try await send(rows)
+        try await transport.send(rows)
         let updatedSent = sentSteps(for: userId).union(rows.map(\.step))
         defaults.set(Array(updatedSent), forKey: Self.sentDefaultsKeyPrefix + userId)
         removePending(snapshot.keys)
