@@ -249,7 +249,11 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       }
 
       if !showingCustomInput {
-        typeRateButton
+        // A wide rate on a narrow screen leaves room for the icon only.
+        ViewThatFits(in: .horizontal) {
+          typeRateButton(showsTitle: true)
+          typeRateButton(showsTitle: false)
+        }
       }
     }
   }
@@ -326,14 +330,15 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
   // MARK: - Tappable Value Views
 
   /// The amount is tappable too, but nothing shows that, so this says it in words.
-  private var typeRateButton: some View {
+  private func typeRateButton(showsTitle: Bool) -> some View {
     Button(action: beginTypingRate) {
       Label {
         Text(.onboardingWageTypeRate)
+          .lineLimit(1)
       } icon: {
         Image(systemName: "keyboard")
-          .accessibilityHidden(true)
       }
+      .labelStyle(TypeRateLabelStyle(showsTitle: showsTitle))
       .font(.tidexSubheadline)
       .foregroundStyle(Color.tidexBlueText)
       .padding(.horizontal, Spacing.sm)
@@ -342,6 +347,8 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       .contentShape(Capsule())
     }
     .buttonStyle(.plain)
+    .fixedSize()
+    .accessibilityLabel(Text(.onboardingWageTypeRate))
     .accessibilityIdentifier("wage.type-rate")
   }
 
@@ -457,6 +464,19 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
     }
     showingCustomInput = false
     isInputFocused = false
+  }
+}
+
+private struct TypeRateLabelStyle: LabelStyle {
+  let showsTitle: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    if showsTitle {
+      Label(configuration)
+    } else {
+      configuration.icon
+        .frame(minWidth: 20)
+    }
   }
 }
 
