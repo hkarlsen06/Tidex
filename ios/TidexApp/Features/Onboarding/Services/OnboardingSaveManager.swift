@@ -9,8 +9,7 @@ enum OnboardingCompletionMode: Equatable {
   case friendOnlySkip
 }
 
-/// Handles async save with status tracking for onboarding data
-/// Creates baseline wage snapshot and updates settings
+/// Saves the setup collected after sign-up, and the demo shift carried over from before it.
 @MainActor
 @Observable
 final class OnboardingSaveManager {
@@ -34,7 +33,10 @@ final class OnboardingSaveManager {
   // MARK: - Published State
 
   private(set) var status: SaveStatus = .idle
-  private(set) var errorMessage: String?
+  /// Saving the carried demo shift after setup succeeded.
+  private(set) var carriedShiftStatus: SaveStatus = .idle
+  /// The job setup saved the wage to. Set when the setup save succeeds.
+  private(set) var setupJob: Job?
 
   // MARK: - Save Status
 
@@ -42,12 +44,12 @@ final class OnboardingSaveManager {
     case idle
     case saving
     case success
-    case error
-
-    var allowsCompletion: Bool {
-      self == .success
-    }
+    case error(message: String)
   }
+
+  typealias ShiftCreator =
+    @MainActor (_ userId: String, _ jobId: String, _ date: Date, _ startTime: String, _ endTime: String)
+    async throws -> Void
 
   // MARK: - Dependencies
 
@@ -55,47 +57,84 @@ final class OnboardingSaveManager {
   private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let syncCoordinator: SyncCoordinator
-  private var lastCompletionMode: OnboardingCompletionMode = .fullSetup
+  private let defaults: UserDefaults
+  private let createShift: ShiftCreator
+  private var savedCarriedDates: Set<String> = []
 
   // MARK: - Init
 
-  init() {
+  init(defaults: UserDefaults = .standard, createShift: ShiftCreator? = nil) {
     self.snapshotsRepository = SnapshotsRepository.shared
     self.jobsRepository = JobsRepository.shared
     self.settingsRepository = SettingsRepository.shared
     self.syncCoordinator = SyncCoordinator.shared
+    self.defaults = defaults
+    self.createShift =
+      createShift ?? { userId, jobId, date, startTime, endTime in
+        _ = try await ShiftsRepository.shared.createShift(
+          userId: userId, jobId: jobId, shiftDate: date, startTime: startTime, endTime: endTime)
+      }
   }
 
   // MARK: - Public API
 
-  /// Save all onboarding data to create baseline snapshot and update settings
-  /// - Parameters:
-  ///   - userId: The user's ID
-  ///   - data: The collected onboarding data
-  ///   - completionMode: Whether onboarding should finish with full setup or friend-only skip
-  func saveOnboardingData(
+  /// Starts saving the collected setup unless a save is already running.
+  func startSave(userId: String, data: OnboardingData, completionMode: OnboardingCompletionMode) {
+    guard status != .saving else { return }
+    status = .saving
+    Task {
+      await save(userId: userId, data: data, completionMode: completionMode)
+    }
+  }
+
+  /// Saves the carried demo shift as one shift per date on the setup job, through the same
+  /// repository call as the Add screen. A retry after a partial failure skips the dates
+  /// already saved, so no date is saved twice.
+  func keepCarriedShift(_ shift: CarriedDemoShift, userId: String, jobId: String) async -> Bool {
+    guard carriedShiftStatus != .saving else { return false }
+    carriedShiftStatus = .saving
+
+    do {
+      for isoDate in shift.dates where !savedCarriedDates.contains(isoDate) {
+        guard let date = Date.fromISODateString(isoDate) else {
+          throw ShiftSaveError.invalidDate
+        }
+        try await createShift(userId, jobId, date, shift.startTime, shift.endTime)
+        savedCarriedDates.insert(isoDate)
+      }
+    } catch {
+      logger.error("Failed to save the carried demo shift: \(error.localizedDescription)")
+      carriedShiftStatus = .error(
+        message: Self.message(for: error, fallback: .onboardingSuccessShiftSaveFailed))
+      return false
+    }
+
+    OnboardingFirstShiftCarryoverStore.clear(defaults: defaults)
+    carriedShiftStatus = .success
+    return true
+  }
+
+  private func save(
     userId: String,
     data: OnboardingData,
-    completionMode: OnboardingCompletionMode = .fullSetup
+    completionMode: OnboardingCompletionMode
   ) async {
-    prepareForSave(completionMode: completionMode)
-
     logger.info(
       "Starting onboarding save for user: \(userId), mode: \(String(describing: completionMode))")
 
     do {
       switch completionMode {
       case .fullSetup:
-        let snapshot = try await createBaselineSnapshot(userId: userId, data: data)
-        logger.info("Created baseline snapshot: \(snapshot.id)")
-
+        let job = try await prepareSetupJob(userId: userId, data: data)
         try await updateSettings(
           userId: userId,
           payrollDay: data.payrollDay,
           currency: data.currency
         )
-        logger.info(
-          "Updated settings with payroll day: \(data.payrollDay), currency: \(data.currency)")
+        setupJob = job
+        OnboardingCompletionStore.setPayAssumptionsReviewPending(
+          true, userId: userId, defaults: defaults)
+        logger.info("Saved setup for job \(job.id) with payroll day \(data.payrollDay)")
 
       case .friendOnlySkip:
         try await prepareFriendOnlySkip(userId: userId, data: data)
@@ -103,52 +142,35 @@ final class OnboardingSaveManager {
       }
 
       // The local flag finishes onboarding. The metadata update runs in the background and
-      // stays queued if it fails, so a slow or missing network never blocks the success screen.
-      OnboardingCompletionStore.markCompleted(userId: userId)
+      // stays queued if it fails, so a slow or missing network never blocks the next screen.
+      OnboardingCompletionStore.markCompleted(userId: userId, defaults: defaults)
       Task { await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: userId) }
-      logger.info("Recorded onboarding completion")
 
       if completionMode == .friendOnlySkip {
         clearOnboardingDraftState()
       }
 
       let syncResult = await syncCoordinator.sync(reason: .localChange, userId: userId)
-      if syncResult.outcome == .completed {
-        logger.info("Sync completed successfully")
-      } else {
-        // Non-blocking - sync will retry later
+      if syncResult.outcome != .completed {
         logger.warning("Sync had issues but continuing: \(String(describing: syncResult.outcome))")
       }
 
       status = .success
-      logger.info("Onboarding save completed successfully")
-
     } catch {
-      guard let message = ErrorTranslations.translate(error, fallback: .onboardingSuccessErrorMessage)
-      else { return }
-      status = .error
-      errorMessage = message
       logger.error("Failed to save onboarding data: \(error.localizedDescription)")
+      status = .error(message: Self.message(for: error, fallback: .onboardingSuccessErrorMessage))
     }
   }
 
-  /// Move the state machine into the pending save state before the success screen is shown.
-  func prepareForSave(completionMode: OnboardingCompletionMode = .fullSetup) {
-    status = .saving
-    errorMessage = nil
-    lastCompletionMode = completionMode
-  }
-
-  /// Retry saving after an error
-  func retry(userId: String, data: OnboardingData) async {
-    await saveOnboardingData(userId: userId, data: data, completionMode: lastCompletionMode)
+  /// A cancelled save still has to leave the saving state, so it gets the fallback message too.
+  private static func message(for error: Error, fallback: LocalizedStringResource) -> String {
+    ErrorTranslations.translate(error, fallback: fallback) ?? String(localized: fallback)
   }
 
   // MARK: - Private Helpers
 
-  private func createBaselineSnapshot(userId: String, data: OnboardingData) async throws
-    -> WageSnapshot
-  {
+  /// Creates or updates the first job and its baseline wage, and returns the job.
+  private func prepareSetupJob(userId: String, data: OnboardingData) async throws -> Job {
     guard data.hasValidWageSelection else {
       throw NSError(
         domain: "TariffSelection", code: 1,
@@ -169,11 +191,8 @@ final class OnboardingSaveManager {
         job: activeSetupJob,
         data: data
       )
-      return try await ensureBaselineSnapshot(
-        userId: userId,
-        job: preparedJob,
-        data: data
-      )
+      _ = try await ensureBaselineSnapshot(userId: userId, job: preparedJob, data: data)
+      return preparedJob
     }
 
     // Avoid relying on the server-side lazy default-job trigger here.
@@ -193,11 +212,8 @@ final class OnboardingSaveManager {
 
     logger.info("Created onboarding default job: \(createdJob.id)")
 
-    return try await ensureBaselineSnapshot(
-      userId: userId,
-      job: createdJob,
-      data: data
-    )
+    _ = try await ensureBaselineSnapshot(userId: userId, job: createdJob, data: data)
+    return createdJob
   }
 
   private func ensureJobMetadata(
@@ -309,7 +325,7 @@ final class OnboardingSaveManager {
       triggerSync: false
     )
 
-    UserDefaults.standard.set("sharing", forKey: Self.startupTabCacheKey)
+    defaults.set("sharing", forKey: Self.startupTabCacheKey)
   }
 
   private func clearOnboardingDraftState() {

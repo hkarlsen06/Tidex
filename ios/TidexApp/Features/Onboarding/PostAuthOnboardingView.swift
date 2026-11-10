@@ -1,50 +1,36 @@
 import SwiftUI
 
-enum PostAuthOnboardingEntryMode: Equatable {
-  case initial
-  case reentry
-}
-
-/// Post-auth onboarding flow container
-/// Collects job, wage, supplements and settings
-/// Creates a baseline wage snapshot before transitioning to the app
+/// Setup after sign-up: purpose, job, wage, then the result of the save.
+/// The friends-only choice saves from the purpose screen and goes straight to Friends.
 struct PostAuthOnboardingView: View {
-  let entryMode: PostAuthOnboardingEntryMode
   let onComplete: () -> Void
-  let onClose: (() -> Void)?
   let userId: String
 
   @State private var currentScreen: PostAuthScreen = .loading
   @State private var onboardingData = OnboardingData()
   @State private var saveManager = OnboardingSaveManager()
+  @State private var completionMode: OnboardingCompletionMode = .fullSetup
+  @State private var carriedShift = OnboardingFirstShiftCarryoverStore.read()
+  @State private var carriedShiftPay: CarriedShiftPay?
   @State private var isNavigatingBack = false
-  @State private var successCompletionMode: OnboardingCompletionMode = .fullSetup
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.scenePhase) private var scenePhase
 
   enum PostAuthScreen: String {
     case loading
     case purpose
-    case wage
-    case supplements
     case jobBasics
-    case settingsAccordion
-    case success
+    case wage
+    /// Keeps the raw value of the success screen it replaced, so its funnel step keeps its name.
+    case result = "success"
   }
 
   var body: some View {
     ZStack {
-      // Background
       Color.tidexBackground
         .ignoresSafeArea()
 
-      // Current screen with transition
       currentScreenContent
-    }
-    .overlay(alignment: .topTrailing) {
-      if shouldShowCloseButton {
-        closeButton
-      }
     }
     .motionAnimation(.navigationPush, value: currentScreen, reduceMotion: reduceMotion)
     .onAppear {
@@ -52,78 +38,55 @@ struct PostAuthOnboardingView: View {
     }
     .onChange(of: saveManager.status) { oldStatus, newStatus in
       if oldStatus != .success, newStatus == .success {
-        OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
-        if entryMode == .initial {
-          OnboardingFunnelRecorder.shared.record(OnboardingFunnelRecorder.onboardingCompletedStep)
-        }
+        handleSetupSaved()
       }
     }
     .onChange(of: currentScreen) { _, newScreen in
-      if entryMode == .initial, newScreen != .loading {
+      if newScreen != .loading {
         OnboardingFunnelRecorder.shared.record(
           OnboardingFunnelRecorder.postAuthPrefix + newScreen.rawValue)
       }
-      // Save progress when screen changes (except success and loading screens)
-      if newScreen != .success, newScreen != .loading {
-        saveProgress()
-      }
+      saveProgressIfEditing()
     }
     .onChange(of: scenePhase) { _, newPhase in
-      // Save when app goes to background
       if newPhase == .inactive || newPhase == .background {
         saveProgressIfEditing()
       }
     }
-    // Save when key data changes within screens
-    .onChange(of: onboardingData.supplementRules.count) { _, _ in saveProgressIfEditing() }
     .onChange(of: onboardingData.jobName) { _, _ in saveProgressIfEditing() }
     .onChange(of: onboardingData.jobColor) { _, _ in saveProgressIfEditing() }
     .onChange(of: onboardingData.wageType) { _, _ in saveProgressIfEditing() }
     .onChange(of: onboardingData.customHourlyWage) { _, _ in saveProgressIfEditing() }
     .onChange(of: onboardingData.selectedTariffLevel) { _, _ in saveProgressIfEditing() }
-    .onChange(of: onboardingData.breakEnabled) { _, _ in saveProgressIfEditing() }
-    .onChange(of: onboardingData.taxEnabled) { _, _ in saveProgressIfEditing() }
-    .onChange(of: onboardingData.taxPercentage) { _, _ in saveProgressIfEditing() }
-    .onChange(of: onboardingData.payrollDay) { _, _ in saveProgressIfEditing() }
     .onChange(of: onboardingData.currency) { _, _ in saveProgressIfEditing() }
   }
 
   // MARK: - Initialization
 
-  /// Initialize onboarding by restoring progress
   private func initializeOnboarding() {
-    if entryMode == .initial {
-      if let savedScreenName = onboardingData.restore() {
-        // Drafts saved on the removed multi-job and 2FA steps resume at settings, the step before.
-        let savedScreen = PostAuthScreen(rawValue: savedScreenName) ?? .settingsAccordion
-        if savedScreen != .success, savedScreen != .loading {
-          currentScreen = savedScreen
-          return
-        }
+    if let savedScreenName = onboardingData.restore() {
+      // Drafts saved on removed steps (supplements, settings, multiple jobs, 2FA) resume at
+      // the wage step, the last one before the result.
+      let savedScreen = PostAuthScreen(rawValue: savedScreenName) ?? .wage
+      if savedScreen != .result, savedScreen != .loading {
+        currentScreen = savedScreen
+        return
       }
-    } else {
-      onboardingData = OnboardingData()
     }
 
     onboardingData.currency =
       OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
       ?? OnboardingCurrencyResolver.detectDefaultCurrency()
     onboardingData.hasInitializedWageForLocale = false
-
-    // Default start
-    currentScreen = entryMode == .initial ? .purpose : .wage
+    currentScreen = .purpose
   }
 
   // MARK: - Persistence
 
-  private func saveProgress() {
-    onboardingData.save(currentScreen: currentScreen.rawValue)
-  }
-
-  /// Saves progress unless the loading or success screen is showing.
+  /// Saves the draft unless the loading or result screen is showing.
   private func saveProgressIfEditing() {
-    if currentScreen != .success, currentScreen != .loading {
-      saveProgress()
+    if currentScreen != .result, currentScreen != .loading {
+      onboardingData.save(currentScreen: currentScreen.rawValue)
     }
   }
 
@@ -134,28 +97,6 @@ struct PostAuthOnboardingView: View {
       direction: isNavigatingBack ? .pop : .push,
       reduceMotion: reduceMotion
     )
-  }
-
-  private func navigateFromWage() {
-    // Only show supplements screen for custom wage users
-    switch onboardingData.wageType {
-    case .tariff:
-      navigateTo(.settingsAccordion)
-
-    case .custom:
-      if onboardingData.usesSimpleSetup {
-        onboardingData.applySimpleSetupDefaults()
-        navigateAfterSettings()
-      } else {
-        navigateTo(.supplements)
-      }
-    }
-  }
-
-  /// Continues to the step after settings. The simple setup for non-krone users jumps here
-  /// straight from the wage step.
-  private func navigateAfterSettings() {
-    startSaveAndNavigateToSuccess()
   }
 
   private func navigateTo(_ screen: PostAuthScreen) {
@@ -172,52 +113,97 @@ struct PostAuthOnboardingView: View {
     }
   }
 
-  private func navigateBackFromJobBasics() {
-    if entryMode == .initial {
-      navigateBack(to: .purpose)
+  // MARK: - Actions
+
+  private func selectFriendsOnly() {
+    OnboardingFunnelRecorder.shared.record("purpose_friends")
+    completionMode = .friendOnlySkip
+    saveManager.startSave(userId: userId, data: onboardingData, completionMode: .friendOnlySkip)
+  }
+
+  private func saveSetup() {
+    // Break, tax and payday keep their defaults. Outside krone, pay is hours times the wage.
+    if onboardingData.usesSimpleSetup {
+      onboardingData.applySimpleSetupDefaults()
+    }
+    completionMode = .fullSetup
+    saveManager.startSave(userId: userId, data: onboardingData, completionMode: .fullSetup)
+    navigateTo(.result)
+  }
+
+  private func handleSetupSaved() {
+    OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
+    OnboardingFunnelRecorder.shared.record(OnboardingFunnelRecorder.onboardingCompletedStep)
+
+    switch completionMode {
+    case .friendOnlySkip:
+      finishOnboarding()
+
+    case .fullSetup:
+      OnboardingFunnelRecorder.shared.record(
+        onboardingData.wageType == .tariff ? "wage_tariff" : "wage_hourly")
+      if let carriedShift, let job = saveManager.setupJob {
+        carriedShiftPay = CarriedShiftPay(
+          shift: carriedShift,
+          snapshots: SnapshotsRepository.shared.getSnapshots(for: userId, jobId: job.id),
+          currency: job.currency
+        )
+      }
+    }
+  }
+
+  private func saveCarriedShift() {
+    guard let carriedShift, let jobId = saveManager.setupJob?.id else { return }
+    let isFirstShift = CelebrationManager.shared.isFirstShiftSave(for: userId)
+
+    Task {
+      guard await saveManager.keepCarriedShift(carriedShift, userId: userId, jobId: jobId) else {
+        return
+      }
+      OnboardingFunnelRecorder.shared.record("demo_shift_saved")
+      NotificationCenter.default.postShiftsDidChange(
+        context: .affecting(isoDates: carriedShift.dates))
+      CelebrationManager.shared.celebrate(dates: Set(carriedShift.dates))
+      if isFirstShift {
+        CelebrationManager.shared.celebrateFirstShift()
+      }
+      let landsOnHome = carriedShift.dates.contains { date in
+        DashboardFeaturedItemSelector.canFeature(
+          shiftDate: date, startTime: carriedShift.startTime, endTime: carriedShift.endTime)
+      }
+      if !landsOnHome {
+        // Home only features a shift that hasn't ended this month, so show it on Schedule.
+        AppCoordinator.shared.pendingDeepLink = .shifts(
+          dates: carriedShift.dates, shiftIds: nil, action: .highlight)
+      }
+      requestShiftReminderPermission(afterFirstShift: isFirstShift)
+      finishOnboarding()
+    }
+  }
+
+  /// Same prompt the Add screen shows after a save, after the first-shift confetti has fallen.
+  private func requestShiftReminderPermission(afterFirstShift isFirstShift: Bool) {
+    let preferences = NotificationPreferencesRepository.shared.getOrCreatePreferences(for: userId)
+    guard preferences.shiftRemindersEnabled, !preferences.shiftReminderMinutesArray.isEmpty else {
       return
     }
-
-    navigateBack(to: .wage)
-  }
-
-  private func navigateBackFromSettings() {
-    switch onboardingData.wageType {
-    case .custom:
-      navigateBack(to: .supplements)
-
-    case .tariff:
-      navigateBack(to: .wage)
+    Task { [userId] in
+      if isFirstShift {
+        await FirstShiftConfetti.waitUntilFinished()
+      }
+      await NotificationService.shared.requestPermissionAndRegister(for: userId)
     }
   }
 
-  private func startSaveAndNavigateToSuccess(
-    completionMode: OnboardingCompletionMode = .fullSetup
-  ) {
-    successCompletionMode = completionMode
-    saveManager.prepareForSave(completionMode: completionMode)
-
-    // Navigate to success screen first
-    navigateTo(.success)
-
-    // Start saving in the background
-    Task {
-      await saveManager.saveOnboardingData(
-        userId: userId,
-        data: onboardingData,
-        completionMode: completionMode
-      )
-    }
+  private func declineCarriedShift() {
+    OnboardingFunnelRecorder.shared.record("demo_shift_dismissed")
+    finishOnboarding()
   }
 
-  private var shouldShowCloseButton: Bool {
-    entryMode == .reentry && currentScreen != .loading && currentScreen != .success
-  }
-
-  private func closeOnboarding() {
-    OnboardingData.clearSavedData()
-    OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
-    onClose?()
+  private func addFirstShift() {
+    // MainTabView opens the Add screen when it appears.
+    AppCoordinator.shared.pendingDeepLink = .addShift(mode: nil, date: nil)
+    finishOnboarding()
   }
 
   private func finishOnboarding() {
@@ -233,66 +219,33 @@ extension PostAuthOnboardingView {
     Group {
       switch currentScreen {
       case .loading:
-        // Brief loading state while restoring progress
         Color.tidexBackground
           .ignoresSafeArea()
 
       case .purpose:
         purposeScreen
 
-      case .wage:
-        wageScreen
-
-      case .supplements:
-        supplementsScreen
-
       case .jobBasics:
         jobBasicsScreen
 
-      case .settingsAccordion:
-        settingsScreen
+      case .wage:
+        wageScreen
 
-      case .success:
-        successScreen
+      case .result:
+        resultScreen
       }
     }
   }
 
   private var purposeScreen: some View {
     PurposeScreen(
+      currency: onboardingData.currency,
+      friendsSaveStatus: completionMode == .friendOnlySkip ? saveManager.status : .idle,
       onSelectPaySetup: {
+        OnboardingFunnelRecorder.shared.record("purpose_pay")
         navigateTo(.jobBasics)
       },
-      onSelectFriendsOnly: {
-        startSaveAndNavigateToSuccess(completionMode: .friendOnlySkip)
-      }
-    )
-    .transition(screenTransition)
-  }
-
-  private var wageScreen: some View {
-    WageScreen(
-      data: onboardingData,
-      onContinue: {
-        navigateFromWage()
-      },
-      onBack: entryMode == .initial
-        ? {
-          navigateBack(to: .jobBasics)
-        } : nil
-    )
-    .transition(screenTransition)
-  }
-
-  private var supplementsScreen: some View {
-    SupplementsScreen(
-      data: onboardingData,
-      onContinue: {
-        navigateTo(.settingsAccordion)
-      },
-      onBack: {
-        navigateBack(to: .wage)
-      }
+      onSelectFriendsOnly: selectFriendsOnly
     )
     .transition(screenTransition)
   }
@@ -304,48 +257,41 @@ extension PostAuthOnboardingView {
         navigateTo(.wage)
       },
       onBack: {
-        navigateBackFromJobBasics()
+        navigateBack(to: .purpose)
       }
     )
     .transition(screenTransition)
   }
 
-  private var settingsScreen: some View {
-    SettingsAccordionScreen(
+  private var wageScreen: some View {
+    WageScreen(
       data: onboardingData,
-      onContinue: {
-        navigateAfterSettings()
+      onContinue: saveSetup,
+      onBack: {
+        navigateBack(to: .jobBasics)
+      },
+      stepLabel: .onboardingPostAuthStep(2, 2)
+    )
+    .transition(screenTransition)
+  }
+
+  private var resultScreen: some View {
+    SetupResultScreen(
+      status: saveManager.status,
+      carriedShiftPay: carriedShiftPay,
+      carriedShiftStatus: saveManager.carriedShiftStatus,
+      onRetry: {
+        saveManager.startSave(userId: userId, data: onboardingData, completionMode: .fullSetup)
       },
       onBack: {
-        navigateBackFromSettings()
-      }
-    )
-    .transition(screenTransition)
-  }
-
-  private var successScreen: some View {
-    SuccessScreen(
-      completionMode: successCompletionMode,
-      saveStatus: saveManager.status,
-      errorMessage: saveManager.errorMessage,
-      onComplete: {
-        finishOnboarding()
+        navigateBack(to: .wage)
       },
-      onAddFirstShift: {
-        if OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft() {
-          OnboardingFunnelRecorder.shared.record("demo_shift_prefilled")
-        }
-        // MainTabView opens the Add screen when it appears, and the Add screen loads the draft.
-        AppCoordinator.shared.pendingDeepLink = .addShift(mode: nil, date: nil)
-        finishOnboarding()
-      },
-      onRetry: {
-        Task {
-          await saveManager.retry(userId: userId, data: onboardingData)
-        }
-      }
+      onSaveCarriedShift: saveCarriedShift,
+      onDeclineCarriedShift: declineCarriedShift,
+      onAddFirstShift: addFirstShift,
+      onFinish: finishOnboarding
     )
-    // Success keeps a softer exit to avoid the destination screen sliding out with it.
+    // A soft exit keeps the destination screen from sliding out with it.
     .transition(
       .asymmetric(
         insertion: reduceMotion
@@ -354,36 +300,11 @@ extension PostAuthOnboardingView {
         removal: .opacity
       ))
   }
-
-  private var closeButton: some View {
-    Button {
-      closeOnboarding()
-    } label: {
-      Image(systemName: "xmark")
-        .font(.tidexSubheadline)
-        .foregroundStyle(Color.tidexTextPrimary)
-        .accessibilityHidden(true)
-        .frame(width: 36, height: 36)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(Circle())
-        .overlay(
-          Circle()
-            .stroke(Color.tidexBorder, lineWidth: 1)
-        )
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
-    }
-    .padding(.top, 8)  // swiftlint:disable:this no_magic_numbers
-    .padding(.trailing, Spacing.lg - 4)  // swiftlint:disable:this no_magic_numbers
-    .accessibilityLabel(String(localized: .commonCancel))
-  }
 }
 
 #Preview {
   PostAuthOnboardingView(
-    entryMode: .initial,
     onComplete: {},
-    onClose: nil,
     userId: "test-user-id"
   )
 }

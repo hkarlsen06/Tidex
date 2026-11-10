@@ -160,11 +160,9 @@ private struct RootContent: View {
           case .authenticated:
             if !hasCompletedPostAuthOnboarding, !coordinator.hasFinishedOnboardingRemotely {
               PostAuthOnboardingView(
-                entryMode: .initial,
                 onComplete: {
                   hasCompletedPostAuthOnboarding = true
                 },
-                onClose: nil,
                 userId: coordinator.userId ?? ""
               )
               .transition(.opacity)

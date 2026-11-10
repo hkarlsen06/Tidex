@@ -72,13 +72,13 @@ final class OnboardingData {
   // MARK: - Computed Properties
 
   /// Users paid in a currency other than krone are most likely outside Norway, where tariffs,
-  /// the 5.5-hour break rule and Norwegian tax presets don't apply. They skip the supplements
-  /// and settings steps and can change those settings later in the app.
+  /// the 5.5-hour break rule and Norwegian tax presets don't apply. Setup saves them without a
+  /// break deduction, and they can change that later in the app.
   var usesSimpleSetup: Bool {
     currency != "kr"
   }
 
-  /// Defaults for the settings the simple setup skips: pay is hours times the hourly wage.
+  /// Defaults for the simple setup: pay is hours times the hourly wage.
   func applySimpleSetupDefaults() {
     breakEnabled = false
     taxEnabled = false

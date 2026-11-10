@@ -45,6 +45,19 @@ enum DashboardFeaturedItemSelector {  // swiftlint:disable:this explicit_acl exp
     )
   }
 
+  /// Whether Home's featured card can show this shift: in the current month Home features
+  /// the next shift that has not ended.
+  static func canFeature(  // swiftlint:disable:this explicit_acl type_contents_order
+    shiftDate: String,
+    startTime: String,
+    endTime: String,
+    now: Date = Date()
+  ) -> Bool {
+    shiftDate.hasPrefix(String(now.toISODateString().prefix(7)))  // swiftlint:disable:this no_magic_numbers
+      && !Date.hasShiftEnded(
+        shiftDate: shiftDate, startTime: startTime, endTime: endTime, referenceDate: now)
+  }
+
   private struct ShiftCandidate {
     let shift: ShiftWithComputations
     let startDate: Date

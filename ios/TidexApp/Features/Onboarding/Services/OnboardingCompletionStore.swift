@@ -26,10 +26,32 @@ enum OnboardingCompletionStore {
     defaults.bool(forKey: completedKey(userId))
   }
 
+  nonisolated private static func payAssumptionsKey(_ userId: String) -> String {
+    "payAssumptionsReviewPending.\(userId)"
+  }
+
   nonisolated static func hasPendingMetadataUpdate(
     userId: String, defaults: UserDefaults = .standard
   ) -> Bool {
     defaults.bool(forKey: pendingKey(userId))
+  }
+
+  /// Setup no longer asks about break, tax and payday, so Home lists the defaults it used
+  /// until the user dismisses the card or opens pay settings from it.
+  nonisolated static func isPayAssumptionsReviewPending(
+    userId: String, defaults: UserDefaults = .standard
+  ) -> Bool {
+    defaults.bool(forKey: payAssumptionsKey(userId))
+  }
+
+  nonisolated static func setPayAssumptionsReviewPending(
+    _ isPending: Bool, userId: String, defaults: UserDefaults = .standard
+  ) {
+    if isPending {
+      defaults.set(true, forKey: payAssumptionsKey(userId))
+    } else {
+      defaults.removeObject(forKey: payAssumptionsKey(userId))
+    }
   }
 
   /// Marks onboarding finished locally and queues the metadata update.
