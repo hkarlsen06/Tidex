@@ -46,10 +46,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         if allSectionsComplete {
           OnboardingButton(
             title: continueTitle,
-            action: {
-              Haptics.play(.success)
-              onContinue()
-            }
+            action: onContinue
           )
           .padding(.horizontal, Spacing.lg)
           .padding(.bottom, Spacing.xl)

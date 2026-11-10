@@ -29,10 +29,7 @@ struct SupplementsScreen: View {
         // Bottom action
         OnboardingButton(
           title: String(localized: primaryButtonTitle),
-          action: {
-            Haptics.play(.success)
-            onContinue()
-          }
+          action: onContinue
         )
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.xl)
