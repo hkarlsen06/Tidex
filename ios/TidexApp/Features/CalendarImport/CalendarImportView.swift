@@ -76,6 +76,7 @@ internal final class CalendarImportModel {
     }
     isWorking = true
     errorMessage = nil
+    let isFirstShift = CelebrationManager.shared.isFirstShiftSave(for: userId)
     var createdDates: Set<String> = []
     // ponytail: one createShift per shift, each starting a sync. Fine for a schedule's worth of
     // shifts. Add a batch insert to the store actor if imports get into the hundreds.
@@ -95,6 +96,9 @@ internal final class CalendarImportModel {
         createdDates.insert(shift.date)
       }
       Haptics.playShiftCreationSuccess()
+      if isFirstShift, !createdDates.isEmpty {
+        CelebrationManager.shared.celebrateFirstShift()
+      }
     } catch {
       kLogger.error("Calendar import stopped: \(error.localizedDescription)")
       errorMessage = ErrorTranslations.translate(error)

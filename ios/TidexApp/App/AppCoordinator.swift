@@ -1279,6 +1279,7 @@ final class AppCoordinator {
     FriendsScheduleTimeZoneStore.shared.resetForUserChange()
     CalendarSubscriptionStore.clearStoredTokensForUserReset()
     ShiftCompletionCelebrationManager.shared.resetForUserChange()
+    CelebrationManager.shared.resetForUserChange()
 
     // Clear all local data (shifts, settings, sync state, etc.)
     if retainedUserId == nil {

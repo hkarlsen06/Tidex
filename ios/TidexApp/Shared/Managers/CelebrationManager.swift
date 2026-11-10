@@ -8,7 +8,8 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Highlights newly added shift dates in the Shifts tab for a few seconds.
+/// Highlights newly added shift dates in the Shifts tab for a few seconds, and holds the
+/// first-shift confetti until `MainTabView` plays it.
 @MainActor
 @Observable
 final class CelebrationManager {
@@ -21,6 +22,10 @@ final class CelebrationManager {
 
   /// Set of newly added shift dates (ISO strings) that should be highlighted
   private(set) var newlyAddedDates: Set<String> = []
+
+  /// Stays set until a host consumes it, because a calendar import from onboarding finishes
+  /// before `MainTabView` exists.
+  private(set) var isFirstShiftCelebrationPending = false
 
   // MARK: - Private State
 
@@ -54,6 +59,32 @@ final class CelebrationManager {
         self?.clearCelebration()
       }
     }
+  }
+
+  /// Whether a save for this user would add their first shift. Call it before the first write.
+  /// Until the first sync finishes this is false, so a returning user on a new device is not new.
+  func isFirstShiftSave(for userId: String) -> Bool {
+    !ShiftsRepository.shared.hasAnyShifts(
+      for: userId,
+      initialSyncComplete: SyncStatusManager.shared.hasCompletedInitialSync(for: userId)
+    )
+  }
+
+  func celebrateFirstShift() {
+    isFirstShiftCelebrationPending = true
+  }
+
+  /// Returns whether a first-shift celebration was pending, and clears it.
+  func consumeFirstShiftCelebration() -> Bool {
+    defer { isFirstShiftCelebrationPending = false }
+    return isFirstShiftCelebrationPending
+  }
+
+  func resetForUserChange() {
+    clearTimer?.invalidate()
+    clearTimer = nil
+    newlyAddedDates = []
+    isFirstShiftCelebrationPending = false
   }
 
   /// Manually clear the celebration state

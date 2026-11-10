@@ -183,7 +183,7 @@ extension AddShiftViewModel {
   }
 
   /// Submit single shifts
-  func submitSingleShifts() async {
+  func submitSingleShifts() async {  // swiftlint:disable:this function_body_length
     guard canSubmitSingle, !isLoading else {
       return
     }
@@ -199,6 +199,7 @@ extension AddShiftViewModel {
 
     isLoading = true
     error = nil
+    let isFirstShift = CelebrationManager.shared.isFirstShiftSave(for: userId)
     var createdDates: Set<String> = []
     defer {
       endSingleSubmission(createdDates: createdDates, userId: userId)
@@ -221,7 +222,7 @@ extension AddShiftViewModel {
       }
 
       donateAddShift(jobId: jobId, dates: createdDates)
-      await finishSingleSubmission(createdDates: createdDates, userId: userId)
+      await finishSingleSubmission(createdDates: createdDates, userId: userId, isFirstShift: isFirstShift)
     } catch {
       addShiftViewModelLogger.error("Failed to create shifts: \(error.localizedDescription)")
       self.error = ErrorTranslations.translate(error).map { message in
@@ -267,11 +268,16 @@ extension AddShiftViewModel {
     isLoading = false
   }
 
-  private func finishSingleSubmission(createdDates: Set<String>, userId: String) async {
+  private func finishSingleSubmission(
+    createdDates: Set<String>, userId: String, isFirstShift: Bool
+  ) async {
     addShiftViewModelLogger.info("Created \(createdDates.count) shifts")
 
     // Highlight the added dates in the Shifts tab
     CelebrationManager.shared.celebrate(dates: createdDates)
+    if isFirstShift, !createdDates.isEmpty {
+      CelebrationManager.shared.celebrateFirstShift()
+    }
 
     // Clear form
     clearForm()

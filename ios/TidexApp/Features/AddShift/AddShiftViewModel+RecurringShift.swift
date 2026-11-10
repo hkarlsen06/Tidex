@@ -99,6 +99,7 @@ extension AddShiftViewModel {
 
     isLoading = true
     error = nil
+    let isFirstShift = CelebrationManager.shared.isFirstShiftSave(for: userId)
 
     do {
       // Use cached conflicts from preview
@@ -116,7 +117,8 @@ extension AddShiftViewModel {
         dateSpecificSupplements: nil
       )
 
-      await finishRecurringSubmission(conflicts: conflicts, userId: userId)
+      await finishRecurringSubmission(
+        conflicts: conflicts, userId: userId, isFirstShift: isFirstShift)
     } catch {
       addShiftViewModelLogger.error("Failed to create recurring shift: \(error.localizedDescription)")
       self.error = ErrorTranslations.translate(error)
@@ -126,7 +128,9 @@ extension AddShiftViewModel {
     isLoading = false
   }
 
-  private func finishRecurringSubmission(conflicts: Set<String>, userId: String) async {
+  private func finishRecurringSubmission(
+    conflicts: Set<String>, userId: String, isFirstShift: Bool
+  ) async {
     addShiftViewModelLogger.info(
       "Created recurring shift with \(self.cachedProjectedDates.count) projected dates, \(conflicts.count) exclusions"
     )
@@ -136,6 +140,9 @@ extension AddShiftViewModel {
 
     // Highlight the created dates in the Shifts tab
     CelebrationManager.shared.celebrate(dates: createdDates)
+    if isFirstShift {
+      CelebrationManager.shared.celebrateFirstShift()
+    }
 
     refreshDistinctShiftTimePairCount(for: userId)
 

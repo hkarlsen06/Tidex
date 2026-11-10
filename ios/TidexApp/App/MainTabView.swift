@@ -212,6 +212,7 @@ struct MainTabView: View {
         )
       }
     }
+    .firstShiftConfetti()
     .sheet(
       isPresented: $celebrationManager.isSheetPresented,
       onDismiss: {
