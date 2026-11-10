@@ -141,8 +141,13 @@ private struct PurposeCard<Example: View>: View {
       .contentShape(shape)
     }
     .buttonStyle(.plain)
-    .accessibilityElement(children: .combine)
+    // The example cards hold buttons and texts of their own, so VoiceOver gets one element.
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(title))
+    .accessibilityHint(Text(message))
     .accessibilityValue(isBusy ? Text(.onboardingSuccessSavingTitle) : Text(verbatim: ""))
+    .accessibilityAddTraits(.isButton)
+    .accessibilityAction { action() }
   }
 
   private var heading: some View {
@@ -264,7 +269,7 @@ private struct FriendExampleCard: View {
           appliedPauseWindows: nil, notes: [])),
       tax_enabled: false, tax_percentage: nil, custom_pause_windows: nil,
       custom_supplements: nil, recurring_id: nil, recurring_anchor_weekday: nil,
-      ownerTimeZone: nil)
+      ownerTimeZone: TimeZone.current.identifier)
   }
 }
 
