@@ -2,16 +2,111 @@
   import SwiftUI
 
   /// Friend cards in their main states, for TIDEX_DESIGN_SCREEN=friends. Set
-  /// TIDEX_DESIGN_FRIENDS_VIEW to add-friend or profile for the other Friends screens.
+  /// TIDEX_DESIGN_FRIENDS_VIEW to add-friend, profile, schedule or chat-header for the others.
+  /// TIDEX_DESIGN_FRIENDS_TIME_ZONE=1 puts the friend in another time zone, and =unknown leaves
+  /// the schedule without one.
   internal struct DesignReviewFriendCards: View {
     private let view: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_VIEW"] ?? "cards"
+    @State private var isSuperimposing = false
 
     internal var body: some View {
       switch view {
       case "add-friend": addFriend
       case "profile": profile
+      case "schedule": schedule
+      case "chat-header":
+        CompactFriendShiftPreviewHeader(
+          preview: Self.preview(for: "Ella", startOffset: 180, duration: 480)
+        )
+        .padding(Spacing.md)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(Color.tidexBackground)
+        .userCurrency("kr")
       default: cards
+      }
+    }
+
+    /// A friend's September 2026 with shifts around midnight and both month edges. One shift is
+    /// recorded on the day before the first visible day.
+    private var schedule: some View {
+      let sharer = SharedUser(
+        id: "ella", email: "ella@example.com", phone: nil, firstName: "Ella",
+        profilePictureUrl: nil, oauthAvatarUrl: nil, sharedAt: "2026-01-01",
+        showEarnings: ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_EARNINGS"] != "0",
+        hidden: false)
+      let shifts = Self.scheduleShifts
+      let ownShifts = [
+        ("08", "12:00", "20:00"), ("15", "06:00", "10:00"), ("22", "09:00", "17:00"),
+      ]
+      .map { day, start, end in
+        ShiftRow(
+          id: "own-\(day)", user_id: nil, shift_date: "2026-09-\(day)", start_time: start,
+          end_time: end, custom_supplements: nil)
+      }
+      return NavigationStack {
+        SharedShiftsListView(
+          sharer: sharer,
+          shifts: shifts.filter { $0.shiftDate >= "2026-08-31" },
+          boundaryShifts: shifts.filter { $0.shiftDate < "2026-08-31" },
+          jobs: [], year: 2_026, month: 9, phase: nil, isLoading: false, isContentReady: true,
+          ownerTimeZone: Self.scheduleZone?.identifier,
+          isSuperimposing: isSuperimposing,
+          userHoursByDate: Dictionary(
+            uniqueKeysWithValues: ownShifts.map { row in
+              (
+                row.shift_date,
+                HoursData(start: row.start_time, end: row.end_time, crossesMidnight: false)
+              )
+            }),
+          userShiftsByDate: Dictionary(grouping: ownShifts, by: \.shift_date)
+        )
+        .navigationTitle(sharer.firstNameOnly)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          Toggle(String(localized: .sharingSuperimposeLegendBoth), isOn: $isSuperimposing)
+        }
+      }
+      .userCurrency("kr")
+      .environment(AppCoordinator.shared)
+    }
+
+    private static var scheduleZone: TimeZone? {
+      switch ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_TIME_ZONE"] {
+      case "1":
+        // London, or Tokyo for a viewer on London's clock when the fixture shifts happen.
+        let reference = Date.fromISODateString("2026-09-10") ?? .now
+        return ["Europe/London", "Asia/Tokyo"].compactMap { TimeZone(identifier: $0) }.first {
+          $0.secondsFromGMT(for: reference) != TimeZone.current.secondsFromGMT(for: reference)
+        }
+
+      case "unknown":
+        return nil
+
+      default:
+        return TimeZone.current
+      }
+    }
+
+    private static var scheduleShifts: [ShiftWithComputations] {
+      let snapshot = WageSnapshot(
+        id: "design-wage", user_id: "ella", from_date: nil, hourly_wage: 250, wage_level: nil,
+        tariff_type_id: nil, supplements: SupplementRulesSnapshot(rules: []),
+        tax_enabled: false, tax_percentage: 0, break_enabled: false,
+        break_method: BreakMethod.proportional.rawValue, break_threshold_hours: 5.5,
+        break_deduction_minutes: 30, created_at: nil)
+      return [
+        ("2026-08-30", "23:30", "07:30"), ("2026-09-08", "09:00", "17:00"),
+        ("2026-09-10", "05:00", "13:00"), ("2026-09-14", "23:30", "07:30"),
+        ("2026-09-19", "14:00", "22:00"), ("2026-09-24", "16:00", "23:30"),
+        ("2026-09-30", "23:15", "06:00"),
+      ].map { date, start, end in
+        let row = ShiftRow(
+          id: "ella-\(date)", user_id: "ella", shift_date: date, start_time: start,
+          end_time: end, custom_supplements: nil)
+        return ShiftWithComputations(
+          shift: row, computed: PayrollCalculator.computeShift(row, snapshot: snapshot),
+          taxEnabled: false, taxPercentage: 0)
       }
     }
 

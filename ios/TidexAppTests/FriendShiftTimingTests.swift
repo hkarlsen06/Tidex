@@ -228,3 +228,152 @@ final class FriendShiftTimingTests: XCTestCase {
     )
   }
 }
+
+final class SharedScheduleProjectionTests: XCTestCase {
+  private let september = "2026-08-31"..."2026-10-04"
+
+  func testLateShiftMovesToTheDayItStartsForTheViewer() throws {
+    let recorded = makeShift("2026-09-14", "23:30", "07:30")
+    let shown = try XCTUnwrap(
+      viewerDated([recorded], schedule: "Europe/London", viewer: "Europe/Oslo").first)
+
+    XCTAssertEqual(shown.shiftDate, "2026-09-15")
+    XCTAssertEqual(shown.startTime, "00:30")
+    XCTAssertEqual(shown.endTime, "08:30")
+    XCTAssertEqual(shown.id, recorded.id)
+    XCTAssertEqual(shown.grossPay, recorded.grossPay)
+    XCTAssertEqual(shown.paidHours, recorded.paidHours)
+  }
+
+  func testWesternViewerSeesAnEarlyShiftOnThePreviousDay() throws {
+    let shown = try XCTUnwrap(
+      viewerDated(
+        [makeShift("2026-09-10", "02:00", "10:00")], schedule: "Europe/Oslo",
+        viewer: "America/New_York"
+      ).first)
+
+    XCTAssertEqual(shown.shiftDate, "2026-09-09")
+    XCTAssertEqual(shown.startTime, "20:00")
+    XCTAssertEqual(shown.endTime, "04:00")
+  }
+
+  func testShiftsCrossTheVisibleEdgesWithoutLossOrDuplicates() {
+    let shifts = [
+      makeShift("2026-08-30", "23:30", "07:30"),  // enters on the first visible day
+      makeShift("2026-08-30", "09:00", "17:00"),  // stays before the visible days
+      makeShift("2026-09-30", "23:15", "06:00"),  // leaves September, still visible on 1 October
+      makeShift("2026-10-04", "23:30", "07:30"),  // leaves the visible days
+    ]
+    let shown = viewerDated(shifts, schedule: "Europe/London", viewer: "Europe/Oslo")
+
+    XCTAssertEqual(shown.map(\.id), ["2026-08-30-23:30", "2026-09-30-23:15"])
+    XCTAssertEqual(shown.map(\.shiftDate), ["2026-08-31", "2026-10-01"])
+  }
+
+  func testWidestZoneGapMovesAShiftTwoDays() throws {
+    let shown = try XCTUnwrap(
+      viewerDated(
+        [makeShift("2026-10-06", "00:30", "08:30")], schedule: "Pacific/Kiritimati",
+        viewer: "Pacific/Pago_Pago"
+      ).first)
+
+    XCTAssertEqual(shown.shiftDate, "2026-10-04")
+    XCTAssertEqual(shown.startTime, "23:30")
+  }
+
+  func testClocksFollowBothZonesThroughTheAutumnClockChange() throws {
+    let shown = try XCTUnwrap(
+      viewerDated(
+        [makeShift("2026-10-25", "00:30", "03:00")], schedule: "Europe/London",
+        viewer: "Europe/Oslo", visible: "2026-10-01"..."2026-10-31"
+      ).first)
+
+    XCTAssertEqual(shown.shiftDate, "2026-10-25")
+    XCTAssertEqual(shown.startTime, "01:30")
+    XCTAssertEqual(shown.endTime, "04:00")
+  }
+
+  func testUnreadableShiftStaysOnItsRecordedDay() {
+    let shown = viewerDated(
+      [makeShift("2026-09-14", "25:00", "07:30")], schedule: "Europe/London",
+      viewer: "Europe/Oslo")
+
+    XCTAssertEqual(shown.map(\.shiftDate), ["2026-09-14"])
+    XCTAssertEqual(shown.map(\.startTime), ["25:00"])
+  }
+
+  func testTimeChoiceIsOfferedOnlyWhenTheClocksDiffer() throws {
+    let oslo = try XCTUnwrap(TimeZone(identifier: "Europe/Oslo"))
+    let winter = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-01-15T12:00:00Z"))
+    let summerShift = makeShift("2026-07-01", "09:00", "17:00")
+    func control(_ zone: String?, _ shifts: [ShiftWithComputations]) -> SharedScheduleTimeControl {
+      SharedScheduleProjection.control(
+        shifts: shifts, scheduleZone: zone, viewerZone: oslo, now: winter)
+    }
+
+    XCTAssertEqual(control("Europe/London", []), .choice)
+    XCTAssertEqual(control("Europe/Stockholm", [summerShift]), .none)
+    // Lagos matches Oslo in winter and is an hour behind while Oslo has summer time.
+    XCTAssertEqual(control("Africa/Lagos", []), .none)
+    XCTAssertEqual(control("Africa/Lagos", [summerShift]), .choice)
+    XCTAssertEqual(control(nil, [summerShift]), .unknownZone)
+    XCTAssertEqual(control("London", [summerShift]), .unknownZone)
+  }
+
+  func testDetailsNameTheOtherClocksDatesOnlyWhenTheyDiffer() throws {
+    let oslo = try XCTUnwrap(TimeZone(identifier: "Europe/Oslo"))
+    let locale = Locale(identifier: "en_GB")
+    func context(_ start: String, _ end: String, _ display: SharedScheduleTimeDisplay) throws
+      -> SharedShiftTimeContext
+    {
+      SharedShiftTimeContext(
+        interval: try XCTUnwrap(
+          SharedShiftInterval(
+            date: "2026-09-14", startTime: start, endTime: end,
+            timeZoneIdentifier: "Europe/London")),
+        display: display, viewerZone: oslo)
+    }
+
+    let daytime = try context("09:00", "17:00", .viewer)
+    XCTAssertEqual(daytime.timeRange(locale: locale), "10:00 – 18:00")
+    XCTAssertEqual(daytime.otherTimeRange(locale: locale), "09:00 – 17:00")
+
+    let lateForViewer = try context("23:30", "07:30", .viewer)
+    XCTAssertTrue(lateForViewer.date(locale: locale).contains("15"))
+    XCTAssertEqual(lateForViewer.timeRange(locale: locale), "00:30 – 08:30")
+    XCTAssertTrue(lateForViewer.otherTimeRange(locale: locale).contains("14"))
+    XCTAssertTrue(lateForViewer.otherTimeRange(locale: locale).contains("23:30"))
+
+    let lateForSchedule = try context("23:30", "07:30", .schedule)
+    XCTAssertTrue(lateForSchedule.date(locale: locale).contains("14"))
+    XCTAssertEqual(lateForSchedule.timeRange(locale: locale), "23:30 – 07:30")
+    XCTAssertTrue(lateForSchedule.otherTimeRange(locale: locale).hasSuffix("00:30 – 08:30"))
+    XCTAssertTrue(lateForSchedule.otherTimeRange(locale: locale).contains("15"))
+  }
+
+  private func viewerDated(
+    _ shifts: [ShiftWithComputations], schedule: String, viewer: String,
+    visible: ClosedRange<String>? = nil
+  ) -> [ShiftWithComputations] {
+    SharedScheduleProjection.viewerDated(
+      shifts, scheduleZone: schedule, viewerZone: TimeZone(identifier: viewer) ?? .gmt,
+      visibleDates: visible ?? september)
+  }
+
+  private func makeShift(_ date: String, _ start: String, _ end: String) -> ShiftWithComputations {
+    let row = ShiftRow(
+      id: "\(date)-\(start)", user_id: "friend", shift_date: date, start_time: start,
+      end_time: end, custom_supplements: nil)
+    let snapshot = WageSnapshot(
+      id: "wage", user_id: "friend", from_date: nil, hourly_wage: 250, wage_level: nil,
+      tariff_type_id: nil, supplements: SupplementRulesSnapshot(rules: []), tax_enabled: false,
+      tax_percentage: 0, break_enabled: false, break_method: BreakMethod.proportional.rawValue,
+      break_threshold_hours: 5.5, break_deduction_minutes: 30, created_at: nil)
+    let paidRow = ShiftRow(
+      id: row.id, user_id: "friend", shift_date: "2026-09-14", start_time: "09:00",
+      end_time: "17:00", custom_supplements: nil)
+    return ShiftWithComputations(
+      shift: row, computed: PayrollCalculator.computeShift(paidRow, snapshot: snapshot),
+      taxEnabled: false, taxPercentage: 0)
+  }
+}

@@ -1117,6 +1117,7 @@ private struct SharedShiftsDetailView: View {
       SharedShiftsListView(
         sharer: sharer,
         shifts: viewModel.sharedShifts,
+        boundaryShifts: viewModel.sharedBoundaryShifts,
         jobs: viewModel.sharedJobs,
         year: viewModel.committedYear,
         month: viewModel.committedMonth,

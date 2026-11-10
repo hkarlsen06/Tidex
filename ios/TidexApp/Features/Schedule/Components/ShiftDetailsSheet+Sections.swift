@@ -61,8 +61,41 @@ extension ShiftDetailsSheet {
       }
       .font(.tidexFootnote)
       .foregroundStyle(Color.tidexTextSecondary)
+
+      if let sharedTime {
+        otherClockRow(sharedTime)
+      }
     }
     .accessibilityElement(children: .combine)
+  }
+
+  /// The same shift on the clock the header doesn't lead with. The value drops under its label
+  /// when the two don't fit on one line.
+  private func otherClockRow(_ sharedTime: SharedShiftTimeContext) -> some View {
+    let label = Text(
+      sharedTime.display == .viewer ? .sharingTimeTheirTime : .sharingTimeYourTime
+    )
+    .foregroundStyle(Color.tidexTextSecondary)
+    let value = Text(sharedTime.otherTimeRange())
+      .foregroundStyle(Color.tidexTextPrimary)
+      .environment(\.layoutDirection, .leftToRight)
+
+    return ViewThatFits(in: .horizontal) {
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+        label
+        Spacer(minLength: Spacing.xs)
+        value
+      }
+      VStack(alignment: .leading, spacing: Spacing.micro) {
+        label
+        value
+      }
+    }
+    .font(.tidexFootnote)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.top, Spacing.xs)
+    .overlay(alignment: .top) { Divider() }
+    .padding(.top, Spacing.xxs)
   }
 
   private var headerPaySummary: some View {

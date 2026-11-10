@@ -27,9 +27,9 @@ struct CalendarViewModeToggle: View {
     _ = Self.applyTidexAppearance
   }
 
-  /// Swaps the stock gray track and thumb for Tidex colors. The proxy is app-wide,
-  /// which is fine while this is the only segmented picker in the app.
-  private static let applyTidexAppearance: Void = {
+  /// Swaps the stock gray track and thumb for Tidex colors. The proxy is app-wide, and every
+  /// segmented picker in the app uses these colors.
+  static let applyTidexAppearance: Void = {
     let control = UISegmentedControl.appearance()
     control.backgroundColor = UIColor(resource: .tidexSurfaceSecondary)
     control.selectedSegmentTintColor = UIColor(Color.tidexGlassSurface)

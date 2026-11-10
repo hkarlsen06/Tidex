@@ -8,6 +8,9 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsL
 struct SharedShiftsListView: View {
   let sharer: SharedUser
   let shifts: [ShiftWithComputations]
+  /// Shifts recorded just outside the visible calendar days. In the viewer's time zone they can
+  /// start on a visible day.
+  var boundaryShifts: [ShiftWithComputations] = []
   let jobs: [SharedJob]
   let year: Int
   let month: Int
@@ -47,6 +50,9 @@ struct SharedShiftsListView: View {
   // View mode toggle (synced with Shifts tab)
   @AppStorage("shiftsViewMode") private var showListView = false
 
+  @AppStorage(SharedScheduleTimeDisplay.storageKey)
+  private var timeDisplay = SharedScheduleTimeDisplay.viewer
+
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
   @State private var selectedShift: ShiftWithComputations?
   @State private var pendingSendToChatResult: SendShiftToChatResult?
@@ -60,6 +66,40 @@ struct SharedShiftsListView: View {
 
   private var showJobIndicator: Bool {
     jobs.count > 1
+  }
+
+  private var timeControl: SharedScheduleTimeControl {
+    guard isContentReady else { return .none }
+    return SharedScheduleProjection.control(
+      shifts: shifts + boundaryShifts, scheduleZone: ownerTimeZone)
+  }
+
+  /// The clock the schedule shows. Superimposing lays the friend's shifts over the viewer's own
+  /// calendar, so it uses the viewer's clock.
+  private var effectiveTimeDisplay: SharedScheduleTimeDisplay {
+    isSuperimposing && !showListView ? .viewer : timeDisplay
+  }
+
+  /// The shifts as the schedule shows them, dated in the viewer's zone when that is the choice.
+  private var shownShifts: [ShiftWithComputations] {
+    guard timeControl == .choice, effectiveTimeDisplay == .viewer else { return shifts }
+    let visibleRange = Date.visibleCalendarRange(year: year, month: month)
+    return SharedScheduleProjection.viewerDated(
+      shifts + boundaryShifts, scheduleZone: ownerTimeZone,
+      visibleDates: visibleRange.start.toISODateString()...visibleRange.end.toISODateString())
+  }
+
+  /// A shown shift may be a copy dated for the viewer. The details sheet takes the recorded one.
+  private func select(_ shown: ShiftWithComputations) {
+    selectedShift = (shifts + boundaryShifts).first { $0.id == shown.id } ?? shown
+  }
+
+  private func timeContext(for shift: ShiftWithComputations) -> SharedShiftTimeContext? {
+    guard
+      let interval = SharedScheduleProjection.interval(of: shift, scheduleZone: ownerTimeZone),
+      interval.differs()
+    else { return nil }
+    return SharedShiftTimeContext(interval: interval, display: effectiveTimeDisplay)
   }
 
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -83,9 +123,6 @@ struct SharedShiftsListView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .safeAreaInset(edge: .top, spacing: 0) {
-      SharedScheduleTimeZoneCaption(ownerTimeZone: ownerTimeZone)
-    }
     .animation(.none, value: showListView)
     // Using .sheet(item:) guarantees data availability when sheet presents
     .sheet(
@@ -106,25 +143,10 @@ struct SharedShiftsListView: View {
           pendingSendToChatResult = result
           selectedShift = nil
         },
-        snapshotShareContext: .shared(owner: sharer)
+        snapshotShareContext: .shared(owner: sharer),
+        sharedTime: timeContext(for: shift)
       )
       .userCurrency(shiftJob?.currency ?? currency)
-      .safeAreaInset(edge: .top) {
-        if let interval = SharedShiftInterval(
-          date: shift.shiftDate, startTime: shift.startTime,
-          endTime: shift.endTime, timeZoneIdentifier: ownerTimeZone
-        ), interval.differs() {
-          VStack(spacing: Spacing.xxs) {
-            Text(.sharingTimeYourTime)
-            Text(
-              verbatim: interval.dateLabel(locale: .appLocale) + " "
-                + interval.timeRange(locale: .appLocale))
-          }
-          .font(.tidexFootnote)
-          .foregroundStyle(Color.tidexTextSecondary)
-          .padding(Spacing.sm)
-        }
-      }
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
     }
@@ -171,7 +193,7 @@ extension SharedShiftsListView {
 
   private var calendarView: some View {
     SharedShiftsCalendarView(
-      shifts: shifts,
+      shifts: shownShifts,
       jobs: jobs,
       year: year,
       month: month,
@@ -179,7 +201,11 @@ extension SharedShiftsListView {
       currency: currency,
       showEarnings: sharer.showEarnings,
       friendFirstName: sharer.firstNameOnly,
-      ownerTimeZone: ownerTimeZone,
+      recordedShifts: shifts + boundaryShifts,
+      canMarkOverlap: timeControl == .none
+        || (timeControl == .choice && effectiveTimeDisplay == .viewer),
+      timeControl: timeControl,
+      timeDisplay: $timeDisplay,
       highlightDates: highlightDates,
       highlightShiftIds: highlightShiftIds,
       isSuperimposing: isSuperimposing,
@@ -187,7 +213,7 @@ extension SharedShiftsListView {
       userShiftsByDate: userShiftsByDate,
       userEarningsByDate: userEarningsByDate,
       onShiftTapped: { shift in
-        selectedShift = shift
+        select(shift)
       },
       onSwipeLeft: {
         AppearanceTracker.shared.reset()
@@ -233,7 +259,7 @@ extension SharedShiftsListView {
     var weekMap: [String: (weekNumber: Int, totalGross: Double, shifts: [ShiftWithComputations])] =
       [:]
 
-    for shift in shifts {
+    for shift in shownShifts {
       guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
       let weekOfYear = calendar.component(.weekOfYear, from: date)
       let yearForWeek = calendar.component(.yearForWeekOfYear, from: date)
@@ -260,7 +286,7 @@ extension SharedShiftsListView {
 
   @ViewBuilder
   private var shiftListContent: some View {
-    if shifts.isEmpty {
+    if shownShifts.isEmpty {
       VStack(spacing: Spacing.md) {
         Image(systemName: "calendar.badge.minus")
           .font(.system(size: emptyIconSize))
@@ -273,6 +299,12 @@ extension SharedShiftsListView {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     } else {
       List {
+        if timeControl != .none {
+          SharedScheduleTimeControlView(control: timeControl, display: $timeDisplay)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
         ForEach(weekGroups, id: \.weekKey) { weekGroup in
           Section {
             ForEach(weekGroup.shifts) { shift in
@@ -287,7 +319,7 @@ extension SharedShiftsListView {
                 amountTextOverride: sharer.showEarnings
                   ? nil
                   : CurrencyConfig.formatEmpty(currency: rowCurrency),
-                onTap: { selectedShift = shift }
+                onTap: { select(shift) }
               )
               .userCurrency(rowCurrency)
               .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))

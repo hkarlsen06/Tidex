@@ -110,6 +110,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   let onShowInCalendarRequested: (() -> Void)?
   var onSendToChatCompleted: ((SendShiftToChatResult) -> Void)?
   let snapshotShareContext: ShiftSnapshotShareContext
+  /// Set for a friend's shift whose schedule zone differs from the viewer's.
+  let sharedTime: SharedShiftTimeContext?
   /// Tariff supplement rules from the applicable snapshot (used for supplements editor)
   private let initialTariffRules: [SupplementRule]
   private var tariffRules: [SupplementRule] { recalculatedTariffRules ?? initialTariffRules }
@@ -238,6 +240,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     onShowInCalendarRequested: (() -> Void)? = nil,
     onSendToChatCompleted: ((SendShiftToChatResult) -> Void)? = nil,
     snapshotShareContext: ShiftSnapshotShareContext = .own,
+    sharedTime: SharedShiftTimeContext? = nil,
     startInEditMode: Bool = false,
     tariffRules: [SupplementRule] = []
   ) {
@@ -253,11 +256,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     self.onShowInCalendarRequested = onShowInCalendarRequested
     self.onSendToChatCompleted = onSendToChatCompleted
     self.snapshotShareContext = snapshotShareContext
+    self.sharedTime = sharedTime
     self.startInEditMode = startInEditMode
     self.initialTariffRules = tariffRules
   }
 
   var formattedDate: String {
+    if let sharedTime { return sharedTime.date() }
     guard let date = Date.fromISODateString(shift.shiftDate) else {
       return shift.shiftDate
     }
@@ -280,7 +285,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   }
 
   var formattedTimeRange: String {
-    ShiftCardFormatter.localizedTimeRange(
+    if let sharedTime { return sharedTime.timeRange() }
+    return ShiftCardFormatter.localizedTimeRange(
       start: shift.startTime,
       end: shift.endTime,
       locale: Locale.appLocale,

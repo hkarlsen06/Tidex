@@ -1274,10 +1274,7 @@ final class TidexAppUITests: XCTestCase {
     timeZoneCards.launch()
     assertExists(
       text(containingLabel: "Your time", in: timeZoneCards), in: timeZoneCards,
-      timeout: defaultTimeout, message: "Expected viewer-local times to be labelled")
-    assertExists(
-      text(containingLabel: "Shift time:", in: timeZoneCards), in: timeZoneCards,
-      timeout: defaultTimeout, message: "Expected the fixed schedule time beside converted clocks")
+      timeout: defaultTimeout, message: "Expected converted clocks to be read as the viewer's")
     var utc = Calendar(identifier: .gregorian)
     utc.timeZone = .gmt
     let start = utc.startOfDay(for: .now).addingTimeInterval(5 * 3_600)
@@ -1291,6 +1288,8 @@ final class TidexAppUITests: XCTestCase {
       timeout: defaultTimeout, message: "Expected the actual shift instant in the viewer's zone")
     attachAppStoreScreenshot(timeZoneCards, name: "friends-cards-time-zones")
     timeZoneCards.terminate()
+
+    assertFriendScheduleShowsEitherClock()
 
     let addFriend = makeFriendsDesignApp(view: "add-friend")
     addFriend.launch()
@@ -1361,6 +1360,68 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(
       outgoing.waitForNonExistence(timeout: defaultTimeout),
       "Expected the message to be deleted after confirming")
+  }
+
+  /// A friend's 05:00 shift in another zone sits on the viewer's day and clock, moves back to
+  /// the recorded ones with Their time, and its details name both.
+  @MainActor
+  private func assertFriendScheduleShowsEitherClock() {
+    let reference = DateComponents(
+      calendar: Calendar(identifier: .gregorian), timeZone: .current, year: 2_026, month: 9,
+      day: 10
+    ).date
+    let scheduleZone = ["Europe/London", "Asia/Tokyo"].compactMap { TimeZone(identifier: $0) }
+      .first {
+        $0.secondsFromGMT(for: reference ?? .now)
+          != TimeZone.current.secondsFromGMT(for: reference ?? .now)
+      }
+    guard
+      let start = DateComponents(
+        calendar: Calendar(identifier: .gregorian), timeZone: scheduleZone, year: 2_026,
+        month: 9, day: 10, hour: 5
+      ).date
+    else { return XCTFail("Expected a schedule zone that differs from the viewer's") }
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US")
+    formatter.dateFormat = "EEEE, MMMM d,"
+    let viewerDay = formatter.string(from: start)
+    formatter.dateFormat = "HH:mm"
+    let viewerClock = formatter.string(from: start)
+
+    let schedule = makeFriendsDesignApp(view: "schedule")
+    schedule.launchEnvironment["TIDEX_DESIGN_FRIENDS_TIME_ZONE"] = "1"
+    schedule.launchArguments += ["-shiftsViewMode", "NO"]
+    schedule.launch()
+    func day(_ prefix: String, showing clock: String) -> XCUIElement {
+      schedule.descendants(matching: .any).matching(
+        NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", prefix, clock)
+      ).firstMatch
+    }
+    assertExists(
+      day(viewerDay, showing: viewerClock), in: schedule, timeout: defaultTimeout,
+      message: "Expected the shift on the viewer's day at \(viewerClock)")
+    XCTAssertTrue(schedule.buttons["Your time"].isSelected)
+    attachAppStoreScreenshot(schedule, name: "friends-schedule-your-time")
+
+    schedule.buttons["Their time"].tap()
+    let recordedDay = day("Thursday, September 10,", showing: "05:00")
+    assertExists(
+      recordedDay, in: schedule, timeout: defaultTimeout,
+      message: "Expected the shift on its recorded day at 05:00")
+    attachAppStoreScreenshot(schedule, name: "friends-schedule-their-time")
+
+    recordedDay.tap()
+    schedule.buttons["Details"].tap()
+    let details = schedule.descendants(matching: .any).matching(
+      NSPredicate(
+        format: "label CONTAINS %@ AND label CONTAINS %@ AND label CONTAINS %@",
+        "05:00 – 13:00", "Your time", viewerClock)
+    ).firstMatch
+    assertExists(
+      details, in: schedule, timeout: defaultTimeout,
+      message: "Expected the details to lead with the recorded time and name the viewer's")
+    attachAppStoreScreenshot(schedule, name: "friends-schedule-details")
+    schedule.terminate()
   }
 
   private func makeFriendsDesignApp(view: String) -> XCUIApplication {

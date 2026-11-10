@@ -91,6 +91,9 @@ final class SharingViewModel: MonthNavigable {
   /// Shifts from the selected sharer for the currently visible calendar range
   /// (includes out-of-month padding days for the committed month grid)
   private(set) var sharedShifts: [ShiftWithComputations] = []
+  /// Shifts recorded just outside the visible calendar range. Shown in the viewer's time zone,
+  /// they can start on a visible day.
+  private(set) var sharedBoundaryShifts: [ShiftWithComputations] = []
 
   /// Job metadata for currently selected sharer
   private(set) var sharedJobs: [SharedJob] = []
@@ -633,6 +636,7 @@ final class SharingViewModel: MonthNavigable {
     selectedSharer = sharer
     hasResolvedSelectedSharerShifts = false
     sharedShifts = []
+    sharedBoundaryShifts = []
     sharedJobs = []
     sharedCurrency = nil
     Task {
@@ -661,6 +665,7 @@ final class SharingViewModel: MonthNavigable {
     selectedSharer = nil
     hasResolvedSelectedSharerShifts = true
     sharedShifts = []
+    sharedBoundaryShifts = []
     sharedJobs = []
     sharedCurrency = nil
     userShiftsForMonth = []
@@ -730,10 +735,11 @@ final class SharingViewModel: MonthNavigable {
       visibleRange: request.visibleRange
     )
 
-    if !cachedShifts.isEmpty {
+    if !cachedShifts.visible.isEmpty || !cachedShifts.boundary.isEmpty {
       // Cache hit - show cached data immediately, no loading flash
       // ATOMIC UPDATE: Set shifts and committed state together
-      sharedShifts = cachedShifts
+      sharedShifts = cachedShifts.visible
+      sharedBoundaryShifts = cachedShifts.boundary
       hasResolvedSelectedSharerShifts = true
       committedYear = year
       committedMonth = month
@@ -752,6 +758,7 @@ final class SharingViewModel: MonthNavigable {
     ) {
       // Previously fetched but empty - show empty calendar instantly, no loading
       sharedShifts = []
+      sharedBoundaryShifts = []
       hasResolvedSelectedSharerShifts = true
       committedYear = year
       committedMonth = month
@@ -783,7 +790,8 @@ final class SharingViewModel: MonthNavigable {
 
     // ATOMIC UPDATE: Set shifts and committed state together
     // This ensures the calendar structure and data update in the same render pass
-    sharedShifts = freshShifts
+    sharedShifts = freshShifts.visible
+    sharedBoundaryShifts = freshShifts.boundary
     sharedJobs = currentMonthResponse?.jobs ?? []
     sharedOwnerTimeZone = currentMonthResponse?.ownerTimeZone
     FriendsScheduleTimeZoneStore.shared.set(
@@ -807,7 +815,7 @@ final class SharingViewModel: MonthNavigable {
       )
     }
 
-    logger.info("Loaded \(freshShifts.count) shared shifts for \(year)-\(month)")
+    logger.info("Loaded \(freshShifts.visible.count) shared shifts for \(year)-\(month)")
   }
 
   /// Load shifts for the selected sharer and current month
@@ -1103,11 +1111,25 @@ final class SharingViewModel: MonthNavigable {
     }.value
   }
 
+  /// Months that hold the visible calendar days and the boundary days around them.
   private static func monthWindowForVisibleRange(year: Int, month: Int) -> [YearMonthKey] {
-    let visibleRange = Date.visibleCalendarRange(year: year, month: month)
-    return monthsInRange(startDate: visibleRange.start, endDate: visibleRange.end).map {
+    let range = boundaryRange(around: Date.visibleCalendarRange(year: year, month: month))
+    return monthsInRange(startDate: range.start, endDate: range.end).map {
       YearMonthKey(year: $0.year, month: $0.month)
     }
+  }
+
+  private static func boundaryRange(around visibleRange: (start: Date, end: Date))
+    -> (start: Date, end: Date)
+  {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = Date.localTimeZone
+    let days = SharedScheduleProjection.boundaryDays
+    return (
+      start: calendar.date(byAdding: .day, value: -days, to: visibleRange.start)
+        ?? visibleRange.start,
+      end: calendar.date(byAdding: .day, value: days, to: visibleRange.end) ?? visibleRange.end
+    )
   }
 
   private static func monthsInRange(startDate: Date, endDate: Date) -> [(year: Int, month: Int)] {
@@ -1139,30 +1161,37 @@ final class SharingViewModel: MonthNavigable {
     return result
   }
 
+  /// Splits the month payloads into the shifts recorded on visible calendar days and the ones
+  /// recorded on the boundary days around them.
   private static func mergeSharedShifts(
     _ shiftSets: [[ShiftWithComputations]],
     visibleRange: (start: Date, end: Date)
-  ) -> [ShiftWithComputations] {
-    let startISO = visibleRange.start.toISODateString()
-    let endISO = visibleRange.end.toISODateString()
+  ) -> (visible: [ShiftWithComputations], boundary: [ShiftWithComputations]) {
+    let visibleDates = visibleRange.start.toISODateString()...visibleRange.end.toISODateString()
+    let boundary = boundaryRange(around: visibleRange)
+    let loadedDates = boundary.start.toISODateString()...boundary.end.toISODateString()
 
     var seenIds = Set<String>()
     var merged: [ShiftWithComputations] = []
 
     for shifts in shiftSets {
-      for shift in shifts where shift.shiftDate >= startISO && shift.shiftDate <= endISO {
+      for shift in shifts where loadedDates.contains(shift.shiftDate) {
         if seenIds.insert(shift.id).inserted {
           merged.append(shift)
         }
       }
     }
 
-    return merged.sorted { lhs, rhs in
+    merged.sort { lhs, rhs in
       if lhs.shiftDate == rhs.shiftDate {
         return lhs.startTime < rhs.startTime
       }
       return lhs.shiftDate < rhs.shiftDate
     }
+    return (
+      visible: merged.filter { visibleDates.contains($0.shiftDate) },
+      boundary: merged.filter { !visibleDates.contains($0.shiftDate) }
+    )
   }
 
   private func fetchSharedShiftsForMonthWindow(

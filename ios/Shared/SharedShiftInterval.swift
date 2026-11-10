@@ -69,23 +69,31 @@ struct SharedShiftInterval: Equatable, Sendable {
   }
 
   func sourceDescription(viewerZone: TimeZone = .current, locale: Locale = .current) -> String {
-    var source = Calendar(identifier: .gregorian)
-    source.timeZone = timeZone
-    var viewer = source
-    viewer.timeZone = viewerZone
+    timeRange(in: timeZone, datedAgainst: viewerZone, locale: locale)
+  }
+
+  /// The clock range in `zone`. It names the dates only when they differ from the dates the
+  /// same instants have in `other`.
+  func timeRange(in zone: TimeZone, datedAgainst other: TimeZone, locale: Locale = .current)
+    -> String
+  {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = zone
+    var otherCalendar = calendar
+    otherCalendar.timeZone = other
     let sameDates = [start, end].allSatisfy { date in
-      source.dateComponents([.year, .month, .day], from: date)
-        == viewer.dateComponents([.year, .month, .day], from: date)
+      calendar.dateComponents([.year, .month, .day], from: date)
+        == otherCalendar.dateComponents([.year, .month, .day], from: date)
     }
-    guard !sameDates else { return timeRange(in: timeZone, locale: locale) }
+    guard !sameDates else { return timeRange(in: zone, locale: locale) }
     var style = Date.FormatStyle().day().month(.abbreviated).locale(locale)
-    style.calendar = source
-    style.timeZone = timeZone
-    if source.isDate(start, inSameDayAs: end) {
-      return start.formatted(style) + " " + timeRange(in: timeZone, locale: locale)
+    style.calendar = calendar
+    style.timeZone = zone
+    if calendar.isDate(start, inSameDayAs: end) {
+      return start.formatted(style) + " " + timeRange(in: zone, locale: locale)
     }
-    return start.formatted(style) + " " + clock(start, in: timeZone, locale: locale)
-      + " – " + end.formatted(style) + " " + clock(end, in: timeZone, locale: locale)
+    return start.formatted(style) + " " + clock(start, in: zone, locale: locale)
+      + " – " + end.formatted(style) + " " + clock(end, in: zone, locale: locale)
   }
 
   func clock(_ instant: Date, in zone: TimeZone = .current, locale: Locale = .current) -> String {

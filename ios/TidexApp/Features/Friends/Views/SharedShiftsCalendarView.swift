@@ -19,7 +19,15 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   let showEarnings: Bool
   let friendFirstName: String
 
-  var ownerTimeZone: String?
+  /// The shifts as recorded, when `shifts` are dated in the viewer's zone. Pay totals stay in
+  /// the friend's month.
+  var recordedShifts: [ShiftWithComputations]?
+
+  /// Whether `shifts` and the viewer's own shifts are on the same clock, so their times compare.
+  var canMarkOverlap = true
+
+  var timeControl = SharedScheduleTimeControl.none
+  var timeDisplay: Binding<SharedScheduleTimeDisplay> = .constant(.viewer)
 
   /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
   var highlightDates: Set<String> = []
@@ -96,13 +104,15 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       hasTaxByDate[shift.shiftDate, default: false] =
         hasTaxByDate[shift.shiftDate, default: false] || shift.taxEnabled
       shiftsByDate[shift.shiftDate, default: []].append(shift)
+    }
 
+    for shift in recordedShifts ?? shifts {
       guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
       let components = calendar.dateComponents([.year, .month], from: date)
       guard components.year == year, components.month == month else { continue }
 
       monthlyGross += shift.grossPay
-      monthlyNet += net
+      monthlyNet += shift.taxEnabled ? shift.netPay : shift.grossPay
       hasTaxEnabled = hasTaxEnabled || shift.taxEnabled
     }
 
@@ -196,6 +206,13 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       // Calendar grid
       calendarGrid(metrics: metrics)
         .padding(.bottom, Spacing.sm)
+
+      // The clock choice sits above the view mode toggle. Superimposing compares the shifts
+      // with the viewer's own, so it always uses the viewer's clock.
+      if selectedDates.isEmpty, !isSuperimposing {
+        SharedScheduleTimeControlView(control: timeControl, display: timeDisplay)
+          .padding(.bottom, showEarnings ? Spacing.xs : 0)
+      }
 
       // View mode toggle or selected-date actions
       if showEarnings {
@@ -828,14 +845,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
 
   private func shiftsOverlap(friendShifts: [ShiftWithComputations], userShifts: [ShiftRow]) -> Bool
   {
-    guard !friendShifts.isEmpty, !userShifts.isEmpty else { return false }
-    guard
-      friendShifts.allSatisfy({ shift in
-        SharedShiftInterval(
-          date: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime,
-          timeZoneIdentifier: ownerTimeZone)?.differs() == false
-      })
-    else { return false }
+    guard canMarkOverlap, !friendShifts.isEmpty, !userShifts.isEmpty else { return false }
 
     return friendShifts.contains { friendShift in
       let friendInterval = shiftInterval(
