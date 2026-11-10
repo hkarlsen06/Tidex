@@ -17,7 +17,7 @@ struct JobBasicsOnboardingScreen: View {
   }
 
   private var headerTopSpacing: CGFloat {
-    onBack != nil ? Spacing.huge : Spacing.huge + Spacing.huge + Spacing.sm
+    onBack != nil ? Spacing.lg : Spacing.huge
   }
 
   var body: some View {
@@ -27,15 +27,17 @@ struct JobBasicsOnboardingScreen: View {
 
       VStack(spacing: 0) {
         scrollArea
-        // Hidden while typing so Continue doesn't sit on the keyboard and skip the colors.
-        if !isJobNameFocused {
-          continueBar
-        }
+        // Stays above the keyboard. The color is optional, so typing a name and tapping
+        // Continue is enough.
+        continueBar
       }
     }
     .onAppear {
       if data.jobColor == nil {
         data.jobColor = OnboardingData.defaultJobColor
+      }
+      if trimmedJobName.isEmpty {
+        isJobNameFocused = true
       }
     }
   }
@@ -67,20 +69,23 @@ struct JobBasicsOnboardingScreen: View {
   }
 
   private var header: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
+    VStack(spacing: Spacing.sm) {
+      Text(.onboardingPostAuthStep(1, 2))
+        .font(.tidexFootnote)
+        .foregroundStyle(Color.tidexTextMuted)
+
       Text(.onboardingJobBasicsTitle)
         .font(.tidexScreenTitle)
         .foregroundStyle(Color.tidexTextPrimary)
-        .multilineTextAlignment(.leading)
+        .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
-        .frame(maxWidth: .infinity, alignment: .leading)
 
       Text(.onboardingJobBasicsSubtitle)
         .font(.tidexBody)
         .foregroundStyle(Color.tidexTextSecondary)
-        .multilineTextAlignment(.leading)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.center)
     }
+    .frame(maxWidth: .infinity)
     .padding(.horizontal, Spacing.xl)
     .adaptiveContentWidth()
   }
@@ -125,7 +130,7 @@ struct JobBasicsOnboardingScreen: View {
       .adaptiveContentWidth()
 
       Spacer()
-        .frame(height: Spacing.xl)
+        .frame(height: isJobNameFocused ? Spacing.md : Spacing.xl)
     }
     .background(Color.tidexBackground)
   }
@@ -194,7 +199,6 @@ struct JobBasicsOnboardingScreen: View {
   private func continueIfReady() {
     guard canContinue else { return }
     data.jobName = trimmedJobName
-    Haptics.play(.success)
     onContinue()
   }
 }
