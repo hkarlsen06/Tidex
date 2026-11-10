@@ -6,8 +6,6 @@
 #include "production-backend.xcconfig"
 
 #include "SiriAIPreview.xcconfig"
-// Git-ignored switch for Debug builds from Xcode. Release reads no local switch.
-#include? "SiriAIPreview.local.xcconfig"
 
 // ConvexMobile ships only arm64 simulator slices, so simulator builds skip x86_64.
 EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64

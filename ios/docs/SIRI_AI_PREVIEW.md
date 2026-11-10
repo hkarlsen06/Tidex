@@ -1,6 +1,6 @@
 # Siri AI developer preview
 
-Apple opened the Siri AI developer preview on 2026-11-03. In the preview, Siri's model can call an app's intents as tools and fill their parameters from what the person said. Tidex adopts it behind a build switch that is off by default, so a normal build contains none of it.
+Apple opened the Siri AI developer preview on 2026-11-03. In the preview, Siri's model can call an app's intents as tools and fill their parameters from what the person said. Tidex compiles it only into Debug builds made with Xcode 27.3. A Release build, and any build with the release Xcode, contains none of it.
 
 ## What Apple allows
 
@@ -46,33 +46,31 @@ Siri's model reads the same titles and descriptions that Shortcuts shows. There 
 
 ## The switch
 
-`ios/SiriAIPreview.xcconfig` defines `TIDEX_SIRI_AI_PREVIEW`, which is `NO` by default. It excludes every file under a folder named `SiriAIPreview` from all targets. Only the exact value `YES` includes those files again. Any other value leaves them out.
+`ios/SiriAIPreview.xcconfig` excludes every file under a folder named `SiriAIPreview` from all targets. It includes them again only when both of these hold:
+
+- The configuration is Debug. Release has no rule that includes the files, so no setting brings them into a Release build or an archive.
+- `TIDEX_SIRI_AI_PREVIEW` is exactly `YES`. The xcconfig sets it from the Xcode version, and only Xcode 27.3 is listed. With the release Xcode the value is empty.
+
+When a later Xcode should compile the preview, add its line to the xcconfig, such as `TIDEX_SIRI_AI_PREVIEW_XCODE_2740 = YES` for Xcode 27.4.
 
 - Put code that needs the iOS 27.3 SDK in a `SiriAIPreview` folder, at most four folder levels deep. The patterns in the xcconfig reach no further.
 - Code outside the folder must not refer to anything inside it, or the normal build breaks.
-- With the switch on, the release Xcode fails with `Cannot find type 'ToolIntent' in scope`. Use the Xcode 27.3 beta.
-- A preview build prints the warning `Siri AI preview build` from `AssistantToolIntents.swift`.
 
 ## Build a preview
 
-From the command line, select the beta toolchain and pass the switch. Give the beta its own DerivedData folder, because the two Xcode versions cannot share one.
+Build or run the Debug configuration with the Xcode 27.3 beta. In the beta app that needs no setup. From the command line, select the beta toolchain. Give the beta its own DerivedData folder, because the two Xcode versions cannot share one.
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode-27.3.0-beta.app/Contents/Developer \
   ./scripts/xcode-build-agent.sh \
-  -derivedDataPath ~/Library/Developer/Xcode/DerivedData/Tidex-siri-ai-preview-beta \
-  TIDEX_SIRI_AI_PREVIEW=YES
+  -derivedDataPath ~/Library/Developer/Xcode/DerivedData/Tidex-siri-ai-preview-beta
 ```
 
-The test wrapper takes the same variable and arguments. On a connected iPhone it leaves the preview build installed.
+The test wrapper takes the same variable and argument. On a connected iPhone it leaves the preview build installed.
 
-In the Xcode 27.3 beta app, create the git-ignored file `ios/SiriAIPreview.local.xcconfig` with one line and build the Debug configuration:
+If a new beta breaks the preview code, pass `TIDEX_SIRI_AI_PREVIEW=NO` to build Debug without it. Passing `YES` with the release Xcode fails with `Cannot find type 'ToolIntent' in scope`.
 
-```
-TIDEX_SIRI_AI_PREVIEW = YES
-```
-
-Only `debug.xcconfig` reads that file. A Release build or an archive gets the preview only when `TIDEX_SIRI_AI_PREVIEW=YES` is on the `xcodebuild` command line. Do that for an internal TestFlight build and never for a build that goes to App Review.
+Internal TestFlight testers cannot get the preview, because TestFlight builds are Release builds.
 
 ## Check the metadata
 
@@ -83,12 +81,12 @@ DEVELOPER_DIR=/Applications/Xcode-27.3.0-beta.app/Contents/Developer \
   xcrun sirimetadataanalyzer <DerivedData>/Build/Products/Debug-iphonesimulator/Tidex.app
 ```
 
-A preview build reports `14 intents (11 tools), 7 entities` with no errors and no warnings. Add `--language nb` for the Norwegian strings. Six suggestions remain on purpose:
+A Debug build from the beta reports `14 intents (11 tools), 7 entities` with no errors and no warnings. Add `--language nb` for the Norwegian strings. Six suggestions remain on purpose:
 
 - Five `SMA203` findings ask for descriptions on the properties of `ShiftEntity`, `JobEntity` and `FriendEntity`. The `description:` argument needs a deployment target of iOS 27.3, and Swift cannot limit a stored property to newer systems. Add the descriptions when the deployment target reaches 27.3.
 - `SMA701` says `StopClockIntent` resembles the system's Stop Stopwatch action. It clocks the user out of work, and its title is Clock Out.
 
-A build with the switch off reports `0 tools` and has no `Metadata.appintents/Skills.skillsc`. To check an archive made with the release Xcode, which has no analyzer, count the tool marker. It must print 0:
+A Release build reports `0 tools` and has no `Metadata.appintents/Skills.skillsc`. To check an archive made with the release Xcode, which has no analyzer, count the tool marker. It must print 0:
 
 ```bash
 grep -c ToolIntent <Tidex.app>/Metadata.appintents/extract.actionsdata
@@ -101,7 +99,7 @@ The skills compiler checks the skill files without a build:
   --skillsbundle ios/TidexApp/Features/Assistant/SiriAIPreview/Skills.skillsbundle --output "$TMPDIR"
 ```
 
-In a preview build, the Xcode 27.3 beta prints `error: the following command failed with exit code 0 but produced no further output` for the skills step. The step succeeds and writes `Skills.skillsc`. Ignore that line while the build reports success.
+In a build with the preview, the Xcode 27.3 beta can print `error: the following command failed with exit code 0 but produced no further output` for the skills step. The step succeeds and writes `Skills.skillsc`. Ignore that line while the build reports success.
 
 ## Not verified yet
 
@@ -118,5 +116,5 @@ Apple's SiriEvaluations framework can script these requests on a device and grad
 ## When Apple opens App Store submission
 
 1. Build with a release Xcode that has the iOS 27.3 SDK.
-2. Move the files out of `SiriAIPreview/`, delete the `#warning`, and delete `ios/SiriAIPreview.xcconfig` with its two `#include` lines and the `.gitignore` entry.
+2. Move the files out of `SiriAIPreview/`, and delete `ios/SiriAIPreview.xcconfig` with its two `#include` lines.
 3. Run the analyzer and the device checks above.

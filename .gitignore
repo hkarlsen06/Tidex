@@ -40,7 +40,6 @@ ios/build/
 
 # Generated at build time — never commit
 ios/BuildNumber.xcconfig
-ios/SiriAIPreview.local.xcconfig
 
 # backups
 next/backups/
