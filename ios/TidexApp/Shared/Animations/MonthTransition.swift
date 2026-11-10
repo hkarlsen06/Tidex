@@ -326,8 +326,10 @@ struct MonthYearPickerSheet: View {
   }
 
   private func monthAccessibilityLabel(_ month: Int) -> Text {
-    let date = Calendar.gregorianCurrent.date(from: DateComponents(year: selectedYear, month: month))
-    let style = Date.FormatStyle(locale: .appLocale, calendar: .gregorianCurrent).month(.wide).year()
+    let date = Calendar.gregorianCurrent.date(
+      from: DateComponents(year: selectedYear, month: month))
+    let style = Date.FormatStyle(locale: .appLocale, calendar: .gregorianCurrent).month(.wide)
+      .year()
     return Text(date ?? Date(), format: style)
   }
 
@@ -419,8 +421,8 @@ struct AnimatedMonthHeader: View {
   @State private var monthScale: CGFloat = 1.0
   @State private var showingMonthPicker = false
   @ScaledMetric(relativeTo: .body) private var navPillVisualSize: CGFloat = 36
-  @ScaledMetric(relativeTo: .body) private var navTapTargetSize: CGFloat = 44
-  @ScaledMetric(relativeTo: .body) private var navTextSafeInset: CGFloat = 24
+  private let navTapTargetSize: CGFloat = 44
+  private let navTextSafeInset: CGFloat = 24
   @ScaledMetric(relativeTo: .body) private var navIconSize: CGFloat = 16
 
   /// Current real month/year for long press "jump to current month"
@@ -575,10 +577,13 @@ struct AnimatedMonthHeader: View {
         .font(.tidexBodyMedium)
         .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(1)
+        .minimumScaleFactor(0.4)
 
       Text(yearText)
         .font(.tidexSubheadline)
         .foregroundStyle(Color.tidexTextSecondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.4)
     }
   }
 
@@ -604,7 +609,9 @@ struct AnimatedMonthHeader: View {
       return
     }
     // Bounce animation on tap
-    withAnimation(.spring(response: 0.15, dampingFraction: 0.5), completionCriteria: .logicallyComplete) {
+    withAnimation(
+      .spring(response: 0.15, dampingFraction: 0.5), completionCriteria: .logicallyComplete
+    ) {
       monthScale = 0.95
     } completion: {
       withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
@@ -627,7 +634,9 @@ struct AnimatedMonthHeader: View {
     }
 
     // Bounce animation
-    withAnimation(.spring(response: 0.15, dampingFraction: 0.5), completionCriteria: .logicallyComplete) {
+    withAnimation(
+      .spring(response: 0.15, dampingFraction: 0.5), completionCriteria: .logicallyComplete
+    ) {
       monthScale = 0.95
     } completion: {
       withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
@@ -663,10 +672,13 @@ struct AnimatedMonthHeader: View {
       action()
     } label: {
       Image(systemName: icon)
-        .font(.system(size: navIconSize, weight: .semibold))
+        .font(.system(size: min(navIconSize, Spacing.iconSize), weight: .semibold))
         .foregroundStyle(Color.tidexBlueText)
         .accessibilityLabel(Text(label))
-        .frame(width: navPillVisualSize, height: navPillVisualSize)
+        .frame(
+          width: min(navPillVisualSize, navTapTargetSize),
+          height: min(navPillVisualSize, navTapTargetSize)
+        )
         .background(Color.tidexBlue.opacity(0.1))
         .clipShape(Circle())
         .frame(width: navTapTargetSize, height: navTapTargetSize)
@@ -686,7 +698,7 @@ struct AnimatedMonthHeader: View {
       action()
     } label: {
       Image(systemName: icon)
-        .font(.system(size: navIconSize, weight: .semibold))
+        .font(.system(size: min(navIconSize, Spacing.iconSize), weight: .semibold))
         .foregroundStyle(Color.tidexBlueText)
         .accessibilityLabel(Text(label))
         .frame(width: navTapTargetSize, height: navTapTargetSize)

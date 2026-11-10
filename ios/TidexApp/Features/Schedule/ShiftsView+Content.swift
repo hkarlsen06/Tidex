@@ -336,169 +336,144 @@ extension ShiftsView {
 
   @ViewBuilder
   private var calendarViewContent: some View {
-    PullToRefreshContainer(onRefresh: {
-      await refreshShiftsContent()
-    }) {  // swiftlint:disable:this closure_body_length
-      GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
-        let isWide = geometry.size.width >= 700
-        // With shifts, the action bar sits above the month picker. Without, the first-shift
-        // prompt follows the month instead.
-        let pinsActionBar = !isWide && hasAnyShifts
-        let calendarWidth =
-          isWide
-          ? min(AdaptiveMaxWidth.tabContent, max(350, geometry.size.height * 0.7))
-          : AdaptiveMaxWidth.tabContent
-        // Calendar only - no list below. Tapping days opens day sheet.
-        ZStack {  // swiftlint:disable:this closure_body_length
-          // Background layer to dismiss selection when tapping outside calendar
-          Color.clear
-            .contentShape(Rectangle())
-            .onTapGesture {
-              if !viewModel.selectedDates.isEmpty {
-                viewModel.clearSelection()
-              }
-            }
-            .accessibilityHidden(true)
-
-          // On a phone the month starts where Add's does, so a tapped day opens Add
-          // without the days moving. Wider screens center it above the month picker.
-          VStack {  // swiftlint:disable:this closure_body_length
-            if isWide {
-              Spacer()
-            }
-            ShiftsCalendarView(
-              shifts: viewModel.shifts,
-              eventCoverageByDate: viewModel.eventCoverageByDate,
-              presentation: viewModel.calendarPresentation,
-              month: displayedMonthDate,
-              year: viewModel.committedYear,
-              monthNumber: viewModel.committedMonth,
-              currency: viewModel.currency,
-              showEarnings: true,
-              jobs: viewModel.activeJobs,
-              pinsActionBarToBottom: pinsActionBar,
-              phase: transitionPhase,
-              onDayTapped: { dateISO, shiftsOnDay in
-                if viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay) {
-                  presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
-                }
-              },
-              selectedDates: $viewModel.selectedDates,
-              confirmingDelete: viewModel.confirmingDelete,
-              isDeleting: viewModel.isDeleting,
-              selectedEarnings: viewModel.selectedEarnings,
-              selectedCurrencyAggregate: viewModel.selectedCurrencyAggregate,
-              selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
-              onDelete: {
-                viewModel.confirmingDelete = true
-              },
-              onConfirmDelete: {
-                Task {
-                  await viewModel.deleteSelectedShifts()
-                }
-              },
-              onCancelDelete: {
-                viewModel.confirmingDelete = false
-              },
-              onCopy: {
-                beginShiftOperation(.copy)
-              },
-              onDetails: {
-                handleSelectedDayDetails()
-              },
-              onEdit: {
-                // Open shift directly in edit mode
-                let shiftsOnDate = viewModel.selectedDateShifts
-                if let shift = shiftsOnDate.first {
-                  shiftToEditDirectly = shift
-                }
-              },
-              onMove: {
-                beginShiftOperation(.move)
-              },
-              onClearSelection: {
-                viewModel.clearSelection()
-              },
-              onDragSelect: { dates in
-                viewModel.applyDragSelection(dates)
-              },
-              onEmptyDayTapped: { dateISO in
-                // If in copy/move mode, handle that instead
-                if viewModel.isCopyMode || viewModel.isMoveMode {
-                  // Tapping outside valid dates cancels operation
-                  viewModel.cancelCopyMoveMode()
-                  return
-                }
-
-                // Ignore empty cell taps while dates are selected
-                if !viewModel.selectedDates.isEmpty {
-                  return
-                }
-
-                // No selection active - navigate to Add tab with date pre-selected
-                if let dateISO {
-                  openAddShift(preselectedDate: dateISO)
-                }
-              },
-              isCopyMode: viewModel.isCopyMode,
-              isMoveMode: viewModel.isMoveMode,
-              isCopying: viewModel.isCopying,
-              isMoving: viewModel.isMoving,
-              copyTargetDates: viewModel.copyTargetDates,
-              copyPreviewEarnings: viewModel.copyPreviewEarnings,
-              copyPreviewConflictDates: viewModel.copyPreviewConflictDates,
-              onCopyToDate: { targetDateISO in
-                viewModel.toggleCopyTargetDate(targetDateISO)
-              },
-              onFinishCopy: {
-                Task {
-                  await viewModel.finishCopyToSelectedDates()
-                }
-              },
-              onMoveToDate: { targetDateISO in
-                Task {
-                  await viewModel.handleMoveToDate(targetDateISO)
-                }
-              },
-              onCancelCopyMove: {
-                viewModel.cancelCopyMoveMode()
-              },
-              newlyAddedDates: celebrationManager.newlyAddedDates,
-              deepLinkHighlightDates: deepLinkHighlightDates,
-              conflictDates: viewModel.conflictDates,
-              excludedFromTotalIds: viewModel.excludedFromTotalIds
-            )
-            .frame(maxWidth: calendarWidth)
-            .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
-            .padding(.top, isWide ? 0 : CalendarGridHelper.phoneMonthTopPadding)
-            if !hasAnyShifts {
-              FirstShiftPrompt { openAddShift() }
-                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.md)
-            }
-            if !pinsActionBar {
-              Spacer()
-            }
+    ZStack {  // swiftlint:disable:this closure_body_length
+      // Background layer to dismiss selection when tapping outside calendar
+      Color.clear
+        .contentShape(Rectangle())
+        .onTapGesture {
+          if !viewModel.selectedDates.isEmpty {
+            viewModel.clearSelection()
           }
-          // Offset for month picker overlay so content centers in available space
-          .padding(.bottom, MonthPickerLayout.totalBottomInset)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // The month sits at the top of a phone screen, so a swipe anywhere below it
-        // changes month too.
-        .monthSwipeGesture(
-          onSwipeLeft: {
-            AppearanceTracker.shared.reset()
-            viewModel.goToNextMonth()
+        .accessibilityHidden(true)
+
+      CalendarPageLayout(
+        pinsControlsToBottom: hasAnyShifts, onRefresh: refreshShiftsContent
+      ) { pinsActionBar in
+        ShiftsCalendarView(
+          shifts: viewModel.shifts,
+          eventCoverageByDate: viewModel.eventCoverageByDate,
+          presentation: viewModel.calendarPresentation,
+          month: displayedMonthDate,
+          year: viewModel.committedYear,
+          monthNumber: viewModel.committedMonth,
+          currency: viewModel.currency,
+          showEarnings: true,
+          jobs: viewModel.activeJobs,
+          pinsActionBarToBottom: pinsActionBar,
+          phase: transitionPhase,
+          onDayTapped: { dateISO, shiftsOnDay in
+            if viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay) {
+              presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
+            }
           },
-          onSwipeRight: {
-            AppearanceTracker.shared.reset()
-            viewModel.goToPreviousMonth()
-          }
+          selectedDates: $viewModel.selectedDates,
+          confirmingDelete: viewModel.confirmingDelete,
+          isDeleting: viewModel.isDeleting,
+          selectedEarnings: viewModel.selectedEarnings,
+          selectedCurrencyAggregate: viewModel.selectedCurrencyAggregate,
+          selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
+          onDelete: {
+            viewModel.confirmingDelete = true
+          },
+          onConfirmDelete: {
+            Task {
+              await viewModel.deleteSelectedShifts()
+            }
+          },
+          onCancelDelete: {
+            viewModel.confirmingDelete = false
+          },
+          onCopy: {
+            beginShiftOperation(.copy)
+          },
+          onDetails: {
+            handleSelectedDayDetails()
+          },
+          onEdit: {
+            // Open shift directly in edit mode
+            let shiftsOnDate = viewModel.selectedDateShifts
+            if let shift = shiftsOnDate.first {
+              shiftToEditDirectly = shift
+            }
+          },
+          onMove: {
+            beginShiftOperation(.move)
+          },
+          onClearSelection: {
+            viewModel.clearSelection()
+          },
+          onDragSelect: { dates in
+            viewModel.applyDragSelection(dates)
+          },
+          onEmptyDayTapped: { dateISO in
+            // If in copy/move mode, handle that instead
+            if viewModel.isCopyMode || viewModel.isMoveMode {
+              // Tapping outside valid dates cancels operation
+              viewModel.cancelCopyMoveMode()
+              return
+            }
+
+            // Ignore empty cell taps while dates are selected
+            if !viewModel.selectedDates.isEmpty {
+              return
+            }
+
+            // No selection active - navigate to Add tab with date pre-selected
+            if let dateISO {
+              openAddShift(preselectedDate: dateISO)
+            }
+          },
+          isCopyMode: viewModel.isCopyMode,
+          isMoveMode: viewModel.isMoveMode,
+          isCopying: viewModel.isCopying,
+          isMoving: viewModel.isMoving,
+          copyTargetDates: viewModel.copyTargetDates,
+          copyPreviewEarnings: viewModel.copyPreviewEarnings,
+          copyPreviewConflictDates: viewModel.copyPreviewConflictDates,
+          onCopyToDate: { targetDateISO in
+            viewModel.toggleCopyTargetDate(targetDateISO)
+          },
+          onFinishCopy: {
+            Task {
+              await viewModel.finishCopyToSelectedDates()
+            }
+          },
+          onMoveToDate: { targetDateISO in
+            Task {
+              await viewModel.handleMoveToDate(targetDateISO)
+            }
+          },
+          onCancelCopyMove: {
+            viewModel.cancelCopyMoveMode()
+          },
+          newlyAddedDates: celebrationManager.newlyAddedDates,
+          deepLinkHighlightDates: deepLinkHighlightDates,
+          conflictDates: viewModel.conflictDates,
+          excludedFromTotalIds: viewModel.excludedFromTotalIds
         )
+      } emptyContent: {
+        if !hasAnyShifts {
+          FirstShiftPrompt { openAddShift() }
+            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.md)
+        }
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // The month sits at the top of a phone screen, so a swipe anywhere below it
+    // changes month too.
+    .monthSwipeGesture(
+      onSwipeLeft: {
+        AppearanceTracker.shared.reset()
+        viewModel.goToNextMonth()
+      },
+      onSwipeRight: {
+        AppearanceTracker.shared.reset()
+        viewModel.goToPreviousMonth()
+      }
+    )
   }
 
   // MARK: - List View Content

@@ -219,7 +219,9 @@ struct CalendarDayCell<Content: View>: View {
       }
     }
     .overlay(alignment: .bottomTrailing) {
-      if let marker = style.marker, marker.isVisible(differentiateWithoutColor: differentiateWithoutColor) {
+      if let marker = style.marker,
+        marker.isVisible(differentiateWithoutColor: differentiateWithoutColor)
+      {
         Image(systemName: marker.systemImage)
           .font(.tidexMicro)
           .imageScale(.small)
@@ -288,7 +290,8 @@ struct CalendarDayCell<Content: View>: View {
   private var dayNumberView: some View {
     Text("\(dayInfo.dayNumber)")
       .font(.tidexBodyMedium)
-      .fixedSize(horizontal: true, vertical: false)
+      .lineLimit(1)
+      .minimumScaleFactor(0.5)
       .monospacedDigit()
       .foregroundStyle(style.dayNumberColor)
   }

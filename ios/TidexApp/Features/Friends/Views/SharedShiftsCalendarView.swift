@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// Read-only calendar view for shared shifts
-/// Matches the visual style of ShiftsCalendarView but without selection/editing features
+/// Shares Schedule's month layout and cells, with selection for viewing shared totals.
 internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type_body_length
   private let appearanceManager = AppearanceManager.shared
 
@@ -28,6 +28,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
 
   var timeControl = SharedScheduleTimeControl.none
   var timeDisplay: Binding<SharedScheduleTimeDisplay> = .constant(.viewer)
+  var pinsActionBarToBottom = false
 
   /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
   var highlightDates: Set<String> = []
@@ -203,20 +204,19 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       CalendarWeekdayHeader()
         .padding(.bottom, Spacing.xs)
 
-      // Calendar grid
       calendarGrid(metrics: metrics)
-        .padding(.bottom, Spacing.sm)
 
-      // The clock choice sits above the view mode toggle. Superimposing compares the shifts
-      // with the viewer's own, so it always uses the viewer's clock.
-      if selectedDates.isEmpty, !isSuperimposing {
-        SharedScheduleTimeControlView(control: timeControl, display: timeDisplay)
-          .padding(.bottom, showEarnings ? Spacing.xs : 0)
-      }
-
-      // View mode toggle or selected-date actions
-      if showEarnings {
-        actionBar(metrics: metrics)
+      if showEarnings || (!isSuperimposing && timeControl != .none) {
+        CalendarControlStack(isPinned: pinsActionBarToBottom) {
+          if selectedDates.isEmpty, !isSuperimposing {
+            SharedScheduleTimeControlView(control: timeControl, display: timeDisplay)
+          }
+          if showEarnings {
+            actionBar(metrics: metrics)
+          }
+        } hint: { _ in
+          EmptyView()
+        }
       }
     }
     .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)

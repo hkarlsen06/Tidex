@@ -1141,7 +1141,7 @@ private struct SharedShiftsDetailView: View {
           onSendToChatCompleted(result)
         }
       )
-      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: showListView ? AdaptiveMaxWidth.tabContent : .infinity)
       .frame(maxWidth: .infinity)
       .environment(\.userCurrency, effectiveCurrency)
     }

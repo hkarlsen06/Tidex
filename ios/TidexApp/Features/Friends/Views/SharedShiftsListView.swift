@@ -102,8 +102,6 @@ struct SharedShiftsListView: View {
     return SharedShiftTimeContext(interval: interval, display: effectiveTimeDisplay)
   }
 
-  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
   var body: some View {
     GeometryReader { _ in
       ZStack {
@@ -170,28 +168,18 @@ struct SharedShiftsListView: View {
 extension SharedShiftsListView {
   // MARK: - Calendar View
 
-  /// Centers the calendar vertically like in ShiftsView
   private var calendarContent: some View {
-    GeometryReader { geometry in
-      let calendarWidth =
-        geometry.size.width >= 700
-        ? min(AdaptiveMaxWidth.tabContent, max(350, geometry.size.height * 0.7))
-        : AdaptiveMaxWidth.tabContent
-      VStack {
-        Spacer()
-        calendarView
-          .frame(maxWidth: calendarWidth)
-          .padding(.horizontal, horizontalSizeClass == .regular ? Spacing.md : Spacing.xs)
-        Spacer()
-      }
-      .frame(maxWidth: .infinity)
+    CalendarPageLayout(
+      pinsControlsToBottom: sharer.showEarnings || (!isSuperimposing && timeControl != .none)
+    ) { pinsControls in
+      calendarView(pinsControls: pinsControls)
+    } emptyContent: {
+      EmptyView()
     }
-    // Offset for month picker overlay so content centers in available space
-    .padding(.bottom, MonthPickerLayout.totalBottomInset)
     .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
   }
 
-  private var calendarView: some View {
+  private func calendarView(pinsControls: Bool) -> some View {
     SharedShiftsCalendarView(
       shifts: shownShifts,
       jobs: jobs,
@@ -206,6 +194,7 @@ extension SharedShiftsListView {
         || (timeControl == .choice && effectiveTimeDisplay == .viewer),
       timeControl: timeControl,
       timeDisplay: $timeDisplay,
+      pinsActionBarToBottom: pinsControls,
       highlightDates: highlightDates,
       highlightShiftIds: highlightShiftIds,
       isSuperimposing: isSuperimposing,

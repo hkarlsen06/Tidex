@@ -49,7 +49,9 @@
           sharer: sharer,
           shifts: shifts.filter { $0.shiftDate >= "2026-08-31" },
           boundaryShifts: shifts.filter { $0.shiftDate < "2026-08-31" },
-          jobs: [], year: 2_026, month: 9, phase: nil, isLoading: false, isContentReady: true,
+          jobs: [], year: SharedMonthContext.shared.displayYear,
+          month: SharedMonthContext.shared.displayMonth,
+          phase: nil, isLoading: false, isContentReady: true,
           ownerTimeZone: Self.scheduleZone?.identifier,
           isSuperimposing: isSuperimposing,
           userHoursByDate: Dictionary(
@@ -61,12 +63,20 @@
             }),
           userShiftsByDate: Dictionary(grouping: ownShifts, by: \.shift_date)
         )
+        .overlay(alignment: .bottom) {
+          MonthPickerControls(showsViewModeToggle: true, showsAddButton: false, onAddShift: {})
+        }
+        .task { SharedMonthContext.shared.navigateTo(year: 2_026, month: 9) }
         .navigationTitle(sharer.firstNameOnly)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
           Toggle(String(localized: .sharingSuperimposeLegendBoth), isOn: $isSuperimposing)
         }
       }
+      .frame(
+        maxWidth: ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_WIDTH"]
+          .flatMap(Double.init).map { CGFloat($0) } ?? .infinity
+      )
       .userCurrency("kr")
       .environment(AppCoordinator.shared)
     }

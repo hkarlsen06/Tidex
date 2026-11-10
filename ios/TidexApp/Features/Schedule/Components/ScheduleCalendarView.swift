@@ -928,7 +928,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       }
     }
     .padding(.horizontal, MonthPickerLayout.tabBarAlignedHorizontalPadding - Spacing.xs)
-    .animation(MotionTokens.optionalAnimation(.subtle, reduceMotion: reduceMotion), value: showsSelectionTip)
+    .animation(
+      MotionTokens.optionalAnimation(.subtle, reduceMotion: reduceMotion), value: showsSelectionTip)
   }
 
   // MARK: - Action Bar
@@ -946,24 +947,15 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       : AnyShape(Capsule())
   }
 
-  /// Under the month, or above the month picker with the tab bar's width. Pinned only on a
-  /// phone, where this view sits `Spacing.xs` from the screen edges.
-  @ViewBuilder
   private var actionBarSlot: some View {
-    if pinsActionBarToBottom {
-      Spacer(minLength: Spacing.sm)
-        .frame(maxWidth: .infinity)
-        .overlay(alignment: .top) { pinnedSelectionTip }
+    CalendarControlStack(isPinned: pinsActionBarToBottom) {
       actionBar
-        .padding(.horizontal, MonthPickerLayout.tabBarAlignedHorizontalPadding - Spacing.xs)
-        .padding(.bottom, MonthPickerLayout.bottomPadding)
-    } else {
-      if showsSelectionTip {
-        selectionTipView
-          .padding(.top, Spacing.sm)
+    } hint: { isPinned in
+      if isPinned {
+        pinnedSelectionTip
+      } else if showsSelectionTip {
+        selectionTipView.padding(.top, Spacing.sm)
       }
-      actionBar
-        .padding(.top, Spacing.sm)
     }
   }
 

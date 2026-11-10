@@ -148,3 +148,11 @@ The archive and App Store and ad-hoc exports succeeded through the shared Xcode 
 An in-place installation on Cold Harbor independently reports `3.1.2 (20261110.1548)`. The app was not uninstalled or launched, and no data reset was performed. Hjalmar is awake and requested an app review before upload, so the candidate remains local. No remote binary validation, upload, submission or release has been performed for this build.
 
 Artifacts and verification receipts are in `/Users/hkarlsen06/Library/Developer/TidexReleases/3.1.2-20261109/friends-time-zones/ui-reviewed-candidate/`. The App Store IPA SHA-256 is `dc5b1817e94e7da90e715bfd7d8f43c5ee6576dc29c05a415181d0ce5da332a5`; the ad-hoc IPA SHA-256 is `c2098cfec2c3ebd916738652aea1b16bacb8f6feb0d21b09017090576213a772`.
+
+## Shared calendar layout correction
+
+Hjalmar reviewed build 20261110.1548 and requested actual code reuse between the Friends calendar and Schedule. Both now use the same calendar page layout, bottom control stack and adaptive picker. When both controls are available, Your time / Their time sits above Times / Earnings and both sit above the month picker. The globe on a friend card now sits beside the converted start clock, rather than beside "Tomorrow".
+
+All three focused Schedule and Friends UI tests passed on Shared iPhone. The rendered checks cover a six-week November with both controls, a 320-point fixture at the largest accessibility text size and the card's globe placement. Sol's selection-state finding was corrected by keeping one calendar instance across layout changes. Existing journeys cover this layout change; no new tests were added.
+
+A replacement local Release candidate will be installed over Tidex on Cold Harbor without deleting its data. Build 1548 is superseded for UI review. No upload, remote binary validation, submission or release is authorized before Hjalmar reviews the corrected layout.

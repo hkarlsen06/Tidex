@@ -334,7 +334,7 @@ extension FriendCard {
     var parts = [String(localized: .friendsAccessibilityShiftsFor(sharer.firstNameOnly))]
     if let timing = shiftTiming, let interval = shiftInterval, !isRefreshing {
       parts.append(timing.statusText(at: now, compact: false))
-      // The globe beside the status marks clocks converted to the viewer's zone.
+      // The globe beside the clocks marks times converted to the viewer's zone.
       if interval.differs() { parts.append(String(localized: .sharingTimeYourTime)) }
       parts.append(interval.datedTimeRange(locale: .appLocale))
       if !Calendar.gregorianCurrent.isDate(interval.start, inSameDayAs: interval.end) {
@@ -393,21 +393,11 @@ extension FriendCard {
     if isRefreshing {
       skeletonBars(count: 1)
     } else if let timing = shiftTiming {
-      HStack(alignment: .firstTextBaseline, spacing: Spacing.micro) {
-        // Marks clocks converted from the schedule's zone. The schedule shows either clock.
-        if shiftInterval?.differs() == true {
-          Image(systemName: "globe")
-            .font(.tidexCaption)
-            .imageScale(.small)
-            .foregroundStyle(Color.tidexTextMuted)
-            .accessibilityHidden(true)
-        }
-        Text(timing.statusText(at: now, compact: true))
-          .font(.tidexCaptionStrong)
-          .foregroundStyle(statusColor(timing.status(at: now)))
-          .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)
-      }
-      .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 0 : statusBaselineOffset)
+      Text(timing.statusText(at: now, compact: true))
+        .font(.tidexCaptionStrong)
+        .foregroundStyle(statusColor(timing.status(at: now)))
+        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.7)
+        .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 0 : statusBaselineOffset)
     }
   }
 
@@ -417,7 +407,16 @@ extension FriendCard {
       skeletonBars(count: 2)
     } else if let timing = shiftTiming, let interval = shiftInterval {
       Group {
-        Text(interval.clock(timing.start, locale: .appLocale))
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.micro) {
+          if interval.differs() {
+            Image(systemName: "globe")
+              .font(.tidexCaption)
+              .imageScale(.small)
+              .foregroundStyle(Color.tidexTextMuted)
+              .accessibilityHidden(true)
+          }
+          Text(interval.clock(timing.start, locale: .appLocale))
+        }
         let endText = interval.clock(timing.end, locale: .appLocale)
         let crossesMidnight = !Calendar.gregorianCurrent.isDate(
           timing.start, inSameDayAs: timing.end)

@@ -14,7 +14,6 @@ struct CalendarViewModeToggle: View {
   @Binding var viewMode: CalendarViewMode
   let currency: String
   let showMoneyOption: Bool
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   init(
     viewMode: Binding<CalendarViewMode>,
@@ -24,38 +23,21 @@ struct CalendarViewModeToggle: View {
     self._viewMode = viewMode
     self.currency = currency
     self.showMoneyOption = showMoneyOption
-    _ = Self.applyTidexAppearance
   }
 
-  /// Swaps the stock gray track and thumb for Tidex colors. The proxy is app-wide, and every
-  /// segmented picker in the app uses these colors.
-  static let applyTidexAppearance: Void = {
-    let control = UISegmentedControl.appearance()
-    control.backgroundColor = UIColor(resource: .tidexSurfaceSecondary)
-    control.selectedSegmentTintColor = UIColor(Color.tidexGlassSurface)
-    let font = UIFont.systemFont(
-      ofSize: UIFont.preferredFont(forTextStyle: .subheadline).pointSize, weight: .semibold)
-    control.setTitleTextAttributes(
-      [.foregroundColor: UIColor(resource: .tidexTextMuted), .font: font], for: .normal)
-    control.setTitleTextAttributes(
-      [.foregroundColor: UIColor(resource: .tidexTextPrimary), .font: font], for: .selected)
-  }()
-
   var body: some View {
-    Picker(
-      selection: $viewMode.animation(
-        reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8))
-    ) {
-      Text(.shiftsCalendarToggleHours).tag(CalendarViewMode.hours)
-      if showMoneyOption {
-        Text(.shiftsCalendarToggleEarnings).tag(CalendarViewMode.money)
-      }
-    } label: {
-      EmptyView()
+    AdaptiveCalendarPicker(selection: $viewMode, options: options)
+      .onChange(of: viewMode) { viewMode.save() }
+  }
+
+  private var options: [CalendarPickerOption<CalendarViewMode>] {
+    var result = [
+      CalendarPickerOption(value: CalendarViewMode.hours, title: .shiftsCalendarToggleHours)
+    ]
+    if showMoneyOption {
+      result.append(CalendarPickerOption(value: .money, title: .shiftsCalendarToggleEarnings))
     }
-    .pickerStyle(.segmented)
-    .controlSize(.large)
-    .onChange(of: viewMode) { viewMode.save() }
+    return result
   }
 }
 

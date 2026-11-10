@@ -521,7 +521,7 @@ struct MainTabView: View {
 
 /// Month picker above the tab bar, with the list toggle on its leading side
 /// and the add button on its trailing side, each as its own glass control.
-private struct MonthPickerControls: View {
+struct MonthPickerControls: View {
   let showsViewModeToggle: Bool
   let showsAddButton: Bool
   let onAddShift: () -> Void
@@ -567,8 +567,10 @@ private struct MonthPickerControls: View {
       showListView.toggle()
     } label: {
       Image(systemName: showListView ? "calendar" : "list.bullet")
-        .font(.tidexButton)
-        .foregroundStyle(monthContext.hasConflictsInMonth ? Color.tidexWarning : Color.tidexTextPrimary)
+        .font(.system(size: Spacing.iconSize, weight: .semibold))
+        .foregroundStyle(
+          monthContext.hasConflictsInMonth ? Color.tidexWarning : Color.tidexTextPrimary
+        )
         .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
         .overlay(alignment: .topTrailing) {
           // The icon color alone would be the only sign of conflicts, so add a badge shape.
@@ -603,7 +605,7 @@ private struct MonthPickerControls: View {
       onAddShift()
     } label: {
       Image(systemName: "plus")
-        .font(.tidexHeadline)
+        .font(.system(size: Spacing.iconSize, weight: .semibold))
         .foregroundStyle(Color.tidexTextPrimary)
         .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
         .contentShape(Rectangle())
