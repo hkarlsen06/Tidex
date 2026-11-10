@@ -222,7 +222,7 @@ extension AddShiftViewModel {
       }
 
       donateAddShift(jobId: jobId, dates: createdDates)
-      await finishSingleSubmission(createdDates: createdDates, userId: userId, isFirstShift: isFirstShift)
+      finishSingleSubmission(createdDates: createdDates, userId: userId, isFirstShift: isFirstShift)
     } catch {
       addShiftViewModelLogger.error("Failed to create shifts: \(error.localizedDescription)")
       self.error = ErrorTranslations.translate(error).map { message in
@@ -270,7 +270,7 @@ extension AddShiftViewModel {
 
   private func finishSingleSubmission(
     createdDates: Set<String>, userId: String, isFirstShift: Bool
-  ) async {
+  ) {
     addShiftViewModelLogger.info("Created \(createdDates.count) shifts")
 
     // Highlight the added dates in the Shifts tab
@@ -289,15 +289,21 @@ extension AddShiftViewModel {
 
     // Notify completion
     onShiftsCreated?(.single(dates: createdDates))
-    await requestShiftReminderPermission(for: userId)
+    requestShiftReminderPermission(for: userId, afterFirstShift: isFirstShift)
   }
 
-  func requestShiftReminderPermission(for userId: String) async {
+  /// Runs in its own task, so the save finishes and Home reloads before the prompt is answered.
+  func requestShiftReminderPermission(for userId: String, afterFirstShift isFirstShift: Bool) {
     let preferences = NotificationPreferencesRepository.shared.getOrCreatePreferences(for: userId)
     guard preferences.shiftRemindersEnabled, !preferences.shiftReminderMinutesArray.isEmpty else {
       return
     }
-    await NotificationService.shared.requestPermissionAndRegister(for: userId)
+    Task {
+      if isFirstShift {
+        await FirstShiftConfetti.waitUntilFinished()
+      }
+      await NotificationService.shared.requestPermissionAndRegister(for: userId)
+    }
   }
 
   /// Check all dates before writing, then retire each saved date from the retryable draft.

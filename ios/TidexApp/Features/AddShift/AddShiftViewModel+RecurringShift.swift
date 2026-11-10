@@ -117,8 +117,7 @@ extension AddShiftViewModel {
         dateSpecificSupplements: nil
       )
 
-      await finishRecurringSubmission(
-        conflicts: conflicts, userId: userId, isFirstShift: isFirstShift)
+      finishRecurringSubmission(conflicts: conflicts, userId: userId, isFirstShift: isFirstShift)
     } catch {
       addShiftViewModelLogger.error("Failed to create recurring shift: \(error.localizedDescription)")
       self.error = ErrorTranslations.translate(error)
@@ -130,7 +129,7 @@ extension AddShiftViewModel {
 
   private func finishRecurringSubmission(
     conflicts: Set<String>, userId: String, isFirstShift: Bool
-  ) async {
+  ) {
     addShiftViewModelLogger.info(
       "Created recurring shift with \(self.cachedProjectedDates.count) projected dates, \(conflicts.count) exclusions"
     )
@@ -161,6 +160,6 @@ extension AddShiftViewModel {
 
     // Notify completion
     onShiftsCreated?(.recurring)
-    await requestShiftReminderPermission(for: userId)
+    requestShiftReminderPermission(for: userId, afterFirstShift: isFirstShift)
   }
 }

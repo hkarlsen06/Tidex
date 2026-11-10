@@ -1,6 +1,24 @@
 import SwiftUI
 import UIKit
 
+/// Timing of the first-shift confetti burst.
+enum FirstShiftConfetti {
+  // Waits for the Add screen's pop to get going, so the burst plays over the screen underneath.
+  fileprivate static let startDelay: Duration = .milliseconds(300)
+  fileprivate static let emissionDuration: Duration = .milliseconds(600)
+  fileprivate static let particleLifetime: Duration = .seconds(3)
+
+  /// Returns once the burst has fallen. A system prompt dims the whole screen, so one that
+  /// follows a first shift waits here. Reduce Motion plays no burst, so there is no wait.
+  @MainActor
+  static func waitUntilFinished() async {
+    guard !UIAccessibility.isReduceMotionEnabled else {
+      return
+    }
+    try? await Task.sleep(for: startDelay + emissionDuration + particleLifetime)
+  }
+}
+
 extension View {
   /// Plays a confetti burst over this view when `CelebrationManager` has a pending first shift.
   func firstShiftConfetti() -> some View {
@@ -41,10 +59,6 @@ private struct ConfettiBurst: View {
   let onFinish: () -> Void
   @State private var isEmitting = false
 
-  // Waits for the Add screen's pop to get going, so the burst plays over the screen underneath.
-  private static let startDelay: Duration = .milliseconds(300)
-  private static let emissionDuration: Duration = .milliseconds(250)
-
   var body: some View {
     ConfettiEmitter(isEmitting: isEmitting)
       .ignoresSafeArea()
@@ -52,11 +66,11 @@ private struct ConfettiBurst: View {
       .accessibilityHidden(true)
       .task {
         do {
-          try await Task.sleep(for: Self.startDelay)
+          try await Task.sleep(for: FirstShiftConfetti.startDelay)
           isEmitting = true
-          try await Task.sleep(for: Self.emissionDuration)
+          try await Task.sleep(for: FirstShiftConfetti.emissionDuration)
           isEmitting = false
-          try await Task.sleep(for: .seconds(ConfettiEmitterView.particleLifetime))
+          try await Task.sleep(for: FirstShiftConfetti.particleLifetime)
         } catch {
           return
         }
@@ -78,8 +92,6 @@ private struct ConfettiEmitter: UIViewRepresentable {
 }
 
 private final class ConfettiEmitterView: UIView {
-  static let particleLifetime: Double = 3
-
   private let emitter = CAEmitterLayer()
   private var isEmitting = false
 
@@ -126,11 +138,11 @@ private final class ConfettiEmitterView: UIView {
         cell.contents = shape.cgImage
         cell.contentsScale = shape.scale
         cell.color = cgColor
-        // 10 cells for 0.25 s at 48 a second is about 120 pieces.
-        cell.birthRate = 48
-        cell.lifetime = Float(Self.particleLifetime)
-        cell.velocity = 140
-        cell.velocityRange = 80
+        // 10 cells for 0.6 s at 24 a second is about 140 pieces.
+        cell.birthRate = 24
+        cell.lifetime = Float(FirstShiftConfetti.particleLifetime.components.seconds)
+        cell.velocity = 170
+        cell.velocityRange = 100
         cell.emissionLongitude = .pi
         cell.emissionRange = .pi / 5
         cell.yAcceleration = 160
