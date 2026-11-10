@@ -565,31 +565,34 @@ export const unblockUser = mutation({
   },
 });
 
-// The app shows these Norwegian messages as they are. manage_sharing_action's versions also named phone numbers.
+// The app maps `code` to its own copy. Builds from before `code` show a generic message and
+// never display `error`, which keeps the Postgres version's Norwegian text for them.
 const shareErrors = {
-  noIdentifier: "Vennligst oppgi en gyldig e-post eller et brukernavn",
-  notFound: "Fant ingen bruker med denne e-posten eller dette brukernavnet",
+  no_identifier: "Vennligst oppgi en gyldig e-post eller et brukernavn",
+  not_found: "Fant ingen bruker med denne e-posten eller dette brukernavnet",
   self: "Du kan ikke dele med deg selv",
   blocked: "Du kan ikke dele vaktene dine med denne brukeren",
   exists: "Du deler allerede vaktene dine med denne brukeren",
 };
 
-type ShareResult = { success: true } | { success: false; error: string };
+type ShareFailureCode = keyof typeof shareErrors;
+type ShareResult = { success: true } | { success: false; code: ShareFailureCode; error: string };
+
+const shareFailure = (code: ShareFailureCode): ShareResult => ({ success: false, code, error: shareErrors[code] });
+
+/** Whether either user blocked the pair, in either direction of their shares. */
+const isBlockedPair = (shares: (Share | null)[]) => shares.some((s) => s?.blocked_by_user_id !== undefined);
 
 /** Starts sharing my shifts with `target_id`. Shared by createShare and shareBack. */
 export const startShare = internalMutation({
   args: { owner_id: v.string(), target_id: v.union(v.string(), v.null()), show_earnings: v.boolean() },
   handler: async (ctx, { owner_id, target_id, show_earnings }): Promise<ShareResult> => {
-    if (target_id === null || (await userByUuid(ctx, target_id)) === null) {
-      return { success: false, error: shareErrors.notFound };
-    }
-    if (target_id === owner_id) return { success: false, error: shareErrors.self };
+    if (target_id === null || (await userByUuid(ctx, target_id)) === null) return shareFailure("not_found");
+    if (target_id === owner_id) return shareFailure("self");
     const mine = await shareBetween(ctx, owner_id, target_id);
     const theirs = await shareBetween(ctx, target_id, owner_id);
-    if ([mine, theirs].some((s) => s?.blocked_by_user_id !== undefined && s !== null)) {
-      return { success: false, error: shareErrors.blocked };
-    }
-    if (mine !== null) return { success: false, error: shareErrors.exists };
+    if (isBlockedPair([mine, theirs])) return shareFailure("blocked");
+    if (mine !== null) return shareFailure("exists");
     await ctx.db.insert("shift_shares", {
       id: crypto.randomUUID(),
       owner_id,
@@ -620,6 +623,24 @@ export const shareBack = mutation({
 });
 
 /**
+ * Who an invite link (tidex.no/invite/<user_id>) names, shown before the opener shares their
+ * shifts with them. Null when the user does not exist or either of the two blocked the other.
+ * Leaves out the email address, since anyone holding the link can ask.
+ */
+export const invitePreview = query({
+  args: { user_id: v.string() },
+  handler: async (ctx, { user_id }) => {
+    const { user } = await requireViewer(ctx);
+    const inviter = await userByUuid(ctx, user_id);
+    if (inviter === null) return null;
+    const mine = await shareBetween(ctx, user.id, user_id);
+    if (isBlockedPair([mine, await shareBetween(ctx, user_id, user.id)])) return null;
+    const { firstName, username, profilePictureUrl, oauthAvatarUrl } = await profileOf(ctx, user_id);
+    return { id: user_id, firstName, username, profilePictureUrl, oauthAvatarUrl, alreadySharing: mine !== null };
+  },
+});
+
+/**
  * Port of manage_sharing_action's createShare. An identifier with @ inside it is an
  * email, matched only against verified addresses in Clerk. Anything else is a username,
  * with or without a leading @. N+1 has no phone sign-in, so phone numbers match nobody.
@@ -630,7 +651,7 @@ export const createShare = action({
     const owner = await ctx.runQuery(internal.sharing.viewerId, {});
     if (owner === null) throw new ConvexError({ code: "not_authorized" });
     const trimmed = identifier.trim();
-    if (trimmed === "") return { success: false, error: shareErrors.noIdentifier };
+    if (trimmed === "") return shareFailure("no_identifier");
 
     let target: string | null;
     if (trimmed.includes("@") && !trimmed.startsWith("@")) {
