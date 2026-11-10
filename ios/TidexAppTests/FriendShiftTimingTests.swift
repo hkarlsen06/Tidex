@@ -331,7 +331,7 @@ final class SharedScheduleProjectionTests: XCTestCase {
           SharedShiftInterval(
             date: "2026-09-14", startTime: start, endTime: end,
             timeZoneIdentifier: "Europe/London")),
-        display: display, viewerZone: oslo)
+        display: display, friendName: "Ella", viewerZone: oslo)
     }
 
     let daytime = try context("09:00", "17:00", .viewer)

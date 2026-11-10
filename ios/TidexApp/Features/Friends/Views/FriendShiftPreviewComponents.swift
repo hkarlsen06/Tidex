@@ -51,11 +51,13 @@ enum FriendCardMessagePreviewTimestampFormatter {
 
 struct CompactFriendShiftPreviewHeader: View {
   let preview: SharerShiftPreview
+  let friendName: String
 
   var body: some View {
     if let shift = preview.shift, let status = preview.status {
       CompactFriendShiftPreviewTextRow(
         shift: shift,
+        friendName: friendName,
         status: status,
         showEarnings: preview.showEarnings,
         currency: preview.currency
@@ -112,6 +114,7 @@ struct FriendShiftTiming: Equatable {
 
 private struct CompactFriendShiftPreviewTextRow: View {
   let shift: SharedShiftData
+  let friendName: String
   let status: ShiftPreviewStatus
   let showEarnings: Bool
   let currency: String?
@@ -173,8 +176,7 @@ private struct CompactFriendShiftPreviewTextRow: View {
         .environment(\.layoutDirection, .leftToRight)
       if let interval, interval.differs() {
         Text(
-          .sharingTimeShiftLocal(
-            interval.sourceDescription(locale: .appLocale))
+          .friendTimeRange(friendName, interval.sourceDescription(locale: .appLocale))
         )
         .font(.tidexCaption)
         .foregroundStyle(Color.tidexTextMuted)

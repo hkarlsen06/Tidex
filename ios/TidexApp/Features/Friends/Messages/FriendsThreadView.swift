@@ -866,7 +866,8 @@ struct FriendsThreadView: View {
       Button {
         openCounterpartShiftPreview(preview: counterpartShiftPreview)
       } label: {
-        CompactFriendShiftPreviewHeader(preview: counterpartShiftPreview)
+        CompactFriendShiftPreviewHeader(
+          preview: counterpartShiftPreview, friendName: counterpartProfileUser.firstNameOnly)
           .frame(maxWidth: .infinity)
           .contentShape(Rectangle())
       }

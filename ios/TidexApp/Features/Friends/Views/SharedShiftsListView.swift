@@ -99,7 +99,8 @@ struct SharedShiftsListView: View {
       let interval = SharedScheduleProjection.interval(of: shift, scheduleZone: ownerTimeZone),
       interval.differs()
     else { return nil }
-    return SharedShiftTimeContext(interval: interval, display: effectiveTimeDisplay)
+    return SharedShiftTimeContext(
+      interval: interval, display: effectiveTimeDisplay, friendName: sharer.firstNameOnly)
   }
 
   var body: some View {
@@ -289,7 +290,8 @@ extension SharedShiftsListView {
     } else {
       List {
         if timeControl != .none {
-          SharedScheduleTimeControlView(control: timeControl, display: $timeDisplay)
+          SharedScheduleTimeControlView(
+            control: timeControl, friendName: sharer.firstNameOnly, display: $timeDisplay)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)

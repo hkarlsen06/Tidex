@@ -4,7 +4,8 @@
   /// Friend cards in their main states, for TIDEX_DESIGN_SCREEN=friends. Set
   /// TIDEX_DESIGN_FRIENDS_VIEW to add-friend, profile, schedule or chat-header for the others.
   /// TIDEX_DESIGN_FRIENDS_TIME_ZONE=1 puts the friends in another time zone, except Nora's card,
-  /// and =unknown leaves the schedule without one.
+  /// and =unknown leaves the schedule without one. TIDEX_DESIGN_FRIENDS_NAME renames the schedule's
+  /// friend.
   internal struct DesignReviewFriendCards: View {
     private let view: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_VIEW"] ?? "cards"
@@ -17,7 +18,7 @@
       case "schedule": schedule
       case "chat-header":
         CompactFriendShiftPreviewHeader(
-          preview: Self.preview(for: "Ella", startOffset: 180, duration: 480)
+          preview: Self.preview(for: "Ella", startOffset: 180, duration: 480), friendName: "Ella"
         )
         .padding(Spacing.md)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -31,7 +32,8 @@
     /// recorded on the day before the first visible day.
     private var schedule: some View {
       let sharer = SharedUser(
-        id: "ella", email: "ella@example.com", phone: nil, firstName: "Ella",
+        id: "ella", email: "ella@example.com", phone: nil,
+        firstName: ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_NAME"] ?? "Ella",
         profilePictureUrl: nil, oauthAvatarUrl: nil, sharedAt: "2026-01-01",
         showEarnings: ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_EARNINGS"] != "0",
         hidden: false)

@@ -209,7 +209,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       if showEarnings || (!isSuperimposing && timeControl != .none) {
         CalendarControlStack(isPinned: pinsActionBarToBottom) {
           if selectedDates.isEmpty, !isSuperimposing {
-            SharedScheduleTimeControlView(control: timeControl, display: timeDisplay)
+            SharedScheduleTimeControlView(
+              control: timeControl, friendName: friendFirstName, display: timeDisplay)
           }
           if showEarnings {
             actionBar(metrics: metrics)

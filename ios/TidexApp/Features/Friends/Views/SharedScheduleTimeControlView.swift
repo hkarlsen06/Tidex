@@ -4,6 +4,7 @@ import SwiftUI
 /// the viewer's.
 struct SharedScheduleTimeControlView: View {
   let control: SharedScheduleTimeControl
+  let friendName: String
   @Binding var display: SharedScheduleTimeDisplay
 
   var body: some View {
@@ -16,7 +17,7 @@ struct SharedScheduleTimeControlView: View {
         selection: $display,
         options: [
           CalendarPickerOption(value: .viewer, title: .sharingTimeYourTime),
-          CalendarPickerOption(value: .schedule, title: .sharingTimeTheirTime),
+          CalendarPickerOption(value: .schedule, title: .friendTime(friendName)),
         ])
 
     case .unknownZone:

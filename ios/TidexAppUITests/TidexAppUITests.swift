@@ -1403,7 +1403,20 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(schedule.buttons["Your time"].isSelected)
     attachAppStoreScreenshot(schedule, name: "friends-schedule-your-time")
 
-    schedule.buttons["Their time"].tap()
+    day(viewerDay, showing: viewerClock).tap()
+    schedule.buttons["Details"].tap()
+    let friendClock = schedule.descendants(matching: .any).matching(
+      NSPredicate(
+        format: "label CONTAINS %@ AND label CONTAINS %@", "Ella's time", "05:00 – 13:00")
+    ).firstMatch
+    assertExists(
+      friendClock, in: schedule, timeout: defaultTimeout,
+      message: "Expected the details to name the friend beside their recorded time")
+    attachAppStoreScreenshot(schedule, name: "friends-schedule-details-your-time")
+    schedule.buttons["Done"].tap()
+    day(viewerDay, showing: viewerClock).tap()
+
+    schedule.buttons["Ella's time"].tap()
     let recordedDay = day("Thursday, September 10,", showing: "05:00")
     assertExists(
       recordedDay, in: schedule, timeout: defaultTimeout,

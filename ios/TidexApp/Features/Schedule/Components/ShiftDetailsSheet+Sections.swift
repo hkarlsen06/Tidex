@@ -73,7 +73,7 @@ extension ShiftDetailsSheet {
   /// when the two don't fit on one line.
   private func otherClockRow(_ sharedTime: SharedShiftTimeContext) -> some View {
     let label = Text(
-      sharedTime.display == .viewer ? .sharingTimeTheirTime : .sharingTimeYourTime
+      sharedTime.display == .viewer ? .friendTime(sharedTime.friendName) : .sharingTimeYourTime
     )
     .foregroundStyle(Color.tidexTextSecondary)
     let value = Text(sharedTime.otherTimeRange())

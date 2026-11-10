@@ -82,6 +82,7 @@ enum SharedScheduleProjection {
 struct SharedShiftTimeContext: Equatable {
   let interval: SharedShiftInterval
   let display: SharedScheduleTimeDisplay
+  let friendName: String
   var viewerZone: TimeZone = .current
 
   private var shownZone: TimeZone { display == .viewer ? viewerZone : interval.timeZone }
@@ -101,5 +102,19 @@ struct SharedShiftTimeContext: Equatable {
   /// The other clock's range, with its dates when they differ from the ones shown above it.
   func otherTimeRange(locale: Locale = .appLocale) -> String {
     interval.timeRange(in: otherZone, datedAgainst: shownZone, locale: locale)
+  }
+}
+
+extension LocalizedStringResource {
+  /// "Anna's time". A friend whose first name is blank gets the generic "Their time".
+  static func friendTime(_ firstName: String) -> LocalizedStringResource {
+    firstName.trimmingCharacters(in: .whitespaces).isEmpty
+      ? .sharingTimeTheirTime : .sharingTimeFriendTime(firstName)
+  }
+
+  /// "Anna's time: 05:00 – 13:00", with the same fallback as `friendTime`.
+  static func friendTimeRange(_ firstName: String, _ range: String) -> LocalizedStringResource {
+    firstName.trimmingCharacters(in: .whitespaces).isEmpty
+      ? .sharingTimeShiftLocal(range) : .sharingTimeFriendTimeRange(firstName, range)
   }
 }
