@@ -205,8 +205,9 @@ final class ShiftCompletionCelebrationManager {
     switch result {
     case .show(let data, let state):
       #if DEBUG
-        // App Store captures happen whenever the fixture month overlaps today.
-        if AppStoreScreenshotFixture.isActive { return }
+        // App Store captures happen whenever the fixture month overlaps today. The no-shifts
+        // fixture takes no captures, so it keeps the sheet for the first-shift journey.
+        if AppStoreScreenshotFixture.isActive, !AppStoreScreenshotFixture.seedsNoShifts { return }
       #endif
       presentation = .showing(data, (state, stateKey))
 

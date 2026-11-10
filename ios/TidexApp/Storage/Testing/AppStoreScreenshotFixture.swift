@@ -20,6 +20,8 @@
     private static let environment: [String: String] = ProcessInfo.processInfo.environment
     internal static let simulatesFailedInitialSync =
       environment["TIDEX_TEST_FIRST_SYNC_FAILURE"] == "1"
+    /// Keeps the job and wage but seeds no shifts, so Home shows the first-shift prompt.
+    internal static let seedsNoShifts = environment["TIDEX_TEST_NO_SHIFTS"] == "1"
     internal static let displayName: String = environment["TIDEX_SCREENSHOT_NAME"] ?? "Emma"
     internal static let avatarURL: String? = environment["TIDEX_SCREENSHOT_AVATAR"].map {
       URL(fileURLWithPath: $0).absoluteString
@@ -82,7 +84,7 @@
       let today: DateComponents = Calendar(identifier: .gregorian).dateComponents(
         in: .current, from: .now)
       guard let year = today.year, let month = today.month, let day = today.day else { return }
-      let days: Set<Int> = shiftDays(year: year, month: month, today: day)
+      let days: Set<Int> = seedsNoShifts ? [] : shiftDays(year: year, month: month, today: day)
       seedShifts(in: context, year: year, month: month, days: days)
       try context.save()
       showMonth(year: year, month: month, today: day, shiftDays: days)
@@ -128,6 +130,7 @@
     @MainActor
     private static func seedShifts(in context: ModelContext, year: Int, month: Int, days: Set<Int>)
     {
+      guard !seedsNoShifts else { return }
       for offset in 0...8 {
         let total: Int = year * 12 + month - 1 - offset
         let shiftYear: Int = total / 12
