@@ -18,7 +18,7 @@ interface LandingPageProps {
 // browsers, like the ones TikTok and Instagram open, ignore taps on target="_blank" links.
 const appStoreHref = 'https://apps.apple.com/app/id6757129790';
 
-function AppStoreButton({ label, className = '' }: { label: string; className?: string }) {
+export function AppStoreButton({ label, className = '' }: { label: string; className?: string }) {
   return (
     <a
       href={appStoreHref}

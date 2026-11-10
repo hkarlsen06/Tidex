@@ -27,6 +27,10 @@
 /.well-known/* /.well-known/:splat 200
 /legal/* /legal/:splat 200
 
+# Invite links (tidex.no/invite/<user id>) open the app when it is installed. Without the app,
+# every id gets the same static page.
+/invite/* /invite/ 200
+
 # Pass through supported locales
 /no/* /no/:splat 200
 /en/* /en/:splat 200

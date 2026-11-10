@@ -2,6 +2,10 @@
 /app-config.json
   Cache-Control: no-store
 
+# iOS reads this to open tidex.no/invite links in the app. It has no file extension, so it needs its type set.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+
 # Hashed build output never changes under the same name, so browsers can keep it for a year.
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable

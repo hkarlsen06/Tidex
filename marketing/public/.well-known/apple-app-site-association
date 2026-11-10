@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["48ZSLD4RMP.no.tidex.app"],
+        "components": [{ "/": "/invite/*", "comment": "Friend invite links open the app when it is installed." }]
+      }
+    ]
+  }
+}
