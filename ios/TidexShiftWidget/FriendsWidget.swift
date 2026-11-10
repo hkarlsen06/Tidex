@@ -15,7 +15,8 @@ struct FriendPreview: Equatable, Identifiable {
   let timeRange: String?  // "09:00 – 17:00"
   let status: FriendShiftStatus
   let daysRemaining: Int?
-  var sourceTime: String?
+  /// The schedule's zone differs from the viewer's, so the clocks shown are converted.
+  var showsConvertedClock = false
   var shiftStart: Date?
   var shiftEnd: Date?
   var avatar: UIImage?
@@ -175,8 +176,7 @@ struct FriendsWidgetProvider: TimelineProvider {
             timeRange: interval.timeRange(),
             status: status,
             daysRemaining: daysRemaining,
-            sourceTime: interval.differs()
-              ? interval.sourceDescription() : nil,
+            showsConvertedClock: interval.differs(),
             shiftStart: interval.start,
             shiftEnd: interval.end
           ))
@@ -418,11 +418,7 @@ struct FriendsWidgetView: View {
       backgroundColor
 
       if entry.hasAnyFriends, !entry.friends.isEmpty {
-        ViewThatFits(in: .vertical) {
-          contentView(rowLimit: Self.maxRows)
-          contentView(rowLimit: 3)
-          contentView(rowLimit: 2)
-        }
+        contentView
       } else {
         emptyStateView
       }
@@ -432,11 +428,19 @@ struct FriendsWidgetView: View {
   nonisolated static let maxRows = 4
   nonisolated static let maxFooterAvatars = 7
 
-  private func contentView(rowLimit: Int) -> some View {
-    let shiftFriends = Array(entry.friends.filter { $0.status != .none }.prefix(rowLimit))
+  /// Friends shown as the card and rows: the nearest shifts that fit.
+  private var shiftFriends: [FriendPreview] {
+    Array(entry.friends.filter { $0.status != .none }.prefix(Self.maxRows))
+  }
+
+  /// Everyone else: friends without a shift and shift friends that didn't fit.
+  private var footerFriends: [FriendPreview] {
     let shown = Set(shiftFriends.map(\.id))
-    let footerFriends = entry.friends.filter { !shown.contains($0.id) }
-    return VStack(alignment: .leading, spacing: 12) {
+    return entry.friends.filter { !shown.contains($0.id) }
+  }
+
+  private var contentView: some View {
+    VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 6) {
         Image(systemName: "person.2.fill")
           .font(.system(size: 12, weight: .semibold))
@@ -462,7 +466,7 @@ struct FriendsWidgetView: View {
       Spacer(minLength: 0)
 
       if !footerFriends.isEmpty {
-        footer(footerFriends)
+        footer
       }
     }
     .padding(16)
@@ -471,7 +475,7 @@ struct FriendsWidgetView: View {
   /// The friend whose shift is closest in time gets the large card.
   private func heroCard(_ friend: FriendPreview) -> some View {
     let isActive = friend.status == .active
-    return VStack(alignment: .leading, spacing: friend.sourceTime == nil ? 14 : 8) {
+    return VStack(alignment: .leading, spacing: 14) {
       HStack(spacing: 12) {
         avatar(friend, size: 44, fontSize: 16)
 
@@ -488,16 +492,14 @@ struct FriendsWidgetView: View {
               .foregroundStyle(secondaryTextColor)
               .lineLimit(1)
           }
-
         }
 
         Spacer(minLength: 8)
 
         if let timeRange = friend.timeRange {
-          VStack(alignment: .trailing, spacing: 1) {
-            if friend.sourceTime != nil {
-              Text(.sharingTimeYourTime).font(.caption2).foregroundStyle(mutedTextColor)
-            }
+          // The mark sits above the range. Beside it, it would take the name's width.
+          VStack(alignment: .trailing, spacing: 0) {
+            if friend.showsConvertedClock { convertedClockMark(size: 11) }
             Text(timeRange)
               .font(.system(size: 22, weight: .bold, design: .rounded))
               .monospacedDigit()
@@ -507,13 +509,6 @@ struct FriendsWidgetView: View {
               .fixedSize(horizontal: true, vertical: false)
           }
         }
-      }
-
-      if let sourceTime = friend.sourceTime {
-        Text(.sharingTimeShiftLocal(sourceTime))
-          .font(.caption2)
-          .foregroundStyle(mutedTextColor)
-          .lineLimit(2)
       }
 
       if let span = shiftSpan(friend) {
@@ -535,10 +530,17 @@ struct FriendsWidgetView: View {
     WidgetAccessibility.join([
       firstName(from: friend.displayName),
       friend.status == .active ? String(localized: .widgetActive) : friend.shiftDate,
-      friend.sourceTime == nil ? nil : String(localized: .sharingTimeYourTime),
+      friend.showsConvertedClock ? String(localized: .sharingTimeYourTime) : nil,
       friend.timeRange.map(WidgetAccessibility.spokenTimeRange),
-      friend.sourceTime.map { String(localized: .sharingTimeShiftLocal($0)) },
     ])
+  }
+
+  /// Marks clocks converted from the schedule's zone to the viewer's.
+  private func convertedClockMark(size: CGFloat) -> some View {
+    Image(systemName: "globe")
+      .font(.system(size: size, weight: .semibold))
+      .foregroundStyle(mutedTextColor)
+      .accessibilityHidden(true)
   }
 
   /// A 24-hour track with the shift drawn as a filled segment.
@@ -591,42 +593,34 @@ struct FriendsWidgetView: View {
   }
 
   private func compactRow(_ friend: FriendPreview) -> some View {
-    VStack(alignment: .leading, spacing: 2) {
-      HStack(spacing: 12) {
-        avatar(friend, size: 34, fontSize: 13)
-        VStack(alignment: .leading, spacing: 1) {
-          Text(firstName(from: friend.displayName))
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(primaryTextColor)
-          if friend.status == .active {
-            activeBadge
-          } else if let shiftDate = friend.shiftDate {
-            Text(shiftDate)
-              .font(.system(size: 12, weight: .medium))
-              .foregroundStyle(secondaryTextColor)
-          }
-        }
-        .lineLimit(1)
-        Spacer(minLength: 8)
-        if let timeRange = friend.timeRange {
-          VStack(alignment: .trailing, spacing: 1) {
-            if friend.sourceTime != nil {
-              Text(.sharingTimeYourTime).font(.caption2).foregroundStyle(mutedTextColor)
-            }
-            Text(timeRange)
-              .font(.system(size: 15, weight: .semibold, design: .rounded))
-              .monospacedDigit()
-              .foregroundStyle(primaryTextColor)
-              .fixedSize()
-          }
+    HStack(spacing: 12) {
+      avatar(friend, size: 34, fontSize: 13)
+
+      VStack(alignment: .leading, spacing: 1) {
+        Text(firstName(from: friend.displayName))
+          .font(.system(size: 15, weight: .semibold))
+          .foregroundStyle(primaryTextColor)
+        if friend.status == .active {
+          activeBadge
+        } else if let shiftDate = friend.shiftDate {
+          Text(shiftDate)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(secondaryTextColor)
         }
       }
-      if let sourceTime = friend.sourceTime {
-        Text(.sharingTimeShiftLocal(sourceTime))
-          .font(.caption2)
-          .foregroundStyle(mutedTextColor)
-          .lineLimit(2)
-          .padding(.leading, 46)
+      .lineLimit(1)
+
+      Spacer(minLength: 8)
+
+      if let timeRange = friend.timeRange {
+        HStack(spacing: 4) {
+          if friend.showsConvertedClock { convertedClockMark(size: 11) }
+          Text(timeRange)
+            .font(.system(size: 15, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(primaryTextColor)
+            .fixedSize()
+        }
       }
     }
     .accessibilityElement(children: .ignore)
@@ -634,7 +628,7 @@ struct FriendsWidgetView: View {
   }
 
   /// Friends not shown above, as a centered row of overlapping avatars.
-  private func footer(_ footerFriends: [FriendPreview]) -> some View {
+  private var footer: some View {
     let visible = footerFriends.prefix(Self.maxFooterAvatars)
     let overflow = footerFriends.count - visible.count
     return HStack(spacing: -8) {

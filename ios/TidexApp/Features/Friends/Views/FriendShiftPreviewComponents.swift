@@ -166,11 +166,6 @@ private struct CompactFriendShiftPreviewTextRow: View {
         .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(isStacked ? nil : 1)
 
-      if let interval, interval.differs() {
-        Text(.sharingTimeYourTime)
-          .font(.tidexCaption)
-          .foregroundStyle(Color.tidexTextMuted)
-      }
       Text(formattedTimeRange)
         .font(.tidexFootnote)
         .foregroundStyle(Color.tidexTextMuted)

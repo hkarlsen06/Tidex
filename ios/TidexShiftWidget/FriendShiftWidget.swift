@@ -369,8 +369,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
       deepLinkURL: deepLinkURL,
       shiftStart: interval.start,
       shiftEnd: interval.end,
-      sourceTime: interval.differs()
-        ? interval.sourceDescription() : nil
+      showsConvertedClock: interval.differs()
     )
   }
 
@@ -550,8 +549,7 @@ struct FriendShiftWidgetView: View {
       earnings: entry.showEarnings ? entry.netEarnings : nil)
     return WidgetAccessibility.join([
       entry.friendName,
-      entry.sourceTime == nil ? nil : String(localized: .sharingTimeYourTime), shift,
-      entry.sourceTime.map { String(localized: .sharingTimeShiftLocal($0)) },
+      entry.showsConvertedClock ? String(localized: .sharingTimeYourTime) : nil, shift,
     ])
   }
 
@@ -664,29 +662,24 @@ struct FriendShiftWidgetView: View {
   }
 
   private var bottomTextView: some View {
-    // Always show friend's first name at bottom
-    Text(firstName)
-      .font(.system(size: 15, weight: .bold))
-      .foregroundStyle(entry.hasShift ? accentColor : mutedTextColor)
-      .widgetAccentable(entry.hasShift)
-      .lineLimit(1)
-  }
-
-  private var timeBlockView: some View {
-    VStack(spacing: 4) {
-      shiftClocks
-      if let sourceTime = entry.sourceTime {
-        Text(.sharingTimeShiftLocal(sourceTime))
-          .font(.caption2)
+    // Always show friend's first name at bottom. The globe marks clocks converted from the
+    // schedule's zone to the viewer's.
+    HStack(spacing: 4) {
+      if entry.showsConvertedClock {
+        Image(systemName: "globe")
+          .font(.system(size: 12, weight: .semibold))
           .foregroundStyle(mutedTextColor)
-          .multilineTextAlignment(.center)
-          .lineLimit(3)
-          .fixedSize(horizontal: false, vertical: true)
+          .accessibilityHidden(true)
       }
+      Text(firstName)
+        .font(.system(size: 15, weight: .bold))
+        .foregroundStyle(entry.hasShift ? accentColor : mutedTextColor)
+        .widgetAccentable(entry.hasShift)
+        .lineLimit(1)
     }
   }
 
-  private var shiftClocks: some View {
+  private var timeBlockView: some View {
     VStack(spacing: -6) {
       if entry.layoutState == .pastShift {
         pastShiftCountupView

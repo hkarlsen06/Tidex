@@ -57,7 +57,8 @@ internal struct FriendShiftWidgetEntry: ShiftTimelineEntry {
   /// Real end instant of the shift (next day for night shifts)
   internal var shiftEnd: Date?
 
-  var sourceTime: String?
+  /// The schedule's zone differs from the viewer's, so the clocks shown are converted.
+  var showsConvertedClock = false
 
   // MARK: - Factory Methods
 
