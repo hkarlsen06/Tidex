@@ -9,6 +9,8 @@ struct WageScreen: View {
   var onBack: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
   var topTrailingTitle: String?  // swiftlint:disable:this explicit_acl type_contents_order
   var onTopTrailingAction: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
+  /// Where the user is in a multi-step setup, shown above the title.
+  var stepLabel: LocalizedStringResource?  // swiftlint:disable:this explicit_acl type_contents_order
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var isLoadingTariffData = false
@@ -116,6 +118,12 @@ struct WageScreen: View {
 
   private var header: some View {
     VStack(spacing: Spacing.sm) {
+      if let stepLabel {
+        Text(stepLabel)
+          .font(.tidexFootnote)
+          .foregroundStyle(Color.tidexTextMuted)
+      }
+
       Text(
         isTariffAvailable
           ? LocalizedStringResource.onboardingWageTitle : .onboardingWageSimpleTitle
@@ -138,9 +146,16 @@ struct WageScreen: View {
   private var wageOptions: some View {
     // Tariffs are Norwegian and priced in kr, so other currencies only get an hourly wage.
     if isTariffAvailable {
-      wageTypeToggle
-        .padding(.horizontal, Spacing.lg)
-        .adaptiveContentWidth()
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        wageTypeToggle
+
+        Text(.onboardingWageTypeHelper)
+          .font(.tidexFootnote)
+          .foregroundStyle(Color.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .padding(.horizontal, Spacing.lg)
+      .adaptiveContentWidth()
 
       Spacer()
         .frame(height: 24)
@@ -156,7 +171,6 @@ struct WageScreen: View {
           }
         }
 
-        if tariffLoadFailed { TariffOfflineHint() }
       case .custom:
         customWageContent
           .id(ScrollTarget.customWageContent)
@@ -177,6 +191,10 @@ struct WageScreen: View {
       )
       .frame(height: isKeyboardVisible ? 12 : 24)
 
+      if let tariffContinueHint {
+        TariffContinueHint(text: tariffContinueHint, isWarning: tariffLoadFailed)
+      }
+
       OnboardingButton(
         title: isKeyboardVisible
           ? String(localized: .commonDone) : String(localized: .commonContinue),
@@ -185,7 +203,6 @@ struct WageScreen: View {
           if isKeyboardVisible {
             dismissKeyboard()
           } else {
-            Haptics.play(.success)
             onContinue()
           }
         }
@@ -263,7 +280,9 @@ struct WageScreen: View {
       )
     }
   }
+}
 
+extension WageScreen {
   // MARK: - Tariff Data Loading
 
   private func loadTariffData() async {
@@ -304,6 +323,23 @@ struct WageScreen: View {
       guard data.selectedTariffTypeId == tariffTypeId else { return }
       tariffLoadFailed = true
     }
+  }
+
+  /// Says what is missing while tariff mode keeps Continue disabled.
+  private var tariffContinueHint: LocalizedStringResource? {
+    guard data.wageType == .tariff, !data.hasValidWageSelection, !isKeyboardVisible else {
+      return nil
+    }
+    if tariffLoadFailed {
+      return .tariffUnavailable
+    }
+    if isLoadingTariffData || (!data.selectedTariffTypeId.isEmpty && data.currentTariffVersion == nil) {
+      return .onboardingWageTariffLoadingRates
+    }
+    if data.selectedTariffTypeId.isEmpty {
+      return .onboardingWageTariffChooseAgreement
+    }
+    return .onboardingWageTariffChooseLevel
   }
 }
 

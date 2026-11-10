@@ -236348,6 +236348,42 @@
         }
       }
     },
+    "onboarding.wage.tariffChooseAgreement" : {
+      "comment" : "Shown above the disabled Continue button on the wage screen when Tariff is chosen but no agreement is picked yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose your agreement to continue."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg tariffavtalen din for å fortsette."
+          }
+        }
+      }
+    },
+    "onboarding.wage.tariffChooseLevel" : {
+      "comment" : "Shown above the disabled Continue button on the wage screen when an agreement is picked but no pay level is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose your pay level to continue."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg lønnstrinnet ditt for å fortsette."
+          }
+        }
+      }
+    },
     "onboarding.wage.tariffHint" : {
       "comment" : "Hint above the Norwegian tariff level list in onboarding. Keep the Norwegian words tariffavtale and lønnstrinn in parentheses so immigrant workers can match them to their contract.",
       "extractionState" : "manual",
@@ -236626,6 +236662,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這些工資標準來自挪威集體協議（tariffavtale）。請依照你的勞動合約選擇協議和工資等級（lønnstrinn）。"
+          }
+        }
+      }
+    },
+    "onboarding.wage.tariffLoadingRates" : {
+      "comment" : "Shown above the disabled Continue button on the wage screen while the chosen agreement's pay rates load.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading the agreement's rates."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henter satsene i avtalen."
           }
         }
       }
@@ -237190,6 +237244,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選擇你的薪資類型"
+          }
+        }
+      }
+    },
+    "onboarding.wage.typeHelper" : {
+      "comment" : "Explains the Hourly wage and Tariff choice on the wage setup screen, for users paid in Norwegian krone. Tariff means a collective agreement.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Covered by a collective agreement, for example in a shop, warehouse, hotel or restaurant? Choose Tariff and Tidex works out evening and weekend supplements for you."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Har du tariffavtale, for eksempel i butikk, på lager, hotell eller restaurant? Velg Tariff, så regner Tidex ut kvelds- og helgetillegg for deg."
+          }
+        }
+      }
+    },
+    "onboarding.wage.typeRate" : {
+      "comment" : "Button next to the hourly wage slider that opens a field for typing the exact rate.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type it"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv inn"
           }
         }
       }

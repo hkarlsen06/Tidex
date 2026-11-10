@@ -198,38 +198,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
 
       // Slider card
       VStack(spacing: Spacing.md) {
-        // Current value display (currency-aware)
-        valueRowLayout {
-          if showingCustomInput {
-            customInputFieldFull
-          } else if isCurrencyPrefix {
-            // Prefix currencies: "$200 per hour"
-            Text(currencySymbol)
-              .font(.tidexBodyMedium)
-              .foregroundStyle(Color.tidexTextSecondary)
-
-            tappableValueFull(formatValueWithDecimals(value))
-
-            Text(.commonPerHour)
-              .font(.tidexSubheadline)
-              .foregroundStyle(Color.tidexTextMuted)
-          } else {
-            // Suffix currencies: "200 kr per time"
-            tappableValueFull(formatValueWithDecimals(value))
-
-            Text(currencySymbol)
-              .font(.tidexBodyMedium)
-              .foregroundStyle(Color.tidexTextSecondary)
-
-            Text(.commonPerHour)
-              .font(.tidexSubheadline)
-              .foregroundStyle(Color.tidexTextMuted)
-          }
-
-          if !dynamicTypeSize.isAccessibilitySize {
-            Spacer()
-          }
-        }
+        fullValueRow
 
         sliderControl
 
@@ -243,6 +212,45 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       Text(.onboardingPersonalizeWageHelper)
         .font(.tidexFootnote)
         .foregroundStyle(Color.tidexTextMuted)
+    }
+  }
+
+  /// The rate with its currency and unit, and the button that opens the field for typing it.
+  private var fullValueRow: some View {
+    valueRowLayout {
+      if showingCustomInput {
+        customInputFieldFull
+      } else if isCurrencyPrefix {
+        // Prefix currencies: "$200 per hour"
+        Text(currencySymbol)
+          .font(.tidexBodyMedium)
+          .foregroundStyle(Color.tidexTextSecondary)
+
+        tappableValueFull(formatValueWithDecimals(value))
+
+        Text(.commonPerHour)
+          .font(.tidexSubheadline)
+          .foregroundStyle(Color.tidexTextMuted)
+      } else {
+        // Suffix currencies: "200 kr per time"
+        tappableValueFull(formatValueWithDecimals(value))
+
+        Text(currencySymbol)
+          .font(.tidexBodyMedium)
+          .foregroundStyle(Color.tidexTextSecondary)
+
+        Text(.commonPerHour)
+          .font(.tidexSubheadline)
+          .foregroundStyle(Color.tidexTextMuted)
+      }
+
+      if !dynamicTypeSize.isAccessibilitySize {
+        Spacer()
+      }
+
+      if !showingCustomInput {
+        typeRateButton
+      }
     }
   }
 
@@ -317,13 +325,35 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
 
   // MARK: - Tappable Value Views
 
+  /// The amount is tappable too, but nothing shows that, so this says it in words.
+  private var typeRateButton: some View {
+    Button(action: beginTypingRate) {
+      Label {
+        Text(.onboardingWageTypeRate)
+      } icon: {
+        Image(systemName: "keyboard")
+          .accessibilityHidden(true)
+      }
+      .font(.tidexSubheadline)
+      .foregroundStyle(Color.tidexBlueText)
+      .padding(.horizontal, Spacing.sm)
+      .frame(minHeight: 44)
+      .background(Color.tidexBlue.opacity(0.08), in: Capsule())
+      .contentShape(Capsule())
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("wage.type-rate")
+  }
+
+  private func beginTypingRate() {
+    Haptics.play(.light)
+    inputText = formatValueWithDecimals(value)
+    showingCustomInput = true
+  }
+
   @ViewBuilder
   private func tappableValue(_ text: String) -> some View {
-    Button(action: {
-      Haptics.play(.light)
-      inputText = formatValueWithDecimals(value)
-      showingCustomInput = true
-    }) {
+    Button(action: beginTypingRate) {
       Text(text)
         .font(.tidexLargeTitle)
         .foregroundStyle(Color.tidexBlueText)
@@ -340,11 +370,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
 
   @ViewBuilder
   private func tappableValueFull(_ text: String) -> some View {
-    Button(action: {
-      Haptics.play(.light)
-      inputText = formatValueWithDecimals(value)
-      showingCustomInput = true
-    }) {
+    Button(action: beginTypingRate) {
       Text(text)
         .font(.tidexScreenTitle)
         .foregroundStyle(Color.tidexBlueText)

@@ -1,12 +1,19 @@
 import SwiftUI
 
-/// Shown when no matching tariff data could be loaded.
-struct TariffOfflineHint: View {
+/// Above a disabled Continue, says what the tariff choice still needs.
+struct TariffContinueHint: View {
+  let text: LocalizedStringResource
+  let isWarning: Bool
+
   var body: some View {
-    Text(.tariffUnavailable)
+    Text(text)
       .font(.tidexFootnote)
-      .foregroundStyle(Color.tidexWarning)
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .foregroundStyle(isWarning ? Color.tidexWarning : Color.tidexTextSecondary)
+      .multilineTextAlignment(.center)
+      .fixedSize(horizontal: false, vertical: true)
+      .padding(.horizontal, Spacing.lg)
+      .padding(.bottom, Spacing.sm)
+      .adaptiveContentWidth()
   }
 }
 
