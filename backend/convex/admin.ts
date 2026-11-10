@@ -568,16 +568,27 @@ export const stats = query({
           rows: [
             { label: "Saw the welcome screen", value: preauthCount("welcome") },
             { label: "Opened the demo", value: preauthCount("add_shift_simulator") },
-            { label: "Added a demo shift", value: preauthCount("demo_shift_added") },
+            { label: "Saved a demo shift", value: preauthCount("demo_shift_added") },
             { label: "Reached sign-up", value: preauthCount("signup_screen") },
           ],
         },
-        { kind: "list", rows: [{ label: "Went to log in", value: String(preauthCount("login_screen")) }] },
+        {
+          kind: "list",
+          rows: [
+            { label: "Skipped the demo", value: String(preauthCount("demo_skipped")) },
+            { label: "Went to log in", value: String(preauthCount("login_screen")) },
+          ],
+        },
       ],
     };
 
     const funnel = await ctx.db.query("onboarding_funnel_steps").collect();
     const stepCount = (step: string) => funnel.filter((f) => f.step === step).length;
+    const split = (title: string, steps: [string, string][]): Json => ({
+      kind: "bars",
+      title,
+      rows: steps.map(([step, label]) => ({ label, value: stepCount(step) })),
+    });
     const viaLabels: Json = { manual: "Add screen", recurring: "Recurring schedule", clock: "Clock in", calendar_import: "Calendar import" };
     const setup = {
       title: "Setup after sign-up",
@@ -587,10 +598,8 @@ export const stats = query({
           title: "Setup",
           rows: [
             ["postauth_purpose", "Purpose"],
-            ["postauth_wage", "Wage"],
-            ["postauth_supplements", "Supplements"],
             ["postauth_jobBasics", "Job"],
-            ["postauth_settingsAccordion", "Settings"],
+            ["postauth_wage", "Wage"],
             ["onboarding_completed", "Finished setup"],
             ["first_shift_added", "Added a first shift"],
           ].map(([step, label]) => ({ label, value: stepCount(step!) })),
@@ -604,6 +613,18 @@ export const stats = query({
               return (viaLabels[via] as string | undefined) ?? via;
             }),
         ),
+        split("Purpose", [
+          ["purpose_pay", "Track pay"],
+          ["purpose_friends", "See friends' shifts"],
+        ]),
+        split("Wage type", [
+          ["wage_hourly", "Own hourly wage"],
+          ["wage_tariff", "Tariff"],
+        ]),
+        split("Demo shift after setup", [
+          ["demo_shift_saved", "Kept"],
+          ["demo_shift_dismissed", "Declined"],
+        ]),
         { kind: "list", rows: [{ label: "Started from the demo shift", value: String(stepCount("demo_shift_prefilled")) }] },
       ],
     };
@@ -744,6 +765,15 @@ export const stats = query({
             { label: "People messaging in 30 days", value: String(new Set(messages.filter((m) => m.created_at >= since(30)).map((m) => m.sender_user_id)).size) },
             { label: "Chats", value: String(threadCount) },
           ],
+        },
+        {
+          kind: "list",
+          title: "Invites",
+          rows: [
+            ["friend_invite_sent", "People who sent an invite"],
+            ["friend_invite_opened", "People who opened an invite"],
+            ["friend_added", "People who added a friend"],
+          ].map(([step, label]) => ({ label: label!, value: String(stepCount(step!)) })),
         },
       ],
     };
