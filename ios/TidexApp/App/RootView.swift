@@ -143,8 +143,13 @@ private struct RootContent: View {
             }
 
           case .termsRequired:
-            AcceptTermsView(isUpdate: coordinator.isTermsUpdate, coordinator: coordinator)
-              .transition(.opacity)
+            if SignupTermsGate.shared.isSigningUp {
+              // Sign-up is saving the terms the person just accepted. See SignupTermsGate.
+              LoadingView()
+            } else {
+              AcceptTermsView(isUpdate: coordinator.isTermsUpdate, coordinator: coordinator)
+                .transition(.opacity)
+            }
 
           case .authenticated:
             if !hasCompletedPostAuthOnboarding, !coordinator.hasFinishedOnboardingRemotely {

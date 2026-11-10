@@ -24,7 +24,10 @@ final class SignupViewModel {
   var otpCode: String = ""
 
   var step: Step = .form
-  var isLoading = false
+  /// True while a sign-up, a code check or a resend runs. Sign-ups finish inside it.
+  var isLoading = false {
+    didSet { SignupTermsGate.shared.isSigningUp = isLoading }
+  }
   var showEmailForm = false
 
   var errorMessage: String?
@@ -338,4 +341,14 @@ final class SignupViewModel {
     errorMessage = nil
     successMessage = nil
   }
+}
+
+/// On while the sign-up screen creates an account and saves the terms the person accepted on it.
+/// Clerk's sign-up event reaches `AppCoordinator` before the terms are saved, and its terms
+/// check would show the terms screen until they are. RootView shows the loading screen instead.
+@MainActor
+@Observable
+final class SignupTermsGate {
+  static let shared = SignupTermsGate()
+  var isSigningUp = false
 }

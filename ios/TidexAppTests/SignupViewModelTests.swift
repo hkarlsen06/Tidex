@@ -133,6 +133,23 @@ internal final class SignupViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
+  /// Clerk's sign-up event lets the coordinator check the terms before this screen saves them.
+  /// Until the save finishes, the app must not show the terms screen the person just accepted.
+  internal func testTermsScreenStaysHiddenUntilSignupSavesTheTerms() async {
+    let stub = StubEmailAuth()
+    stub.signUpResult = .success(.needsVerification)
+    var gateDuringSave: Bool?
+    let viewModel = makeViewModel(stub) { gateDuringSave = SignupTermsGate.shared.isSigningUp }
+    await viewModel.signUp()
+    XCTAssertFalse(SignupTermsGate.shared.isSigningUp, "Waiting for the code must not hide the terms")
+
+    viewModel.otpCode = "123456"
+    await viewModel.verifyEmailCode()
+
+    XCTAssertEqual(gateDuringSave, true)
+    XCTAssertFalse(SignupTermsGate.shared.isSigningUp)
+  }
+
   internal func testVerifyWithWrongOrExpiredCodeShowsMessageAndClearsCode() async throws {
     let stub = StubEmailAuth()
     stub.verifyError = try makeClerkAPIError("verification_expired")
