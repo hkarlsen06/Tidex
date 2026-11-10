@@ -78,7 +78,6 @@ final class OnboardingSaveManager {
 
   // MARK: - Public API
 
-  /// Starts saving the collected setup unless a save is already running.
   func startSave(userId: String, data: OnboardingData, completionMode: OnboardingCompletionMode) {
     guard status != .saving else { return }
     status = .saving

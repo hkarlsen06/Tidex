@@ -83,7 +83,6 @@ struct PostAuthOnboardingView: View {
 
   // MARK: - Persistence
 
-  /// Saves the draft unless the loading or result screen is showing.
   private func saveProgressIfEditing() {
     if currentScreen != .result, currentScreen != .loading {
       onboardingData.save(currentScreen: currentScreen.rawValue)
