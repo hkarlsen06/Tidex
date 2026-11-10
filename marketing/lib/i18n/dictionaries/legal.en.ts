@@ -177,7 +177,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-10-24',
+    lastUpdatedDate: '2026-11-10',
     dateLocale: 'en-US',
     sections: [
       {
@@ -205,6 +205,7 @@ export const legalEn = {
         paragraphs: ['Your data is used to:'],
         list: [
           { text: 'Provide shift tracking and salary calculations.' },
+          { text: 'Show shared shifts and countdowns in the correct time zone. We use a fixed schedule time zone, initially based on your device\'s reported zone and editable in Settings. This zone is shared with people you have granted access to your schedule. It does not update automatically when you travel.' },
           { text: 'Provide Friends messaging, image attachments, screenshot alerts, abuse reports, safety tooling, and user blocking.' },
           { text: 'Authenticate and manage your account.' },
           { text: 'Support optional sign-in with Apple and Google.' },

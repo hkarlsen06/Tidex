@@ -28,9 +28,9 @@ The metadata source had a stale comment saying that the generator writes TXT fil
 
 ## Friends time-zone release hold
 
-Hjalmar reported that at 00:30 in his time zone, a friend's 05:00 shift in Great Britain showed a four-and-a-half-hour countdown. With the stated one-hour difference, that shift starts at 06:00 for him and is five and a half hours away. The current shared timing code interprets the stored clock time using the viewer's calendar. The shared payload does not carry the friend's reported time zone.
+Hjalmar reported that at 00:30 in his time zone, a friend's 05:00 shift in Great Britain showed a four-and-a-half-hour countdown. With the stated one-hour difference, that shift starts at 06:00 for him and is five and a half hours away. The withdrawn build interpreted the stored clock time using the viewer's calendar. Its shared payload carried no schedule time zone.
 
-The existing admin user details expose `user_app_activity.time_zone`. The fix should use that named zone and the viewer's current zone, without a Norway-specific offset. Hjalmar requested market research to choose the least confusing time display before implementation. Existing shift and pay data must retain their original meaning.
+The admin zone follows the phone. A fixed, owner-editable sharing zone was chosen after market research and Fable 5.2 review, so travel cannot silently move an established schedule. The backend initializes it once from valid reported data. Friend previews and widgets use the viewer's zone, while calendar dates and payroll grouping keep the schedule's zone. Both times are labelled when they differ. The full decision and evidence are in [Friends time zones](friends-time-zones.md).
 
 ## Initial binary and verification
 
@@ -123,3 +123,15 @@ Hjalmar repeated both connection checks on this build. With `100% Loss`, a newly
 The App Store upload was committed at `2026-11-09T22:30:46Z`, upload ID `1389b554-fe22-4905-a754-fadb1eef1895`. Apple processed it as `VALID`. The separate validation placeholder is not the committed binary upload. Private submission, preflight and independent readback receipts are stored with the final artifacts.
 
 The owner-side comparison of shared overlapping shifts and overtime gross/net totals remains unverified in `RELEASE_CHECKS.md` before manual release. The lower-level 20-second auth request deadline is covered by automated tests; the device stall check confirmed immediate cached presentation rather than measuring that request directly. Review submission does not publish the app or close those records.
+
+## Replacement time-zone candidate
+
+The additive backend change is signed on main as `a07b1e87`. Five backend handler tests with 35 assertions passed, as did backend and marketing TypeScript checks. The local Convex runtime accepted the backfill, initialized 37 valid zones among 38 activity rows, and reported zero eligible rows when repeated. Production has not been deployed or backfilled.
+
+The client correction is signed on main as `ed4e0485`. Hjalmar observed that the new client shows "Schedule" for every friend and an unknown-zone caption in their calendars. A read-only production inventory confirmed the cause: the new schedule-zone functions are absent, none of the 284 profiles has a fixed schedule zone yet, and 73 activity records already contain registered zones. Deploying the additive backend and running its set-if-absent backfill must precede the next live retest. Do not add a device-local guess to conceal the missing backend.
+
+Fable 5.2 agreed with the fixed-zone choice. Its implementation review found formatting, widget layout, VoiceOver and failed-setting-load defects, which have been corrected. Shared clocks retain the existing HH:mm convention. The iOS wrapper passed 48 focused tests and the expanded cross-zone Friends UI journey. The footer layout then passed the UI journey again. Depressed Harbor was locked, so these runs used Shared iPhone. Normal and maximum-text-size cards were inspected, and accessibility labels include both times. Both friend widgets were rendered with a cross-midnight shift. A clipped source caption in the small widget was corrected and rechecked. The final wrapper build passed with zero warnings or errors.
+
+Release notes were extended from the withdrawn candidate at `e5544021`, after the published App Store 3.1.1 build `20261106.0018`. The new notes cover time zones, the fixed sharing setting, month swipes and friend-chat navigation. All 32 locale files were regenerated, only their whatsNew fields changed, and local metadata validation reports zero errors or warnings. These replacement notes have not been uploaded to App Store Connect.
+
+Hjalmar chose a date-only privacy update on November 10. English and Norwegian policy display dates are November 10; the canonical acceptance manifests remain unchanged. Publishing the policy, deploying the backend and applying the production backfill require deployment approval. Build 2324 stays withdrawn. A corrected archive and submission still remain to be prepared.

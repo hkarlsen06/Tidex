@@ -177,7 +177,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-10-24',
+    lastUpdatedDate: '2026-11-10',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -205,6 +205,7 @@ export const legalNo = {
         paragraphs: ['Dine data brukes til:'],
         list: [
           { text: 'Tilby skiftsporing og lønnsutregning.' },
+          { text: 'Vise delte vakter og nedtellinger i riktig tidssone. Vi bruker en fast tidssone for vaktplanen, først basert på tidssonen enheten din har rapportert. Du kan endre den i Innstillinger. Tidssonen deles med personer du har gitt tilgang til vaktplanen din. Den endres ikke automatisk når du reiser.' },
           { text: 'Tilby vennemeldinger, bildevedlegg, skjermbildevarsler, misbruksrapportering, sikkerhetsfunksjoner og blokkering av brukere.' },
           { text: 'Autentisere og administrere kontoen din.' },
           { text: 'Støtte valgfri innlogging med Apple og Google.' },
