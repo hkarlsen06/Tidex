@@ -101,6 +101,7 @@ export default defineSchema({
   profiles: defineTable({
     id: uuid,
     username: optString,
+    schedule_time_zone: optString,
     last_synced_at: optTs,
     created_at: ts,
     updated_at: ts,

@@ -15,6 +15,7 @@ import { clerkUsersWithVerifiedEmail } from "./lib/clerk";
 import { isObjectionable } from "./lib/messaging";
 import { queueScreenshot, queueShareStarted } from "./lib/notify";
 import { nextRevision } from "./lib/revision";
+import { scheduleTimeZone } from "./lib/scheduleTimeZone";
 import { publicRow, reject } from "./lib/syncWrite";
 
 // Ports of get_friends_tab_bootstrap, get_shared_month_payload, get_my_profile_username
@@ -216,7 +217,7 @@ async function sharedSchedule(
       return job;
     });
 
-  const payload = { show_earnings: showEarnings, settings: settingsJson, shifts, recurring_shifts: recurring, snapshots, jobs };
+  const payload = { owner_time_zone: await scheduleTimeZone(ctx, ownerId), show_earnings: showEarnings, settings: settingsJson, shifts, recurring_shifts: recurring, snapshots, jobs };
   requirePayrollRevision(payrollRevision, payload);
   return payload;
 }

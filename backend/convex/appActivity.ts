@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
+import { isScheduleTimeZone, saveScheduleTimeZone } from "./lib/scheduleTimeZone";
 
 const osloDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Oslo" });
 
@@ -31,6 +32,10 @@ export const record = mutation({
     const { user, impersonationSessionId } = await requireViewer(ctx);
     // An admin browsing as this user is not the user opening the app.
     if (impersonationSessionId !== null) return null;
+
+    if (isScheduleTimeZone(args.time_zone)) {
+      await saveScheduleTimeZone(ctx, user.id, args.time_zone, true);
+    }
 
     const now = new Date();
     const nowIso = now.toISOString();
