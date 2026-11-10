@@ -1,6 +1,6 @@
 # Siri AI developer preview
 
-Apple opened the Siri AI developer preview on 2026-11-03. In the preview, Siri's model can call an app's intents as tools and fill their parameters from what the person said. Tidex compiles it only into Debug builds made with Xcode 27.3. A Release build, and any build with the release Xcode, contains none of it.
+Apple opened the Siri AI developer preview on 2026-11-03. In the preview, Siri's model can call an app's intents as tools and fill their parameters from what the person said. Tidex compiles it into Debug builds made with Xcode 27.3 or later. A Release build, and any build with Xcode 27.2, contains none of it.
 
 ## What Apple allows
 
@@ -49,16 +49,16 @@ Siri's model reads the same titles and descriptions that Shortcuts shows. There 
 `ios/SiriAIPreview.xcconfig` excludes every file under a folder named `SiriAIPreview` from all targets. It includes them again only when both of these hold:
 
 - The configuration is Debug. Release has no rule that includes the files, so no setting brings them into a Release build or an archive.
-- `TIDEX_SIRI_AI_PREVIEW` is exactly `YES`. The xcconfig sets it from the Xcode version, and only Xcode 27.3 is listed. With the release Xcode the value is empty.
+- `TIDEX_SIRI_AI_PREVIEW` is exactly `YES`. That is its value for every Xcode except 27.2, which the xcconfig lists as `NO` because it lacks the SDK. A newer Xcode needs no change.
 
-When a later Xcode should compile the preview, add its line to the xcconfig, such as `TIDEX_SIRI_AI_PREVIEW_XCODE_2740 = YES` for Xcode 27.4.
+CI builds with Xcode 27.2. Delete the 27.2 line once no machine builds with that version.
 
 - Put code that needs the iOS 27.3 SDK in a `SiriAIPreview` folder, at most four folder levels deep. The patterns in the xcconfig reach no further.
 - Code outside the folder must not refer to anything inside it, or the normal build breaks.
 
 ## Build a preview
 
-Build or run the Debug configuration with the Xcode 27.3 beta. In the beta app that needs no setup. From the command line, select the beta toolchain. Give the beta its own DerivedData folder, because the two Xcode versions cannot share one.
+Build or run the Debug configuration with Xcode 27.3 or later. In the beta app that needs no setup. From the command line, select the beta toolchain. Give the beta its own DerivedData folder, because the two Xcode versions cannot share one.
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode-27.3.0-beta.app/Contents/Developer \
@@ -68,7 +68,7 @@ DEVELOPER_DIR=/Applications/Xcode-27.3.0-beta.app/Contents/Developer \
 
 The test wrapper takes the same variable and argument. On a connected iPhone it leaves the preview build installed.
 
-If a new beta breaks the preview code, pass `TIDEX_SIRI_AI_PREVIEW=NO` to build Debug without it. Passing `YES` with the release Xcode fails with `Cannot find type 'ToolIntent' in scope`.
+If a new beta breaks the preview code, pass `TIDEX_SIRI_AI_PREVIEW=NO` to build Debug without it. Passing `YES` with Xcode 27.2 fails with `Cannot find type 'ToolIntent' in scope`.
 
 Internal TestFlight testers cannot get the preview, because TestFlight builds are Release builds.
 

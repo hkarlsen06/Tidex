@@ -1,7 +1,7 @@
 import AppIntents
 
-// Siri AI developer preview. This folder compiles only in Debug builds with Xcode 27.3,
-// which has the iOS 27.3 SDK. See ios/docs/SIRI_AI_PREVIEW.md.
+// Siri AI developer preview. This folder compiles only in Debug builds, and not with
+// Xcode 27.2, which lacks the iOS 27.3 SDK. See ios/docs/SIRI_AI_PREVIEW.md.
 //
 // A tool is an intent Siri's model may call by itself. The intents keep their iOS 26
 // availability and gain the conformance here. The message intents follow the messages schema,

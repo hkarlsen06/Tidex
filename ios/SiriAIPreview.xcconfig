@@ -1,12 +1,12 @@
 // Siri AI developer preview gate. See docs/SIRI_AI_PREVIEW.md.
 //
 // Files under a SiriAIPreview folder need the iOS 27.3 SDK, and Apple does not take them
-// in App Store builds yet. Debug builds with Xcode 27.3 compile them. Release builds and
-// builds with any other Xcode leave them out.
+// in App Store builds yet. Debug builds compile them with Xcode 27.3 and every later Xcode.
+// Release builds leave them out.
 
-// Xcode 27.3 and its patch releases report 2730. Add a line for each later Xcode.
-TIDEX_SIRI_AI_PREVIEW = $(TIDEX_SIRI_AI_PREVIEW_XCODE_$(XCODE_VERSION_MINOR))
-TIDEX_SIRI_AI_PREVIEW_XCODE_2730 = YES
+// Xcode 27.2 reports 2720 and lacks the SDK. Any Xcode not listed here compiles the files.
+TIDEX_SIRI_AI_PREVIEW = $(TIDEX_SIRI_AI_PREVIEW_XCODE_$(XCODE_VERSION_MINOR):default=YES)
+TIDEX_SIRI_AI_PREVIEW_XCODE_2720 = NO
 
 // A pattern's * stops at a slash, so each folder depth has its own pattern. The fourth
 // reaches the SKILL.md files inside Skills.skillsbundle.
