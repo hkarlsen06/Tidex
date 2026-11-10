@@ -15,6 +15,11 @@ private struct ProfilePictureReply: Decodable {
 @MainActor
 @Observable
 final class ProfileSettingsViewModel {
+  enum ScheduleTimeZoneLoadState {
+    case loading
+    case loaded(String?)
+    case failed
+  }
 
   // MARK: - Dependencies
 
@@ -41,6 +46,42 @@ final class ProfileSettingsViewModel {
 
   /// Loading states
   private(set) var isLoading = false
+  private(set) var scheduleTimeZoneLoadState = ScheduleTimeZoneLoadState.loading
+  private(set) var isSavingScheduleTimeZone = false
+
+  var scheduleTimeZone: String? {
+    guard case .loaded(let zone) = scheduleTimeZoneLoadState else { return nil }
+    return zone
+  }
+
+  var canEditScheduleTimeZone: Bool {
+    guard case .loaded = scheduleTimeZoneLoadState else { return false }
+    return !isLoading && !isSavingScheduleTimeZone && !isOfflineProfileFallback
+  }
+
+  var scheduleZoneDiffersFromDevice: Bool {
+    guard let scheduleTimeZone, let zone = TimeZone(identifier: scheduleTimeZone) else {
+      return false
+    }
+    return zone.secondsFromGMT() != TimeZone.current.secondsFromGMT()
+  }
+
+  func saveScheduleTimeZone(_ zone: String) async {
+    guard let userId, canEditScheduleTimeZone else { return }
+    isSavingScheduleTimeZone = true
+    defer { isSavingScheduleTimeZone = false }
+    do {
+      let saved: String = try await ConvexAPI.app.mutation(
+        "scheduleTimeZone:setMine",
+        [
+          "time_zone": AnyJSON.string(zone), "expected_user_id": .string(userId),
+        ])
+      guard self.userId == userId else { return }
+      scheduleTimeZoneLoadState = .loaded(saved)
+    } catch {
+      errorMessage = ErrorTranslations.translate(error, fallback: .commonErrorGeneric)
+    }
+  }
   private(set) var isSavingName = false
   private(set) var isSavingUsername = false
   private(set) var isUploadingAvatar = false
@@ -90,6 +131,7 @@ final class ProfileSettingsViewModel {
   /// Load the user's profile data
   func loadProfile() async {
     isLoading = true
+    scheduleTimeZoneLoadState = .loading
     errorMessage = nil
     isOfflineProfileFallback = false
     hydrateCachedProfileForImmediateDisplay()
@@ -97,6 +139,12 @@ final class ProfileSettingsViewModel {
     do {
       let session = try await AuthSessionManager.shared.getSession()
       userId = session.normalizedUserId
+      do {
+        let zone: String? = try await ConvexAPI.app.query("scheduleTimeZone:mine")
+        scheduleTimeZoneLoadState = .loaded(zone)
+      } catch {
+        scheduleTimeZoneLoadState = .failed
+      }
       displayName = session.user.name ?? ""
       originalDisplayName = displayName
 
@@ -125,6 +173,7 @@ final class ProfileSettingsViewModel {
       }
 
     } catch {
+      scheduleTimeZoneLoadState = .failed
       if ErrorTranslations.isOffline(error) {
         loadOfflineProfileFallback()
       } else {
@@ -273,7 +322,9 @@ final class ProfileSettingsViewModel {
       username = saved ?? ""
       originalUsername = username
     } catch {
-      if let message = ErrorTranslations.translate(error, fallback: .profileErrorsUsernameSaveFailed) {
+      if let message = ErrorTranslations.translate(
+        error, fallback: .profileErrorsUsernameSaveFailed)
+      {
         setUsernameError(message)
       }
     }
@@ -516,7 +567,8 @@ extension ProfileSettingsViewModel {
       }
 
     } catch {
-      errorMessage = ErrorTranslations.translate(error, fallback: .profileDangerZoneDeleteAccountErrorsDeleteFailed)
+      errorMessage = ErrorTranslations.translate(
+        error, fallback: .profileDangerZoneDeleteAccountErrorsDeleteFailed)
       Haptics.play(.error)
       isDeletingAccount = false
     }

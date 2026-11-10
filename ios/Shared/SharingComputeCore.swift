@@ -54,6 +54,7 @@ struct SharingComputedPreview: Sendable {
   let shift: SharingComputedShift?
   let status: SharingPreviewStatus?
   let showEarnings: Bool
+  var ownerTimeZone: String?
 }
 
 typealias SharingRPCBreakMethod = BreakMethod
@@ -236,9 +237,10 @@ enum SharingComputeCore {
     // Resolve conflicts before overtime, using the same ordering for equal gross pay.
     let ordered = computed.sorted(by: isInOutputOrder)
     let excludedIds = excludedShiftIds(in: ordered)
-    let overtimeAdjusted = applyOvertime(
-      to: ordered.filter { !excludedIds.contains($0.id) }, context: context, mode: mode
-    ) + ordered.filter { excludedIds.contains($0.id) }
+    let overtimeAdjusted =
+      applyOvertime(
+        to: ordered.filter { !excludedIds.contains($0.id) }, context: context, mode: mode
+      ) + ordered.filter { excludedIds.contains($0.id) }
     let visible = overtimeAdjusted.filter { shift in
       shift.shiftDate >= startDate && shift.shiftDate <= endDate
     }
@@ -252,7 +254,9 @@ enum SharingComputeCore {
     return sorted
   }
 
-  private static func isInOutputOrder(_ lhs: SharingComputedShift, _ rhs: SharingComputedShift) -> Bool {
+  private static func isInOutputOrder(_ lhs: SharingComputedShift, _ rhs: SharingComputedShift)
+    -> Bool
+  {
     if lhs.shiftDate != rhs.shiftDate { return lhs.shiftDate < rhs.shiftDate }
     if lhs.startTime != rhs.startTime { return lhs.startTime < rhs.startTime }
     return lhs.id < rhs.id
@@ -268,7 +272,8 @@ enum SharingComputeCore {
       return $0.id < $1.id
     }
     for (date, shiftsOnDate) in Dictionary(grouping: ordered, by: \.date) {
-      var parent = Dictionary(shiftsOnDate.map { ($0.id, $0.id) }, uniquingKeysWith: { first, _ in first })
+      var parent = Dictionary(
+        shiftsOnDate.map { ($0.id, $0.id) }, uniquingKeysWith: { first, _ in first })
       func find(_ id: String) -> String {
         guard let ancestor = parent[id], ancestor != id else { return id }
         let root = find(ancestor)
@@ -299,11 +304,13 @@ enum SharingComputeCore {
   }
 
   static func excludedShiftIds(in shifts: [SharingComputedShift]) -> Set<String> {
-    conflictAnalysis(shifts.map {
-      PayrollConflictShift(
-        id: $0.id, date: $0.shiftDate, startTime: $0.startTime, endTime: $0.endTime,
-        gross: $0.computed.preOvertimeGross ?? $0.computed.gross)
-    }).excludedIds
+    conflictAnalysis(
+      shifts.map {
+        PayrollConflictShift(
+          id: $0.id, date: $0.shiftDate, startTime: $0.startTime, endTime: $0.endTime,
+          gross: $0.computed.preOvertimeGross ?? $0.computed.gross)
+      }
+    ).excludedIds
   }
 
   static func computeMonthShifts(
@@ -389,90 +396,45 @@ enum SharingComputeCore {
     sharerId: String,
     shifts: [SharingComputedShift],
     showEarnings: Bool,
+    ownerTimeZone: String? = nil,
     now: Date = Date()
   ) -> SharingComputedPreview {
-    guard !shifts.isEmpty else {
-      return SharingComputedPreview(
-        sharerId: sharerId, shift: nil, status: nil, showEarnings: showEarnings)
-    }
-
-    let sortedShifts = shifts.sorted { lhs, rhs in
-      if lhs.shiftDate == rhs.shiftDate {
-        return lhs.startTime < rhs.startTime
-      }
-      return lhs.shiftDate < rhs.shiftDate
-    }
-
-    for shift in sortedShifts {
+    let timed = shifts.compactMap { shift -> (SharingComputedShift, SharedShiftInterval)? in
       guard
-        let (start, end) = shiftInterval(
-          shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
-      else {
-        continue
-      }
-
-      if now >= start, now <= end {
-        return SharingComputedPreview(
-          sharerId: sharerId, shift: shift, status: .active, showEarnings: showEarnings)
-      }
-    }
-
-    for shift in sortedShifts {
-      guard let start = shiftDateTime(shiftDate: shift.shiftDate, time: shift.startTime) else {
-        continue
-      }
-
-      if start > now {
-        return SharingComputedPreview(
-          sharerId: sharerId, shift: shift, status: .upcoming, showEarnings: showEarnings)
-      }
-    }
-
-    let pastShifts = sortedShifts.filter { shift in
-      guard
-        let (_, end) = shiftInterval(
-          shiftDate: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
-      else {
-        return false
-      }
-      return end < now
-    }
-
-    if let mostRecentPast = pastShifts.last {
-      return SharingComputedPreview(
-        sharerId: sharerId, shift: mostRecentPast, status: .past, showEarnings: showEarnings)
-    }
-
+        let interval = SharedShiftInterval(
+          date: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime,
+          timeZoneIdentifier: ownerTimeZone
+        )
+      else { return nil }
+      return (shift, interval)
+    }.sorted { $0.1.start < $1.1.start }
+    let selected =
+      timed.first { $0.1.status(at: now) == .active }
+      ?? timed.first { $0.1.status(at: now) == .upcoming }
+      ?? timed.last
     return SharingComputedPreview(
-      sharerId: sharerId, shift: nil, status: nil, showEarnings: showEarnings)
+      sharerId: sharerId, shift: selected?.0, status: selected?.1.status(at: now),
+      showEarnings: showEarnings, ownerTimeZone: ownerTimeZone
+    )
   }
 
   static func sortPreviews(_ previews: [SharingComputedPreview]) -> [SharingComputedPreview] {
     previews.sorted { lhs, rhs in
       let priority: [SharingPreviewStatus?] = [.active, .upcoming, .past, nil]
-      let lhsPriority = priority.firstIndex(where: { $0 == lhs.status }) ?? 4
-      let rhsPriority = priority.firstIndex(where: { $0 == rhs.status }) ?? 4
-
-      if lhsPriority != rhsPriority {
-        return lhsPriority < rhsPriority
+      let left = priority.firstIndex(of: lhs.status) ?? 3
+      let right = priority.firstIndex(of: rhs.status) ?? 3
+      if left != right { return left < right }
+      func start(_ preview: SharingComputedPreview) -> Date? {
+        guard let shift = preview.shift else { return nil }
+        return SharedShiftInterval(
+          date: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime,
+          timeZoneIdentifier: preview.ownerTimeZone
+        )?.start
       }
-
-      guard
-        let lhsDateTime = shiftDateTime(
-          shiftDate: lhs.shift?.shiftDate, time: lhs.shift?.startTime),
-        let rhsDateTime = shiftDateTime(shiftDate: rhs.shift?.shiftDate, time: rhs.shift?.startTime)
-      else {
-        return lhs.shift != nil
+      if let leftStart = start(lhs), let rightStart = start(rhs), leftStart != rightStart {
+        return lhs.status == .past ? leftStart > rightStart : leftStart < rightStart
       }
-
-      if lhs.status == .upcoming {
-        return lhsDateTime < rhsDateTime
-      }
-      if lhs.status == .past {
-        return lhsDateTime > rhsDateTime
-      }
-
-      return false
+      return lhs.sharerId < rhs.sharerId
     }
   }
 
@@ -538,10 +500,11 @@ enum SharingComputeCore {
       computed: computed,
       taxEnabled: taxEnabled,
       taxPercentage: taxPercentage,
-      calculationContext: mode == .visible ? SharingShiftCalculationContext(
-        wageSnapshotId: wageSnapshot?.id, taxSnapshotId: taxSnapshot?.id,
-        scheduledPayoutDate: payoutDate, savedTaxPercentage: savedTaxPercentage,
-        halfTaxApplied: taxEnabled && halfTaxMonth == payoutMonth) : nil
+      calculationContext: mode == .visible
+        ? SharingShiftCalculationContext(
+          wageSnapshotId: wageSnapshot?.id, taxSnapshotId: taxSnapshot?.id,
+          scheduledPayoutDate: payoutDate, savedTaxPercentage: savedTaxPercentage,
+          halfTaxApplied: taxEnabled && halfTaxMonth == payoutMonth) : nil
     )
   }
 
@@ -976,7 +939,8 @@ enum SharingComputeCore {
     let expandedStart = isoWeekStart(for: start)
     let endWeekStart = isoWeekStart(for: end)
     let expandedEnd = sharingISOCalendar.date(byAdding: .day, value: 6, to: endWeekStart) ?? end
-    let carryInStart = sharingISOCalendar.date(byAdding: .day, value: -1, to: expandedStart)
+    let carryInStart =
+      sharingISOCalendar.date(byAdding: .day, value: -1, to: expandedStart)
       ?? expandedStart
     return (isoDateString(carryInStart), isoDateString(expandedEnd))
   }
@@ -1062,7 +1026,8 @@ enum SharingComputeCore {
     context: SharingPayrollContext
   ) -> [SharingRPCWageSnapshot] {
     guard let jobId else {
-      return context.legacyNilJobSnapshots.isEmpty ? context.allSnapshots : context.legacyNilJobSnapshots
+      return context.legacyNilJobSnapshots.isEmpty
+        ? context.allSnapshots : context.legacyNilJobSnapshots
     }
     if let scoped = context.snapshotsByJobId[jobId], !scoped.isEmpty {
       return scoped
@@ -1072,7 +1037,8 @@ enum SharingComputeCore {
     {
       return scoped
     }
-    return context.legacyNilJobSnapshots.isEmpty ? context.allSnapshots : context.legacyNilJobSnapshots
+    return context.legacyNilJobSnapshots.isEmpty
+      ? context.allSnapshots : context.legacyNilJobSnapshots
   }
 
   static func computeShift(
@@ -1139,7 +1105,8 @@ enum SharingComputeCore {
       let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
       let breakMethod = snapshot?.effectiveBreakMethod ?? .proportional
       let savedThreshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
-      let breakThreshold = savedThreshold.isFinite && savedThreshold >= 0
+      let breakThreshold =
+        savedThreshold.isFinite && savedThreshold >= 0
         ? savedThreshold : defaultBreakThresholdHours
       let breakMinutes =
         breakEnabled
@@ -1407,55 +1374,6 @@ enum SharingComputeCore {
 
   // MARK: - Date + Time Helpers
 
-  private static func shiftInterval(
-    shiftDate: String,
-    startTime: String,
-    endTime: String
-  ) -> (start: Date, end: Date)? {
-    guard let start = shiftDateTime(shiftDate: shiftDate, time: startTime),
-      var end = shiftDateTime(shiftDate: shiftDate, time: endTime)
-    else {
-      return nil
-    }
-
-    if end <= start {
-      end = Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: end) ?? end
-    }
-
-    return (start, end)
-  }
-
-  private static func shiftDateTime(shiftDate: String?, time: String?) -> Date? {
-    guard let shiftDate, let time else { return nil }
-
-    let dateParts = shiftDate.split(separator: "-").compactMap { Int($0) }
-    let timeParts = time.split(separator: ":").compactMap { Int($0) }
-
-    guard dateParts.count == 3, timeParts.count >= 2 else { return nil }
-
-    let hour = timeParts[0] == 24 ? 0 : timeParts[0]
-
-    var components = DateComponents()
-    components.year = dateParts[0]
-    components.month = dateParts[1]
-    components.day = dateParts[2]
-    components.hour = hour
-    components.minute = timeParts[1]
-    components.second = 0
-    components.timeZone = .current
-
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = .current
-
-    guard var date = calendar.date(from: components) else { return nil }
-
-    if timeParts[0] == 24 {
-      date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
-    }
-
-    return date
-  }
-
   private static func weekdayFromISO(_ dateString: String) -> Int {
     guard let date = dateFromISO(dateString) else { return 1 }
     var calendar = Calendar(identifier: .gregorian)
@@ -1534,7 +1452,8 @@ enum SharingComputeCore {
     let basePay = roundedPay(base, periodCount: periods.count)
     let supplementPay = roundedPay(supplement, periodCount: periods.count)
     return PayrollPayTotals(
-      base: basePay, supplement: supplementPay, gross: roundTo(basePay + supplementPay, decimals: 2))
+      base: basePay, supplement: supplementPay, gross: roundTo(basePay + supplementPay, decimals: 2)
+    )
   }
 
   private static func roundedPay(_ amount: Double, periodCount: Int) -> Double {

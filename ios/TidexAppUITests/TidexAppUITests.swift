@@ -1269,6 +1269,29 @@ final class TidexAppUITests: XCTestCase {
     attachAppStoreScreenshot(cards, name: "friends-cards")
     cards.terminate()
 
+    let timeZoneCards = makeFriendsDesignApp(view: "cards")
+    timeZoneCards.launchEnvironment["TIDEX_DESIGN_FRIENDS_TIME_ZONE"] = "1"
+    timeZoneCards.launch()
+    assertExists(
+      text(containingLabel: "Your time", in: timeZoneCards), in: timeZoneCards,
+      timeout: defaultTimeout, message: "Expected viewer-local times to be labelled")
+    assertExists(
+      text(containingLabel: "Shift time:", in: timeZoneCards), in: timeZoneCards,
+      timeout: defaultTimeout, message: "Expected the fixed schedule time beside converted clocks")
+    var utc = Calendar(identifier: .gregorian)
+    utc.timeZone = .gmt
+    let start = utc.startOfDay(for: .now).addingTimeInterval(5 * 3_600)
+    let clockFormatter = DateFormatter()
+    clockFormatter.locale = Locale(identifier: "en")
+    clockFormatter.timeZone = .current
+    clockFormatter.dateFormat = "HH:mm"
+    let viewerClock = clockFormatter.string(from: start)
+    assertExists(
+      text(containingLabel: viewerClock, in: timeZoneCards), in: timeZoneCards,
+      timeout: defaultTimeout, message: "Expected the actual shift instant in the viewer's zone")
+    attachAppStoreScreenshot(timeZoneCards, name: "friends-cards-time-zones")
+    timeZoneCards.terminate()
+
     let addFriend = makeFriendsDesignApp(view: "add-friend")
     addFriend.launch()
     assertExists(

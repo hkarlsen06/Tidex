@@ -13,6 +13,7 @@ struct SharerShiftPreview: Equatable {
   let showEarnings: Bool
   let currency: String?
   let hasSharedCalendarContent: Bool
+  let ownerTimeZone: String?
 
   init(
     sharerId: String,
@@ -20,10 +21,14 @@ struct SharerShiftPreview: Equatable {
     status: ShiftPreviewStatus?,
     showEarnings: Bool,
     currency: String?,
-    hasSharedCalendarContent: Bool? = nil
+    hasSharedCalendarContent: Bool? = nil,
+    ownerTimeZone: String? = nil
   ) {
+    self.ownerTimeZone = ownerTimeZone ?? shift?.ownerTimeZone
     self.sharerId = sharerId
-    self.shift = shift
+    var timedShift = shift
+    timedShift?.ownerTimeZone = self.ownerTimeZone
+    self.shift = timedShift
     self.status = status
     self.showEarnings = showEarnings
     self.currency = currency
@@ -466,7 +471,11 @@ final class SharingService {
         computedShifts = SharingComputeCore.enforceHiddenEarnings(on: computedShifts)
       }
 
-      let shifts = computedShifts.map(Self.mapComputedShiftToSharedShiftData)
+      let shifts = computedShifts.map { computed in
+        var shift = Self.mapComputedShiftToSharedShiftData(computed)
+        shift.ownerTimeZone = payloadRow.ownerTimeZone
+        return shift
+      }
       let payoutTaxSettings = SharingComputeCore.payoutTaxSettings(
         year: year,
         month: month,
@@ -500,7 +509,8 @@ final class SharingService {
             monthly_goal: $0.monthlyGoal
           )
         },
-        payoutTaxSettings: payloadRow.showEarnings ? payoutTaxSettings : nil
+        payoutTaxSettings: payloadRow.showEarnings ? payoutTaxSettings : nil,
+        ownerTimeZone: payloadRow.ownerTimeZone
       )
     }.value
   }
@@ -545,6 +555,7 @@ final class SharingService {
           sharerId: sharerId,
           shifts: shifts,
           showEarnings: payloadRow.showEarnings,
+          ownerTimeZone: payloadRow.ownerTimeZone,
           now: now
         )
         let previewCurrency =
@@ -554,11 +565,16 @@ final class SharingService {
 
         return SharerShiftPreview(
           sharerId: sharerId,
-          shift: preview.shift.map(Self.mapComputedShiftToSharedShiftData),
+          shift: preview.shift.map { computed in
+            var shift = Self.mapComputedShiftToSharedShiftData(computed)
+            shift.ownerTimeZone = payloadRow.ownerTimeZone
+            return shift
+          },
           status: preview.status.flatMap { ShiftPreviewStatus(rawValue: $0.rawValue) },
           showEarnings: preview.showEarnings,
           currency: previewCurrency,
-          hasSharedCalendarContent: hasSharedCalendarContent
+          hasSharedCalendarContent: hasSharedCalendarContent,
+          ownerTimeZone: payloadRow.ownerTimeZone
         )
       }
     }.value

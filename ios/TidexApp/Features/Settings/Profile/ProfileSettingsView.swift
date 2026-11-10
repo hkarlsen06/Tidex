@@ -70,6 +70,7 @@ struct ProfileSettingsView: View {
 
         profileHeaderSection
         personalInfoSection
+        ScheduleTimeZoneSection(viewModel: viewModel)
         accountAccessSection
         sessionsSection
         dangerZoneSection
@@ -77,6 +78,7 @@ struct ProfileSettingsView: View {
       .listRowBackground(Color.tidexSurfacePrimary)
     }
     .tidexListBackground()
+    .refreshable { await viewModel.loadProfile() }
     .navigationTitle(String(localized: .profileTitle))
     .navigationBarTitleDisplayMode(.inline)
     .task {
@@ -226,7 +228,9 @@ extension ProfileSettingsView {
           : viewModel.displayName
       )
       .font(.tidexTitle)
-      .foregroundStyle(viewModel.displayName.isEmpty ? Color.tidexTextMuted : Color.tidexTextPrimary)
+      .foregroundStyle(
+        viewModel.displayName.isEmpty ? Color.tidexTextMuted : Color.tidexTextPrimary
+      )
       .multilineTextAlignment(.center)
       .lineLimit(2)
 

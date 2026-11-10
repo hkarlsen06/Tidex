@@ -318,6 +318,7 @@
 				PayPeriod.swift,
 				SharedAuthToken.swift,
 				SharedKeychainStorage.swift,
+				SharedShiftInterval.swift,
 				StoredFriendShift.swift,
 				StoredMonthlyTotals.swift,
 				StoredShift.swift,

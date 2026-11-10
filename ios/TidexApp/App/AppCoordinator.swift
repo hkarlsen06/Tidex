@@ -1276,6 +1276,7 @@ final class AppCoordinator {
     await clearSignedOutDeviceState()
 
     CalendarSubscriptionStore.shared.resetForUserChange()
+    FriendsScheduleTimeZoneStore.shared.resetForUserChange()
     CalendarSubscriptionStore.clearStoredTokensForUserReset()
     ShiftCompletionCelebrationManager.shared.resetForUserChange()
 

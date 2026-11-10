@@ -70,6 +70,20 @@
         .navigationTitle(String(localized: .tabsSharing))
       }
       .userCurrency("kr")
+      .task {
+        guard ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_WIDGETS"] == "1" else {
+          return
+        }
+        let names = ["Henrik", "Ella", "Jonas", "Nora", "Maja"]
+        let sharers = names.map { name in
+          SharedUser(
+            id: name, email: "friend@example.com", phone: nil, firstName: name,
+            profilePictureUrl: nil, oauthAvatarUrl: nil, sharedAt: "2026-01-01",
+            showEarnings: true, hidden: false)
+        }
+        let previews = names.map { Self.preview(for: $0, startOffset: 0, duration: 480) }
+        NativeWidgetStorage.updateFriendWidgetStorage(sharers: sharers, previews: previews)
+      }
     }
 
     /// `shift` is (start offset from now in minutes, duration in minutes).
@@ -111,15 +125,32 @@
     private static func preview(for id: String, startOffset: Double, duration: Double)
       -> SharerShiftPreview
     {
-      let start = Date.now.addingTimeInterval(startOffset * 60)
+      let isTimeZoneCheck =
+        ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_TIME_ZONE"] == "1"
+      var utc = Calendar(identifier: .gregorian)
+      utc.timeZone = .gmt
+      let isWidgetCheck = ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_WIDGETS"] == "1"
+      let start =
+        isTimeZoneCheck
+        ? utc.startOfDay(for: .now).addingTimeInterval((isWidgetCheck ? 23.5 : 5) * 3_600)
+        : Date.now.addingTimeInterval(startOffset * 60)
       let end = start.addingTimeInterval(duration * 60)
-      let time = Date.FormatStyle().hour(.twoDigits(amPM: .omitted)).minute()
-        .locale(Locale(identifier: "en_GB"))
+      let sourceZone =
+        isTimeZoneCheck
+        ? (TimeZone.current.secondsFromGMT(for: start) == 0
+          ? TimeZone(identifier: "Asia/Tokyo") : TimeZone(identifier: "Europe/London"))
+        : TimeZone.current
+      let time = DateFormatter()
+      time.locale = Locale(identifier: "en_US_POSIX")
+      time.calendar = Calendar(identifier: .gregorian)
+      time.timeZone = sourceZone ?? .current
+      time.dateFormat = "HH:mm"
       let status: ShiftPreviewStatus = end < .now ? .past : (start > .now ? .upcoming : .active)
       let shift = SharedShiftData(
         id: id, user_id: id, job_id: nil, job_name: nil, job_color: nil,
-        shift_date: start.toISODateString(), start_time: start.formatted(time),
-        end_time: end.formatted(time),
+        shift_date: start.toISODateString(in: sourceZone ?? .current),
+        start_time: time.string(from: start),
+        end_time: time.string(from: end),
         computed: SharedShiftComputed(
           id: id, durationHours: duration / 60, paidHours: duration / 60, basePay: 1_200,
           supplementPay: 0, gross: 1_200,
@@ -127,7 +158,8 @@
             method: .none, thresholdHours: 0, deductedHours: 0, source: .none,
             appliedPauseWindows: nil, notes: [])),
         tax_enabled: false, tax_percentage: nil, custom_pause_windows: nil,
-        custom_supplements: nil, recurring_id: nil, recurring_anchor_weekday: nil)
+        custom_supplements: nil, recurring_id: nil, recurring_anchor_weekday: nil,
+        ownerTimeZone: sourceZone?.identifier)
       return SharerShiftPreview(
         sharerId: id, shift: shift, status: status, showEarnings: true, currency: "kr")
     }

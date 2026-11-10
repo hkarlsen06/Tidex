@@ -19,6 +19,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   let showEarnings: Bool
   let friendFirstName: String
 
+  var ownerTimeZone: String?
+
   /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
   var highlightDates: Set<String> = []
 
@@ -202,7 +204,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     }
     .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
     .animation(
-      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count)
+      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count
+    )
     .onAppear {
       toggleHaptic.prepare()
       syncSelectedEarnings(with: metrics)
@@ -826,6 +829,13 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   private func shiftsOverlap(friendShifts: [ShiftWithComputations], userShifts: [ShiftRow]) -> Bool
   {
     guard !friendShifts.isEmpty, !userShifts.isEmpty else { return false }
+    guard
+      friendShifts.allSatisfy({ shift in
+        SharedShiftInterval(
+          date: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime,
+          timeZoneIdentifier: ownerTimeZone)?.differs() == false
+      })
+    else { return false }
 
     return friendShifts.contains { friendShift in
       let friendInterval = shiftInterval(

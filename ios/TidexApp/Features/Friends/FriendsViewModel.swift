@@ -85,6 +85,7 @@ final class SharingViewModel: MonthNavigable {
   private(set) var chatOnlyUserIds: Set<String> = []
 
   /// Currently selected sharer (nil shows sharer list)
+  var sharedOwnerTimeZone: String?
   var selectedSharer: SharedUser?
 
   /// Shifts from the selected sharer for the currently visible calendar range
@@ -450,6 +451,8 @@ final class SharingViewModel: MonthNavigable {
     managementSnapshot = bootstrap.managementSnapshot
 
     let blockedUserIds = Set(bootstrap.blockedFriends.map(\.id))
+    FriendsScheduleTimeZoneStore.shared.replace(
+      bootstrap.previews.filter { !blockedUserIds.contains($0.sharerId) }, viewerId: userId)
     locallyBlockedUserIds = blockedUserIds
 
     let filteredFreshSharers = bootstrap.sharers.filter { !blockedUserIds.contains($0.id) }
@@ -468,7 +471,9 @@ final class SharingViewModel: MonthNavigable {
       .filter { !blockedUserIds.contains($0.key) }
 
     if animatePreviewReveal {
-      withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(duration: 0.4, bounce: 0.15)) {
+      withAnimation(
+        UIAccessibility.isReduceMotionEnabled ? nil : .spring(duration: 0.4, bounce: 0.15)
+      ) {
         shiftPreviews = freshPreviewMap
       }
     } else {
@@ -610,7 +615,8 @@ final class SharingViewModel: MonthNavigable {
       } else {
         await loadSharers(forceRefreshPreviews: true)
       }
-      let elapsedMs = (DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
+      let elapsedMs =
+        (DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
       if elapsedMs < minimumDurationMs {
         try? await Task.sleep(for: .milliseconds(Int64(minimumDurationMs - elapsedMs)))
       }
@@ -708,6 +714,8 @@ final class SharingViewModel: MonthNavigable {
     let userId = request.userId
     let year = request.year
     let month = request.month
+    sharedOwnerTimeZone = FriendsScheduleTimeZoneStore.shared.zone(
+      ownerId: sharer.id, viewerId: userId)
 
     let cachedShiftSets = request.monthWindow.map { key in
       sharedShiftsRepository.getSharedShifts(
@@ -777,6 +785,9 @@ final class SharingViewModel: MonthNavigable {
     // This ensures the calendar structure and data update in the same render pass
     sharedShifts = freshShifts
     sharedJobs = currentMonthResponse?.jobs ?? []
+    sharedOwnerTimeZone = currentMonthResponse?.ownerTimeZone
+    FriendsScheduleTimeZoneStore.shared.set(
+      sharedOwnerTimeZone, ownerId: request.sharer.id, viewerId: request.userId)
     sharedCurrency = currentMonthResponse?.settings.currency
     hasResolvedSelectedSharerShifts = true
     committedYear = year
@@ -927,7 +938,9 @@ final class SharingViewModel: MonthNavigable {
 
   /// Toggle superimpose mode and load user shifts if needed
   func toggleSuperimpose() {
-    withAnimation(UIAccessibility.isReduceMotionEnabled ? nil : .spring(duration: 0.4, bounce: 0.15)) {
+    withAnimation(
+      UIAccessibility.isReduceMotionEnabled ? nil : .spring(duration: 0.4, bounce: 0.15)
+    ) {
       isSuperimposing.toggle()
     }
     Task {
@@ -959,7 +972,8 @@ final class SharingViewModel: MonthNavigable {
   private var sharedTotals: ShiftTotals {
     // Shared shifts already carry the effective payout tax, including half tax.
     PayrollEngine.summarizeShiftTotals(
-      shifts: paidSharedShifts, excludedShiftIds: [], halfTaxMonth: nil, earningsMonth: displayMonth)
+      shifts: paidSharedShifts, excludedShiftIds: [], halfTaxMonth: nil, earningsMonth: displayMonth
+    )
   }
 
   /// Total paid hours after excluding overlapping shifts.

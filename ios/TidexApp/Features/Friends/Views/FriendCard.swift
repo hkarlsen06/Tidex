@@ -32,6 +32,15 @@ struct FriendCard: View {
     preview?.shift.flatMap { FriendShiftTiming(shift: $0) }
   }
 
+  private var sourceTimeDescription: String? {
+    guard let shift = preview?.shift,
+      let interval = SharedShiftInterval(
+        date: shift.shift_date, startTime: shift.start_time,
+        endTime: shift.end_time, timeZoneIdentifier: shift.ownerTimeZone), interval.differs()
+    else { return nil }
+    return interval.sourceDescription(locale: .appLocale)
+  }
+
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @Environment(\.displayScale) private var displayScale
 
@@ -87,22 +96,35 @@ struct FriendCard: View {
 
     // Tick every second only while a shift needs a live countdown.
     TimelineView(.periodic(from: .now, by: shiftTiming == nil ? 60 : 1)) { context in
-      layout {
-        conversation(at: context.date)
+      VStack(alignment: .trailing, spacing: Spacing.xs) {
+        layout {
+          conversation(at: context.date)
 
-        // Without a tile the empty column still holds its width, so the message times line up
-        // with the other cards.
-        if showsShiftTile || !isStacked {
-          shiftTile(at: context.date)
-            // The line sits on the tile's edge rather than mid-gap. The tile centers its text, so
-            // this leaves about as much room on the text's side as on the bubble's.
-            .overlay(alignment: .leading) {
-              if showsShiftTile && !isStacked {
-                Rectangle()
-                  .fill(Color.tidexSeparator)
-                  .frame(width: 1 / displayScale)
+          // Without a tile the empty column still holds its width, so the message times line up
+          // with the other cards.
+          if showsShiftTile || !isStacked {
+            shiftTile(at: context.date)
+              // The line sits on the tile's edge rather than mid-gap. The tile centers its text, so
+              // this leaves about as much room on the text's side as on the bubble's.
+              .overlay(alignment: .leading) {
+                if showsShiftTile && !isStacked {
+                  Rectangle()
+                    .fill(Color.tidexSeparator)
+                    .frame(width: 1 / displayScale)
+                }
               }
-            }
+          }
+        }
+        if let sourceTimeDescription, !isRefreshing {
+          Button(action: onCalendarTap) {
+            Text(.sharingTimeShiftLocal(sourceTimeDescription))
+              .font(.tidexCaption)
+              .foregroundStyle(Color.tidexTextMuted)
+              .multilineTextAlignment(.trailing)
+          }
+          .buttonStyle(.plain)
+          .disabled(!isCalendarAvailable)
+          .accessibilityHidden(true)
         }
       }
       .fixedSize(horizontal: false, vertical: true)
@@ -326,9 +348,23 @@ extension FriendCard {
     var parts = [String(localized: .friendsAccessibilityShiftsFor(sharer.firstNameOnly))]
     if let timing = shiftTiming, let shift = preview?.shift, !isRefreshing {
       parts.append(timing.statusText(at: now, compact: false))
-      parts.append(
-        CalendarGridHelper.shiftTimesAccessibilityText(
-          startTime: shift.start_time, endTime: shift.end_time))
+      if let interval = SharedShiftInterval(
+        date: shift.shift_date, startTime: shift.start_time, endTime: shift.end_time,
+        timeZoneIdentifier: shift.ownerTimeZone
+      ) {
+        if interval.differs() { parts.append(String(localized: .sharingTimeYourTime)) }
+        parts.append(interval.datedTimeRange(locale: .appLocale))
+        if !Calendar.gregorianCurrent.isDate(interval.start, inSameDayAs: interval.end) {
+          parts.append(
+            String(
+              localized: .friendsCardEndsNextDay(interval.clock(interval.end, locale: .appLocale))))
+        }
+        if interval.differs() {
+          parts.append(
+            String(
+              localized: .sharingTimeShiftLocal(interval.sourceDescription(locale: .appLocale))))
+        }
+      }
     }
     return parts.joined(separator: ", ")
   }
@@ -393,17 +429,24 @@ extension FriendCard {
     if isRefreshing {
       skeletonBars(count: 2)
     } else if let timing = shiftTiming, let shift = preview?.shift {
-      let crossesMidnight = !Calendar.gregorianCurrent.isDate(timing.end, inSameDayAs: timing.start)
-      let endTime = ShiftCardFormatter.localizedTime(shift.end_time, locale: Locale.appLocale)
-
+      let interval = SharedShiftInterval(
+        date: shift.shift_date, startTime: shift.start_time, endTime: shift.end_time,
+        timeZoneIdentifier: shift.ownerTimeZone)
       Group {
-        Text(ShiftCardFormatter.localizedTime(shift.start_time, locale: Locale.appLocale))
-        Text(verbatim: endTime + (crossesMidnight ? "+1" : ""))
+        if let interval, interval.differs() {
+          Text(.sharingTimeYourTime).font(.tidexCaption)
+        }
+        Text(interval?.clock(timing.start, locale: .appLocale) ?? "")
+        let endText = interval?.clock(timing.end, locale: .appLocale) ?? ""
+        let crossesMidnight = !Calendar.gregorianCurrent.isDate(
+          timing.start, inSameDayAs: timing.end)
+        Text(verbatim: endText + (crossesMidnight ? "+1" : ""))
           .accessibilityLabel(
-            crossesMidnight ? Text(.friendsCardEndsNextDay(endTime)) : Text(verbatim: endTime))
+            crossesMidnight ? Text(.friendsCardEndsNextDay(endText)) : Text(verbatim: endText))
       }
       .font(.tidexSubheadline.weight(.semibold))
-      .foregroundStyle(timing.status(at: now) == .past ? Color.tidexTextSecondary : Color.tidexTextPrimary)
+      .foregroundStyle(
+        timing.status(at: now) == .past ? Color.tidexTextSecondary : Color.tidexTextPrimary)
     } else if isCalendarAvailable {
       Image(systemName: "calendar")
         .font(.tidexHeadline)

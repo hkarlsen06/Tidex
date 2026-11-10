@@ -49,6 +49,7 @@ struct FriendWithShift: Sendable {
   let endTime: String?
   let gross: Double?
   let status: FriendShiftStatus?
+  var ownerTimeZone: String?
 
   /// Whether this friend has a shift to display
   var hasShift: Bool {
@@ -174,6 +175,7 @@ enum FriendsAPIClient {
             sharerId: sharer.id,
             shifts: shifts,
             showEarnings: payloadRow.showEarnings,
+            ownerTimeZone: payloadRow.ownerTimeZone,
             now: now
           ))
       } else {
@@ -219,7 +221,8 @@ enum FriendsAPIClient {
         startTime: previewShift?.startTime,
         endTime: previewShift?.endTime,
         gross: safeGross,
-        status: status
+        status: status,
+        ownerTimeZone: preview?.ownerTimeZone
       )
     }
 
@@ -288,7 +291,7 @@ enum FriendsAPIClient {
       case .query: return try await SharedAuthToken.convex.query(path, args)
       case .mutation: return try await SharedAuthToken.convex.mutation(path, args)
       }
-    } catch where UserFacingError.isCancellation(error) {
+    } catch  where UserFacingError.isCancellation(error) {
       throw error
     } catch let error as FriendsAPIError {
       throw error
@@ -332,8 +335,8 @@ enum FriendsAPIClient {
         return lhsPriority < rhsPriority
       }
 
-      guard let lhsDateTime = shiftDateTime(shiftDate: lhs.shiftDate, time: lhs.startTime),
-        let rhsDateTime = shiftDateTime(shiftDate: rhs.shiftDate, time: rhs.startTime)
+      guard let lhsDateTime = interval(lhs)?.start,
+        let rhsDateTime = interval(rhs)?.start
       else {
         return lhs.shiftDate != nil
       }
@@ -369,29 +372,14 @@ enum FriendsAPIClient {
     return username.hasPrefix("@") ? username : "@\(username)"
   }
 
-  private static func shiftDateTime(shiftDate: String?, time: String?) -> Date? {
-    guard let shiftDate, let time else { return nil }
-    let dateParts = shiftDate.split(separator: "-").compactMap { Int($0) }
-    let timeParts = time.split(separator: ":").compactMap { Int($0) }
-    guard dateParts.count == 3, timeParts.count >= 2 else { return nil }
-
-    var components = DateComponents()
-    components.year = dateParts[0]
-    components.month = dateParts[1]
-    components.day = dateParts[2]
-    components.hour = timeParts[0] == 24 ? 0 : timeParts[0]
-    components.minute = timeParts[1]
-
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = .current
-
-    guard var date = calendar.date(from: components) else { return nil }
-    if timeParts[0] == 24 {
-      date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
+  private static func interval(_ friend: FriendWithShift) -> SharedShiftInterval? {
+    guard let date = friend.shiftDate, let start = friend.startTime, let end = friend.endTime else {
+      return nil
     }
-
-    return date
+    return SharedShiftInterval(
+      date: date, startTime: start, endTime: end, timeZoneIdentifier: friend.ownerTimeZone)
   }
+
 }
 
 #if os(iOS)
@@ -475,14 +463,8 @@ enum FriendsAPIClient {
       }
 
       guard
-        let lhsDateTime = shiftDateTime(
-          shiftDate: lhsPreview?.shift?.shiftDate,
-          time: lhsPreview?.shift?.startTime
-        ),
-        let rhsDateTime = shiftDateTime(
-          shiftDate: rhsPreview?.shift?.shiftDate,
-          time: rhsPreview?.shift?.startTime
-        )
+        let lhsDateTime = previewStart(lhsPreview),
+        let rhsDateTime = previewStart(rhsPreview)
       else {
         return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
       }
@@ -514,22 +496,14 @@ enum FriendsAPIClient {
       }
     }
 
-    private static func shiftDateTime(shiftDate: String?, time: String?) -> Date? {
-      guard let shiftDate, let time else { return nil }
-      let dateParts = shiftDate.split(separator: "-").compactMap { Int($0) }
-      let timeParts = time.split(separator: ":").compactMap { Int($0) }
-      guard dateParts.count == 3, timeParts.count >= 2 else { return nil }
-
-      var components = DateComponents()
-      components.calendar = Calendar(identifier: .gregorian)
-      components.year = dateParts[0]
-      components.month = dateParts[1]
-      components.day = dateParts[2]
-      components.hour = timeParts[0]
-      components.minute = timeParts[1]
-      components.second = 0
-      return components.calendar?.date(from: components)
+    private static func previewStart(_ preview: SharingComputedPreview?) -> Date? {
+      guard let shift = preview?.shift else { return nil }
+      return SharedShiftInterval(
+        date: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime,
+        timeZoneIdentifier: preview?.ownerTimeZone
+      )?.start
     }
+
   }
 
   enum SiriMessageRecipientMatcher {
@@ -726,6 +700,7 @@ enum FriendsAPIClient {
             sharerId: row.sharerId,
             shifts: shifts,
             showEarnings: row.showEarnings,
+            ownerTimeZone: row.ownerTimeZone,
             now: now
           )
           return (row.sharerId, preview)
@@ -771,7 +746,7 @@ enum FriendsAPIClient {
           throw FriendsAPIError.httpError(statusCode: httpResponse.statusCode)
         }
         return try JSONDecoder().decode(UploadReply.self, from: data).storageId
-      } catch where UserFacingError.isCancellation(error) {
+      } catch  where UserFacingError.isCancellation(error) {
         throw error
       } catch let error as FriendsAPIError {
         throw error

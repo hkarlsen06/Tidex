@@ -57,6 +57,8 @@ internal struct FriendShiftWidgetEntry: ShiftTimelineEntry {
   /// Real end instant of the shift (next day for night shifts)
   internal var shiftEnd: Date?
 
+  var sourceTime: String?
+
   // MARK: - Factory Methods
 
   /// Placeholder entry for widget gallery and loading states

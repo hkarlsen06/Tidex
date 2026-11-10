@@ -74,27 +74,19 @@ struct FriendShiftTiming: Equatable {
     self.end = end
   }
 
-  init?(shift: SharedShiftData, calendar: Calendar = .gregorianCurrent) {
-    guard let shiftDate = Date.fromISODateString(shift.shift_date) else { return nil }
-
-    let startComponents = shift.start_time.split(separator: ":").compactMap { Int($0) }
-    let endComponents = shift.end_time.split(separator: ":").compactMap { Int($0) }
-    guard startComponents.count >= 2, endComponents.count >= 2,
-      let start = calendar.date(
-        bySettingHour: startComponents[0], minute: startComponents[1], second: 0, of: shiftDate),
-      var end = calendar.date(
-        bySettingHour: endComponents[0], minute: endComponents[1], second: 0, of: shiftDate)
+  init?(shift: SharedShiftData) {
+    guard
+      let interval = SharedShiftInterval(
+        date: shift.shift_date, startTime: shift.start_time, endTime: shift.end_time,
+        timeZoneIdentifier: shift.ownerTimeZone
+      )
     else { return nil }
-
-    if end <= start {
-      end = calendar.date(byAdding: .day, value: 1, to: end) ?? end
-    }
-    self.init(start: start, end: end)
+    self.init(start: interval.start, end: interval.end)
   }
 
   func status(at now: Date) -> ShiftPreviewStatus {
     if now < start { return .upcoming }
-    return now <= end ? .active : .past
+    return now < end ? .active : .past
   }
 
   /// Fraction of the shift that has elapsed, clamped to 0...1.
@@ -126,19 +118,18 @@ private struct CompactFriendShiftPreviewTextRow: View {
 
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+  private var interval: SharedShiftInterval? {
+    SharedShiftInterval(
+      date: shift.shift_date, startTime: shift.start_time, endTime: shift.end_time,
+      timeZoneIdentifier: shift.ownerTimeZone)
+  }
+
   private var formattedDate: String {
-    guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
-    return date.formatted(.dateTime.weekday(.wide).day().month(.abbreviated).calendar(.gregorian))
-      .sentenceCased()
+    interval?.dateLabel(locale: .appLocale) ?? shift.shift_date
   }
 
   private var formattedTimeRange: String {
-    ShiftCardFormatter.localizedTimeRange(
-      start: shift.start_time,
-      end: shift.end_time,
-      locale: Locale.appLocale,
-      separator: " – "
-    )
+    interval?.timeRange(locale: .appLocale) ?? ""
   }
 
   private var formattedEarnings: String {
@@ -175,11 +166,24 @@ private struct CompactFriendShiftPreviewTextRow: View {
         .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(isStacked ? nil : 1)
 
+      if let interval, interval.differs() {
+        Text(.sharingTimeYourTime)
+          .font(.tidexCaption)
+          .foregroundStyle(Color.tidexTextMuted)
+      }
       Text(formattedTimeRange)
         .font(.tidexFootnote)
         .foregroundStyle(Color.tidexTextMuted)
         .lineLimit(isStacked ? nil : 1)
         .environment(\.layoutDirection, .leftToRight)
+      if let interval, interval.differs() {
+        Text(
+          .sharingTimeShiftLocal(
+            interval.sourceDescription(locale: .appLocale))
+        )
+        .font(.tidexCaption)
+        .foregroundStyle(Color.tidexTextMuted)
+      }
     }
   }
 
@@ -205,6 +209,6 @@ private struct CompactFriendShiftPreviewTextRow: View {
     if let timing = FriendShiftTiming(shift: shift) {
       return timing.statusText(at: now)
     }
-    return status == .active ? String(localized: .sharingStatusActive) : ""
+    return ""
   }
 }

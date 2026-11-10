@@ -1123,6 +1123,7 @@ private struct SharedShiftsDetailView: View {
         phase: viewModel.transitionPhase,
         isLoading: viewModel.isLoadingShifts,
         isContentReady: viewModel.hasResolvedSelectedSharerShifts,
+        ownerTimeZone: viewModel.sharedOwnerTimeZone,
         highlightDates: highlightDates,
         highlightShiftIds: highlightShiftIds,
         isSuperimposing: viewModel.isSuperimposing,
@@ -1174,7 +1175,8 @@ private struct SharedShiftsDetailView: View {
           } label: {
             superimposeToggleLabel
               .font(.tidexFootnoteMedium)
-              .foregroundStyle(viewModel.isSuperimposing ? Color.tidexBlueText : Color.tidexTextMuted)
+              .foregroundStyle(
+                viewModel.isSuperimposing ? Color.tidexBlueText : Color.tidexTextMuted)
           }
         }
 

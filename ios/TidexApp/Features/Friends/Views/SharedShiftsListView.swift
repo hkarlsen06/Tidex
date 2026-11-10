@@ -14,6 +14,7 @@ struct SharedShiftsListView: View {
   let phase: MonthTransitionPhase?
   let isLoading: Bool
   let isContentReady: Bool
+  var ownerTimeZone: String?
 
   /// Dates to highlight from notification deeplink
   var highlightDates: Set<String> = []
@@ -82,6 +83,9 @@ struct SharedShiftsListView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .safeAreaInset(edge: .top, spacing: 0) {
+      SharedScheduleTimeZoneCaption(ownerTimeZone: ownerTimeZone)
+    }
     .animation(.none, value: showListView)
     // Using .sheet(item:) guarantees data availability when sheet presents
     .sheet(
@@ -105,6 +109,22 @@ struct SharedShiftsListView: View {
         snapshotShareContext: .shared(owner: sharer)
       )
       .userCurrency(shiftJob?.currency ?? currency)
+      .safeAreaInset(edge: .top) {
+        if let interval = SharedShiftInterval(
+          date: shift.shiftDate, startTime: shift.startTime,
+          endTime: shift.endTime, timeZoneIdentifier: ownerTimeZone
+        ), interval.differs() {
+          VStack(spacing: Spacing.xxs) {
+            Text(.sharingTimeYourTime)
+            Text(
+              verbatim: interval.dateLabel(locale: .appLocale) + " "
+                + interval.timeRange(locale: .appLocale))
+          }
+          .font(.tidexFootnote)
+          .foregroundStyle(Color.tidexTextSecondary)
+          .padding(Spacing.sm)
+        }
+      }
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
     }
@@ -159,6 +179,7 @@ extension SharedShiftsListView {
       currency: currency,
       showEarnings: sharer.showEarnings,
       friendFirstName: sharer.firstNameOnly,
+      ownerTimeZone: ownerTimeZone,
       highlightDates: highlightDates,
       highlightShiftIds: highlightShiftIds,
       isSuperimposing: isSuperimposing,

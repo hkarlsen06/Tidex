@@ -224,7 +224,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
         gross: friend.gross ?? 0,
         currencySymbol: currency,
         showEarnings: friend.showEarnings,
-        status: friend.status?.rawValue ?? "upcoming"
+        status: friend.status?.rawValue,
+        ownerTimeZone: friend.ownerTimeZone
       )
     }
 
@@ -271,14 +272,17 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     let endTime: String?
     let gross: Double?
     let showEarnings: Bool
+    let ownerTimeZone: String?
 
     if let apiFriend = fromAPI, apiFriend.hasShift {
+      ownerTimeZone = apiFriend.ownerTimeZone
       shiftDate = apiFriend.shiftDate
       startTime = apiFriend.startTime
       endTime = apiFriend.endTime
       gross = apiFriend.gross
       showEarnings = apiFriend.showEarnings
     } else if let cachedShift = loadFriendShift(for: friend.id) {
+      ownerTimeZone = cachedShift.ownerTimeZone
       shiftDate = cachedShift.shiftDate
       startTime = cachedShift.startTime
       endTime = cachedShift.endTime
@@ -307,37 +311,27 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
       )
     }
 
-    // Determine layout state
+    guard
+      let interval = SharedShiftInterval(
+        date: shiftDate, startTime: startTime, endTime: endTime, timeZoneIdentifier: ownerTimeZone
+      )
+    else {
+      return FriendShiftWidgetEntry.empty(
+        friendId: friend.id, friendName: friend.displayName,
+        friendInitials: friend.initials, currency: storedCurrency)
+    }
+    let viewerDate = interval.dateString()
     var (layoutState, daysRemaining) = helper.determineLayoutState(
-      shiftDateString: shiftDate, at: now)
-
-    // Check if shift has started/ended
-    let shiftStarted = helper.hasShiftStarted(
-      shiftDateString: shiftDate, startTime: startTime, at: now)
-    let shiftEnded = helper.hasShiftEnded(
-      shiftDateString: shiftDate,
-      startTime: startTime,
-      endTime: endTime,
-      at: now
-    )
-    let shiftActive = helper.isShiftActive(
-      shiftDateString: shiftDate,
-      startTime: startTime,
-      endTime: endTime,
-      at: now
-    )
-
-    // Adjust layout state for active/ended shifts
-    // Preserve pastShift layout for past shifts - they should show "X days ago"
-    if shiftActive {
+      shiftDateString: viewerDate, at: now)
+    let shiftStarted = now >= interval.start
+    let shiftEnded = now >= interval.end
+    if interval.status(at: now) == .active {
       layoutState = .todayOrTomorrow
       daysRemaining = 0
-    } else if layoutState != .pastShift, shiftStarted || shiftEnded {
+    } else if layoutState != .pastShift, shiftStarted {
       layoutState = .todayOrTomorrow
     }
-
-    // Format date
-    let formattedDate = formatShiftDate(shiftDate, daysRemaining: daysRemaining)
+    let formattedDate = formatShiftDate(viewerDate, daysRemaining: daysRemaining)
 
     // Format earnings (or hide if not allowed)
     let netEarnings: String
@@ -356,8 +350,6 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
     // Build deep link (use "user" param to match AppCoordinator.handleDeepLink)
     let deepLinkURL = URL(string: "tidex://sharing?user=\(friend.id)&dates=\(shiftDate)")
-    let interval = helper.shiftInterval(
-      shiftDateString: shiftDate, startTime: startTime, endTime: endTime)
 
     return FriendShiftWidgetEntry(
       date: now,
@@ -365,8 +357,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
       friendName: friend.displayName,
       friendInitials: friend.initials,
       shiftDate: formattedDate,
-      startTime: startTime,
-      endTime: endTime,
+      startTime: interval.clock(interval.start),
+      endTime: interval.clock(interval.end),
       netEarnings: netEarnings,
       showEarnings: showEarnings,
       hasShift: true,
@@ -375,8 +367,10 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
       shiftHasStarted: shiftStarted,
       shiftHasEnded: shiftEnded,
       deepLinkURL: deepLinkURL,
-      shiftStart: interval?.start,
-      shiftEnd: interval?.end
+      shiftStart: interval.start,
+      shiftEnd: interval.end,
+      sourceTime: interval.differs()
+        ? interval.sourceDescription() : nil
     )
   }
 
@@ -554,7 +548,11 @@ struct FriendShiftWidgetView: View {
     let shift = WidgetAccessibility.shiftSummary(
       entry, shiftDate: entry.shiftDate, startTime: entry.startTime, endTime: entry.endTime,
       earnings: entry.showEarnings ? entry.netEarnings : nil)
-    return WidgetAccessibility.join([entry.friendName, shift])
+    return WidgetAccessibility.join([
+      entry.friendName,
+      entry.sourceTime == nil ? nil : String(localized: .sharingTimeYourTime), shift,
+      entry.sourceTime.map { String(localized: .sharingTimeShiftLocal($0)) },
+    ])
   }
 
   // MARK: - No Friend Selected Layout
@@ -675,6 +673,20 @@ struct FriendShiftWidgetView: View {
   }
 
   private var timeBlockView: some View {
+    VStack(spacing: 4) {
+      shiftClocks
+      if let sourceTime = entry.sourceTime {
+        Text(.sharingTimeShiftLocal(sourceTime))
+          .font(.caption2)
+          .foregroundStyle(mutedTextColor)
+          .multilineTextAlignment(.center)
+          .lineLimit(3)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+    }
+  }
+
+  private var shiftClocks: some View {
     VStack(spacing: -6) {
       if entry.layoutState == .pastShift {
         pastShiftCountupView

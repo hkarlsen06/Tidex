@@ -21,7 +21,8 @@ extension StoredFriendShift {
       gross: shift.computed.gross,
       currencySymbol: currencySymbol,
       showEarnings: preview.showEarnings,
-      status: preview.status?.rawValue ?? "upcoming"
+      status: preview.status?.rawValue,
+      ownerTimeZone: preview.ownerTimeZone
     )
   }
 }

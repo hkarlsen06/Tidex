@@ -26,5 +26,6 @@ struct StoredFriendShift: Codable {
   let showEarnings: Bool
 
   /// Shift status: "active", "upcoming", or "past"
-  let status: String
+  let status: String?
+  var ownerTimeZone: String?
 }

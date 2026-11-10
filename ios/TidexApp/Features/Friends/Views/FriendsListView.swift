@@ -181,17 +181,8 @@ struct FriendsListOrdering {
   }
 
   private func shiftStartTime(for shift: SharedShiftData) -> Date? {
-    guard let shiftDate = Date.fromISODateString(shift.shift_date) else { return nil }
+    return FriendShiftTiming(shift: shift)?.start
 
-    let components = shift.start_time.split(separator: ":").compactMap { Int($0) }
-    guard components.count >= 2 else { return nil }
-
-    return Calendar.gregorianCurrent.date(
-      bySettingHour: components[0],
-      minute: components[1],
-      second: 0,
-      of: shiftDate
-    )
   }
 }
 

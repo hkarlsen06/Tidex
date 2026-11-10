@@ -51,6 +51,16 @@ extension LocalStoreActor {
     month: Int,
     forceReplace: Bool = false
   ) throws {
+    let zoneKey = "friends.sharedCalendarCacheZone.\(viewerId)"
+    let viewerZone = TimeZone.current.identifier
+    if let savedZone = UserDefaults.standard.string(forKey: zoneKey), savedZone != viewerZone {
+      let staleShifts = FetchDescriptor<LocalSharedShift>(
+        predicate: #Predicate { $0.viewerId == viewerId })
+      for row in try modelContext.fetch(staleShifts) { modelContext.delete(row) }
+      let staleRecords = FetchDescriptor<LocalSharedShiftFetchRecord>(
+        predicate: #Predicate { $0.viewerId == viewerId })
+      for row in try modelContext.fetch(staleRecords) { modelContext.delete(row) }
+    }
     // Fetch existing shifts for this owner/viewer/month
     let descriptor = FetchDescriptor<LocalSharedShift>(
       predicate: #Predicate { shift in
@@ -109,6 +119,7 @@ extension LocalStoreActor {
     )
 
     try modelContext.save()
+    UserDefaults.standard.set(viewerZone, forKey: zoneKey)
   }
 
   /// Clear all shared data for a viewer

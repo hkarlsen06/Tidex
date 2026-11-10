@@ -6,6 +6,7 @@ struct SharedShiftsResponse: Codable {
   let settings: SharedUserSettings
   let jobs: [SharedJob]
   let payoutTaxSettings: SharedPayoutTaxSettings?
+  var ownerTimeZone: String?
 }
 
 /// A shift with computed payroll data from the API
@@ -29,6 +30,7 @@ struct SharedShiftData: Codable, Identifiable, Equatable {
   /// Recurring shift metadata (for virtual shifts)
   let recurring_id: String?
   let recurring_anchor_weekday: Int?
+  var ownerTimeZone: String?
 
   var isVirtual: Bool {
     recurring_id != nil

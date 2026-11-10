@@ -698,6 +698,7 @@ struct SharingRPCWageSnapshot: Codable, Sendable {
 
 struct SharingRPCPreviewPayloadRow: Codable, Sendable {
   let sharerId: String
+  let ownerTimeZone: String?
   let showEarnings: Bool
   let settings: SharingRPCUserSettings
   let shifts: [SharingRPCShiftRow]
@@ -719,6 +720,7 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
 
   private enum CodingKeys: String, CodingKey {
     case sharerId = "sharer_id"
+    case ownerTimeZone = "owner_time_zone"
     case showEarnings = "show_earnings"
     case settings
     case shifts
@@ -730,6 +732,7 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
   init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     sharerId = try container.decode(String.self, forKey: .sharerId)
+    ownerTimeZone = try container.decodeIfPresent(String.self, forKey: .ownerTimeZone)
     showEarnings = try container.decode(Bool.self, forKey: .showEarnings)
     settings =
       try container.decodeIfPresent(SharingRPCUserSettings.self, forKey: .settings)
@@ -758,6 +761,7 @@ struct SharingRPCPreviewPayloadRow: Codable, Sendable {
 
 struct SharingRPCMonthPayloadRow: Codable, Sendable {
   let ownerId: String
+  let ownerTimeZone: String?
   let showEarnings: Bool
   let settings: SharingRPCUserSettings
   let shifts: [SharingRPCShiftRow]
@@ -779,6 +783,7 @@ struct SharingRPCMonthPayloadRow: Codable, Sendable {
 
   private enum CodingKeys: String, CodingKey {
     case ownerId = "owner_id"
+    case ownerTimeZone = "owner_time_zone"
     case showEarnings = "show_earnings"
     case settings
     case shifts
@@ -790,6 +795,7 @@ struct SharingRPCMonthPayloadRow: Codable, Sendable {
   init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     ownerId = try container.decode(String.self, forKey: .ownerId)
+    ownerTimeZone = try container.decodeIfPresent(String.self, forKey: .ownerTimeZone)
     showEarnings = try container.decode(Bool.self, forKey: .showEarnings)
     settings =
       try container.decodeIfPresent(SharingRPCUserSettings.self, forKey: .settings)

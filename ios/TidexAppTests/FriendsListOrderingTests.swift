@@ -780,7 +780,8 @@ final class FriendsListOrderingTests: XCTestCase {
         custom_pause_windows: nil,
         custom_supplements: nil,
         recurring_id: nil,
-        recurring_anchor_weekday: nil
+        recurring_anchor_weekday: nil,
+        ownerTimeZone: "UTC"
       ),
       status: status,
       showEarnings: false,

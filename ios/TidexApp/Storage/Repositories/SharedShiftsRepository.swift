@@ -1,6 +1,6 @@
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsRepository")
 
@@ -121,6 +121,18 @@ final class SharedShiftsRepository {
     }
   }
 
+  private func calendarCacheIsCurrent(viewerId: String) -> Bool {
+    let key = "friends.sharedCalendarCacheZone.\(viewerId)"
+    let current = TimeZone.current.identifier
+    guard let saved = UserDefaults.standard.string(forKey: key) else {
+      // Released caches have no viewer-zone metadata. Preserve them on upgrade and
+      // record this zone so subsequent travel invalidates their date-only values.
+      UserDefaults.standard.set(current, forKey: key)
+      return true
+    }
+    return saved == current
+  }
+
   // MARK: - Shared Shift Operations
 
   /// Get cached shared shifts for a specific owner and month
@@ -136,6 +148,8 @@ final class SharedShiftsRepository {
     year: Int,
     month: Int
   ) -> [ShiftWithComputations] {
+    guard calendarCacheIsCurrent(viewerId: viewerId)
+    else { return [] }
     let context = localStore.mainContext
 
     let descriptor = FetchDescriptor<LocalSharedShift>(
@@ -199,6 +213,8 @@ final class SharedShiftsRepository {
     year: Int,
     month: Int
   ) -> Date? {
+    guard calendarCacheIsCurrent(viewerId: viewerId)
+    else { return nil }
     let context = localStore.mainContext
 
     var descriptor = FetchDescriptor<LocalSharedShift>(
@@ -254,6 +270,8 @@ final class SharedShiftsRepository {
     year: Int,
     month: Int
   ) -> Bool {
+    guard calendarCacheIsCurrent(viewerId: viewerId)
+    else { return false }
     let context = localStore.mainContext
     let compositeKey = "\(viewerId):\(ownerId):\(year):\(month)"
 
@@ -289,7 +307,18 @@ final class SharedShiftsRepository {
       )
       var previewMap: [String: SharerShiftPreview] = [:]
       for localPreview in localPreviews {
-        previewMap[localPreview.sharerId] = localPreview.toSharerShiftPreview()
+        let cached = localPreview.toSharerShiftPreview()
+        let zone = FriendsScheduleTimeZoneStore.shared.zone(
+          ownerId: cached.sharerId, viewerId: viewerId)
+        var shift = cached.shift
+        shift?.ownerTimeZone = zone
+        let timing = shift.flatMap { FriendShiftTiming(shift: $0) }
+        previewMap[cached.sharerId] = SharerShiftPreview(
+          sharerId: cached.sharerId, shift: timing == nil ? nil : shift,
+          status: timing?.status(at: .now), showEarnings: cached.showEarnings,
+          currency: cached.currency, hasSharedCalendarContent: cached.shift != nil,
+          ownerTimeZone: zone
+        )
       }
       return previewMap
     } catch {
@@ -303,6 +332,10 @@ final class SharedShiftsRepository {
   ///   - previews: Array of SharerShiftPreview from API
   ///   - viewerId: The current user's ID
   func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) async {
+    for preview in previews {
+      FriendsScheduleTimeZoneStore.shared.set(
+        preview.ownerTimeZone, ownerId: preview.sharerId, viewerId: viewerId)
+    }
     do {
       try await localStore.storeActor.saveShiftPreviews(previews, for: viewerId)
       logger.info("Saved \(previews.count) shift previews to cache")

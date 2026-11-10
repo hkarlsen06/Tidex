@@ -15,6 +15,9 @@ struct FriendPreview: Equatable, Identifiable {
   let timeRange: String?  // "09:00 – 17:00"
   let status: FriendShiftStatus
   let daysRemaining: Int?
+  var sourceTime: String?
+  var shiftStart: Date?
+  var shiftEnd: Date?
   var avatar: UIImage?
 
   enum FriendShiftStatus: Equatable {
@@ -109,10 +112,10 @@ struct FriendsWidgetProvider: TimelineProvider {
       Calendar.gregorianCurrent.nextDate(
         after: now, matching: DateComponents(hour: 0, minute: 0, second: 0),
         matchingPolicy: .nextTime) ?? now.addingTimeInterval(24 * 60 * 60)
-    let helper = ShiftWidgetProviderHelper()
     let boundaries = shifts.compactMap {
-      helper.shiftInterval(
-        shiftDateString: $0.shiftDate, startTime: $0.startTime, endTime: $0.endTime)
+      SharedShiftInterval(
+        date: $0.shiftDate, startTime: $0.startTime, endTime: $0.endTime,
+        timeZoneIdentifier: $0.ownerTimeZone)
     }.flatMap { [$0.start, $0.end] }
     let dates = [now] + Set(boundaries.filter { $0 > now && $0 < nextMidnight }).sorted()
     let entries = dates.map { createEntry(at: $0, shifts: shifts) }
@@ -148,15 +151,19 @@ struct FriendsWidgetProvider: TimelineProvider {
       // Find shift for this sharer
       let shift = shifts.first { $0.sharerId == sharer.id }
 
-      if let shift {
+      if let shift,
+        let interval = SharedShiftInterval(
+          date: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime,
+          timeZoneIdentifier: shift.ownerTimeZone
+        )
+      {
         // Calculate layout state
         let (status, daysRemaining) = determineStatus(
-          shiftDateString: shift.shiftDate,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
+          interval: interval,
           now: now
         )
-        let formattedDate = formatShiftDate(shift.shiftDate, daysRemaining: daysRemaining, now: now)
+        let formattedDate = formatShiftDate(
+          interval.dateString(), daysRemaining: daysRemaining, now: now)
 
         previews.append(
           FriendPreview(
@@ -164,10 +171,14 @@ struct FriendsWidgetProvider: TimelineProvider {
             displayName: sharer.displayName,
             initials: sharer.initials,
             shiftDate: formattedDate,
-            rawDate: shift.shiftDate,
-            timeRange: "\(shift.startTime) – \(shift.endTime)",
+            rawDate: interval.dateString(),
+            timeRange: interval.timeRange(),
             status: status,
-            daysRemaining: daysRemaining
+            daysRemaining: daysRemaining,
+            sourceTime: interval.differs()
+              ? interval.sourceDescription() : nil,
+            shiftStart: interval.start,
+            shiftEnd: interval.end
           ))
       } else {
         // No shift for this friend
@@ -238,7 +249,8 @@ struct FriendsWidgetProvider: TimelineProvider {
     let topFriends = previews.enumerated().map { index, preview in
       var preview = preview
       if index < FriendsWidgetView.maxRows + FriendsWidgetView.maxFooterAvatars,
-        let path = avatarDirectory?.appendingPathComponent("\(preview.id).jpg").path {
+        let path = avatarDirectory?.appendingPathComponent("\(preview.id).jpg").path
+      {
         preview.avatar = UIImage(contentsOfFile: path)
       }
       return preview
@@ -254,20 +266,15 @@ struct FriendsWidgetProvider: TimelineProvider {
   // MARK: - Date Helpers
 
   private func determineStatus(
-    shiftDateString: String,
-    startTime: String,
-    endTime: String,
+    interval: SharedShiftInterval,
     now: Date
   ) -> (FriendPreview.FriendShiftStatus, Int) {
-    guard let interval = ShiftWidgetProviderHelper().shiftInterval(
-      shiftDateString: shiftDateString, startTime: startTime, endTime: endTime)
-    else {
-      return (.none, 0)
-    }
     let calendar = Calendar.gregorianCurrent
-    let days = calendar.dateComponents(
-      [.day], from: calendar.startOfDay(for: now),
-      to: calendar.startOfDay(for: interval.start)).day ?? 0
+    let days =
+      calendar.dateComponents(
+        [.day], from: calendar.startOfDay(for: now),
+        to: calendar.startOfDay(for: interval.start)
+      ).day ?? 0
     if now < interval.start { return (.upcoming, days) }
     if now < interval.end { return (.active, 0) }
     return (.past, days)
@@ -411,7 +418,11 @@ struct FriendsWidgetView: View {
       backgroundColor
 
       if entry.hasAnyFriends, !entry.friends.isEmpty {
-        contentView
+        ViewThatFits(in: .vertical) {
+          contentView(rowLimit: Self.maxRows)
+          contentView(rowLimit: 3)
+          contentView(rowLimit: 2)
+        }
       } else {
         emptyStateView
       }
@@ -421,19 +432,11 @@ struct FriendsWidgetView: View {
   nonisolated static let maxRows = 4
   nonisolated static let maxFooterAvatars = 7
 
-  /// Friends shown as the card and rows: the nearest shifts that fit.
-  private var shiftFriends: [FriendPreview] {
-    Array(entry.friends.filter { $0.status != .none }.prefix(Self.maxRows))
-  }
-
-  /// Everyone else: friends without a shift and shift friends that didn't fit.
-  private var footerFriends: [FriendPreview] {
+  private func contentView(rowLimit: Int) -> some View {
+    let shiftFriends = Array(entry.friends.filter { $0.status != .none }.prefix(rowLimit))
     let shown = Set(shiftFriends.map(\.id))
-    return entry.friends.filter { !shown.contains($0.id) }
-  }
-
-  private var contentView: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    let footerFriends = entry.friends.filter { !shown.contains($0.id) }
+    return VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 6) {
         Image(systemName: "person.2.fill")
           .font(.system(size: 12, weight: .semibold))
@@ -459,7 +462,7 @@ struct FriendsWidgetView: View {
       Spacer(minLength: 0)
 
       if !footerFriends.isEmpty {
-        footer
+        footer(footerFriends)
       }
     }
     .padding(16)
@@ -468,7 +471,7 @@ struct FriendsWidgetView: View {
   /// The friend whose shift is closest in time gets the large card.
   private func heroCard(_ friend: FriendPreview) -> some View {
     let isActive = friend.status == .active
-    return VStack(alignment: .leading, spacing: 14) {
+    return VStack(alignment: .leading, spacing: friend.sourceTime == nil ? 14 : 8) {
       HStack(spacing: 12) {
         avatar(friend, size: 44, fontSize: 16)
 
@@ -485,19 +488,32 @@ struct FriendsWidgetView: View {
               .foregroundStyle(secondaryTextColor)
               .lineLimit(1)
           }
+
         }
 
         Spacer(minLength: 8)
 
         if let timeRange = friend.timeRange {
-          Text(timeRange)
-            .font(.system(size: 22, weight: .bold, design: .rounded))
-            .monospacedDigit()
-            .foregroundStyle(primaryTextColor)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .fixedSize(horizontal: true, vertical: false)
+          VStack(alignment: .trailing, spacing: 1) {
+            if friend.sourceTime != nil {
+              Text(.sharingTimeYourTime).font(.caption2).foregroundStyle(mutedTextColor)
+            }
+            Text(timeRange)
+              .font(.system(size: 22, weight: .bold, design: .rounded))
+              .monospacedDigit()
+              .foregroundStyle(primaryTextColor)
+              .lineLimit(1)
+              .minimumScaleFactor(0.8)
+              .fixedSize(horizontal: true, vertical: false)
+          }
         }
+      }
+
+      if let sourceTime = friend.sourceTime {
+        Text(.sharingTimeShiftLocal(sourceTime))
+          .font(.caption2)
+          .foregroundStyle(mutedTextColor)
+          .lineLimit(2)
       }
 
       if let span = shiftSpan(friend) {
@@ -519,7 +535,9 @@ struct FriendsWidgetView: View {
     WidgetAccessibility.join([
       firstName(from: friend.displayName),
       friend.status == .active ? String(localized: .widgetActive) : friend.shiftDate,
+      friend.sourceTime == nil ? nil : String(localized: .sharingTimeYourTime),
       friend.timeRange.map(WidgetAccessibility.spokenTimeRange),
+      friend.sourceTime.map { String(localized: .sharingTimeShiftLocal($0)) },
     ])
   }
 
@@ -561,44 +579,54 @@ struct FriendsWidgetView: View {
 
   /// Shift start and end as fractions of the day. Cross-midnight shifts are clipped at 24:00.
   private func shiftSpan(_ friend: FriendPreview) -> ClosedRange<Double>? {
-    guard let parts = friend.timeRange?.components(separatedBy: " – "), parts.count == 2 else {
-      return nil
-    }
-    let minutes = parts.map { part -> Double? in
-      let hourMinute = part.split(separator: ":").compactMap { Double($0) }
-      return hourMinute.count == 2 ? hourMinute[0] * 60 + hourMinute[1] : nil
-    }
-    guard let start = minutes[0], let end = minutes[1] else { return nil }
+    guard let shiftStart = friend.shiftStart, let shiftEnd = friend.shiftEnd else { return nil }
+    let calendar = Calendar.gregorianCurrent
+    let start = Double(
+      calendar.component(.hour, from: shiftStart) * 60
+        + calendar.component(.minute, from: shiftStart))
+    let end = Double(
+      calendar.component(.hour, from: shiftEnd) * 60 + calendar.component(.minute, from: shiftEnd))
     let clippedEnd = end > start ? end : 1_440
     return (start / 1_440)...(clippedEnd / 1_440)
   }
 
   private func compactRow(_ friend: FriendPreview) -> some View {
-    HStack(spacing: 12) {
-      avatar(friend, size: 34, fontSize: 13)
-
-      VStack(alignment: .leading, spacing: 1) {
-        Text(firstName(from: friend.displayName))
-          .font(.system(size: 15, weight: .semibold))
-          .foregroundStyle(primaryTextColor)
-        if friend.status == .active {
-          activeBadge
-        } else if let shiftDate = friend.shiftDate {
-          Text(shiftDate)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(secondaryTextColor)
+    VStack(alignment: .leading, spacing: 2) {
+      HStack(spacing: 12) {
+        avatar(friend, size: 34, fontSize: 13)
+        VStack(alignment: .leading, spacing: 1) {
+          Text(firstName(from: friend.displayName))
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(primaryTextColor)
+          if friend.status == .active {
+            activeBadge
+          } else if let shiftDate = friend.shiftDate {
+            Text(shiftDate)
+              .font(.system(size: 12, weight: .medium))
+              .foregroundStyle(secondaryTextColor)
+          }
+        }
+        .lineLimit(1)
+        Spacer(minLength: 8)
+        if let timeRange = friend.timeRange {
+          VStack(alignment: .trailing, spacing: 1) {
+            if friend.sourceTime != nil {
+              Text(.sharingTimeYourTime).font(.caption2).foregroundStyle(mutedTextColor)
+            }
+            Text(timeRange)
+              .font(.system(size: 15, weight: .semibold, design: .rounded))
+              .monospacedDigit()
+              .foregroundStyle(primaryTextColor)
+              .fixedSize()
+          }
         }
       }
-      .lineLimit(1)
-
-      Spacer(minLength: 8)
-
-      if let timeRange = friend.timeRange {
-        Text(timeRange)
-          .font(.system(size: 15, weight: .semibold, design: .rounded))
-          .monospacedDigit()
-          .foregroundStyle(primaryTextColor)
-          .fixedSize()
+      if let sourceTime = friend.sourceTime {
+        Text(.sharingTimeShiftLocal(sourceTime))
+          .font(.caption2)
+          .foregroundStyle(mutedTextColor)
+          .lineLimit(2)
+          .padding(.leading, 46)
       }
     }
     .accessibilityElement(children: .ignore)
@@ -606,7 +634,7 @@ struct FriendsWidgetView: View {
   }
 
   /// Friends not shown above, as a centered row of overlapping avatars.
-  private var footer: some View {
+  private func footer(_ footerFriends: [FriendPreview]) -> some View {
     let visible = footerFriends.prefix(Self.maxFooterAvatars)
     let overflow = footerFriends.count - visible.count
     return HStack(spacing: -8) {
@@ -656,11 +684,11 @@ struct FriendsWidgetView: View {
     }
     .frame(width: size, height: size)
     .clipShape(Circle())
-      .overlay {
-        if friend.status == .active {
-          Circle().strokeBorder(activeColor, lineWidth: 2)
-        }
+    .overlay {
+      if friend.status == .active {
+        Circle().strokeBorder(activeColor, lineWidth: 2)
       }
+    }
   }
 
   private var activeBadge: some View {
