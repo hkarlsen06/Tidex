@@ -127,7 +127,7 @@ internal struct OTPInputField: View {
       cursorTimer = nil
     }
     .sensoryFeedback(.impact(weight: .light), trigger: code) { _, newValue in
-      !newValue.isEmpty
+      !newValue.isEmpty && newValue.count < digitCount
     }
     .sensoryFeedback(.impact(weight: .medium), trigger: code) { _, newValue in
       newValue.count == digitCount

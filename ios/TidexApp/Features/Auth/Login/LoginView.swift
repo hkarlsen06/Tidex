@@ -65,6 +65,8 @@ struct LoginView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: geometry.size.height)
+        // The code step reshapes the hero while the keyboard rises. One animation moves both.
+        .motionAnimation(.emphasis, value: viewModel.currentStep, reduceMotion: reduceMotion)
       }
       .scrollBounceBehavior(.basedOnSize)
     }
@@ -168,13 +170,12 @@ struct LoginView: View {
       fieldError(viewModel.fieldErrors.email)
       fieldError(viewModel.fieldErrors.password)
 
-      // Submit button
+      // The screen's loading overlay is the progress indicator.
       PrimaryButton(
         title: String(localized: .loginSubmitButton),
         action: {
           Task { await viewModel.signIn() }
-        },
-        isLoading: viewModel.isLoading
+        }
       )
     }
   }

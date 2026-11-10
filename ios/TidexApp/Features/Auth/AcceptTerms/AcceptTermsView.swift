@@ -3,8 +3,8 @@ import os.log
 
 private let kAcceptTermsLogger: Logger = Logger(subsystem: "no.tidex.app", category: "AcceptTerms")
 
-/// Screen shown when user needs to accept (or re-accept) terms of service
-/// Mirrors the web app's `/accept-terms` page behavior
+/// Asks a signed-in user to accept the terms, or to accept them again after the version in the
+/// public legal manifest changes.
 internal struct AcceptTermsView: View {
   internal let isUpdate: Bool
   internal let coordinator: AppCoordinator

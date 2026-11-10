@@ -63,6 +63,8 @@ struct SignupView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: geometry.size.height)
+        // The code step reshapes the form while the keyboard rises. One animation moves both.
+        .motionAnimation(.emphasis, value: viewModel.step, reduceMotion: reduceMotion)
       }
       .scrollBounceBehavior(.basedOnSize)
     }
@@ -319,8 +321,7 @@ struct SignupForm: View {
         title: String(localized: .signupSubmitButton),
         action: {
           Task { await viewModel.signUp() }
-        },
-        isLoading: viewModel.isLoading
+        }
       )
     }
   }

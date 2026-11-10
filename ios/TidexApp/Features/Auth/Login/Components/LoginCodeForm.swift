@@ -21,7 +21,6 @@ internal struct LoginCodeForm: View {
         action: {
           Task { await viewModel.verifyOTP() }
         },
-        isLoading: viewModel.isLoading,
         isDisabled: viewModel.otpCode.count < LoginViewModel.codeLength
       )
 

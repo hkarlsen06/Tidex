@@ -22,7 +22,6 @@ internal struct EmailVerificationForm: View {
         action: {
           Task { await viewModel.verifyEmailCode() }
         },
-        isLoading: viewModel.isLoading,
         isDisabled: viewModel.otpCode.count < SignupViewModel.codeLength
       )
 
