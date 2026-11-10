@@ -1358,6 +1358,8 @@ final class AppCoordinator {
     AuthSessionManager.shared.clearSharedKeychain()
     AuthSessionManager.shared.clearCachedUser()
     WidgetAppGroup.markSignedOut()
+    // A sign-out that keeps unsynced data keeps UserDefaults, so clear the demo shift here.
+    OnboardingFirstShiftCarryoverStore.clear()
 
     // After the cached user is gone, so a refresh still in flight can't index again.
     await AssistantSpotlight.removeAll()

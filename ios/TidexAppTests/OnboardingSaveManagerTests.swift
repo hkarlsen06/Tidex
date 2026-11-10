@@ -51,7 +51,7 @@ final class OnboardingFirstShiftCarryoverStoreTests: XCTestCase {
     XCTAssertEqual(draft?.lastModified, now)
   }
 
-  func testMoveDropsDatesOutsideCurrentMonthAndConsumesCarryover() {
+  func testMoveKeepsDatesFromEveryMonthAndConsumesCarryover() {
     OnboardingFirstShiftCarryoverStore.write(
       dates: ["2026-08-31", "2026-09-01"],
       startTime: date("2026-09-01", "22:00"),
@@ -62,7 +62,7 @@ final class OnboardingFirstShiftCarryoverStoreTests: XCTestCase {
     OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft(
       now: date("2026-09-02", "09:00"), defaults: defaults)
 
-    XCTAssertEqual(storedAddShiftDraft()?.selectedDates, ["2026-09-01"])
+    XCTAssertEqual(storedAddShiftDraft()?.selectedDates, ["2026-08-31", "2026-09-01"])
     XCTAssertFalse(
       OnboardingFirstShiftCarryoverStore.moveToAddShiftDraft(defaults: defaults),
       "The carry-over is used once"

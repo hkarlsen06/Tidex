@@ -1,6 +1,16 @@
 import Foundation
 
-/// Keeps the shift built in the pre-auth simulator so the first real Add screen can start from it.
+/// The shift a user built in the pre-auth simulator. It stays a what-if until the user saves it.
+internal struct CarriedDemoShift: Equatable {
+  /// Sorted `yyyy-MM-dd` dates.
+  internal let dates: [String]
+  /// `HH:mm`.
+  internal let startTime: String
+  /// `HH:mm`. An end at or before the start ends the next day.
+  internal let endTime: String
+}
+
+/// Keeps the shift built in the pre-auth simulator until the user saves it, declines it or signs out.
 internal enum OnboardingFirstShiftCarryoverStore {
   private static let key: String = "preAuthSimulatorShift"
 
@@ -33,9 +43,21 @@ internal enum OnboardingFirstShiftCarryoverStore {
     defaults.set(data, forKey: key)
   }
 
-  /// Turns the simulator shift into the Add screen draft so the Add screen opens pre-filled.
-  /// Dates outside the current month are dropped because the simulator only showed the month
-  /// the user was in. Returns false when there was nothing to carry over.
+  /// The carried shift, or nil when there is none or it lacks dates or times.
+  internal static func read(defaults: UserDefaults = .standard) -> CarriedDemoShift? {
+    guard let draft = storedDraft(defaults: defaults),
+      let startTime = draft.startTime,
+      let endTime = draft.endTime,
+      !draft.selectedDates.isEmpty
+    else {
+      return nil
+    }
+    return CarriedDemoShift(
+      dates: draft.selectedDates.sorted(), startTime: startTime, endTime: endTime)
+  }
+
+  /// Turns the simulator shift into the Add screen draft so the Add screen opens pre-filled
+  /// with every carried date. Returns false when there was nothing to carry over.
   @discardableResult
   internal static func moveToAddShiftDraft(
     now: Date = Date(),
@@ -43,14 +65,9 @@ internal enum OnboardingFirstShiftCarryoverStore {
   ) -> Bool {
     defer { clear(defaults: defaults) }
 
-    guard let data = defaults.data(forKey: key),
-      var draft = try? JSONDecoder().decode(ShiftDraft.self, from: data)
-    else {
+    guard var draft = storedDraft(defaults: defaults) else {
       return false
     }
-
-    let monthPrefix = String(now.toISODateString().prefix(7))
-    draft.selectedDates = draft.selectedDates.filter { $0.hasPrefix(monthPrefix) }
     draft.lastModified = now
 
     guard draft.hasContent, let updated = try? JSONEncoder().encode(draft) else {
@@ -63,5 +80,9 @@ internal enum OnboardingFirstShiftCarryoverStore {
 
   internal static func clear(defaults: UserDefaults = .standard) {
     defaults.removeObject(forKey: key)
+  }
+
+  private static func storedDraft(defaults: UserDefaults) -> ShiftDraft? {
+    defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(ShiftDraft.self, from: $0) }
   }
 }
