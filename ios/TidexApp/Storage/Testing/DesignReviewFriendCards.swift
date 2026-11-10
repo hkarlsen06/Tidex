@@ -3,8 +3,8 @@
 
   /// Friend cards in their main states, for TIDEX_DESIGN_SCREEN=friends. Set
   /// TIDEX_DESIGN_FRIENDS_VIEW to add-friend, profile, schedule or chat-header for the others.
-  /// TIDEX_DESIGN_FRIENDS_TIME_ZONE=1 puts the friend in another time zone, and =unknown leaves
-  /// the schedule without one.
+  /// TIDEX_DESIGN_FRIENDS_TIME_ZONE=1 puts the friends in another time zone, except Nora's card,
+  /// and =unknown leaves the schedule without one.
   internal struct DesignReviewFriendCards: View {
     private let view: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_VIEW"] ?? "cards"
@@ -159,13 +159,17 @@
           VStack(spacing: Spacing.sm) {
             ScreenshotNotificationBubble(
               notifiedName: "Ella", showNotifiedIcon: true, bellShakeTrigger: false)
-            card("Henrik", minutesAgo: 30, shift: (Self.minutesUntilTomorrow(atHour: 22), 480))
+            card(
+              "Henrik", minutesAgo: 30, shift: (Self.minutesUntilTomorrow(atHour: 22), 480),
+              convertedAtUTCHour: 21)
             card("Ella", minutesAgo: 12, state: .incomingUnread, unread: 2, shift: (-120, 180))
             card("Jonas Berg", minutesAgo: 90, state: .outgoingOpened, shift: (1_200, 480))
             card("Maja", isTyping: true, shift: (-1_800, 420))
             card("Oskar Lie", isCalendarAvailable: false)
             card("Sofie", minutesAgo: 4, state: .outgoingFailed, isCalendarAvailable: false)
-            card("Nora", minutesAgo: 3_000, state: .incomingOpened, shift: (4_320, 360))
+            card(
+              "Nora", minutesAgo: 3_000, state: .incomingOpened, shift: (4_320, 360),
+              convertedAtUTCHour: nil)
             card("Terese Caroline Roysdatter", minutesAgo: 60, state: .outgoingSent)
           }
           .padding(.horizontal, Spacing.md)
@@ -191,7 +195,8 @@
       }
     }
 
-    /// `shift` is (start offset from now in minutes, duration in minutes).
+    /// `shift` is (start offset from now in minutes, duration in minutes). In the time zone check
+    /// the shift starts at `convertedAtUTCHour` today instead, or keeps the viewer's zone when nil.
     private func card(
       _ name: String,
       minutesAgo: Double? = nil,
@@ -199,7 +204,8 @@
       unread: Int = 0,
       isTyping: Bool = false,
       isCalendarAvailable: Bool = true,
-      shift: (Double, Double)? = nil
+      shift: (Double, Double)? = nil,
+      convertedAtUTCHour: Double? = 5
     ) -> some View {
       let sharer = SharedUser(
         id: name, email: "\(name.lowercased().prefix(4))@example.com", phone: nil,
@@ -212,7 +218,10 @@
       }
       return FriendCard(
         sharer: sharer,
-        preview: shift.map { Self.preview(for: name, startOffset: $0.0, duration: $0.1) },
+        preview: shift.map {
+          Self.preview(
+            for: name, startOffset: $0.0, duration: $0.1, convertedAtUTCHour: convertedAtUTCHour)
+        },
         messagePreview: message, isTyping: isTyping, isSelected: false, isRefreshing: false,
         onChatTap: {}, onCalendarTap: {}, isCalendarAvailable: isCalendarAvailable,
         unreadMessageCount: unread)
@@ -226,25 +235,27 @@
         Calendar.gregorianCurrent.date(byAdding: .hour, value: hour, to: tomorrow) ?? tomorrow
       return start.timeIntervalSinceNow / 60
     }
+  }
 
-    private static func preview(for id: String, startOffset: Double, duration: Double)
-      -> SharerShiftPreview
-    {
+  extension DesignReviewFriendCards {
+    private static func preview(
+      for id: String, startOffset: Double, duration: Double, convertedAtUTCHour: Double? = 5
+    ) -> SharerShiftPreview {
       let isTimeZoneCheck =
         ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_TIME_ZONE"] == "1"
       var utc = Calendar(identifier: .gregorian)
       utc.timeZone = .gmt
       let isWidgetCheck = ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_WIDGETS"] == "1"
+      let convertedHour = isTimeZoneCheck ? (isWidgetCheck ? 23.5 : convertedAtUTCHour) : nil
       let start =
-        isTimeZoneCheck
-        ? utc.startOfDay(for: .now).addingTimeInterval((isWidgetCheck ? 23.5 : 5) * 3_600)
-        : Date.now.addingTimeInterval(startOffset * 60)
+        convertedHour.map { utc.startOfDay(for: .now).addingTimeInterval($0 * 3_600) }
+        ?? Date.now.addingTimeInterval(startOffset * 60)
       let end = start.addingTimeInterval(duration * 60)
       let sourceZone =
-        isTimeZoneCheck
-        ? (TimeZone.current.secondsFromGMT(for: start) == 0
+        convertedHour == nil
+        ? TimeZone.current
+        : (TimeZone.current.secondsFromGMT(for: start) == 0
           ? TimeZone(identifier: "Asia/Tokyo") : TimeZone(identifier: "Europe/London"))
-        : TimeZone.current
       let time = DateFormatter()
       time.locale = Locale(identifier: "en_US_POSIX")
       time.calendar = Calendar(identifier: .gregorian)

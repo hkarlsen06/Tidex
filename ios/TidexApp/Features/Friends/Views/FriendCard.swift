@@ -355,6 +355,20 @@ extension FriendCard {
     return labels
   }
 
+  /// At least 80 points, and wide enough for the widest clock row, the globe beside a next-day
+  /// end time such as "06:00+1", so large text never truncates a clock. Clocks are always HH:mm.
+  private var shiftTileWidth: CGFloat {
+    let clockFont = UIFont.monospacedDigitSystemFont(
+      ofSize: uiFont(.subheadline).pointSize, weight: .semibold)
+    let clock = ("00:00+1" as NSString).size(withAttributes: [.font: clockFont]).width
+    let globe =
+      UIImage(
+        systemName: "globe",
+        withConfiguration: UIImage.SymbolConfiguration(font: uiFont(.caption1), scale: .small)
+      )?.size.width ?? 0
+    return max(80, (globe + Spacing.micro + clock).rounded(.up))
+  }
+
   /// Status over stacked start and end times, like the calendar day cell. The times fill a row
   /// as tall as the avatar, which lines them up with it. "+1" marks an end time on the next day.
   private func shiftTileLabel(at now: Date) -> some View {
@@ -377,10 +391,10 @@ extension FriendCard {
     .foregroundStyle(Color.tidexBlueText)
     .monospacedDigit()
     .lineLimit(isStacked ? nil : 1)
-    // A fixed width keeps the shift column aligned across cards. The full card height keeps the
+    // A shared width keeps the shift column aligned across cards. The full card height keeps the
     // hairline the same length on every card. A shift keeps to the bottom so its rows line up
     // with the conversation, and the calendar entry sits in the middle.
-    .frame(width: isStacked ? nil : 80)
+    .frame(width: isStacked ? nil : shiftTileWidth)
     .frame(
       maxHeight: isStacked ? nil : .infinity,
       alignment: shiftTiming == nil && !isRefreshing ? .center : .bottom
@@ -406,27 +420,25 @@ extension FriendCard {
     if isRefreshing {
       skeletonBars(count: 2)
     } else if let timing = shiftTiming, let interval = shiftInterval {
-      Group {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.micro) {
-          if interval.differs() {
-            Image(systemName: "globe")
-              .font(.tidexCaption)
-              .imageScale(.small)
-              .foregroundStyle(Color.tidexTextMuted)
-              .accessibilityHidden(true)
+      if interval.differs() {
+        // One globe centered beside both clocks, so it reads as marking the pair.
+        HStack(spacing: Spacing.micro) {
+          Image(systemName: "globe")
+            .font(.tidexCaption)
+            .imageScale(.small)
+            .foregroundStyle(Color.tidexTextMuted)
+            .accessibilityHidden(true)
+
+          VStack(
+            alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .center,
+            spacing: Spacing.micro
+          ) {
+            clocks(timing, interval, at: now)
           }
-          Text(interval.clock(timing.start, locale: .appLocale))
         }
-        let endText = interval.clock(timing.end, locale: .appLocale)
-        let crossesMidnight = !Calendar.gregorianCurrent.isDate(
-          timing.start, inSameDayAs: timing.end)
-        Text(verbatim: endText + (crossesMidnight ? "+1" : ""))
-          .accessibilityLabel(
-            crossesMidnight ? Text(.friendsCardEndsNextDay(endText)) : Text(verbatim: endText))
+      } else {
+        clocks(timing, interval, at: now)
       }
-      .font(.tidexSubheadline.weight(.semibold))
-      .foregroundStyle(
-        timing.status(at: now) == .past ? Color.tidexTextSecondary : Color.tidexTextPrimary)
     } else if isCalendarAvailable {
       Image(systemName: "calendar")
         .font(.tidexHeadline)
@@ -435,6 +447,23 @@ extension FriendCard {
       Text(.tabsShifts)
         .font(.tidexCaptionStrong)
     }
+  }
+
+  private func clocks(
+    _ timing: FriendShiftTiming, _ interval: SharedShiftInterval, at now: Date
+  ) -> some View {
+    Group {
+      Text(interval.clock(timing.start, locale: .appLocale))
+      let endText = interval.clock(timing.end, locale: .appLocale)
+      let crossesMidnight = !Calendar.gregorianCurrent.isDate(
+        timing.start, inSameDayAs: timing.end)
+      Text(verbatim: endText + (crossesMidnight ? "+1" : ""))
+        .accessibilityLabel(
+          crossesMidnight ? Text(.friendsCardEndsNextDay(endText)) : Text(verbatim: endText))
+    }
+    .font(.tidexSubheadline.weight(.semibold))
+    .foregroundStyle(
+      timing.status(at: now) == .past ? Color.tidexTextSecondary : Color.tidexTextPrimary)
   }
 
   private func skeletonBars(count: Int) -> some View {
