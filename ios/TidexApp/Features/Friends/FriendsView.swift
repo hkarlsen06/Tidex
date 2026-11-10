@@ -2,13 +2,12 @@ import SwiftUI
 import UIKit
 import os
 
-enum SharingDeepLinkNavigationPathResolver {
-  static func shouldPreserveExistingPath(
-    navigationPathIsEmpty: Bool,
-    selectedSharerId: String?,
-    activeChatHighlightUserId: String?
-  ) -> Bool {
-    !navigationPathIsEmpty && selectedSharerId == nil && activeChatHighlightUserId != nil
+private enum FriendsRoute: Hashable {
+  case sharer(SharedUser)
+  case chat(FriendChatRoute)
+
+  var isChat: Bool {
+    if case .chat = self { true } else { false }
   }
 }
 
@@ -28,7 +27,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
   @State private var viewModel = SharingViewModel()
 
   /// Navigation path for push navigation (friend detail slides in from right)
-  @State private var navigationPath = NavigationPath()
+  @State private var navigationPath: [FriendsRoute] = []
 
   @State private var showAddFriendSheet = false
 
@@ -90,7 +89,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       guard !Task.isCancelled else { return }
 
       activeChatHighlightUserId = normalizedHighlightUserId
-      navigationPath.append(route)
+      navigationPath.append(.chat(route))
       pendingChatNavigationTask = nil
     }
   }
@@ -109,11 +108,11 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       .toolbar {
         friendsToolbarContent
       }
-      .navigationDestination(for: SharedUser.self) { sharer in
-        sharedShiftsDetailDestination(for: sharer)
-      }
-      .navigationDestination(for: FriendChatRoute.self) { route in
-        friendChatDestination(for: route)
+      .navigationDestination(for: FriendsRoute.self) { route in
+        switch route {
+        case .sharer(let sharer): sharedShiftsDetailDestination(for: sharer)
+        case .chat(let route): friendChatDestination(for: route)
+        }
       }
       .addShiftDestination(in: .friends, hidesTabBar: isChatTabBarHidden)
       .adaptiveToolbarTransaction()
@@ -145,7 +144,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
         return
       }
 
-      navigationPath = NavigationPath()
+      navigationPath = []
       viewModel.deselectSharer()
     }
     .sheet(isPresented: $showAddFriendSheet) {
@@ -167,9 +166,10 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       hasSelectedSharer = viewModel.selectedSharer != nil
     }
     .onChange(of: navigationPath) { _, path in
+      // A friend's calendar opened from a chat sits above the chat, so check the whole stack.
+      isChatTabBarHidden = pendingChatRoute != nil || path.contains(where: \.isChat)
       // When user navigates back (automatic back button or swipe), deselect sharer
       if path.isEmpty {
-        isChatTabBarHidden = pendingChatRoute != nil
         activeChatHighlightUserId = nil
         if viewModel.selectedSharer != nil {
           viewModel.deselectSharer()
@@ -349,17 +349,12 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
         })
       else { return }
 
-      let shouldPreserveNavigationPath =
-        SharingDeepLinkNavigationPathResolver.shouldPreserveExistingPath(
-          navigationPathIsEmpty: navigationPath.isEmpty,
-          selectedSharerId: viewModel.selectedSharer?.id,
-          activeChatHighlightUserId: activeChatHighlightUserId
-        )
-      if !shouldPreserveNavigationPath {
-        navigationPath = NavigationPath()
+      // Opened from a chat, keep the chat underneath so going back returns to it.
+      if navigationPath.last?.isChat != true {
+        navigationPath = []
       }
       viewModel.selectSharer(sharer)
-      navigationPath.append(sharer)
+      navigationPath.append(.sharer(sharer))
 
       // Extract shift IDs for precise highlighting (excludes deleted shifts)
       if let changes, !changes.isEmpty {
@@ -406,7 +401,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       if let sharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
         $0.id == highlightId
       }) {
-        navigationPath = NavigationPath()
+        navigationPath = []
         profileSharer = sharer
       } else {
         showAddFriendSheet = true
@@ -454,7 +449,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
           isRefreshing: viewModel.isRefreshing,
           onSelectSharer: { sharer in
             viewModel.selectSharer(sharer)
-            navigationPath.append(sharer)
+            navigationPath.append(.sharer(sharer))
           },
           onMessageTap: { sharer in
             Task {
@@ -552,7 +547,6 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       hasSelectedSharer = false
     }
     .onDisappear {
-      isChatTabBarHidden = false
       activeChatHighlightUserId = nil
       hasSelectedSharer = viewModel.selectedSharer != nil
     }
@@ -774,7 +768,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     if navigationPath.isEmpty {
       schedulePendingChatNavigationIfNeeded()
     } else {
-      navigationPath = NavigationPath()
+      navigationPath = []
     }
   }
 
@@ -793,7 +787,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       hasSelectedSharer = false
       isChatTabBarHidden = true
       activeChatHighlightUserId = highlightUserId
-      navigationPath.append(route)
+      navigationPath.append(.chat(route))
       pendingChatNavigationTask = nil
     }
   }
