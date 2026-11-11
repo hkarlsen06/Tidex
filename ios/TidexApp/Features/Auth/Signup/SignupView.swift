@@ -37,6 +37,14 @@ struct SignupView: View {
         scrollContent(geometry: geometry)
       }
     }
+    // The same top-left spot as on the demo screen, so the button stays put between them.
+    .overlay(alignment: .topLeading) {
+      if viewModel.step == .form {
+        PreAuthBackButton(action: restartOnboarding)
+          .padding(.horizontal, Spacing.sm)
+          .transition(.opacity)
+      }
+    }
     .loading(viewModel.isLoading)
     .onTapGesture {
       UIApplication.shared.sendAction(
@@ -81,8 +89,7 @@ struct SignupView: View {
         logoSize: 132,
         currency: currency,
         subtitle: subtitle,
-        demoShift: demoShift,
-        onBack: viewModel.step == .form ? restartOnboarding : nil
+        demoShift: demoShift
       )
       .padding(.bottom, heroControlsGap)
       .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.00)

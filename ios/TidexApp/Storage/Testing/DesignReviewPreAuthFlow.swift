@@ -11,7 +11,12 @@
     init(startsAtSignup: Bool) {
       _exit = State(
         initialValue: startsAtSignup
-          ? .some(PreAuthDemoShift(dates: ["2026-11-14"], startTime: "08:00", endTime: "16:00"))
+          ? .some(
+            PreAuthDemoShift(
+              dates: [
+                "2026-11-13", "2026-11-14", "2026-11-20", "2026-11-21", "2026-11-27", "2026-11-28",
+              ],
+              startTime: "10:00", endTime: "18:00"))
           : nil)
     }
 

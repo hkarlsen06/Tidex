@@ -9,8 +9,6 @@ struct AuthHeroVisual: View {
   var subtitle: LocalizedStringResource?
   /// The shift saved in the pre-auth demo. It replaces the sample paycheck card.
   var demoShift: PreAuthDemoShift?
-  /// Shows a back button beside the logo. Nil on steps that keep their own back link.
-  var onBack: (() -> Void)?
 
   var body: some View {
     VStack(spacing: Spacing.lg) {
@@ -44,12 +42,6 @@ struct AuthHeroVisual: View {
       .frame(width: min(logoSize, Spacing.huge), height: min(logoSize, Spacing.huge))
       .accessibilityHidden(true)
       .frame(maxWidth: .infinity)
-      .overlay(alignment: .leading) {
-        if let onBack {
-          PreAuthBackButton(action: onBack)
-            .transition(.opacity)
-        }
-      }
   }
 
   private var ghostedAmountText: String {
@@ -81,7 +73,7 @@ struct AuthHeroVisual: View {
       }
       .padding(.horizontal, Spacing.lg)
       .padding(.vertical, Spacing.mlg)
-      .frame(width: 280)
+      .frame(maxWidth: .infinity)
       .background(heroCardBackground)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .overlay(
@@ -112,40 +104,129 @@ struct AuthHeroVisual: View {
 
 }
 
-/// The demo shift on the sign-up screen: its dates and times.
+/// The demo shift on the sign-up screen: one tile per date under its month, then the times.
 private struct AuthDemoShiftCard: View {
   let shift: PreAuthDemoShift
 
-  private var datesText: String {
-    shift.dates.compactMap { Date.fromISODateString($0) }
-      .map { $0.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale)) }
+  private var days: [Date] { shift.dates.compactMap { Date.fromISODateString($0) } }
+
+  private var monthsText: String {
+    var months: [String] = []
+    for day in days {
+      let month = day.formatted(.dateTime.month(.wide).locale(.appLocale))
+      if months.last != month { months.append(month) }
+    }
+    return months.formatted(.list(type: .and).locale(.appLocale))
+  }
+
+  private var timeText: String {
+    ShiftCardFormatter.localizedTimeRange(
+      start: shift.startTime, end: shift.endTime, locale: .appLocale)
+  }
+
+  private var spokenDates: String {
+    days.map { $0.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale)) }
       .formatted(.list(type: .and).locale(.appLocale))
   }
 
   var body: some View {
-    VStack(spacing: Spacing.xxs) {
-      Text(verbatim: datesText)
-        .font(.tidexHeadline)
-        .foregroundStyle(Color.tidexTextPrimary)
-        .multilineTextAlignment(.center)
-        .fixedSize(horizontal: false, vertical: true)
-      Text(
-        verbatim: ShiftCardFormatter.localizedTimeRange(
-          start: shift.startTime, end: shift.endTime, locale: .appLocale))
+    VStack(spacing: Spacing.sm) {
+      Text(verbatim: monthsText)
+        .font(.tidexCaptionStrong)
+        .foregroundStyle(Color.tidexTextSecondary)
+      CenteredFlowLayout(spacing: Spacing.xxs + 2) {
+        ForEach(days, id: \.self) { day in
+          dateTile(day)
+        }
+      }
+      Text(verbatim: timeText)
         .font(.tidexAmountLarge)
         .monospacedDigit()
         .foregroundStyle(Color.tidexBlueText)
+        .padding(.top, Spacing.xxs)
     }
-    .padding(.horizontal, Spacing.lg)
+    .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.mlg)
-    .frame(minWidth: 280)
+    .frame(maxWidth: .infinity)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
         .stroke(Color.tidexSeparator, lineWidth: 1)
     )
-    .accessibilityElement(children: .combine)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: "\(spokenDates), \(timeText)"))
+  }
+
+  private func dateTile(_ day: Date) -> some View {
+    VStack(spacing: 2) {
+      Text(verbatim: day.formatted(.dateTime.weekday(.abbreviated).locale(.appLocale)))
+        .font(.tidexCaption)
+        .foregroundStyle(Color.tidexTextSecondary)
+      Text(verbatim: day.formatted(.dateTime.day().locale(.appLocale)))
+        .font(.tidexHeadline)
+        .monospacedDigit()
+        .foregroundStyle(Color.tidexTextPrimary)
+    }
+    .frame(minWidth: 40)
+    .padding(.vertical, Spacing.xs)
+    .background(
+      Color.tidexSurfaceSecondary,
+      in: RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+  }
+}
+
+/// Lays its children out in centred rows that wrap at the available width. Rows share the
+/// children evenly, so eight tiles become four and four rather than seven and one.
+private struct CenteredFlowLayout: Layout {
+  let spacing: CGFloat
+
+  private struct Row {
+    let indices: [Int]
+    let width: CGFloat
+    let height: CGFloat
+  }
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let rows = rows(fitting: proposal.width ?? .infinity, subviews: subviews)
+    let height = rows.reduce(0) { $0 + $1.height } + spacing * CGFloat(max(rows.count - 1, 0))
+    return CGSize(width: rows.map(\.width).max() ?? 0, height: height)
+  }
+
+  func placeSubviews(
+    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+  ) {
+    var y = bounds.minY
+    for row in rows(fitting: bounds.width, subviews: subviews) {
+      var x = bounds.midX - row.width / 2
+      for index in row.indices {
+        let size = subviews[index].sizeThatFits(.unspecified)
+        subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+        x += size.width + spacing
+      }
+      y += row.height + spacing
+    }
+  }
+
+  private func rows(fitting maxWidth: CGFloat, subviews: Subviews) -> [Row] {
+    let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+    var fitsOnFirstRow = 0
+    var width: CGFloat = 0
+    for size in sizes {
+      width += (fitsOnFirstRow == 0 ? 0 : spacing) + size.width
+      if width > maxWidth, fitsOnFirstRow > 0 { break }
+      fitsOnFirstRow += 1
+    }
+    guard fitsOnFirstRow > 0 else { return [] }
+    let rowCount = (sizes.count + fitsOnFirstRow - 1) / fitsOnFirstRow
+    let perRow = (sizes.count + rowCount - 1) / rowCount
+    return stride(from: 0, to: sizes.count, by: perRow).map { start in
+      let indices = Array(start..<min(start + perRow, sizes.count))
+      return Row(
+        indices: indices,
+        width: indices.reduce(0) { $0 + sizes[$1].width } + spacing * CGFloat(indices.count - 1),
+        height: indices.map { sizes[$0].height }.max() ?? 0)
+    }
   }
 }
 

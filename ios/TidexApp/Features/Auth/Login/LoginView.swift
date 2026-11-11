@@ -37,6 +37,14 @@ struct LoginView: View {
         scrollContent(geometry: geometry)
       }
     }
+    // The same top-left spot as on the demo screen, so the button stays put between them.
+    .overlay(alignment: .topLeading) {
+      if viewModel.currentStep == .input {
+        PreAuthBackButton(action: restartOnboarding)
+          .padding(.horizontal, Spacing.sm)
+          .transition(.opacity)
+      }
+    }
     .loading(viewModel.isLoading)
     .onTapGesture {
       UIApplication.shared.sendAction(
@@ -77,8 +85,7 @@ struct LoginView: View {
       AuthHeroVisual(
         title: .loginTitle,
         logoSize: 132,
-        currency: currency,
-        onBack: viewModel.currentStep == .input ? restartOnboarding : nil
+        currency: currency
       )
       .padding(.bottom, heroControlsGap)
 
