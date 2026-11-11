@@ -22,14 +22,14 @@ extension DashboardView {
     .userCurrency(data.currency)
   }
 
-  /// Centers the cards between the toolbar and the month picker. At accessibility text sizes the
-  /// cards are taller than the screen, so they scroll from the top instead of being squeezed
-  /// into a viewport-height frame.
+  /// Centers the cards between the toolbar and the month picker. At accessibility text sizes, or
+  /// with the pay assumptions card, the cards are taller than the screen, so they scroll from the
+  /// top instead of being squeezed into a viewport-height frame.
   @ViewBuilder
   private func centeredDashboardCards<Content: View>(  // swiftlint:disable:this type_contents_order
     @ViewBuilder content: @escaping () -> Content
   ) -> some View {
-    if dynamicTypeSize.isAccessibilitySize {
+    if dynamicTypeSize.isAccessibilitySize || payAssumptions != nil {
       content()
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, Spacing.xxl)
@@ -275,7 +275,8 @@ extension DashboardView {
         }
       }
       .contentShape(Rectangle())
-      .gesture(monthSwipeGesture())
+      // Simultaneous, so a vertical drag on the cards still scrolls them at large sizes.
+      .simultaneousGesture(monthSwipeGesture())
     } else {
       EmptyView()
     }
