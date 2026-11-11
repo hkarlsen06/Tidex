@@ -186,9 +186,12 @@ struct CalendarDayCell<Content: View>: View {
   var body: some View {
     VStack(spacing: 0) {
       HStack(alignment: .top, spacing: 0) {
-        leadingMarkerSlot
-          .frame(maxWidth: .infinity, alignment: .leading)
+        leadingMarkerContent
           .padding(.leading, leadingMarkerLeadingInset)
+
+        // The markers keep their width, so a crowded Monday shrinks its day number instead of
+        // drawing it on top of them.
+        Spacer(minLength: Spacing.xxs)
 
         if !style.showsTodayBadge {
           dayNumberView
@@ -273,17 +276,6 @@ struct CalendarDayCell<Content: View>: View {
   private var resolvedSingleUserSymbol: String {
     if let singleUserIndicatorSymbol { return singleUserIndicatorSymbol }
     return singleUserIndicatorColor == .tidexTextPrimary ? "person.fill" : "person.crop.circle.fill"
-  }
-
-  private var leadingMarkerSlot: some View {
-    Text("88")
-      .font(.tidexMicro)
-      .fixedSize(horizontal: true, vertical: false)
-      .hidden()
-      .accessibilityHidden(true)
-      .overlay(alignment: .leading) {
-        leadingMarkerContent
-      }
   }
 
   @ViewBuilder
