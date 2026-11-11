@@ -57,6 +57,8 @@ elif args == ["physical-destination"]:
     if os.environ.get("POLICY_DISCOVERY_FAIL") == "1":
         sys.exit(1)
     print(os.environ.get("POLICY_PHYSICAL", ""))
+elif args and args[0] == "simulator-lease":
+    pass
 else:
     sys.exit(2)
 ''')
@@ -164,6 +166,8 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
     assert not any(command[:3] == ["xcrun", "simctl", "shutdown"] for command in commands)
     assert not (root / "sim-locks/simulator").exists()
     run("lock", "acquire", "Shared iPhone 2", IOS_AGENT_SIMULATORS="2")
+    _, commands = run("lock", "run", "Shared iPhone 2", "--", "true", IOS_AGENT_SIMULATORS="2")
+    assert ["ios-agent", "simulator-lease", "Shared iPhone 2", "600"] in commands, commands
     _, commands = run("lock", "release", "simulator")
     assert ["xcrun", "simctl", "shutdown", "Shared iPhone 2"] in commands
     assert not (root / "sim-locks/simulator-2").exists()

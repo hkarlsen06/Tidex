@@ -203,6 +203,9 @@ take() {
 start_simulator() {
   local simulator state
   simulator="$(slot_simulator "$1")"
+  if [ "$1" != simulator ] && command -v ios-agent >/dev/null 2>&1; then
+    ios-agent simulator-lease "$simulator" "$TTL_SECONDS"
+  fi
   read -r SIMULATOR_UDID state <<<"$(xcrun simctl list devices available -j | python3 -c '
 import json, sys
 # Read all of stdin before exiting, or simctl dies of SIGPIPE.
