@@ -4,6 +4,8 @@ import SwiftUI
 struct CalendarPageLayout<Content: View, EmptyContent: View>: View {
   let pinsControlsToBottom: Bool
   var onRefresh: (() async -> Void)?
+  let onSwipeLeft: () -> Void
+  let onSwipeRight: () -> Void
   @ViewBuilder let content: (Bool) -> Content
   @ViewBuilder let emptyContent: () -> EmptyContent
 
@@ -21,6 +23,8 @@ struct CalendarPageLayout<Content: View, EmptyContent: View>: View {
       let page = ScrollView {
         self.page(isWide: isWide, pinsControls: pinsControls, calendarWidth: calendarWidth)
           .frame(minHeight: geometry.size.height + (onRefresh == nil ? 0 : 1))
+          // Inside the scroll view, the swipe attaches to it and sees a drag anywhere on the page.
+          .monthSwipeGesture(onSwipeLeft: onSwipeLeft, onSwipeRight: onSwipeRight)
       }
       .scrollBounceBehavior(onRefresh == nil ? .basedOnSize : .always, axes: .vertical)
       .scrollIndicators(.hidden)

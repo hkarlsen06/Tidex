@@ -50,8 +50,6 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
 
   /// Callback when a shift is tapped (for showing details)
   var onShiftTapped: ((ShiftWithComputations) -> Void)?
-  var onSwipeLeft: (() -> Void)?
-  var onSwipeRight: (() -> Void)?
 
   // swiftlint:disable:next explicit_type_interface type_contents_order
   @State private var viewMode = CalendarViewMode.load()
@@ -483,9 +481,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
           onDragSelect: { state, location in
             handleDragSelect(
               state, at: location, gridSize: geometry.size, days: days, metrics: metrics)
-          },
-          onSwipeLeft: onSwipeLeft,
-          onSwipeRight: onSwipeRight
+          }
         )
       }
     }

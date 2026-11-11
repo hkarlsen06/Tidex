@@ -70,7 +70,9 @@
                 HoursData(start: row.start_time, end: row.end_time, crossesMidnight: false)
               )
             }),
-          userShiftsByDate: Dictionary(grouping: ownShifts, by: \.shift_date)
+          userShiftsByDate: Dictionary(grouping: ownShifts, by: \.shift_date),
+          onPreviousMonth: { SharedMonthContext.shared.goToPreviousMonth() },
+          onNextMonth: { SharedMonthContext.shared.goToNextMonth() }
         )
         .overlay(alignment: .bottom) {
           MonthPickerControls(showsViewModeToggle: true, showsAddButton: false, onAddShift: {})

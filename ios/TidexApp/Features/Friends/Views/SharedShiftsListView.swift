@@ -171,7 +171,15 @@ extension SharedShiftsListView {
 
   private var calendarContent: some View {
     CalendarPageLayout(
-      pinsControlsToBottom: sharer.showEarnings || (!isSuperimposing && timeControl != .none)
+      pinsControlsToBottom: sharer.showEarnings || (!isSuperimposing && timeControl != .none),
+      onSwipeLeft: {
+        AppearanceTracker.shared.reset()
+        onNextMonth?()
+      },
+      onSwipeRight: {
+        AppearanceTracker.shared.reset()
+        onPreviousMonth?()
+      }
     ) { pinsControls in
       calendarView(pinsControls: pinsControls)
     } emptyContent: {
@@ -204,14 +212,6 @@ extension SharedShiftsListView {
       userEarningsByDate: userEarningsByDate,
       onShiftTapped: { shift in
         select(shift)
-      },
-      onSwipeLeft: {
-        AppearanceTracker.shared.reset()
-        onNextMonth?()
-      },
-      onSwipeRight: {
-        AppearanceTracker.shared.reset()
-        onPreviousMonth?()
       }
     )
   }

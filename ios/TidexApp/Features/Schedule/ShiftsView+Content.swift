@@ -348,7 +348,15 @@ extension ShiftsView {
         .accessibilityHidden(true)
 
       CalendarPageLayout(
-        pinsControlsToBottom: hasAnyShifts, onRefresh: refreshShiftsContent
+        pinsControlsToBottom: hasAnyShifts, onRefresh: refreshShiftsContent,
+        onSwipeLeft: {
+          AppearanceTracker.shared.reset()
+          viewModel.goToNextMonth()
+        },
+        onSwipeRight: {
+          AppearanceTracker.shared.reset()
+          viewModel.goToPreviousMonth()
+        }
       ) { pinsActionBar in
         ShiftsCalendarView(
           shifts: viewModel.shifts,
@@ -462,18 +470,6 @@ extension ShiftsView {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    // The month sits at the top of a phone screen, so a swipe anywhere below it
-    // changes month too.
-    .monthSwipeGesture(
-      onSwipeLeft: {
-        AppearanceTracker.shared.reset()
-        viewModel.goToNextMonth()
-      },
-      onSwipeRight: {
-        AppearanceTracker.shared.reset()
-        viewModel.goToPreviousMonth()
-      }
-    )
   }
 
   // MARK: - List View Content

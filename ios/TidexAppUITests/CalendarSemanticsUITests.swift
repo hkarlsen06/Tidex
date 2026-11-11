@@ -70,6 +70,50 @@ final class CalendarSemanticsUITests: XCTestCase {
     attachScreenshot(app, name: "shared-calendar")
   }
 
+  /// A swipe on the empty page below the month changes month on Schedule and on a friend's
+  /// calendar.
+  @MainActor
+  func testSwipeBelowTheMonthChangesMonth() {
+    let schedule = XCUIApplication()
+    schedule.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+      "-defaultStartupTab", "shifts", "-shiftsViewMode", "NO",
+    ]
+    schedule.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    schedule.launch()
+    let nextMonth = Calendar(identifier: .gregorian).date(byAdding: .month, value: 1, to: .now)
+    assertSwipeBelowTheMonth(
+      in: schedule, movesFrom: fixtureDate(day: 15), to: fixtureDate(day: 15, of: nextMonth ?? .now))
+    schedule.terminate()
+
+    let friend = XCUIApplication()
+    friend.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-shiftsViewMode", "NO",
+    ]
+    friend.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "design-review"
+    friend.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "friends"
+    friend.launchEnvironment["TIDEX_DESIGN_FRIENDS_VIEW"] = "schedule"
+    friend.launch()
+    assertSwipeBelowTheMonth(
+      in: friend, movesFrom: "Tuesday, September 15", to: "Thursday, October 15")
+  }
+
+  @MainActor
+  private func assertSwipeBelowTheMonth(
+    in app: XCUIApplication, movesFrom shownDay: String, to nextMonthDay: String
+  ) {
+    XCTAssertTrue(
+      day(beginningWith: shownDay, in: app).waitForExistence(timeout: timeout),
+      app.debugDescription)
+    app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.66))
+      .press(
+        forDuration: 0.05,
+        thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.66)))
+    XCTAssertTrue(
+      day(beginningWith: nextMonthDay, in: app).waitForExistence(timeout: timeout),
+      app.debugDescription)
+  }
+
   /// A tap on an empty day offers a new shift on that date. The Add calendar then shows the
   /// preview amounts, labeled for VoiceOver.
   @MainActor
@@ -94,9 +138,9 @@ final class CalendarSemanticsUITests: XCTestCase {
     attachScreenshot(app, name: "add-empty-day-preview")
   }
 
-  private func fixtureDate(day: Int) -> String {
+  private func fixtureDate(day: Int, of month: Date = .now) -> String {
     let calendar = Calendar(identifier: .gregorian)
-    var components = calendar.dateComponents([.year, .month], from: .now)
+    var components = calendar.dateComponents([.year, .month], from: month)
     components.day = day
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "en_US")
