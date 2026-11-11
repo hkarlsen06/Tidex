@@ -58,6 +58,9 @@ struct MainTabView: View {
   // State for Home-owned stats navigation
   @State private var showHomeStats = false
 
+  /// The invite link waiting for the user's answer. Its sheet closes the pending invite.
+  @State private var inviteConfirmation: InviteConfirmationModel?
+
   // Screenshot share prompt state (presented as overlay to keep content visible)
   @State private var showScreenshotPrompt = false
   @State private var stopImpersonationError: String?
@@ -258,11 +261,17 @@ struct MainTabView: View {
     .onChange(of: coordinator.userId) { _, _ in
       scheduleUnreadFriendsCountRefresh()
       handlePendingDeepLink(coordinator.pendingDeepLink)
+      presentPendingInvite()
     }
     .onAppear {
       // Handle any pending deep link on initial appearance
       loadedTabs.insert(selectedTab)
       handlePendingDeepLink(coordinator.pendingDeepLink)
+      // An invite opened before sign-up or during onboarding.
+      presentPendingInvite()
+    }
+    .sheet(item: $inviteConfirmation, onDismiss: { PendingInviteStore.clear() }) { model in
+      InviteConfirmationSheet(model: model) { activateTab(.friends) }
     }
     .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) { _ in
       scheduleUnreadFriendsCountRefresh()
@@ -481,10 +490,23 @@ struct MainTabView: View {
       adminSheetInitialReportId = reportId
       showAdminFeedbackSheet = true
       coordinator.clearPendingDeepLink()
+
+    case .invite:
+      // AppCoordinator saved it to PendingInviteStore, which also covers a signed-out open.
+      coordinator.clearPendingDeepLink()
+      presentPendingInvite()
     }
     // Note: We don't clear the deep link here for tab-based navigation - the destination view will consume and clear it
   }
   // swiftlint:enable cyclomatic_complexity
+
+  private func presentPendingInvite() {
+    guard inviteConfirmation == nil, let userId = coordinator.userId,
+      let inviterId = PendingInviteStore.inviter(for: userId)
+    else { return }
+    OnboardingFunnelRecorder.shared.record("friend_invite_opened")
+    inviteConfirmation = InviteConfirmationModel(inviterId: inviterId, viewerId: userId)
+  }
 
   private func activateTab(_ tab: Tab) {
     loadedTabs.insert(tab)

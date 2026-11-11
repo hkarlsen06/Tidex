@@ -25,6 +25,9 @@ enum ErrorTranslations {
       return UserFacingError.message(
         for: ConvexAPI.Failure.badResponse(status: status), fallback: fallback)
 
+    case SharingServiceError.shareRejected(let failure):
+      return failure?.message ?? String(localized: fallback ?? .commonErrorGeneric)
+
     default:
       return localMessage(for: error) ?? UserFacingError.message(for: error, fallback: fallback)
     }
@@ -34,7 +37,8 @@ enum ErrorTranslations {
   private static func localMessage(for error: Error) -> String? {
     switch error {
     case is JobsRepositoryError, is ShiftSaveError, is CalendarSubscriptionStoreError,
-      is AuthSessionManagerError, is AuthError, is AppCoordinator.UserIdError, is SharingServiceError,
+      is AuthSessionManagerError, is AuthError, is AppCoordinator.UserIdError,
+      is SharingServiceError,
       is FriendsMessagingServiceError, is TariffVersionServiceError, is ShiftsError,
       is DashboardError, is SharingError, is StatsServiceError, is ExportError:
       return (error as? LocalizedError)?.errorDescription

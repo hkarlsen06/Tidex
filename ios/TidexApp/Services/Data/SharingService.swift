@@ -41,12 +41,47 @@ struct SharerShiftPreview: Equatable {
 
 // MARK: - Errors
 
+/// Why the server refused to start a share, from `code` in `sharing:createShare` and
+/// `sharing:shareBack` replies.
+enum ShareFailure: String, Equatable {
+  case noIdentifier = "no_identifier"
+  case notFound = "not_found"
+  case isSelf = "self"
+  case blocked
+  case exists
+
+  var message: String {
+    switch self {
+    case .noIdentifier: String(localized: .sharingErrorNoIdentifier)
+    case .notFound: String(localized: .sharingErrorNotFound)
+    case .isSelf: String(localized: .sharingErrorSelf)
+    case .blocked: String(localized: .sharingErrorBlocked)
+    case .exists: String(localized: .sharingErrorExists)
+    }
+  }
+}
+
+/// The user an invite link names, from `sharing:invitePreview`.
+struct InvitePreview: Decodable, Equatable {
+  let id: String
+  let firstName: String?
+  let username: String?
+  let profilePictureUrl: String?
+  let oauthAvatarUrl: String?
+  /// The viewer already shares their shifts with this user.
+  let alreadySharing: Bool
+
+  var hasName: Bool { firstName?.isEmpty == false || username?.isEmpty == false }
+}
+
 enum SharingServiceError: Error, LocalizedError {
   case notAuthenticated
   case networkError(underlying: Error)
   case decodingError(underlying: Error)
   case httpError(statusCode: Int, message: String?)
   case noShareAccess
+  /// The server refused to start a share. Nil for a server without codes or a newer code.
+  case shareRejected(ShareFailure?)
 
   var errorDescription: String? {
     switch self {
@@ -65,6 +100,9 @@ enum SharingServiceError: Error, LocalizedError {
 
     case .noShareAccess:
       return String(localized: .sharingErrorNoShareAccess)
+
+    case .shareRejected(let failure):
+      return failure?.message ?? String(localized: .commonErrorGeneric)
     }
   }
 }
@@ -710,12 +748,24 @@ final class SharingService {
     logger.info("Successfully showed sharer")
   }
 
-  /// Share back with someone who has shared with me
-  func shareBack(recipientId: String) async throws {
+  /// Starts sharing my shifts with a user I know by id: someone who shares with me, or the
+  /// sender of an invite link.
+  func shareBack(recipientId: String, showEarnings: Bool = false) async throws {
     do {
       let result: ManageActionResponse = try await ConvexAPI.app.mutation(
-        "sharing:shareBack", ["recipient_id": AnyJSON.string(recipientId)])
+        "sharing:shareBack",
+        ["recipient_id": AnyJSON.string(recipientId), "show_earnings": .bool(showEarnings)])
       try throwIfFailed(result)
+    } catch {
+      throw mapRPCError(error)
+    }
+  }
+
+  /// Who an invite link names. Nil when the user does not exist or either side blocked the other.
+  func invitePreview(userId: String) async throws -> InvitePreview? {
+    do {
+      return try await ConvexAPI.app.query(
+        "sharing:invitePreview", ["user_id": AnyJSON.string(userId)], as: InvitePreview?.self)
     } catch {
       throw mapRPCError(error)
     }
@@ -764,11 +814,15 @@ final class SharingService {
   }
 
   private func throwIfFailed(_ result: ManageActionResponse) throws {
-    guard result.success else {
-      let errorMessage = result.error ?? "Unknown error"
-      logger.error("Share action failed: \(errorMessage)")
-      throw SharingServiceError.httpError(statusCode: 400, message: errorMessage)
+    if let error = Self.shareError(for: result) {
+      logger.error("Share action failed: \(result.code ?? result.error ?? "no reason")")
+      throw error
     }
+  }
+
+  /// The error a failed share reply stands for, read from its `code`.
+  nonisolated static func shareError(for result: ManageActionResponse) -> SharingServiceError? {
+    result.success ? nil : .shareRejected(result.code.flatMap(ShareFailure.init(rawValue:)))
   }
   // swiftlint:disable:next file_length
 }

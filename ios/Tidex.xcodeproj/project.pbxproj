@@ -38,6 +38,7 @@
 		34B9BE74C916732F72B5D562 /* TidexAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */; };
 		3DF443C2C293E16F9A4E9C99 /* FriendNotificationMessagePrefetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDF8C4565592D34AD761BEC /* FriendNotificationMessagePrefetcherTests.swift */; };
 		476274EAA87579B5D555F33E /* FriendsComposerDraftStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */; };
+		23B685478D820DCD34933C58 /* FriendInviteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A274CA4559894E6F3262DDF1 /* FriendInviteTests.swift */; };
 		49C89D7374B5AC5DFB1FB072 /* StatsServiceUserIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CAD23D585847B9F1CFA03FB /* StatsServiceUserIsolationTests.swift */; };
 		4B15848ACE7F18869FF4DF32 /* SyncPushMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3711A751DD492A879351F57 /* SyncPushMergeTests.swift */; };
 		DA35ADCB2BA4CC654F5D621E /* TariffVersionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D446AA96D91655E1CD3FCFA3 /* TariffVersionServiceTests.swift */; };
@@ -246,6 +247,7 @@
 		68D309DBAA8A9B8426E275DF /* AssistantEarningsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AssistantEarningsTests.swift; sourceTree = "<group>"; };
 		ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheInvalidationTests.swift; sourceTree = "<group>"; };
 		AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsComposerDraftStoreTests.swift; sourceTree = "<group>"; };
+		A274CA4559894E6F3262DDF1 /* FriendInviteTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendInviteTests.swift; sourceTree = "<group>"; };
 		AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftSubmissionTests.swift; sourceTree = "<group>"; };
 		AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleListMonthTests.swift; sourceTree = "<group>"; };
 		B4289F8A28BA4A1B40DF97B9 /* FriendsMessagingRealtimeCoordinatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsMessagingRealtimeCoordinatorTests.swift; sourceTree = "<group>"; };
@@ -531,6 +533,7 @@
 				D0101D84EA694A80B323B9F0 /* FriendsBootstrapDecodingTests.swift */,
 				45FACC6CA659ACE3AE2483B9 /* FriendsChatMessageGroupingTests.swift */,
 				AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */,
+				A274CA4559894E6F3262DDF1 /* FriendInviteTests.swift */,
 				0BFB7767F7B12834B1480B4E /* FriendsMessagesRepositoryTests.swift */,
 				B4289F8A28BA4A1B40DF97B9 /* FriendsMessagingRealtimeCoordinatorTests.swift */,
 				74680137314542BB189059D7 /* FriendsMessagingRichContentTests.swift */,
@@ -1074,6 +1077,7 @@
 				75D3AD7184F6294BEF65BF09 /* FriendsBootstrapDecodingTests.swift in Sources */,
 				E29A3657DB37A9E7B0BA9A38 /* FriendsChatMessageGroupingTests.swift in Sources */,
 				476274EAA87579B5D555F33E /* FriendsComposerDraftStoreTests.swift in Sources */,
+				23B685478D820DCD34933C58 /* FriendInviteTests.swift in Sources */,
 				1633DC21C02D2D11F7ED4C0E /* FriendsMessagesRepositoryTests.swift in Sources */,
 				798A63BCB40DB451D63BFE52 /* FriendsMessagingRealtimeCoordinatorTests.swift in Sources */,
 				81E2A55FD8229B909EECCF7D /* FriendsMessagingRichContentTests.swift in Sources */,

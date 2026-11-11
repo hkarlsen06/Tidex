@@ -85,12 +85,11 @@ final class AppLifecycleHandler {
 
   // MARK: - URL Handling
 
+  /// tidex:// links, and tidex.no invite links when SwiftUI hands a universal link here rather
+  /// than to `handleUserActivity`. The resolver ignores every other URL. Clerk's web sign-in
+  /// (Google) returns to its own ASWebAuthenticationSession, so it never arrives here.
   func handleOpenURL(_ url: URL) {
-    // Clerk's web sign-in (Google) returns to its own ASWebAuthenticationSession, so only the
-    // app's own tidex:// links arrive here.
-    if url.scheme == "tidex" {
-      handleDeepLink(url)
-    }
+    handleDeepLink(url)
   }
 
   func handleUserActivity(_ activity: NSUserActivity) {

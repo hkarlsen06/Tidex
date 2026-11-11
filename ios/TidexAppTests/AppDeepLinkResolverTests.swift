@@ -27,14 +27,6 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
     XCTAssertEqual(deepLink, .settings(destination: .recurringShifts))
   }
 
-  internal func testResolvesHttpsSettingsAlias() throws {
-    let url: URL = try XCTUnwrap(URL(string: "https://app.tidex.no/no/settings/recurring-shifts"))
-
-    let deepLink: AppCoordinator.DeepLink? = AppDeepLinkResolver.resolve(url)
-
-    XCTAssertEqual(deepLink, .settings(destination: .recurringShifts))
-  }
-
   internal func testResolvesShiftHighlightDeepLinkWithShiftIds() throws {
     let url: URL = try XCTUnwrap(
       URL(string: "tidex://shifts?dates=2026-06-01,2026-06-02&shiftIds=a,b&action=highlight")
@@ -60,14 +52,6 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
     XCTAssertEqual(deepLink, .addShift(mode: .recurring, date: nil))
   }
 
-  internal func testResolvesHttpsAddShiftDeepLinkWithEventsMode() throws {
-    let url: URL = try XCTUnwrap(URL(string: "https://app.tidex.no/no/add-shift?mode=events"))
-
-    let deepLink: AppCoordinator.DeepLink? = AppDeepLinkResolver.resolve(url)
-
-    XCTAssertEqual(deepLink, .addShift(mode: .events, date: nil))
-  }
-
   internal func testResolvesAddShiftDeepLinkWithDate() throws {
     let url: URL = try XCTUnwrap(URL(string: "tidex://add?date=2026-09-02"))
 
@@ -84,14 +68,37 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
     XCTAssertEqual(deepLink, .settings(destination: .admin))
   }
 
-  internal func testResolvesHttpsSettingsAdminReportsToAdminReport() throws {
-    let url: URL = try XCTUnwrap(
-      URL(string: "https://app.tidex.no/settings/admin?tab=reports&reportId=report_123")
-    )
+  internal func testInviteLinksResolveToTheInviterInBothForms() throws {
+    let inviterId = "0b7e3f2a-5c1d-4e8f-9a6b-2d4c8e1f3a5b"
+    for link in [
+      "tidex://invite/\(inviterId)",
+      "https://tidex.no/invite/\(inviterId)",
+      "https://tidex.no/invite/\(inviterId.uppercased())/",
+    ] {
+      let url: URL = try XCTUnwrap(URL(string: link))
+      XCTAssertEqual(AppDeepLinkResolver.resolve(url), .invite(inviterId: inviterId), link)
+    }
+  }
 
-    let deepLink: AppCoordinator.DeepLink? = AppDeepLinkResolver.resolve(url)
-
-    XCTAssertEqual(deepLink, .adminReport(reportId: "report_123"))
+  internal func testInviteLinksRejectAnythingButOneUserIdOnTidex() throws {
+    let inviterId = "0b7e3f2a-5c1d-4e8f-9a6b-2d4c8e1f3a5b"
+    for link in [
+      "tidex://invite/not-a-uuid",
+      "tidex://invite/",
+      "tidex://invite/\(inviterId)/extra",
+      "https://tidex.no/invite/12345",
+      "https://tidex.no/invite/",
+      "https://tidex.no/invite/\(inviterId)/extra",
+      "https://tidex.no/no/invite/\(inviterId)",
+      "http://tidex.no/invite/\(inviterId)",
+      "https://evil.example/invite/\(inviterId)",
+      "https://tidex.no.evil.example/invite/\(inviterId)",
+      "https://app.tidex.no/invite/\(inviterId)",
+      "https://app.tidex.no/settings/admin",
+    ] {
+      let url: URL = try XCTUnwrap(URL(string: link))
+      XCTAssertNil(AppDeepLinkResolver.resolve(url), link)
+    }
   }
 
   internal func testNotificationShiftReminderHighlightsShift() {
@@ -130,7 +137,8 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
 
   internal func testNotificationSharedShiftFallsBackToLegacyDateString() {
     let userInfo: [AnyHashable: Any] = [
-      "type": "shared_shift_created", "owner_id": "owner_1", "shift_dates": "2026-06-01, 2026-06-02",
+      "type": "shared_shift_created", "owner_id": "owner_1",
+      "shift_dates": "2026-06-01, 2026-06-02",
     ]
 
     XCTAssertEqual(
@@ -147,8 +155,9 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
     let deepLink: AppCoordinator.DeepLink? = AppDeepLinkResolver.resolve(
       notificationUserInfo: userInfo)
 
-    guard case .friendChat(let threadId, let messageId, let senderId, let typingId, let requestId) =
-      deepLink
+    guard
+      case .friendChat(let threadId, let messageId, let senderId, let typingId, let requestId) =
+        deepLink
     else {
       return XCTFail("Expected a friend chat deep link, got \(String(describing: deepLink))")
     }

@@ -296,4 +296,6 @@ struct Friend: Codable, Identifiable, Equatable {
 struct ManageActionResponse: Codable {
   let success: Bool
   let error: String?
+  /// Why a share failed, such as "not_found". Missing from servers before November 2026.
+  let code: String?
 }

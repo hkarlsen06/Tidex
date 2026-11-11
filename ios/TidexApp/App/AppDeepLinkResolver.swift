@@ -1,7 +1,7 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable conditional_returns_on_newline cyclomatic_complexity discouraged_optional_collection explicit_acl
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable explicit_top_level_acl explicit_type_interface extension_access_modifier function_body_length
+// swiftlint:disable explicit_top_level_acl explicit_type_interface extension_access_modifier
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable strict_fileprivate
 import Foundation
@@ -27,42 +27,34 @@ enum AppDeepLinkResolver {
       case "admin":
         return adminDeepLink(queryItems: queryItems)
 
+      case "invite":
+        let segments = url.path.split(separator: "/")
+        return segments.count == 1 ? inviteDeepLink(rawInviterId: String(segments[0])) : nil
+
       default:
         return nil
       }
     }
 
-    guard
-      let scheme = url.scheme?.lowercased(),
-      scheme == "https" || scheme == "http",
-      url.host?.lowercased() == "app.tidex.no"
-    else {
+    guard url.scheme?.lowercased() == "https", url.host?.lowercased() == "tidex.no" else {
       return nil
     }
+    let segments = url.path.split(separator: "/")
+    guard segments.count == 2, segments[0] == "invite" else { return nil }
+    return inviteDeepLink(rawInviterId: String(segments[1]))
+  }
 
-    let path = normalizedAppPath(url.path)
-    if path == "/sharing" || path == "/sharing/manage" {
-      return sharingDeepLink(path: path, queryItems: queryItems)
-    }
-    if path == "/shifts" {
-      return shiftsDeepLink(queryItems: queryItems)
-    }
-    if path == "/add" || path == "/add-shift" || path == "/add_shift" {
-      return addShiftDeepLink(queryItems: queryItems)
-    }
-    if path == "/admin" || path == "/settings/admin" {
-      return adminDeepLink(queryItems: queryItems)
-    }
-    if path == "/settings" || path.hasPrefix("/settings/") {
-      return settingsDeepLink(path: path, queryItems: queryItems)
-    }
-
-    return nil
+  /// `tidex://invite/<user id>` and `https://tidex.no/invite/<user id>`. Anything but one UUID
+  /// is rejected, so a link can only ever name a user id.
+  private static func inviteDeepLink(rawInviterId: String) -> AppCoordinator.DeepLink? {
+    guard let inviterId = UUID(uuidString: rawInviterId) else { return nil }
+    return .invite(inviterId: inviterId.uuidString.lowercased())
   }
 
   /// Resolves the destination for a tapped push notification. Returns nil for payloads
   /// without an in-app destination, including `deeplink` values that aren't tidex:// URLs.
-  static func resolve(notificationUserInfo userInfo: [AnyHashable: Any]) -> AppCoordinator.DeepLink? {
+  static func resolve(notificationUserInfo userInfo: [AnyHashable: Any]) -> AppCoordinator.DeepLink?
+  {
     let type = userInfo["type"] as? String ?? ""
 
     if type == "smart_prompt", let date = userInfo["date"] as? String {
@@ -142,8 +134,7 @@ enum AppDeepLinkResolver {
     path: String,
     queryItems: [URLQueryItem]
   ) -> AppCoordinator.DeepLink {
-    let pathComponents = path.split(separator: "/")
-    if path == "/manage" || path == "/sharing/manage" || pathComponents.contains("manage") {
+    if path.split(separator: "/").contains("manage") {
       return .sharingManage(highlightUserId: queryItems.value(named: "highlight"))
     }
 
@@ -197,13 +188,11 @@ enum AppDeepLinkResolver {
     path: String,
     queryItems: [URLQueryItem]
   ) -> AppCoordinator.DeepLink {
-    let pathSegments = path.split(separator: "/", omittingEmptySubsequences: true)
-    let pathDestination = settingsPathDestination(from: pathSegments)
     let rawDestination =
       queryItems.value(named: "destination")
       ?? queryItems.value(named: "page")
       ?? queryItems.value(named: "tab")
-      ?? pathDestination
+      ?? path.split(separator: "/").first.map(String.init)
 
     return .settings(
       destination: settingsDestination(
@@ -211,16 +200,6 @@ enum AppDeepLinkResolver {
         jobId: queryItems.value(named: "jobId") ?? queryItems.value(named: "job_id")
       )
     )
-  }
-
-  private static func settingsPathDestination(
-    from pathSegments: [Substring]
-  ) -> String? {
-    guard let first = pathSegments.first else { return nil }
-    if first == "settings" {
-      return pathSegments.dropFirst().first.map(String.init)
-    }
-    return String(first)
   }
 
   private static func settingsDestination(
@@ -273,19 +252,6 @@ enum AppDeepLinkResolver {
     default:
       return .adminFeedback
     }
-  }
-
-  private static func normalizedAppPath(_ path: String) -> String {
-    let segments = path.split(separator: "/", omittingEmptySubsequences: true)
-    guard let first = segments.first else { return "/" }
-
-    let strippedSegments =
-      first == "en" || first == "no"
-      ? Array(segments.dropFirst())
-      : Array(segments)
-
-    guard !strippedSegments.isEmpty else { return "/" }
-    return "/" + strippedSegments.joined(separator: "/")
   }
 }
 

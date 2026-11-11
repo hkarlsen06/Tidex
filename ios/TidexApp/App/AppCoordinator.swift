@@ -83,6 +83,7 @@ final class AppCoordinator {
     case adminFeedback  // Navigate to admin panel with feedback tab (for admins receiving new feedback)
     case adminReport(reportId: String?)  // Open admin panel on reports tab and optionally select a report
     case clockOut  // Open Home and clock out like its Clock out button
+    case invite(inviterId: String)  // Ask before sharing my shifts with the user who sent the link
   }
 
   enum SettingsDeepLinkDestination: Equatable {
@@ -1351,6 +1352,7 @@ final class AppCoordinator {
 
     NativeWidgetStorage.clearWidgetStorage()
     NativeWidgetStorage.clearFriendWidgetStorage()
+    PendingInviteStore.clear()
 
     // Clear the access token shared with iPhone extensions, and the cached user.
     AuthSessionManager.shared.clearSharedKeychain()
@@ -1506,8 +1508,14 @@ final class AppCoordinator {
   /// - tidex://shifts?shiftIds=<uuid>&dates=2025-01-15&action=highlight → Highlight/open specific shifts
   /// - tidex://settings/pay?jobId=<uuid> → Open pay settings
   /// - tidex://admin?tab=reports&reportId=<uuid> → Open admin reports
+  /// - tidex://invite/<userId> or https://tidex.no/invite/<userId> → Ask to share with that user
   func handleDeepLink(_ url: URL) {
     guard let deepLink = AppDeepLinkResolver.resolve(url) else { return }
+    if case .invite(let inviterId) = deepLink {
+      // Kept until the main app shows it, through sign-up and onboarding if need be.
+      PendingInviteStore.save(
+        inviterId: inviterId, openedBy: appState == .authenticated ? userId : nil)
+    }
     pendingDeepLink = deepLink
   }
 

@@ -374529,6 +374529,24 @@
         }
       }
     },
+    "sharing.askedToShareBack" : {
+      "comment" : "Under the confirmation that the user started sharing. Says what the friend sees next",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "They get a notice and can share their shifts back with one tap."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen får beskjed og kan dele vaktene sine tilbake med ett trykk."
+          }
+        }
+      }
+    },
     "sharing.blockedUsers.description" : {
       "comment" : "Footer text under the blocked users section in the add friend sheet.",
       "extractionState" : "manual",
@@ -377631,6 +377649,42 @@
         }
       }
     },
+    "sharing.error.blocked" : {
+      "comment" : "Error when sharing is not possible because one of the two people blocked the other. Does not say who blocked",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can't share your shifts with this person."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan ikke dele vaktene dine med denne personen."
+          }
+        }
+      }
+    },
+    "sharing.error.exists" : {
+      "comment" : "Error when the user already shares their shifts with this person",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You already share your shifts with this person."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du deler allerede vaktene dine med denne personen."
+          }
+        }
+      }
+    },
     "sharing.error.loadFriends" : {
       "comment" : "Error when the friends list cannot be loaded.",
       "extractionState" : "manual",
@@ -377913,6 +377967,24 @@
         }
       }
     },
+    "sharing.error.noIdentifier" : {
+      "comment" : "Add friend error when the email or username field was empty",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter an email or a username."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv inn en e-post eller et brukernavn."
+          }
+        }
+      }
+    },
     "sharing.error.noShareAccess" : {
       "comment" : "Shown when the user opens shared shifts they no longer have access to",
       "extractionState" : "manual",
@@ -378191,6 +378263,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你無權存取這些共享班次。"
+          }
+        }
+      }
+    },
+    "sharing.error.notFound" : {
+      "comment" : "Add friend error when no account has the typed email or username",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No one on Tidex has that email or username."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen på Tidex har den e-posten eller det brukernavnet."
           }
         }
       }
@@ -378755,6 +378845,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法移除分享"
+          }
+        }
+      }
+    },
+    "sharing.error.self" : {
+      "comment" : "Error when the user tries to share their shifts with their own account",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can't share with yourself."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan ikke dele med deg selv."
           }
         }
       }
@@ -381011,6 +381119,348 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已隱藏與封鎖"
+          }
+        }
+      }
+    },
+    "sharing.invite.action" : {
+      "comment" : "Button that opens the share sheet with the user's invite link",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invite a friend"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inviter en venn"
+          }
+        }
+      }
+    },
+    "sharing.invite.alreadySharing" : {
+      "comment" : "Shown when the user opens an invite from someone they already share with. %@ is that person's name",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You already share your shifts with %@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du deler allerede vaktene dine med %@."
+          }
+        }
+      }
+    },
+    "sharing.invite.confirm.title" : {
+      "comment" : "Question before sharing. %@ is the name of the person who sent the invite link",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share your shifts with %@?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dele vaktene dine med %@?"
+          }
+        }
+      }
+    },
+    "sharing.invite.earningsHidden" : {
+      "comment" : "Under the Show earnings switch while it is off",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your earnings stay hidden."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inntjeningen din vises ikke."
+          }
+        }
+      }
+    },
+    "sharing.invite.earningsShown" : {
+      "comment" : "Under the Show earnings switch while it is on",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "They will also see what you earn."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen får også se hva du tjener."
+          }
+        }
+      }
+    },
+    "sharing.invite.loadFailed.body" : {
+      "comment" : "Explains why nothing can be shared yet when the invite could not be loaded",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check your internet connection and try again. Nothing is shared until you can see who sent the link."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sjekk internettforbindelsen og prøv igjen. Ingenting deles før du ser hvem som sendte lenken."
+          }
+        }
+      }
+    },
+    "sharing.invite.loadFailed.title" : {
+      "comment" : "Title when the app could not find out who sent the invite link",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load the invitation"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke laste invitasjonen"
+          }
+        }
+      }
+    },
+    "sharing.invite.message" : {
+      "comment" : "Text sent with the user's invite link in the share sheet. Opening the link asks the friend to share their shifts with the user",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I'd like to see your shifts in Tidex. Open the link to share them with me, and I can share mine back."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg vil gjerne se vaktene dine i Tidex. Åpne lenken for å dele dem med meg, så kan jeg dele mine tilbake."
+          }
+        }
+      }
+    },
+    "sharing.invite.noName" : {
+      "comment" : "Warning when the account that sent the invite link has neither a name nor a username",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This person has no name or username in Tidex. Only share if you know who sent you the link."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen har verken navn eller brukernavn i Tidex. Del bare hvis du vet hvem som sendte deg lenken."
+          }
+        }
+      }
+    },
+    "sharing.invite.notNow" : {
+      "comment" : "Closes the invite sheet without sharing anything",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke nå"
+          }
+        }
+      }
+    },
+    "sharing.invite.ownLink.body" : {
+      "comment" : "Explains what the user's own invite link is for",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send it to a friend. When they open it, they share their shifts with you."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send den til en venn. Når de åpner den, deler de vaktene sine med deg."
+          }
+        }
+      }
+    },
+    "sharing.invite.ownLink.title" : {
+      "comment" : "Title when the user opened their own invite link",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is your own link"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette er din egen lenke"
+          }
+        }
+      }
+    },
+    "sharing.invite.share" : {
+      "comment" : "Button that shares the user's shifts with the person who sent the invite link",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share my shifts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Del vaktene mine"
+          }
+        }
+      }
+    },
+    "sharing.invite.shareFailed" : {
+      "comment" : "Generic error when sharing with the person who sent an invite link failed",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not share your shifts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke dele vaktene dine"
+          }
+        }
+      }
+    },
+    "sharing.invite.title" : {
+      "comment" : "Navigation title of the sheet shown when the user opens a friend's invite link",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invitation"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invitasjon"
+          }
+        }
+      }
+    },
+    "sharing.invite.unavailable.body" : {
+      "comment" : "Body when an invite link names no account the user can share with. Must not say whether someone blocked someone",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It does not lead to anyone you can share with."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den fører ikke til noen du kan dele med."
+          }
+        }
+      }
+    },
+    "sharing.invite.unavailable.title" : {
+      "comment" : "Title when an invite link names no account the user can share with",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This link does not work"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne lenken virker ikke"
+          }
+        }
+      }
+    },
+    "sharing.invite.unnamed" : {
+      "comment" : "Stands in for the name of an account without a name or username",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex user"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex-bruker"
+          }
+        }
+      }
+    },
+    "sharing.invite.whatIsShared" : {
+      "comment" : "Says what the person who sent the invite link will see after the user shares",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "They will see the date, start and end of each of your shifts."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen får se dato, start og slutt for hver av vaktene dine."
           }
         }
       }
@@ -386651,6 +387101,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分享回去"
+          }
+        }
+      }
+    },
+    "sharing.sharedWith" : {
+      "comment" : "Confirmation after the user started sharing their shifts. %@ is the friend's name",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You now share your shifts with %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du deler nå vaktene dine med %@"
           }
         }
       }
