@@ -10,6 +10,8 @@ Tidex is for shift workers aged roughly 13-30 who need a practical way to unders
 
 Users come to Tidex to enter shifts quickly, keep a reliable work record, see expected earnings, and catch payroll mistakes without needing to understand payroll systems in depth.
 
+Some users come only to see when their friends work. They follow friends who share their schedules and never add a job of their own. That is a full use of Tidex, not an unfinished setup, so screens must not call it missing or required.
+
 ## Product Purpose
 
 Tidex exists to make shift pay understandable, predictable, and verifiable. The product turns work schedules, wage settings, supplements, breaks, tax settings, and reports into clear numbers users can trust.
