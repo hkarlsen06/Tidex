@@ -6872,13 +6872,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "كل %lld أسبوع"
+                  "value" : "كل %lld أسابيع"
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "كل %lld أسبوع"
+                  "value" : "كل %lld أسبوعًا"
                 }
               },
               "one" : {
@@ -6896,7 +6896,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "كل %lld أسبوع"
+                  "value" : "كل أسبوعين"
                 }
               },
               "zero" : {
@@ -6932,7 +6932,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "প্রতি সপ্তাহ"
+                  "value" : "প্রতি %lld সপ্তাহ"
                 }
               },
               "other" : {
@@ -6968,13 +6968,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "každých %lld týdnů"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "každých %lld týdnů"
+                  "value" : "každé %lld týdny"
                 }
               },
               "one" : {
@@ -7094,7 +7088,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "iga %lld nädalat"
+                  "value" : "iga %lld nädala järel"
                 }
               }
             }
@@ -7106,7 +7100,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "هر هفته"
+                  "value" : "هر %lld هفته"
                 }
               },
               "other" : {
@@ -7142,7 +7136,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "bawat linggo"
+                  "value" : "bawat %lld linggo"
                 }
               },
               "other" : {
@@ -7175,12 +7169,6 @@
         "he" : {
           "variations" : {
             "plural" : {
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "כל %lld שבועות"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -7196,7 +7184,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "כל %lld שבועות"
+                  "value" : "כל שבועיים"
                 }
               }
             }
@@ -7208,7 +7196,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "हर सप्ताह"
+                  "value" : "हर %lld सप्ताह"
                 }
               },
               "other" : {
@@ -7226,25 +7214,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "svaki %lld tjedana"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "svaki %lld tjedana"
+                  "value" : "svaka %lld tjedna"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "svaki tjedan"
+                  "value" : "svaki %lld tjedan"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "svaki %lld tjedana"
+                  "value" : "svakih %lld tjedana"
                 }
               }
             }
@@ -7271,12 +7253,6 @@
         "id" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "setiap minggu"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -7292,7 +7268,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "á hverri viku"
+                  "value" : "á %lld viku fresti"
                 }
               },
               "other" : {
@@ -7325,12 +7301,6 @@
         "ja" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "毎週"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -7343,12 +7313,6 @@
         "ko" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "매주"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -7364,25 +7328,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "kas %lld savaitę"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "kas %lld savaitę"
+                  "value" : "kas %lld savaites"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "kas savaitę"
+                  "value" : "kas %lld savaitę"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "kas %lld savaitę"
+                  "value" : "kas %lld savaičių"
                 }
               }
             }
@@ -7394,7 +7352,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "katru nedēļu"
+                  "value" : "katru %lld. nedēļu"
                 }
               },
               "other" : {
@@ -7454,13 +7412,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "hver uke"
+                  "value" : "kvar veke"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "hver %lld. uke"
+                  "value" : "kvar %lld. veke"
                 }
               }
             }
@@ -7472,7 +7430,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "co %lld tygodni"
+                  "value" : "co %lld tygodnie"
                 }
               },
               "many" : {
@@ -7490,7 +7448,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "co %lld tygodni"
+                  "value" : "co %lld tygodnia"
                 }
               }
             }
@@ -7502,7 +7460,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "a cada semana"
+                  "value" : "a cada %lld semana"
                 }
               },
               "other" : {
@@ -7520,19 +7478,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "fiecare %lld săptămâni"
+                  "value" : "la fiecare %lld săptămâni"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "fiecare săptămână"
+                  "value" : "în fiecare săptămână"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "fiecare %lld săptămâni"
+                  "value" : "la fiecare %lld de săptămâni"
                 }
               }
             }
@@ -7544,7 +7502,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "каждые %lld недель"
+                  "value" : "каждые %lld недели"
                 }
               },
               "many" : {
@@ -7556,13 +7514,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "каждую неделю"
+                  "value" : "каждую %lld неделю"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "каждые %lld недель"
+                  "value" : "каждые %lld недели"
                 }
               }
             }
@@ -7574,13 +7532,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "každých %lld týždňov"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "každých %lld týždňov"
+                  "value" : "každé %lld týždne"
                 }
               },
               "one" : {
@@ -7610,19 +7562,19 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "vsak teden"
+                  "value" : "vsak %lld teden"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "vsake %lld tedne"
+                  "value" : "vsakih %lld tednov"
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "vsake %lld tedne"
+                  "value" : "vsaka %lld tedna"
                 }
               }
             }
@@ -7637,22 +7589,16 @@
                   "value" : "svake %lld nedelje"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "svake %lld nedelje"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "svake nedelje"
+                  "value" : "svake %lld. nedelje"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "svake %lld nedelje"
+                  "value" : "svakih %lld nedelja"
                 }
               }
             }
@@ -7700,13 +7646,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "ஒவ்வொரு வாரம்"
+                  "value" : "ஒவ்வொரு வாரமும்"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "ஒவ்வொரு %lld வாரங்கள்"
+                  "value" : "%lld வாரங்களுக்கு ஒருமுறை"
                 }
               }
             }
@@ -7715,12 +7661,6 @@
         "th" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "ทุกสัปดาห์"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -7742,7 +7682,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "her %lld haftada"
+                  "value" : "her %lld haftada bir"
                 }
               }
             }
@@ -7754,25 +7694,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "кожні %lld тижнів"
+                  "value" : "раз на %lld тижні"
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "кожні %lld тижнів"
+                  "value" : "раз на %lld тижнів"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "кожного тижня"
+                  "value" : "раз на %lld тиждень"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "кожні %lld тижнів"
+                  "value" : "раз на %lld тижня"
                 }
               }
             }
@@ -7799,16 +7739,10 @@
         "vi" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "cứ mỗi tuần"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "cứ %lld tuần"
+                  "value" : "mỗi %lld tuần"
                 }
               }
             }
@@ -7817,12 +7751,6 @@
         "zh-Hans" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "每周"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -7835,12 +7763,6 @@
         "zh-Hant" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "每週"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -8990,13 +8912,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld شهر"
+                  "value" : "%lld أشهر"
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld شهر"
+                  "value" : "%lld شهرًا"
                 }
               },
               "one" : {
@@ -9014,7 +8936,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld شهر"
+                  "value" : "شهران"
                 }
               },
               "zero" : {
@@ -9050,7 +8972,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "১ মাস"
+                  "value" : "%lld মাস"
                 }
               },
               "other" : {
@@ -9086,13 +9008,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld měsíců"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld měsíců"
+                  "value" : "%lld měsíce"
                 }
               },
               "one" : {
@@ -9224,7 +9140,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 ماه"
+                  "value" : "%lld ماه"
                 }
               },
               "other" : {
@@ -9260,7 +9176,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 buwan"
+                  "value" : "%lld buwan"
                 }
               },
               "other" : {
@@ -9278,7 +9194,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 mois"
+                  "value" : "%lld mois"
                 }
               },
               "other" : {
@@ -9293,16 +9209,10 @@
         "he" : {
           "variations" : {
             "plural" : {
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld חודשים"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "חודש 1"
+                  "value" : "חודש אחד"
                 }
               },
               "other" : {
@@ -9314,7 +9224,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld חודשים"
+                  "value" : "חודשיים"
                 }
               }
             }
@@ -9326,7 +9236,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 महीना"
+                  "value" : "%lld महीना"
                 }
               },
               "other" : {
@@ -9344,19 +9254,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld mjeseci"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld mjeseci"
+                  "value" : "%lld mjeseca"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 mjesec"
+                  "value" : "%lld mjesec"
                 }
               },
               "other" : {
@@ -9389,12 +9293,6 @@
         "id" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 bulan"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -9410,7 +9308,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 mánuður"
+                  "value" : "%lld mánuður"
                 }
               },
               "other" : {
@@ -9443,16 +9341,10 @@
         "ja" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1か月"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld か月"
+                  "value" : "%lldか月"
                 }
               }
             }
@@ -9461,12 +9353,6 @@
         "ko" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1개월"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -9485,22 +9371,16 @@
                   "value" : "%lld mėnesiai"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld mėnesiai"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 mėnuo"
+                  "value" : "%lld mėnuo"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld mėnesiai"
+                  "value" : "%lld mėnesių"
                 }
               }
             }
@@ -9512,7 +9392,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 mēnesis"
+                  "value" : "%lld mēnesis"
                 }
               },
               "other" : {
@@ -9572,13 +9452,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 måned"
+                  "value" : "1 månad"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld måneder"
+                  "value" : "%lld månader"
                 }
               }
             }
@@ -9590,7 +9470,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld miesięcy"
+                  "value" : "%lld miesiące"
                 }
               },
               "many" : {
@@ -9608,7 +9488,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld miesięcy"
+                  "value" : "%lld miesiąca"
                 }
               }
             }
@@ -9620,7 +9500,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 mês"
+                  "value" : "%lld mês"
                 }
               },
               "other" : {
@@ -9650,7 +9530,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld luni"
+                  "value" : "%lld de luni"
                 }
               }
             }
@@ -9662,7 +9542,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld месяцев"
+                  "value" : "%lld месяца"
                 }
               },
               "many" : {
@@ -9674,13 +9554,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 месяц"
+                  "value" : "%lld месяц"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld месяцев"
+                  "value" : "%lld месяца"
                 }
               }
             }
@@ -9692,13 +9572,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld mesiacov"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld mesiacov"
+                  "value" : "%lld mesiace"
                 }
               },
               "one" : {
@@ -9722,13 +9596,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld mesecev"
+                  "value" : "%lld meseci"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 mesec"
+                  "value" : "%lld mesec"
                 }
               },
               "other" : {
@@ -9740,7 +9614,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld mesecev"
+                  "value" : "%lld meseca"
                 }
               }
             }
@@ -9752,19 +9626,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld meseci"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld meseci"
+                  "value" : "%lld meseca"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 mesec"
+                  "value" : "%lld mesec"
                 }
               },
               "other" : {
@@ -9806,7 +9674,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld miezi"
+                  "value" : "Miezi %lld"
                 }
               }
             }
@@ -9833,12 +9701,6 @@
         "th" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 เดือน"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -9872,7 +9734,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld місяців"
+                  "value" : "%lld місяці"
                 }
               },
               "many" : {
@@ -9884,13 +9746,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 місяць"
+                  "value" : "%lld місяць"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld місяців"
+                  "value" : "%lld місяця"
                 }
               }
             }
@@ -9917,12 +9779,6 @@
         "vi" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 tháng"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -9935,12 +9791,6 @@
         "zh-Hans" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 个月"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -9953,12 +9803,6 @@
         "zh-Hant" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 個月"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -18440,7 +18284,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld سنة"
+                  "value" : "%lld سنوات"
                 }
               },
               "many" : {
@@ -18464,7 +18308,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld سنة"
+                  "value" : "سنتان"
                 }
               },
               "zero" : {
@@ -18500,7 +18344,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "১ বছর"
+                  "value" : "%lld বছর"
                 }
               },
               "other" : {
@@ -18536,13 +18380,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld let"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld let"
+                  "value" : "%lld roky"
                 }
               },
               "one" : {
@@ -18674,7 +18512,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 سال"
+                  "value" : "%lld سال"
                 }
               },
               "other" : {
@@ -18710,7 +18548,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 taon"
+                  "value" : "%lld taon"
                 }
               },
               "other" : {
@@ -18728,7 +18566,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 année"
+                  "value" : "%lld année"
                 }
               },
               "other" : {
@@ -18743,16 +18581,10 @@
         "he" : {
           "variations" : {
             "plural" : {
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld שנים"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "שנה 1"
+                  "value" : "שנה אחת"
                 }
               },
               "other" : {
@@ -18764,7 +18596,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld שנים"
+                  "value" : "שנתיים"
                 }
               }
             }
@@ -18776,7 +18608,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 वर्ष"
+                  "value" : "%lld वर्ष"
                 }
               },
               "other" : {
@@ -18794,19 +18626,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld godina"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld godina"
+                  "value" : "%lld godine"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 godina"
+                  "value" : "%lld godina"
                 }
               },
               "other" : {
@@ -18839,12 +18665,6 @@
         "id" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 tahun"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -18860,7 +18680,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 ár"
+                  "value" : "%lld ár"
                 }
               },
               "other" : {
@@ -18893,12 +18713,6 @@
         "ja" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1年"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -18911,12 +18725,6 @@
         "ko" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1년"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -18935,22 +18743,16 @@
                   "value" : "%lld metai"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld metai"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 metai"
+                  "value" : "%lld metai"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld metai"
+                  "value" : "%lld metų"
                 }
               }
             }
@@ -18962,7 +18764,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 gads"
+                  "value" : "%lld gads"
                 }
               },
               "other" : {
@@ -19010,7 +18812,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld jaren"
+                  "value" : "%lld jaar"
                 }
               }
             }
@@ -19040,7 +18842,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld lat"
+                  "value" : "%lld lata"
                 }
               },
               "many" : {
@@ -19058,7 +18860,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld lat"
+                  "value" : "%lld roku"
                 }
               }
             }
@@ -19070,7 +18872,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 ano"
+                  "value" : "%lld ano"
                 }
               },
               "other" : {
@@ -19100,7 +18902,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ani"
+                  "value" : "%lld de ani"
                 }
               }
             }
@@ -19112,7 +18914,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld лет"
+                  "value" : "%lld года"
                 }
               },
               "many" : {
@@ -19124,13 +18926,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 год"
+                  "value" : "%lld год"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld лет"
+                  "value" : "%lld года"
                 }
               }
             }
@@ -19142,13 +18944,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld rokov"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld rokov"
+                  "value" : "%lld roky"
                 }
               },
               "one" : {
@@ -19172,13 +18968,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld let"
+                  "value" : "%lld leta"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 leto"
+                  "value" : "%lld leto"
                 }
               },
               "other" : {
@@ -19190,7 +18986,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld let"
+                  "value" : "%lld leti"
                 }
               }
             }
@@ -19202,19 +18998,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld godina"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld godina"
+                  "value" : "%lld godine"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 godina"
+                  "value" : "%lld godina"
                 }
               },
               "other" : {
@@ -19256,7 +19046,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld miaka"
+                  "value" : "Miaka %lld"
                 }
               }
             }
@@ -19283,12 +19073,6 @@
         "th" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 ปี"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -19322,7 +19106,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld років"
+                  "value" : "%lld роки"
                 }
               },
               "many" : {
@@ -19334,13 +19118,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 рік"
+                  "value" : "%lld рік"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld років"
+                  "value" : "%lld року"
                 }
               }
             }
@@ -19367,12 +19151,6 @@
         "vi" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 năm"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -19385,12 +19163,6 @@
         "zh-Hans" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 年"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -19403,12 +19175,6 @@
         "zh-Hant" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 年"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -250638,7 +250404,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "سيتم استبعاد %lld وردية بسبب تضارب"
+                  "value" : "سيتم استبعاد %lld ورديات بسبب تضارب"
                 }
               },
               "many" : {
@@ -250650,7 +250416,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "ستتم استبعاد وردية واحدة بسبب تضارب"
+                  "value" : "سيتم استبعاد وردية واحدة بسبب تضارب"
                 }
               },
               "other" : {
@@ -250662,7 +250428,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "سيتم استبعاد %lld وردية بسبب تضارب"
+                  "value" : "سيتم استبعاد ورديتين بسبب تضارب"
                 }
               },
               "zero" : {
@@ -250680,13 +250446,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 вакта ще бъде изключена поради конфликти"
+                  "value" : "1 смяна ще бъде изключена поради конфликти"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld вакти ще бъдат изключени поради конфликти"
+                  "value" : "%lld смени ще бъдат изключени поради конфликти"
                 }
               }
             }
@@ -250698,13 +250464,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "১টি শিফট সংঘর্ষের কারণে বাদ দেওয়া হবে"
+                  "value" : "%lldটি শিফট সংঘর্ষের কারণে বাদ দেওয়া হবে"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld শিফট সংঘর্ষের কারণে বাদ দেওয়া হবে"
+                  "value" : "%lldটি শিফট সংঘর্ষের কারণে বাদ দেওয়া হবে"
                 }
               }
             }
@@ -250716,13 +250482,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vaga s'exclorà a causa de conflictes"
+                  "value" : "1 torn s'exclourà a causa de conflictes"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vagues s'exclouran a causa de conflictes"
+                  "value" : "%lld torns s'exclouran a causa de conflictes"
                 }
               }
             }
@@ -250734,13 +250500,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld směn bude vyloučeno z důvodu konfliktů"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld směn bude vyloučeno z důvodu konfliktů"
+                  "value" : "%lld směny budou vyloučeny z důvodu konfliktů"
                 }
               },
               "one" : {
@@ -250800,13 +250560,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 βάρδια θα εξαιρεθεί λόγω συγκρούσεων"
+                  "value" : "1 βάρδια θα εξαιρεθεί λόγω διενέξεων"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld βάρδιες θα εξαιρεθούν λόγω συγκρούσεων"
+                  "value" : "%lld βάρδιες θα εξαιρεθούν λόγω διενέξεων"
                 }
               }
             }
@@ -250860,7 +250620,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vahetus jäetakse välja konfliktide tõttu"
+                  "value" : "%lld vahetust jäetakse välja konfliktide tõttu"
                 }
               }
             }
@@ -250872,13 +250632,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 وقایع به دلیل تضاد حذف خواهد شد"
+                  "value" : "%lld شیفت به‌دلیل تداخل حذف می‌شود"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld وقایع به دلیل تضاد حذف خواهند شد"
+                  "value" : "%lld شیفت به‌دلیل تداخل حذف می‌شود"
                 }
               }
             }
@@ -250908,13 +250668,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 shift ay hindi isasama dahil sa mga konflikto"
+                  "value" : "Hindi isasama ang %lld shift dahil sa salungatan"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld shift ay hindi isasama dahil sa mga konflikto"
+                  "value" : "Hindi isasama ang %lld shift dahil sa salungatan"
                 }
               }
             }
@@ -250926,13 +250686,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vos sera exclue en raison de conflits"
+                  "value" : "%lld service sera exclu en raison de conflits"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vos seront exclus en raison de conflits"
+                  "value" : "%lld services seront exclus en raison de conflits"
                 }
               }
             }
@@ -250941,28 +250701,22 @@
         "he" : {
           "variations" : {
             "plural" : {
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld vaktim יוחרجו בגלל קונפליקטים"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt יוחרג בגלל קונפליקטים"
+                  "value" : "משמרת אחת לא תיכלל בגלל התנגשויות"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vaktim יוחרجו בגלל קונפליקטים"
+                  "value" : "%lld משמרות לא ייכללו בגלל התנגשויות"
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vaktim יוחרجו בגלל קונפליקטים"
+                  "value" : "%lld משמרות לא ייכללו בגלל התנגשויות"
                 }
               }
             }
@@ -250974,13 +250728,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 शिफ्ट संघर्ष के कारण बाहर रखा जाएगा"
+                  "value" : "%lld शिफ्ट टकराव के कारण बाहर रखी जाएगी"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld शिफ्ट संघर्ष के कारण बाहर रखे जाएंगे"
+                  "value" : "%lld शिफ्ट टकराव के कारण बाहर रखी जाएंगी"
                 }
               }
             }
@@ -250992,25 +250746,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakti će biti isključeni zbog sukoba"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld vakti će biti isključeni zbog sukoba"
+                  "value" : "%lld smjene bit će isključene zbog sukoba"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt će biti isključena zbog sukoba"
+                  "value" : "%lld smjena bit će isključena zbog sukoba"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakti će biti isključeni zbog sukoba"
+                  "value" : "%lld smjena bit će isključeno zbog sukoba"
                 }
               }
             }
@@ -251037,16 +250785,10 @@
         "id" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 vakat akan dikecualikan karena konflik"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakat akan dikecualikan karena konflik"
+                  "value" : "%lld shift akan dikecualikan karena konflik"
                 }
               }
             }
@@ -251058,13 +250800,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt verður útilokað vegna átaka"
+                  "value" : "%lld vakt verður útilokuð vegna árekstra"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vaktir verða útilokaðar vegna átaka"
+                  "value" : "%lld vaktir verða útilokaðar vegna árekstra"
                 }
               }
             }
@@ -251091,12 +250833,6 @@
         "ja" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1件のシフトが競合により除外されます"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -251109,12 +250845,6 @@
         "ko" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1개 근무가 충돌로 인해 제외됩니다"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -251130,25 +250860,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld pamainų bus neįtrauktos dėl konfliktų"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld pamainų bus neįtrauktos dėl konfliktų"
+                  "value" : "%lld pamainos bus neįtrauktos dėl konfliktų"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 pamaina bus neįtraukta dėl konfliktų"
+                  "value" : "%lld pamaina bus neįtraukta dėl konfliktų"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld pamainų bus neįtrauktos dėl konfliktų"
+                  "value" : "%lld pamainų bus neįtraukta dėl konfliktų"
                 }
               }
             }
@@ -251160,7 +250884,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 maiņa tiks izslēgta konfliktu dēļ"
+                  "value" : "%lld maiņa tiks izslēgta konfliktu dēļ"
                 }
               },
               "other" : {
@@ -251220,13 +250944,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt vil bli ekskludert på grunn av konflikter"
+                  "value" : "1 vakt blir ekskludert på grunn av konfliktar"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakter vil bli ekskludert på grunn av konflikter"
+                  "value" : "%lld vakter blir ekskluderte på grunn av konfliktar"
                 }
               }
             }
@@ -251238,7 +250962,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmian zostanie wykluczonych ze względu na konflikty"
+                  "value" : "%lld zmiany zostaną wykluczone ze względu na konflikty"
                 }
               },
               "many" : {
@@ -251256,7 +250980,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmian zostanie wykluczonych ze względu na konflikty"
+                  "value" : "%lld zmiany zostanie wykluczone ze względu na konflikty"
                 }
               }
             }
@@ -251268,7 +250992,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 turno será excluído devido a conflitos"
+                  "value" : "%lld turno será excluído devido a conflitos"
                 }
               },
               "other" : {
@@ -251286,19 +251010,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakte vor fi excluse din cauza conflictelor"
+                  "value" : "%lld ture vor fi excluse din cauza conflictelor"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vaktă va fi exclusă din cauza conflictelor"
+                  "value" : "1 tură va fi exclusă din cauza conflictelor"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakte vor fi excluse din cauza conflictelor"
+                  "value" : "%lld de ture vor fi excluse din cauza conflictelor"
                 }
               }
             }
@@ -251316,13 +251040,13 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смены будут исключены из-за конфликтов"
+                  "value" : "%lld смен будут исключены из-за конфликтов"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 смена будет исключена из-за конфликтов"
+                  "value" : "%lld смена будет исключена из-за конфликтов"
                 }
               },
               "other" : {
@@ -251340,25 +251064,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt budú vylúčené z dôvodu konfliktov"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld vakt budú vylúčené z dôvodu konfliktov"
+                  "value" : "%lld zmeny budú vylúčené z dôvodu konfliktov"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt budú vylúčené z dôvodu konfliktov"
+                  "value" : "1 zmena bude vylúčená z dôvodu konfliktov"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt budú vylúčené z dôvodu konfliktov"
+                  "value" : "%lld zmien bude vylúčených z dôvodu konfliktov"
                 }
               }
             }
@@ -251370,25 +251088,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt bo izključenih zaradi konfliktov"
+                  "value" : "%lld izmene bodo izključene zaradi prekrivanja"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt bo izključena zaradi konfliktov"
+                  "value" : "%lld izmena bo izključena zaradi prekrivanja"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt bo izključenih zaradi konfliktov"
+                  "value" : "%lld izmen bo izključenih zaradi prekrivanja"
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt bo izključenih zaradi konfliktov"
+                  "value" : "%lld izmeni bosta izključeni zaradi prekrivanja"
                 }
               }
             }
@@ -251400,25 +251118,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakte će biti isključene zbog konflikata"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld vakte će biti isključene zbog konflikata"
+                  "value" : "%lld smene će biti isključene zbog preklapanja"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt će biti isključena zbog konflikata"
+                  "value" : "%lld smena će biti isključena zbog preklapanja"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakte će biti isključene zbog konflikata"
+                  "value" : "%lld smena će biti isključeno zbog preklapanja"
                 }
               }
             }
@@ -251430,13 +251142,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 skift kommer att exkluderas på grund av konflikter"
+                  "value" : "1 pass kommer att exkluderas på grund av konflikter"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld skift kommer att exkluderas på grund av konflikter"
+                  "value" : "%lld pass kommer att exkluderas på grund av konflikter"
                 }
               }
             }
@@ -251448,13 +251160,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Kipande 1 kitachukuliwa kutokana na migogoro"
+                  "value" : "Zamu 1 itaondolewa kwa sababu ya migongano"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vipande vitachukuliwa kutokana na migogoro"
+                  "value" : "Zamu %lld zitaondolewa kwa sababu ya migongano"
                 }
               }
             }
@@ -251466,13 +251178,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "সংঘর্ষের কারণে 1টি শিফট বাদ দেওয়া হবে"
+                  "value" : "முரண்பாடு காரணமாக 1 ஷிப்ட் விலக்கப்படும்"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld শিফট সংঘর্ষের কারণে বাদ দেওয়া হবে"
+                  "value" : "முரண்பாடுகள் காரணமாக %lld ஷிப்ட்கள் விலக்கப்படும்"
                 }
               }
             }
@@ -251481,12 +251193,6 @@
         "th" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 กะงานจะถูกยกเว้นเนื่องจากขัดแย้ง"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -251502,13 +251208,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt çakışma nedeniyle hariç tutulacak"
+                  "value" : "1 vardiya çakışma nedeniyle hariç tutulacak"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt çakışma nedeniyle hariç tutulacak"
+                  "value" : "%lld vardiya çakışma nedeniyle hariç tutulacak"
                 }
               }
             }
@@ -251520,7 +251226,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld змін буде виключено через конфлікти"
+                  "value" : "%lld зміни буде виключено через конфлікти"
                 }
               },
               "many" : {
@@ -251532,13 +251238,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 зміну буде виключено через конфлікти"
+                  "value" : "%lld зміну буде виключено через конфлікти"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld змін буде виключено через конфлікти"
+                  "value" : "%lld зміни буде виключено через конфлікти"
                 }
               }
             }
@@ -251565,12 +251271,6 @@
         "vi" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 ca làm việc sẽ bị loại trừ do xung đột"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -251583,12 +251283,6 @@
         "zh-Hans" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 个班次将因冲突而被排除"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -251601,12 +251295,6 @@
         "zh-Hant" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 個班次將因衝突而被排除"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -252756,7 +252444,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld وردية"
+                  "value" : "%lld ورديات"
                 }
               },
               "many" : {
@@ -252780,7 +252468,7 @@
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld وردية"
+                  "value" : "ورديتان"
                 }
               },
               "zero" : {
@@ -252798,7 +252486,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 смена"
+                  "value" : "1 смяна"
                 }
               },
               "other" : {
@@ -252816,13 +252504,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "১ শিফট"
+                  "value" : "%lldটি শিফট"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld শিফট"
+                  "value" : "%lldটি শিফট"
                 }
               }
             }
@@ -252834,13 +252522,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vague"
+                  "value" : "1 torn"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vagues"
+                  "value" : "%lld torns"
                 }
               }
             }
@@ -252852,13 +252540,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld směn"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld směn"
+                  "value" : "%lld směny"
                 }
               },
               "one" : {
@@ -252978,7 +252660,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vahetus"
+                  "value" : "%lld vahetust"
                 }
               }
             }
@@ -252990,7 +252672,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 شیفت"
+                  "value" : "%lld شیفت"
                 }
               },
               "other" : {
@@ -253026,13 +252708,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 shift"
+                  "value" : "%lld shift"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld shifts"
+                  "value" : "%lld shift"
                 }
               }
             }
@@ -253044,13 +252726,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vos"
+                  "value" : "%lld service"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vos"
+                  "value" : "%lld services"
                 }
               }
             }
@@ -253059,12 +252741,6 @@
         "he" : {
           "variations" : {
             "plural" : {
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld משמרות"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -253092,7 +252768,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 शिफ्ट"
+                  "value" : "%lld शिफ्ट"
                 }
               },
               "other" : {
@@ -253110,19 +252786,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjena"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld smjena"
+                  "value" : "%lld smjene"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 smjena"
+                  "value" : "%lld smjena"
                 }
               },
               "other" : {
@@ -253155,12 +252825,6 @@
         "id" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 shift"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -253176,7 +252840,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakti"
+                  "value" : "%lld vakt"
                 }
               },
               "other" : {
@@ -253209,12 +252873,6 @@
         "ja" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1シフト"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -253227,12 +252885,6 @@
         "ko" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1개 근무"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -253248,19 +252900,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld pamainų"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld pamainų"
+                  "value" : "%lld pamainos"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 pamaina"
+                  "value" : "%lld pamaina"
                 }
               },
               "other" : {
@@ -253278,7 +252924,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 maiņa"
+                  "value" : "%lld maiņa"
                 }
               },
               "other" : {
@@ -253356,7 +253002,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmian"
+                  "value" : "%lld zmiany"
                 }
               },
               "many" : {
@@ -253374,7 +253020,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmian"
+                  "value" : "%lld zmiany"
                 }
               }
             }
@@ -253386,7 +253032,7 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 turno"
+                  "value" : "%lld turno"
                 }
               },
               "other" : {
@@ -253404,19 +253050,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakte"
+                  "value" : "%lld ture"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vaktă"
+                  "value" : "1 tură"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakte"
+                  "value" : "%lld de ture"
                 }
               }
             }
@@ -253434,13 +253080,13 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смены"
+                  "value" : "%lld смен"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 смена"
+                  "value" : "%lld смена"
                 }
               },
               "other" : {
@@ -253458,13 +253104,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmien"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld zmien"
+                  "value" : "%lld zmeny"
                 }
               },
               "one" : {
@@ -253494,19 +253134,19 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 izmena"
+                  "value" : "%lld izmena"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld izmene"
+                  "value" : "%lld izmen"
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld izmene"
+                  "value" : "%lld izmeni"
                 }
               }
             }
@@ -253518,19 +253158,13 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smena"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld smena"
+                  "value" : "%lld smene"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 smena"
+                  "value" : "%lld smena"
                 }
               },
               "other" : {
@@ -253548,13 +253182,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 skift"
+                  "value" : "1 pass"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld skift"
+                  "value" : "%lld pass"
                 }
               }
             }
@@ -253566,13 +253200,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "vakte 1"
+                  "value" : "Zamu 1"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "vakte %lld"
+                  "value" : "Zamu %lld"
                 }
               }
             }
@@ -253599,12 +253233,6 @@
         "th" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 กะงาน"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -253620,13 +253248,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 vakt"
+                  "value" : "1 vardiya"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt"
+                  "value" : "%lld vardiya"
                 }
               }
             }
@@ -253638,7 +253266,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld змін"
+                  "value" : "%lld зміни"
                 }
               },
               "many" : {
@@ -253650,13 +253278,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 зміна"
+                  "value" : "%lld зміна"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld змін"
+                  "value" : "%lld зміни"
                 }
               }
             }
@@ -253683,12 +253311,6 @@
         "vi" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 ca làm việc"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -253701,12 +253323,6 @@
         "zh-Hans" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 个班次"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -253719,12 +253335,6 @@
         "zh-Hant" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "1 個班次"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -491562,31 +491172,31 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبات"
+                  "value" : "%lld نوبة"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبة"
+                  "value" : "نوبة واحدة"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبات"
+                  "value" : "%lld نوبة"
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبات"
+                  "value" : "نوبتان"
                 }
               },
               "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبات"
+                  "value" : "%lld نوبة"
                 }
               }
             }
@@ -491604,7 +491214,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смяни"
+                  "value" : "%lld смени"
                 }
               }
             }
@@ -491634,13 +491244,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt"
+                  "value" : "%lld torn"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakts"
+                  "value" : "%lld torns"
                 }
               }
             }
@@ -491655,12 +491265,6 @@
                   "value" : "%lld směny"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld směny"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -491670,7 +491274,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld směny"
+                  "value" : "%lld směn"
                 }
               }
             }
@@ -491688,7 +491292,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakter"
+                  "value" : "%lld vagter"
                 }
               }
             }
@@ -491778,7 +491382,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vahetused"
+                  "value" : "%lld vahetust"
                 }
               }
             }
@@ -491796,7 +491400,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld شیفت‌ها"
+                  "value" : "%lld شیفت"
                 }
               }
             }
@@ -491814,7 +491418,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vuorot"
+                  "value" : "%lld vuoroa"
                 }
               }
             }
@@ -491832,7 +491436,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld shifts"
+                  "value" : "%lld shift"
                 }
               }
             }
@@ -491844,13 +491448,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vaction"
+                  "value" : "%lld service"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld quarts"
+                  "value" : "%lld services"
                 }
               }
             }
@@ -491859,12 +491463,6 @@
         "he" : {
           "variations" : {
             "plural" : {
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld משמרות"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -491892,13 +491490,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld पाली"
+                  "value" : "%lld शिफ्ट"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld पालियां"
+                  "value" : "%lld शिफ्ट"
                 }
               }
             }
@@ -491913,12 +491511,6 @@
                   "value" : "%lld smjene"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld smjene"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -491928,7 +491520,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjene"
+                  "value" : "%lld smjena"
                 }
               }
             }
@@ -491946,7 +491538,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld műszakok"
+                  "value" : "%lld műszak"
                 }
               }
             }
@@ -491955,16 +491547,10 @@
         "id" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld shift"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld shifts"
+                  "value" : "%lld shift"
                 }
               }
             }
@@ -492009,16 +491595,10 @@
         "ja" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld シフト"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld シフト"
+                  "value" : "%lld件のシフト"
                 }
               }
             }
@@ -492027,16 +491607,10 @@
         "ko" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld 근무"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld 근무"
+                  "value" : "%lld개 근무"
                 }
               }
             }
@@ -492051,12 +491625,6 @@
                   "value" : "%lld pamainos"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld pamainos"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -492066,7 +491634,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld pamainos"
+                  "value" : "%lld pamainų"
                 }
               }
             }
@@ -492162,7 +491730,7 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmiany"
+                  "value" : "%lld zmian"
                 }
               },
               "one" : {
@@ -492204,7 +491772,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld turi"
+                  "value" : "%lld ture"
                 }
               },
               "one" : {
@@ -492216,7 +491784,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld turi"
+                  "value" : "%lld de ture"
                 }
               }
             }
@@ -492234,7 +491802,7 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смены"
+                  "value" : "%lld смен"
                 }
               },
               "one" : {
@@ -492261,12 +491829,6 @@
                   "value" : "%lld zmeny"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld zmeny"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -492276,7 +491838,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmeny"
+                  "value" : "%lld zmien"
                 }
               }
             }
@@ -492300,13 +491862,13 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld izmene"
+                  "value" : "%lld izmen"
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld izmene"
+                  "value" : "%lld izmeni"
                 }
               }
             }
@@ -492318,25 +491880,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjene"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld smjene"
+                  "value" : "%lld smene"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjena"
+                  "value" : "%lld smena"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjene"
+                  "value" : "%lld smena"
                 }
               }
             }
@@ -492348,13 +491904,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld skift"
+                  "value" : "%lld pass"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld skift"
+                  "value" : "%lld pass"
                 }
               }
             }
@@ -492366,13 +491922,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zamu"
+                  "value" : "Zamu %lld"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zamu"
+                  "value" : "Zamu %lld"
                 }
               }
             }
@@ -492384,13 +491940,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld சிஃப்ட்"
+                  "value" : "%lld ஷிப்ட்"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld சிஃப்ட்கள்"
+                  "value" : "%lld ஷிப்ட்கள்"
                 }
               }
             }
@@ -492399,12 +491955,6 @@
         "th" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld เวลาทำงาน"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -492426,7 +491976,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vardiyalar"
+                  "value" : "%lld vardiya"
                 }
               }
             }
@@ -492444,13 +491994,13 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld зміни"
+                  "value" : "%lld змін"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld змина"
+                  "value" : "%lld зміна"
                 }
               },
               "other" : {
@@ -492483,16 +492033,10 @@
         "vi" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ca làm việc"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ca trực"
+                  "value" : "%lld ca làm"
                 }
               }
             }
@@ -492501,16 +492045,10 @@
         "zh-Hans" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld 班次"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld 班次"
+                  "value" : "%lld 个班次"
                 }
               }
             }
@@ -492519,16 +492057,10 @@
         "zh-Hant" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld 班次"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld 班次"
+                  "value" : "%lld 個班次"
                 }
               }
             }
@@ -492552,31 +492084,31 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبات مجدولة"
+                  "value" : "%lld نوبة مجدولة"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبة مجدولة"
+                  "value" : "نوبة واحدة مجدولة"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبات مجدولة"
+                  "value" : "%lld نوبة مجدولة"
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبات مجدولة"
+                  "value" : "نوبتان مجدولتان"
                 }
               },
               "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld نوبات مجدولة"
+                  "value" : "%lld نوبة مجدولة"
                 }
               }
             }
@@ -492588,13 +492120,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смяна планирана"
+                  "value" : "%lld планирана смяна"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смяни планирани"
+                  "value" : "%lld планирани смени"
                 }
               }
             }
@@ -492624,13 +492156,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt planificada"
+                  "value" : "%lld torn planificat"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakts planificades"
+                  "value" : "%lld torns planificats"
                 }
               }
             }
@@ -492642,13 +492174,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld směny naplánované"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld směny naplánované"
+                  "value" : "%lld směny naplánovány"
                 }
               },
               "one" : {
@@ -492660,7 +492186,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld směny naplánované"
+                  "value" : "%lld směn naplánováno"
                 }
               }
             }
@@ -492678,7 +492204,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakter planlagt"
+                  "value" : "%lld vagter planlagt"
                 }
               }
             }
@@ -492708,13 +492234,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld βάρδια προγραμματισμένη"
+                  "value" : "%lld προγραμματισμένη βάρδια"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld βάρδιες προγραμματισμένες"
+                  "value" : "%lld προγραμματισμένες βάρδιες"
                 }
               }
             }
@@ -492768,7 +492294,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vahetused planeeritud"
+                  "value" : "%lld vahetust planeeritud"
                 }
               }
             }
@@ -492780,13 +492306,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld شیفت برنامه‌ریزی شده"
+                  "value" : "%lld شیفت برنامه‌ریزی‌شده"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld شیفت‌های برنامه‌ریزی شده"
+                  "value" : "%lld شیفت برنامه‌ریزی‌شده"
                 }
               }
             }
@@ -492804,7 +492330,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vuorot suunniteltu"
+                  "value" : "%lld vuoroa suunniteltu"
                 }
               }
             }
@@ -492816,13 +492342,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld shift na naplano"
+                  "value" : "%lld nakaplanong shift"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld shifts na naplano"
+                  "value" : "%lld nakaplanong shift"
                 }
               }
             }
@@ -492834,13 +492360,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vaction planifiée"
+                  "value" : "%lld service planifié"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld quarts planifiés"
+                  "value" : "%lld services planifiés"
                 }
               }
             }
@@ -492849,12 +492375,6 @@
         "he" : {
           "variations" : {
             "plural" : {
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld משמרות מתוכננות"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -492882,13 +492402,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld पाली योजित"
+                  "value" : "%lld शिफ्ट निर्धारित"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld पालियां योजित"
+                  "value" : "%lld शिफ्ट निर्धारित"
                 }
               }
             }
@@ -492903,12 +492423,6 @@
                   "value" : "%lld smjene planirane"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld smjene planirane"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -492918,7 +492432,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjene planirane"
+                  "value" : "%lld smjena planirano"
                 }
               }
             }
@@ -492930,13 +492444,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld műszak tervezett"
+                  "value" : "%lld tervezett műszak"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld műszakok tervezett"
+                  "value" : "%lld tervezett műszak"
                 }
               }
             }
@@ -492945,16 +492459,10 @@
         "id" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld shift direncanakan"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld shifts direncanakan"
+                  "value" : "%lld shift direncanakan"
                 }
               }
             }
@@ -492999,16 +492507,10 @@
         "ja" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld シフト予定"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld 予定されたシフト"
+                  "value" : "%lld件のシフト予定"
                 }
               }
             }
@@ -493017,16 +492519,10 @@
         "ko" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld 근무 예정됨"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld 예정된 근무"
+                  "value" : "%lld개 근무 예정"
                 }
               }
             }
@@ -493041,12 +492537,6 @@
                   "value" : "%lld pamainos suplanuotos"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld pamainos suplanuotos"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -493056,7 +492546,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld pamainos suplanuotos"
+                  "value" : "%lld pamainų suplanuota"
                 }
               }
             }
@@ -493128,13 +492618,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakt planlagt"
+                  "value" : "%lld vakt planlagd"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vakter planlagt"
+                  "value" : "%lld vakter planlagde"
                 }
               }
             }
@@ -493152,19 +492642,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zaplanowane zmiany"
+                  "value" : "%lld zaplanowanych zmian"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmiana zaplanowana"
+                  "value" : "%lld zaplanowana zmiana"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zaplanowane zmiany"
+                  "value" : "%lld zaplanowanej zmiany"
                 }
               }
             }
@@ -493194,7 +492684,7 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld turi planificate"
+                  "value" : "%lld ture planificate"
                 }
               },
               "one" : {
@@ -493206,7 +492696,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld turi planificate"
+                  "value" : "%lld de ture planificate"
                 }
               }
             }
@@ -493224,7 +492714,7 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смены запланированы"
+                  "value" : "%lld смен запланировано"
                 }
               },
               "one" : {
@@ -493236,7 +492726,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смены запланированы"
+                  "value" : "%lld смены запланировано"
                 }
               }
             }
@@ -493251,12 +492741,6 @@
                   "value" : "%lld zmeny naplánované"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld zmeny naplánované"
-                }
-              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -493266,7 +492750,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmeny naplánované"
+                  "value" : "%lld zmien naplánovaných"
                 }
               }
             }
@@ -493278,25 +492762,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld izmene načrtovane"
+                  "value" : "%lld načrtovane izmene"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld izmena načrtovana"
+                  "value" : "%lld načrtovana izmena"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld izmene načrtovane"
+                  "value" : "%lld načrtovanih izmen"
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld izmene načrtovane"
+                  "value" : "%lld načrtovani izmeni"
                 }
               }
             }
@@ -493308,25 +492792,19 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjene planirane"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld smjene planirane"
+                  "value" : "%lld planirane smene"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjena planirana"
+                  "value" : "%lld planirana smena"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld smjene planirane"
+                  "value" : "%lld planiranih smena"
                 }
               }
             }
@@ -493338,13 +492816,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld skift planerat"
+                  "value" : "%lld planerat pass"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld skift planerade"
+                  "value" : "%lld planerade pass"
                 }
               }
             }
@@ -493356,13 +492834,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zamu iliyopangwa"
+                  "value" : "Zamu %lld imepangwa"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zamu zilizopangwa"
+                  "value" : "Zamu %lld zimepangwa"
                 }
               }
             }
@@ -493374,13 +492852,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld சிஃப்ட் திட்டமிடப்பட்டது"
+                  "value" : "%lld ஷிப்ட் திட்டமிடப்பட்டுள்ளது"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld சிஃப்ட்கள் திட்டமிடப்பட்டுள்ளன"
+                  "value" : "%lld ஷிப்ட்கள் திட்டமிடப்பட்டுள்ளன"
                 }
               }
             }
@@ -493389,12 +492867,6 @@
         "th" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld มีการวางแผนเวลาทำงาน"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -493416,7 +492888,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld vardiyalar planlandı"
+                  "value" : "%lld vardiya planlandı"
                 }
               }
             }
@@ -493428,25 +492900,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld зміни заплановані"
+                  "value" : "%lld заплановані зміни"
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld зміни заплановані"
+                  "value" : "%lld запланованих змін"
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld змина заплановна"
+                  "value" : "%lld запланована зміна"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld зміни заплановані"
+                  "value" : "%lld запланованої зміни"
                 }
               }
             }
@@ -493473,16 +492945,10 @@
         "vi" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ca làm việc được lên kế hoạch"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ca trực được lên kế hoạch"
+                  "value" : "%lld ca đã lên lịch"
                 }
               }
             }
@@ -493491,16 +492957,10 @@
         "zh-Hans" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld 班次已计划"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld 已计划班次"
+                  "value" : "已安排 %lld 个班次"
                 }
               }
             }
@@ -493509,16 +492969,10 @@
         "zh-Hant" : {
           "variations" : {
             "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld 已計畫班次"
-                }
-              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld 已計畫班次"
+                  "value" : "%lld 個班次已排定"
                 }
               }
             }
