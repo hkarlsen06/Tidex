@@ -33,6 +33,7 @@ marketing/out/
 marketing/.next/
 .wrangler/
 ios/build/
+ios/ASConnectScreenshots/
 
 # Xcode user state
 *.xcuserstate

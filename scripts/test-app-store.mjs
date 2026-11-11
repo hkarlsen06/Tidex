@@ -3,13 +3,13 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { assertEditable, pngDimensions, root, withAsc } from './lib/app-store-connect.mjs';
+import { assertEditable, pngDimensions, withAsc } from './lib/app-store-connect.mjs';
 import { seedVersionMetadata } from '../ios/Scripts/appstore-metadata-files.mjs';
 
-const png = await readFile(path.join(root, 'ios/ASConnectScreenshots/3.1.1/3d-duo/en-US/Duo-outer-01.png'));
+const png = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000c49444154789c63606060000000040001f61738550000000049454e44ae426082', 'hex');
 
 test('the upload parser accepts finished artwork and rejects truncated files', () => {
-  assert.deepEqual(pngDimensions(png, 'artwork'), [1398, 2034]);
+  assert.deepEqual(pngDimensions(png, 'artwork'), [1, 1]);
   for (const length of [0, 20, 33, png.length - 1]) {
     assert.throws(() => pngDimensions(png.subarray(0, length), 'truncated'), /invalid|incomplete|truncated/);
   }

@@ -42,7 +42,7 @@ These commands manage only the review notes field. Existing demo credentials and
 
 ## Screenshots
 
-The capture and 3D rendering commands are unchanged. The uploader reads the finished artwork, validates opaque PNGs and dimensions, and stages only the selected device family:
+Screenshot captures and rendered artwork are generated locally under `ios/ASConnectScreenshots/` and ignored by Git. App Store Connect holds the uploaded galleries. Generate fresh artwork when updating a gallery, or pass an existing local directory with `--assets-dir`. The uploader validates opaque PNGs and dimensions and stages only the selected device family:
 
 ```sh
 bun run app-store screenshots --device duo
