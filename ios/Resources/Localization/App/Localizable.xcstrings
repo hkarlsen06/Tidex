@@ -23,6 +23,852 @@
       },
       "shouldTranslate" : false
     },
+    "onboarding.postAuth.purpose.friendsPreviewMessage" : {
+      "comment" : "Sample chat message in the preview on the onboarding purpose screen.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هل يمكنك تبديل المناوبة معي يوم الجمعة؟"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Можеш ли да се смениш с мен в петък?"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "তুমি কি শুক্রবার আমার সঙ্গে শিফট বদলাবে?"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em pots canviar el torn de divendres?"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Můžeš se se mnou v pátek prohodit?"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kan du bytte med mig på fredag?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kannst du am Freitag mit mir tauschen?"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Μπορείς να αλλάξεις βάρδια μαζί μου την Παρασκευή;"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can you swap with me on Friday?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Puedes cambiar conmigo el viernes?"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kas saad minuga reedel vahetada?"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "می‌تونی جمعه باهام شیفت عوض کنی؟"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voitko vaihtaa kanssani perjantaina?"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pwede ba tayong magpalit sa Biyernes?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu peux échanger avec moi vendredi ?"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אתה יכול להחליף איתי ביום שישי?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्या आप शुक्रवार को मेरे साथ शिफ्ट बदल सकते हैं?"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Možeš li se zamijeniti sa mnom u petak?"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El tudnál cserélni velem péntekre?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bisa tukar shift denganku hari Jumat?"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geturðu skipt við mig á föstudag?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puoi fare cambio con me venerdì?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金曜に私と交代できる？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "금요일에 나랑 교대할 수 있어?"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ar gali penktadienį susikeisti su manimi?"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vai vari samainīties ar mani piektdien?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kan du bytte med meg på fredag?"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kun je vrijdag met me ruilen?"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kan du byte med meg på fredag?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Możesz zamienić się ze mną na piątek?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você pode trocar comigo na sexta-feira?"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poți să faci schimb cu mine vineri?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Можешь подменить меня в пятницу?"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Môžeš si so mnou vymeniť piatkovú zmenu?"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ali lahko zamenjaš z mano v petek?"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Možeš li da se zameniš sa mnom u petak?"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kan du byta med mig på fredag?"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unaweza kubadilishana nami Ijumaa?"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "வெள்ளிக்கிழமை என்னுடன் ஷிப்டை மாற்ற முடியுமா?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันศุกร์สลับกะกับฉันได้ไหม?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuma günü benimle nöbet değişir misin?"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Можеш підмінити мене в п’ятницю?"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کیا آپ جمعہ کو میرے ساتھ شفٹ بدل سکتے ہیں؟"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn có thể đổi ca với tôi vào thứ Sáu không?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你周五能和我换班吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你星期五可以跟我換班嗎？"
+          }
+        }
+      }
+    },
+    "onboarding.postAuth.purpose.friendsPreviewTitle" : {
+      "comment" : "Heading over the friends preview on the onboarding purpose screen. It continues the pay preview heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أو فقط عرض مناوبات أصدقائك"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "или просто виж смените на приятелите си"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "অথবা শুধু বন্ধুদের শিফট দেখো"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "o simplement veure els torns dels teus amics"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nebo jen zobrazit směny přátel"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eller bare se dine venners vagter"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "oder einfach die Schichten deiner Freunde sehen"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ή απλώς δες τις βάρδιες των φίλων σου"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "or just see your friends' shifts"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "o solo ver los turnos de tus amigos"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "või lihtsalt vaata sõprade vahetusi"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یا فقط شیفت‌های دوستانت را ببینی"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tai vain nähdä ystäviesi vuorot"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "o tingnan lang ang mga shift ng mga kaibigan mo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ou juste voir les shifts de vos amis"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "או פשוט לראות את המשמרות של החברים שלך"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "या बस अपने दोस्तों की शिफ्टें देखें"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ili samo pogledaj smjene svojih prijatelja"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vagy csak nézd meg a barátaid műszakjait"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "atau lihat shift temanmu saja"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eða bara séð vaktir vina þinna"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "o semplicemente vedere i turni dei tuoi amici"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "または友だちのシフトを見るだけ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "또는 친구들 근무만 보기"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "arba tiesiog matyti draugų pamainas"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vai vienkārši redzēt draugu maiņas"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eller bare se venners vakter"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "of bekijk gewoon de diensten van je vrienden"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eller berre sjå vaktene til vener"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "albo po prostu zobacz zmiany znajomych"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ou só ver os turnos dos seus amigos"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sau doar vezi turele prietenilor tăi"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "или просто смотреть смены друзей"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "alebo len vidieť zmeny priateľov"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ali pa samo poglej izmene svojih prijateljev"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ili samo vidi smene svojih prijatelja"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "eller bara se dina vänners pass"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "au uone tu zamu za marafiki zako"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "அல்லது நண்பர்களின் ஷிப்ட்களை மட்டும் பாருங்கள்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "หรือแค่ดูกะของเพื่อน"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "veya sadece arkadaşlarının vardiyalarını gör"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "або просто дивіться зміни друзів"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یا صرف اپنے دوستوں کی شفٹیں دیکھیں"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hoặc chỉ xem ca làm của bạn bè"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "或只是查看好友的班次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "或只是查看朋友的班表"
+          }
+        }
+      }
+    },
+    "onboarding.postAuth.purpose.payPreviewTitle" : {
+      "comment" : "Heading over the pay preview on the onboarding purpose screen.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استخدم Tidex لحساب الأجر"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Използвай Tidex, за да изчислиш заплащането"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "বেতন হিসাব করতে Tidex ব্যবহার করুন"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fes servir Tidex per calcular el sou"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použij Tidex pro výpočet mzdy"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brug Tidex til at beregne løn"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutze Tidex zur Lohnberechnung"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Χρησιμοποίησε το Tidex για υπολογισμό μισθού"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Tidex to calculate pay"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa Tidex para calcular el sueldo"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kasuta Tidexit palga arvutamiseks"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "با Tidex حقوقت را محاسبه کن"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laske palkka Tidexillä"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gamitin ang Tidex para kalkulahin ang sahod"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisez Tidex pour calculer votre paie"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השתמשו ב-Tidex לחישוב שכר"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वेतन की गणना के लिए Tidex इस्तेमाल करें"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koristi Tidex za izračun plaće"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Használd a Tidexet bérszámításhoz"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gunakan Tidex untuk hitung gaji"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notaðu Tidex til að reikna laun"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa Tidex per calcolare la paga"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidexで給与を計算"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex로 급여 계산하기"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naudok „Tidex“ atlygiui apskaičiuoti"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izmanto Tidex, lai aprēķinātu algu"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bruk Tidex til å beregne lønn"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebruik Tidex om loon te berekenen"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bruk Tidex til å rekne ut løn"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Użyj Tidex do obliczania wypłaty"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use o Tidex para calcular o pagamento"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folosește Tidex pentru a calcula salariul"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используйте Tidex для расчёта зарплаты"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použite Tidex na výpočet mzdy"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uporabi Tidex za izračun plače"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koristi Tidex za obračun plate"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Använd Tidex för att räkna ut lön"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tumia Tidex kukokotoa mshahara"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "சம்பளத்தை கணக்கிட Tidex-ஐ பயன்படுத்துங்கள்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใช้ Tidex คำนวณค่าจ้าง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ücreti hesaplamak için Tidex kullan"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Використовуйте Tidex для розрахунку зарплати"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تنخواہ حساب کرنے کے لیے Tidex استعمال کریں"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dùng Tidex để tính lương"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 Tidex 计算工资"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 Tidex 計算薪資"
+          }
+        }
+      }
+    },
     "–" : {
       "localizations" : {
         "en" : {
@@ -224710,199 +225556,199 @@
       }
     },
     "onboarding.post_auth.purpose.friends_option.title" : {
-      "comment" : "Choice on the first setup screen after sign-up: only follow friends' shifts, with no job of your own.",
+      "comment" : "Option on the onboarding purpose screen for users who mainly want to see friends' shifts.",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اعرف متى يعمل أصدقاؤك"
+            "value" : "اطّلع على نوبات الأصدقاء"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Виж кога работят приятелите ти"
+            "value" : "Вижте смените на приятели"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "বন্ধুরা কখন কাজ করে দেখুন"
+            "value" : "বন্ধুদের শিফট দেখুন"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mira quan treballen els amics"
+            "value" : "Veure els torns dels amics"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zjistit, kdy pracují přátelé"
+            "value" : "Zobrazit směny přátel"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se, hvornår venner arbejder"
+            "value" : "Se venners vagter"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sehen, wann Freunde arbeiten"
+            "value" : "Schichten von Freunden sehen"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Δες πότε δουλεύουν οι φίλοι σου"
+            "value" : "Δες τις βάρδιες φίλων"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "See when friends work"
+            "value" : "See friends' shifts"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ver cuándo trabajan tus amigos"
+            "value" : "Ver turnos de amigos"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vaata, millal sõbrad töötavad"
+            "value" : "Vaata sõprade vahetusi"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "دیدن زمان کار دوستان"
+            "value" : "شیفت‌های دوستان را ببینید"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Katso, milloin ystävät ovat töissä"
+            "value" : "Katso kavereiden vuorot"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tingnan kung kailan nagtatrabaho ang mga kaibigan"
+            "value" : "Tingnan ang mga shift ng kaibigan"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voir les horaires de mes amis"
+            "value" : "Voir les horaires des amis"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "לראות מתי חברים עובדים"
+            "value" : "צפה במשמרות של חברים"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "देखें दोस्त कब काम करते हैं"
+            "value" : "दोस्तों की शिफ्ट देखें"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pogledaj kada prijatelji rade"
+            "value" : "Pogledaj smjene prijatelja"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nézd meg, mikor dolgoznak a barátaid"
+            "value" : "Barátok műszakjai"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lihat jadwal shift teman"
+            "value" : "Lihat shift teman"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sjá hvenær vinir vinna"
+            "value" : "Sjá vaktir vina"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vedi quando lavorano gli amici"
+            "value" : "Vedi i turni degli amici"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "友達の勤務予定を見る"
+            "value" : "友達のシフトを見る"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "친구의 근무 일정 보기"
+            "value" : "친구의 근무 보기"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Matyti, kada dirba draugai"
+            "value" : "Matyk draugų pamainas"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skatīt, kad strādā draugi"
+            "value" : "Skati draugu maiņas"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se når venner jobber"
+            "value" : "Se venners vakter"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zie wanneer vrienden werken"
+            "value" : "Bekijk diensten van vrienden"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sjå når vener jobbar"
+            "value" : "Sjå veners vakter"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zobacz, kiedy pracują znajomi"
+            "value" : "Zobacz zmiany znajomych"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ver quando amigos trabalham"
+            "value" : "Ver turnos dos amigos"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vezi când lucrează prietenii"
+            "value" : "Vezi turele prietenilor"
           }
         },
         "ru" : {
@@ -224914,85 +225760,85 @@
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pozrieť si, kedy pracujú priatelia"
+            "value" : "Pozrite si zmeny priateľov"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Poglej, kdaj delajo prijatelji"
+            "value" : "Oglej si izmene prijateljev"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vidi kada prijatelji rade"
+            "value" : "Vidi smene prijatelja"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se när vänner jobbar"
+            "value" : "Se vänners pass"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ona marafiki wanapofanya kazi"
+            "value" : "Ona zamu za marafiki"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "நண்பர்கள் வேலை செய்யும் நேரத்தைப் பார்"
+            "value" : "நண்பர்களின் ஷிப்ட்களை பார்க்கவும்"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ดูว่าเพื่อนทำงานเมื่อไร"
+            "value" : "ดูกะของเพื่อน"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arkadaşlarının vardiyalarını gör"
+            "value" : "Arkadaşların vardiyalarını gör"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Дізнаватись, коли працюють друзі"
+            "value" : "Переглядати зміни друзів"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "دیکھیں دوست کب کام کرتے ہیں"
+            "value" : "دوستوں کی شفٹیں دیکھیں"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Xem lịch làm của bạn bè"
+            "value" : "Xem ca làm của bạn bè"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "查看好友何时上班"
+            "value" : "查看好友班次"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "查看朋友何時上班"
+            "value" : "查看好友班表"
           }
         }
       }
     },
     "onboarding.post_auth.purpose.pay_option.title" : {
-      "comment" : "Choice on the first setup screen after sign-up: set up a job to work out pay.",
+      "comment" : "Option on the onboarding purpose screen for users who mainly want to calculate their pay.",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
@@ -225004,7 +225850,7 @@
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Изчисли заплатата ми"
+            "value" : "Изчислете заплащането ми"
           }
         },
         "bn" : {
@@ -225022,7 +225868,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spočítat mou mzdu"
+            "value" : "Spočítat výplatu"
           }
         },
         "da" : {
@@ -225046,13 +225892,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Work out my pay"
+            "value" : "Calculate my pay"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Calcular mi sueldo"
+            "value" : "Calcular mi pago"
           }
         },
         "et" : {
@@ -225064,7 +225910,7 @@
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "محاسبه حقوقم"
+            "value" : "حقوقم را محاسبه کنم"
           }
         },
         "fi" : {
@@ -225076,25 +225922,25 @@
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kuwentahin ang suweldo ko"
+            "value" : "Kalkulahin ang sahod ko"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Calculer ma paie"
+            "value" : "Calculer mon salaire"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "לחשב את השכר שלי"
+            "value" : "חשב את השכר שלי"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "मेरा वेतन गिनें"
+            "value" : "मेरा वेतन गणना करें"
           }
         },
         "hr" : {
@@ -225106,7 +225952,7 @@
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bérem kiszámítása"
+            "value" : "Számold ki a bérem"
           }
         },
         "id" : {
@@ -225118,7 +225964,7 @@
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reikna út launin mín"
+            "value" : "Reikna launin mín"
           }
         },
         "it" : {
@@ -225136,13 +225982,13 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내 급여 계산하기"
+            "value" : "내 급여 계산"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apskaičiuoti savo atlyginimą"
+            "value" : "Skaičiuoti mano atlyginimą"
           }
         },
         "lv" : {
@@ -225154,13 +226000,13 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Regn ut lønna mi"
+            "value" : "Beregne lønna mi"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mijn loon berekenen"
+            "value" : "Bereken mijn loon"
           }
         },
         "nn" : {
@@ -225172,13 +226018,13 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oblicz moje wynagrodzenie"
+            "value" : "Oblicz moje zarobki"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Calcular meu pagamento"
+            "value" : "Calcular meu salário"
           }
         },
         "ro" : {
@@ -225190,13 +226036,13 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Рассчитать мою зарплату"
+            "value" : "Рассчитать зарплату"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vypočítať si mzdu"
+            "value" : "Vypočítať mzdu"
           }
         },
         "sl" : {
@@ -225208,13 +226054,13 @@
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Izračunaj moju platu"
+            "value" : "Izračunaj moju zaradu"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Räkna ut min lön"
+            "value" : "Beräkna min lön"
           }
         },
         "sw" : {
@@ -225226,7 +226072,7 @@
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "என் சம்பளத்தைக் கணக்கிடு"
+            "value" : "என் ஊதியத்தை கணக்கிடு"
           }
         },
         "th" : {
@@ -225238,19 +226084,19 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Maaşımı hesapla"
+            "value" : "Ücretimi hesapla"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Розраховувати зарплату"
+            "value" : "Розрахувати мою зарплату"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اپنی تنخواہ شمار کریں"
+            "value" : "میری تنخواہ کا حساب لگائیں"
           }
         },
         "vi" : {
@@ -225833,852 +226679,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你想先做什麼？"
-          }
-        }
-      }
-    },
-    "onboarding.postAuth.purpose.example" : {
-      "comment" : "Small label above a sample card inside each choice on the first setup screen, so the sample is not read as real data.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مثال"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Пример"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "উদাহরণ"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exemple"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Příklad"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eksempel"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beispiel"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Παράδειγμα"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Example"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ejemplo"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Näide"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "نمونه"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esimerkki"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Halimbawa"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exemple"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "דוגמה"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "उदाहरण"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Primjer"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Példa"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Contoh"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dæmi"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esempio"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "例"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "예시"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pavyzdys"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Piemērs"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eksempel"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voorbeeld"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Døme"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Przykład"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exemplo"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exemplu"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Пример"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Príklad"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Primer"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Primer"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exempel"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mfano"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "உதாரணம்"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตัวอย่าง"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Örnek"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Приклад"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مثال"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ví dụ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "示例"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "範例"
-          }
-        }
-      }
-    },
-    "onboarding.postAuth.purpose.friendsMessage" : {
-      "comment" : "Line under the 'See when friends work' choice on the first setup screen. Says this path needs no job of your own.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تابع ورديات أصدقائك. لا تحتاج إلى وظيفة خاصة بك."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Следи смените на приятелите си. Не ти трябва собствена работа."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "বন্ধুদের শিফট দেখুন। নিজের চাকরি থাকা জরুরি নয়।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Segueix els torns dels teus amics. No cal que tinguis feina pròpia."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sledujte směny přátel. Vlastní práci nepotřebujete."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Følg dine venners vagter. Du behøver ikke selv have et job."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sieh die Schichten deiner Freunde. Du brauchst keinen eigenen Job."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Παρακολούθησε τις βάρδιες των φίλων σου. Δεν χρειάζεται να έχεις δική σου δουλειά."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Follow your friends' shifts. You don't need a job of your own."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sigue los turnos de tus amigos. No necesitas tener un empleo propio."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jälgi sõprade vahetusi. Sul ei pea olema oma töökohta."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "شیفت‌های دوستانتان را دنبال کنید. لازم نیست خودتان شغلی داشته باشید."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seuraa ystäviesi vuoroja. Et tarvitse omaa työpaikkaa."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subaybayan ang mga shift ng kaibigan mo. Hindi mo kailangan ng sariling trabaho."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suivez les services de vos amis. Pas besoin d'avoir votre propre emploi."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "עקבו אחר המשמרות של החברים שלכם. לא צריך עבודה משלכם."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "दोस्तों की शिफ्टें देखें। आपकी अपनी नौकरी होना ज़रूरी नहीं है।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pratite smjene prijatelja. Ne trebate imati vlastiti posao."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kövesd a barátaid műszakjait. Saját munkahely nem szükséges."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ikuti jadwal shift teman. Anda tidak perlu punya pekerjaan sendiri."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fylgstu með vöktum vina þinna. Þú þarft ekki að vera með eigin vinnu."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Segui i turni dei tuoi amici. Non ti serve un lavoro tuo."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "友達のシフトを確認できます。自分の仕事を登録する必要はありません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "친구의 근무 일정을 확인하세요. 본인의 일자리가 없어도 돼요."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sekite draugų pamainas. Jums nereikia turėti savo darbo."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sekojiet draugu maiņām. Jums nav vajadzīga sava darbavieta."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Følg vaktene til vennene dine. Du trenger ikke egen jobb."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volg de diensten van je vrienden. Je hebt zelf geen baan nodig."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Følg vaktene til venene dine. Du treng ikkje eigen jobb."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Śledź zmiany znajomych. Nie musisz mieć własnej pracy."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acompanhe os turnos dos seus amigos. Você não precisa ter um emprego."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Urmărește turele prietenilor. Nu ai nevoie de un loc de muncă propriu."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Следите за сменами друзей. Своя работа не нужна."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sledujte zmeny priateľov. Vlastnú prácu nepotrebujete."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spremljajte izmene prijateljev. Ne potrebujete svoje zaposlitve."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pratite smene prijatelja. Ne treba vam sopstveni posao."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Följ dina vänners pass. Du behöver inget eget jobb."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fuatilia zamu za marafiki. Huhitaji kuwa na kazi yako mwenyewe."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "நண்பர்களின் ஷிப்டுகளைப் பின்தொடருங்கள். உங்களுக்கென வேலை இருக்க வேண்டியதில்லை."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ติดตามกะงานของเพื่อน ไม่ต้องมีงานของตัวเอง"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arkadaşlarınızın vardiyalarını takip edin. Kendi işiniz olması gerekmez."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Стежте за змінами друзів. Власна робота не потрібна."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "دوستوں کی شفٹیں دیکھیں۔ آپ کی اپنی ملازمت ہونا ضروری نہیں۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Theo dõi ca làm của bạn bè. Bạn không cần có công việc riêng."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关注好友的班次。你不需要有自己的工作。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "追蹤朋友的班次，不必有自己的工作。"
-          }
-        }
-      }
-    },
-    "onboarding.postAuth.purpose.payMessage" : {
-      "comment" : "Line under the 'Work out my pay' choice on the first setup screen after sign-up.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف الورديات واعرف كم ستتقاضى."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Добавяй смени и виж колко ще получиш."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "শিফট যোগ করে কত বেতন পাবেন দেখুন।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afegeix torns i mira quant cobraràs."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přidávejte směny a sledujte svou výplatu."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tilføj vagter, og se, hvad du får udbetalt."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Füge Schichten hinzu und sieh, wie viel du verdienst."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Πρόσθεσε βάρδιες και δες πόσα θα πληρωθείς."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add shifts and see what you get paid."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añade turnos y descubre cuánto cobrarás."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lisa vahetusi ja vaata, kui palju palka saad."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "شیفت‌ها را اضافه کنید و ببینید چقدر حقوق می‌گیرید."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lisää vuoroja ja näe, paljonko saat palkkaa."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Magdagdag ng mga shift at tingnan ang suweldo mo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajoutez vos services et voyez combien vous gagnerez."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "הוסיפו משמרות וראו כמה תקבלו."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "शिफ्टें जोड़ें और देखें कि आपको कितना वेतन मिलेगा।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodajte smjene i pogledajte koliko ćete biti plaćeni."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adj hozzá műszakokat, és nézd meg, mennyi fizetést kapsz."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tambahkan shift dan lihat gaji yang Anda terima."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bættu við vöktum og sjáðu hvað þú færð greitt."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aggiungi i turni e scopri quanto guadagnerai."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "シフトを追加して、支給額を確認しましょう。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "근무를 추가하고 받을 급여를 확인하세요."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pridėkite pamainas ir sužinokite, kiek gausite."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pievienojiet maiņas un uzziniet, cik saņemsiet."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg inn vakter og se hva du får utbetalt."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voeg diensten toe en zie hoeveel je verdient."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg inn vakter og sjå kva du får utbetalt."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodawaj zmiany i sprawdzaj, ile zarobisz."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adicione turnos e veja quanto vai receber."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adaugă ture și vezi cât vei primi."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Добавляйте смены и смотрите, сколько заработаете."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pridajte zmeny a zistite, koľko dostanete."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodajte izmene in preverite svoje plačilo."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodajte smene i vidite koliko ćete zaraditi."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lägg till pass och se vad du får i lön."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ongeza zamu na uone utakavyolipwa."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ஷிப்டுகளைச் சேர்த்து, உங்களுக்குக் கிடைக்கும் ஊதியத்தைப் பாருங்கள்."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เพิ่มกะงานแล้วดูว่าจะได้รับค่าจ้างเท่าไร"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vardiya ekleyin ve ne kadar kazanacağınızı görün."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Додавайте зміни й дізнавайтеся, скільки заробите."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "شفٹیں شامل کریں اور دیکھیں کتنی تنخواہ ملے گی۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thêm ca làm và xem bạn được trả bao nhiêu."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加班次，查看你的收入。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新增班次，查看實領薪資。"
           }
         }
       }

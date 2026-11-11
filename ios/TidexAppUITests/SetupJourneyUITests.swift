@@ -14,7 +14,7 @@ final class SetupJourneyUITests: XCTestCase {
     let app = makeApp(result: "carried")
     app.launch()
 
-    let payChoice = button(startingWith: "Work out my pay", in: app)
+    let payChoice = button(startingWith: "Calculate my pay", in: app)
     XCTAssertTrue(payChoice.waitForExistence(timeout: timeout), app.debugDescription)
     payChoice.tap()
 
@@ -43,7 +43,7 @@ final class SetupJourneyUITests: XCTestCase {
     let app = makeApp(result: "failed")
     app.launch()
 
-    let payChoice = button(startingWith: "Work out my pay", in: app)
+    let payChoice = button(startingWith: "Calculate my pay", in: app)
     XCTAssertTrue(payChoice.waitForExistence(timeout: timeout), app.debugDescription)
     payChoice.tap()
     XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout), app.debugDescription)
