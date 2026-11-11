@@ -12,6 +12,7 @@ struct PostAuthOnboardingView: View {
   @State private var completionMode: OnboardingCompletionMode = .fullSetup
   @State private var carriedShift = OnboardingFirstShiftCarryoverStore.read()
   @State private var carriedShiftPay: CarriedShiftPay?
+  @State private var payAssumptions: PayAssumptions?
   @State private var isNavigatingBack = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.scenePhase) private var scenePhase
@@ -155,6 +156,12 @@ struct PostAuthOnboardingView: View {
     case .fullSetup:
       OnboardingFunnelRecorder.shared.record(
         onboardingData.wageType == .tariff ? "wage_tariff" : "wage_hourly")
+      if let job = saveManager.setupJob,
+        let snapshot = SnapshotsRepository.shared.snapshotForDate(
+          Date().toISODateString(), userId: userId, jobId: job.id)
+      {
+        payAssumptions = PayAssumptions(job: job, snapshot: snapshot)
+      }
       if let carriedShift, let job = saveManager.setupJob {
         carriedShiftPay = CarriedShiftPay(
           shift: carriedShift,
@@ -293,6 +300,7 @@ extension PostAuthOnboardingView {
       status: saveManager.status,
       carriedShiftPay: carriedShiftPay,
       carriedShiftStatus: saveManager.carriedShiftStatus,
+      payAssumptions: payAssumptions,
       onRetry: {
         saveManager.startSave(userId: userId, data: onboardingData, completionMode: .fullSetup)
       },

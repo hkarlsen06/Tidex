@@ -12,6 +12,8 @@ internal struct CarriedShiftPay: Equatable {
   internal let supplementPay: Double
   internal let breakDeduction: Double
   internal let gross: Double
+  /// Each date's gross pay, drawn in its calendar cell.
+  internal let dailyGross: [String: Double]
 
   internal init(shift: CarriedDemoShift, snapshots: [WageSnapshot], currency: String) {
     var workedHours = 0.0
@@ -19,24 +21,17 @@ internal struct CarriedShiftPay: Equatable {
     var supplementPay = 0.0
     var breakDeduction = 0.0
     var gross = 0.0
+    var dailyGross: [String: Double] = [:]
 
     for date in shift.dates {
-      let row = ShiftRow(
-        id: "carried-\(date)",
-        user_id: nil,
-        shift_date: date,
-        start_time: shift.startTime,
-        end_time: shift.endTime,
-        custom_supplements: nil
-      )
-      let computed = PayrollCalculator.computeShift(
-        row, snapshot: SnapshotsService.snapshotForDate(date, from: snapshots))
+      let computed = Self.compute(shift, on: date, snapshots: snapshots)
       let deduction = BreakDeductionBreakdown.make(
         originalPeriods: computed.preBreakWagePeriods,
         adjustedPeriods: computed.wagePeriods
       )
       workedHours += computed.durationHours
       gross += computed.gross
+      dailyGross[date] = computed.gross
       if computed.breakAudit.deductedHours > 0, let deduction {
         basePay += BreakDeductionBreakdown.basePay(for: computed.preBreakWagePeriods)
         supplementPay += BreakDeductionBreakdown.supplementPay(for: computed.preBreakWagePeriods)
@@ -54,5 +49,21 @@ internal struct CarriedShiftPay: Equatable {
     self.supplementPay = supplementPay
     self.breakDeduction = breakDeduction
     self.gross = gross
+    self.dailyGross = dailyGross
+  }
+
+  private static func compute(
+    _ shift: CarriedDemoShift, on date: String, snapshots: [WageSnapshot]
+  ) -> ShiftComputed {
+    let row = ShiftRow(
+      id: "carried-\(date)",
+      user_id: nil,
+      shift_date: date,
+      start_time: shift.startTime,
+      end_time: shift.endTime,
+      custom_supplements: nil
+    )
+    return PayrollCalculator.computeShift(
+      row, snapshot: SnapshotsService.snapshotForDate(date, from: snapshots))
   }
 }

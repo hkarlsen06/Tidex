@@ -37,6 +37,8 @@ struct WorkSetupRequiredPlaceholder<Header: View>: View {
         VStack(spacing: Spacing.lg) {
           header
 
+          benefits
+
           VStack(spacing: Spacing.xs) {
             Text(.settingsPaySetupInviteTitle)
               .font(.tidexTitle)
@@ -51,8 +53,6 @@ struct WorkSetupRequiredPlaceholder<Header: View>: View {
               .lineSpacing(2)
               .fixedSize(horizontal: false, vertical: true)
           }
-
-          benefits
 
           setupButton
 

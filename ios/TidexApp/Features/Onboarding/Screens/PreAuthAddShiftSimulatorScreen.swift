@@ -177,7 +177,7 @@ extension PreAuthAddShiftSimulatorScreen {
   private var resultPanel: some View {
     VStack(spacing: Spacing.sm) {
       if let pay = viewModel.pay {
-        PreAuthDemoPayCard(pay: pay, hourlyRate: viewModel.hourlyRate, currency: viewModel.currency)
+        PreAuthDemoPaySummary(pay: pay, hourlyRate: viewModel.hourlyRate, currency: viewModel.currency)
           .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
       } else {
         Text(.onboardingAddSimulatorInstruction)

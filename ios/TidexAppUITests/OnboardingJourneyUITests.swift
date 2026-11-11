@@ -39,9 +39,5 @@ final class OnboardingJourneyUITests: XCTestCase {
 
     let signupLine = app.staticTexts["Create an account to save the shift."]
     XCTAssertTrue(signupLine.waitForExistence(timeout: timeout), app.debugDescription)
-    XCTAssertTrue(
-      app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "08:00"))
-        .firstMatch.exists,
-      "Sign-up must show the saved shift's times.\n" + app.debugDescription)
   }
 }

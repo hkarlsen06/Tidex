@@ -88,8 +88,7 @@ struct SignupView: View {
         title: .signupTitle,
         logoSize: 132,
         currency: currency,
-        subtitle: subtitle,
-        demoShift: demoShift
+        subtitle: subtitle
       )
       .padding(.bottom, heroControlsGap)
       .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.00)

@@ -131,8 +131,6 @@ final class OnboardingSaveManager {
           currency: data.currency
         )
         setupJob = job
-        OnboardingCompletionStore.setPayAssumptionsReviewPending(
-          true, userId: userId, defaults: defaults)
         logger.info("Saved setup for job \(job.id) with payroll day \(data.payrollDay)")
 
       case .friendOnlySkip:

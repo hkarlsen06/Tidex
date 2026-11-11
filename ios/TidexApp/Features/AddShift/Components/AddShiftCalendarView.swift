@@ -35,6 +35,10 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
   var onToggleDateOverride: ((String) -> Void)?
   var showSelectionCheckmark: Bool = true
   var selectionEmphasis: AddShiftCalendarSelectionEmphasis = .standard
+  // swiftlint:disable:next discouraged_optional_collection explicit_acl
+  /// Shows only the weeks that hold these dates, every day as part of the grid, in place of
+  /// the display month. For read-only summaries.
+  var onlyWeeksOf: Set<String>?
 
   @State private var dragSelection: CalendarDragSelection?
 
@@ -178,7 +182,31 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
 
   // MARK: - Calendar Helpers
 
+  private func daysInWeeks(of dates: Set<String>) -> [CalendarDayInfo] {
+    let mondays = Set(
+      dates.compactMap { Date.fromISODateString($0) }.compactMap { date -> Date? in
+        let offset = (calendar.component(.weekday, from: date) + 5) % 7
+        return calendar.date(byAdding: .day, value: -offset, to: calendar.startOfDay(for: date))
+      }
+    ).sorted()
+    return mondays.enumerated().flatMap { week, monday in
+      (0..<7).compactMap { offset -> CalendarDayInfo? in
+        guard let date = calendar.date(byAdding: .day, value: offset, to: monday) else {
+          return nil
+        }
+        return .inMonth(
+          id: week * 7 + offset,
+          dayNumber: calendar.component(.day, from: date),
+          dateISO: date.toISODateString(),
+          weekNumber: offset == 0 ? getIsoWeek(from: date) : nil)
+      }
+    }
+  }
+
   private func daysInMonth() -> [CalendarDayInfo] {
+    if let onlyWeeksOf {
+      return daysInWeeks(of: onlyWeeksOf)
+    }
     var days: [CalendarDayInfo] = []
 
     // Get first day of month from viewModel's displayMonth

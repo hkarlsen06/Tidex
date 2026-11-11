@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// What the demo shift pays, large, with the calculation under it.
-struct PreAuthDemoPayCard: View {
+/// What the demo shift pays, large, with the calculation under it. Plain text, no panel.
+struct PreAuthDemoPaySummary: View {
   let pay: PreAuthDemoPay
   let hourlyRate: Double
   let currency: String
@@ -43,10 +43,8 @@ struct PreAuthDemoPayCard: View {
         .foregroundStyle(Color.tidexTextMuted)
         .fixedSize(horizontal: false, vertical: true)
     }
-    .padding(Spacing.md)
+    .padding(.horizontal, Spacing.xs)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
   }
 
   private func label(for kind: PreAuthDemoPay.Kind) -> String {

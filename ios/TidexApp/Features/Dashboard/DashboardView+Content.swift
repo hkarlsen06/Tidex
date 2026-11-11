@@ -22,14 +22,14 @@ extension DashboardView {
     .userCurrency(data.currency)
   }
 
-  /// Centers the cards between the toolbar and the month picker. At accessibility text sizes, or
-  /// with the pay assumptions card, the cards are taller than the screen, so they scroll from the
-  /// top instead of being squeezed into a viewport-height frame.
+  /// Centers the cards between the toolbar and the month picker. At accessibility text sizes the
+  /// cards are taller than the screen, so they scroll from the top instead of being squeezed
+  /// into a viewport-height frame.
   @ViewBuilder
   private func centeredDashboardCards<Content: View>(  // swiftlint:disable:this type_contents_order
     @ViewBuilder content: @escaping () -> Content
   ) -> some View {
-    if dynamicTypeSize.isAccessibilitySize || payAssumptions != nil {
+    if dynamicTypeSize.isAccessibilitySize {
       content()
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, Spacing.xxl)
@@ -261,33 +261,12 @@ extension DashboardView {
             featuredShiftSection(data: data)
           }
         }
-
-        if let payAssumptions {
-          PayAssumptionsCard(
-            assumptions: payAssumptions,
-            onReview: {
-              finishPayAssumptionsReview()
-              coordinator.pendingDeepLink = .settings(destination: .pay(jobId: payAssumptions.jobId))
-            },
-            onDismiss: finishPayAssumptionsReview
-          )
-          .transition(.opacity)
-        }
       }
       .contentShape(Rectangle())
       // Simultaneous, so a vertical drag on the cards still scrolls them at large sizes.
       .simultaneousGesture(monthSwipeGesture())
     } else {
       EmptyView()
-    }
-  }
-
-  private func finishPayAssumptionsReview() {  // swiftlint:disable:this type_contents_order
-    if let userId = coordinator.userId {
-      OnboardingCompletionStore.setPayAssumptionsReviewPending(false, userId: userId)
-    }
-    withAnimation(.easeOut(duration: 0.2)) {  // swiftlint:disable:this no_magic_numbers
-      payAssumptions = nil
     }
   }
 

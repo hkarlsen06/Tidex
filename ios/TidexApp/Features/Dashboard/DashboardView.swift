@@ -57,7 +57,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @State var hasAnyShifts = true  // swiftlint:disable:this explicit_type_interface type_contents_order
   /// The pre-auth demo shift, when setup ended before the user kept or declined it.
   @State var carriedDemoShift: CarriedDemoShift?  // swiftlint:disable:this type_contents_order
-  @State var payAssumptions: PayAssumptions?  // swiftlint:disable:this type_contents_order
 
   // Action to run once the currently-presented sheet finishes dismissing, so two sheets
   // never race to present at once (see `performPendingSheetAction`).
@@ -208,21 +207,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       initialSyncComplete: coordinator.initialSyncComplete
     )
     carriedDemoShift = hasAnyShifts ? nil : OnboardingFirstShiftCarryoverStore.read()
-    refreshPayAssumptions()
-  }
-
-  /// Shown after the first shift to a user who finished the shorter setup, until dismissed.
-  func refreshPayAssumptions() {  // swiftlint:disable:this type_contents_order
-    guard hasAnyShifts, let userId = coordinator.userId,
-      OnboardingCompletionStore.isPayAssumptionsReviewPending(userId: userId),
-      let job = JobsRepository.shared.getDefaultJob(for: userId),
-      let snapshot = SnapshotsRepository.shared.snapshotForDate(
-        Date().toISODateString(), userId: userId, jobId: job.id)
-    else {
-      payAssumptions = nil
-      return
-    }
-    payAssumptions = PayAssumptions(job: job, snapshot: snapshot)
   }
 
   /// Home features only a shift that hasn't ended this month. When a first shift added from

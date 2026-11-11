@@ -7,6 +7,8 @@ struct SetupResultScreen: View {
   /// Set once setup is saved, when the user built a shift in the pre-auth demo.
   let carriedShiftPay: CarriedShiftPay?
   let carriedShiftStatus: OnboardingSaveManager.SaveStatus
+  /// The break, tax and payday the saved job uses, which setup no longer asks about.
+  let payAssumptions: PayAssumptions?
   let onRetry: () -> Void
   /// Returns to the wage step with the input kept.
   let onBack: () -> Void
@@ -115,20 +117,32 @@ struct SetupResultScreen: View {
       errorBanner(message: message)
 
     case .carriedShift(let pay):
-      CarriedShiftPayCard(pay: pay)
+      CarriedShiftOverview(pay: pay)
+      settingsNote
       if case .error(let message) = carriedShiftStatus {
         errorBanner(message: message)
       }
 
     case .ready:
-      Text(.onboardingSuccessReassurance)
-        .font(.tidexSubheadline)
-        .foregroundStyle(Color.tidexTextMuted)
-        .multilineTextAlignment(.center)
+      settingsNote
 
     case .saving:
       EmptyView()
     }
+  }
+
+  /// The settings setup chose without asking, and that they can be changed.
+  private var settingsNote: some View {
+    VStack(spacing: Spacing.xxs) {
+      if let payAssumptions {
+        Text(verbatim: payAssumptions.summary)
+      }
+      Text(.onboardingSuccessReassurance)
+    }
+    .font(.tidexFootnote)
+    .foregroundStyle(Color.tidexTextMuted)
+    .multilineTextAlignment(.center)
+    .fixedSize(horizontal: false, vertical: true)
   }
 
   private var statusIcon: AnyView? {
@@ -278,79 +292,98 @@ struct SetupResultScreen: View {
   }
 }
 
-/// The carried shift's dates and times, and what they pay, in the rows the shift details use.
-private struct CarriedShiftPayCard: View {
+/// The carried shift on the demo's calendar, each day with its pay, then the pay worked out.
+private struct CarriedShiftOverview: View {
   let pay: CarriedShiftPay
 
+  private var dates: [Date] {
+    pay.shift.dates.compactMap { Date.fromISODateString($0) }.sorted()
+  }
+
+  /// "November 2026", or "November – desember 2026" when the dates cross a month.
+  private var monthsTitle: String {
+    let style = Date.FormatStyle.dateTime.month(.wide).calendar(.gregorian).locale(.appLocale)
+    guard let first = dates.first, let last = dates.last else { return "" }
+    let year = last.formatted(.dateTime.year().calendar(.gregorian).locale(.appLocale))
+    let firstMonth = first.formatted(style)
+    let lastMonth = last.formatted(style)
+    let months = firstMonth == lastMonth ? firstMonth : "\(firstMonth) – \(lastMonth)"
+    return "\(months) \(year)".sentenceCased()
+  }
+
   var body: some View {
-    EarningsBreakdownCard {
-      VStack(alignment: .leading, spacing: Spacing.xxs) {
-        Text(datesText)
+    VStack(spacing: Spacing.lg) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        Text(verbatim: monthsTitle)
           .font(.tidexHeadline)
           .foregroundStyle(Color.tidexTextPrimary)
-          .fixedSize(horizontal: false, vertical: true)
+          .padding(.horizontal, Spacing.xs)
 
-        Text(timeText)
-          .font(.tidexSubheadline)
-          .monospacedDigit()
-          .foregroundStyle(Color.tidexTextSecondary)
+        AddShiftCalendarView(
+          viewModel: CarriedShiftCalendar(
+            dates: Set(pay.shift.dates),
+            earnings: pay.dailyGross.mapValues {
+              CalendarEarningsData(net: $0, gross: $0, hasTaxEnabled: false)
+            }
+          ),
+          onlyWeeksOf: Set(pay.shift.dates)
+        )
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .accessibilityElement(children: .combine)
-
-      Divider()
-      payRows
-      Divider()
-
-      EarningsBreakdownCard<EmptyView>.Row(
-        label: String(localized: .shiftsGrossPay), value: format(pay.gross), isHighlighted: true)
+      payLines
     }
   }
 
-  @ViewBuilder
-  private var payRows: some View {
-    VStack(alignment: .leading, spacing: 2) {
-      EarningsBreakdownCard<EmptyView>.Row(
-        label: String(localized: .shiftsBasePay), value: format(pay.basePay))
-      Text(baseDetail)
-        .font(.tidexFootnote)
+  private var payLines: some View {
+    VStack(spacing: Spacing.xxs) {
+      VStack(spacing: 2) {
+        line(label: String(localized: .shiftsBasePay), amount: pay.basePay)
+        Text(verbatim: "\(timeText) · \(baseDetail)")
+          .font(.tidexFootnote)
+          .monospacedDigit()
+          .foregroundStyle(Color.tidexTextMuted)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .accessibilityElement(children: .combine)
+
+      if pay.supplementPay > 0 {
+        line(label: String(localized: .shiftsTotalSupplement), amount: pay.supplementPay)
+      }
+      if pay.breakDeduction > 0 {
+        line(label: String(localized: .shiftsBreakDeduction), amount: -pay.breakDeduction)
+      }
+
+      HStack(alignment: .firstTextBaseline) {
+        Text(.shiftsGrossPay)
+          .font(.tidexBodyMedium)
+          .foregroundStyle(Color.tidexTextPrimary)
+        Spacer(minLength: Spacing.sm)
+        Text(verbatim: format(pay.gross))
+          .font(.tidexAmountMedium)
+          .monospacedDigit()
+          .foregroundStyle(Color.tidexTextPrimary)
+      }
+      .padding(.top, Spacing.xs)
+      .accessibilityElement(children: .combine)
+    }
+  }
+
+  private func line(label: String, amount: Double) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+      Text(verbatim: label)
+        .foregroundStyle(Color.tidexTextSecondary)
+      Spacer(minLength: 0)
+      Text(verbatim: amount < 0 ? "\u{2212}\(format(-amount))" : format(amount))
         .monospacedDigit()
-        .foregroundStyle(Color.tidexTextMuted)
+        .foregroundStyle(Color.tidexTextPrimary)
     }
+    .font(.tidexSubheadline)
     .accessibilityElement(children: .combine)
-
-    if pay.supplementPay > 0 {
-      EarningsBreakdownCard<EmptyView>.Row(
-        label: String(localized: .shiftsTotalSupplement), value: format(pay.supplementPay))
-    }
-
-    if pay.breakDeduction > 0 {
-      EarningsBreakdownCard<EmptyView>.Row(
-        label: String(localized: .shiftsBreakDeduction),
-        value: "−\(format(pay.breakDeduction))",
-        valueColor: .tidexError
-      )
-    }
   }
 
   private func format(_ amount: Double) -> String {
     CurrencyConfig.format(amount, currency: pay.currency)
-  }
-
-  private var datesText: String {
-    let dates = pay.shift.dates.compactMap { Date.fromISODateString($0) }
-    if dates.count == 1, let date = dates.first {
-      return date.formatted(
-        .dateTime.weekday(.wide).day().month(.wide).calendar(.gregorian).locale(.appLocale)
-      ).sentenceCased()
-    }
-    return dates.map {
-      $0.formatted(
-        .dateTime.weekday(.abbreviated).day().month(.abbreviated).calendar(.gregorian)
-          .locale(.appLocale))
-    }
-    .formatted(.list(type: .and).locale(.appLocale))
-    .sentenceCased()
   }
 
   private var timeText: String {
@@ -373,6 +406,24 @@ private struct CarriedShiftPayCard: View {
   }
 }
 
+/// Feeds the Add screen's calendar with the carried dates. Taps do nothing.
+@Observable
+private final class CarriedShiftCalendar: AddShiftCalendarViewModeling {
+  let displayMonth = Date()
+  let selectedDates: Set<String>
+  let previewEarnings: [String: CalendarEarningsData]
+  let conflictDates: Set<String> = []
+  let existingShiftHours: [String: HoursData] = [:]
+  let navigationDirection: MonthNavigationDirection? = nil
+
+  init(dates: Set<String>, earnings: [String: CalendarEarningsData]) {
+    selectedDates = dates
+    previewEarnings = earnings
+  }
+
+  func toggleDate(_ dateISO: String) {}
+}
+
 #if DEBUG
   #Preview("Carried shift") {
     SetupResultScreen(
@@ -383,6 +434,7 @@ private struct CarriedShiftPayCard: View {
         currency: "kr"
       ),
       carriedShiftStatus: .idle,
+      payAssumptions: nil,
       onRetry: {}, onBack: {}, onSaveCarriedShift: {}, onDeclineCarriedShift: {},
       onAddFirstShift: {}, onFinish: {}
     )

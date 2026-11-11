@@ -4,9 +4,10 @@
   /// Walks the real setup screens without creating an account or saving a job.
   /// `TIDEX_DESIGN_RESULT` picks the result screen: `carried` (default), `carried-multi`,
   /// `ready`, `saving`, `failed` or `shift-failed`. `TIDEX_DESIGN_FRIENDS=failed` makes the
-  /// friends choice fail on the purpose screen.
+  /// friends choice fail on the purpose screen. `TIDEX_DESIGN_SETUP_STEP` opens `job`, `wage` or
+  /// `result` directly.
   internal struct DesignReviewOnboardingSetup: View {
-    private enum Step {
+    private enum Step: String {
       case purpose
       case job
       case wage
@@ -27,38 +28,53 @@
 
     internal var body: some View {
       Group {
-        switch step {
-        case .purpose:
-          PurposeScreen(
-            currency: data.currency,
-            friendsSaveStatus: friendsStatus,
-            onSelectPaySetup: { step = .job },
-            onSelectFriendsOnly: selectFriends
-          )
-        case .job:
-          JobBasicsOnboardingScreen(data: data, onContinue: { step = .wage }, onBack: { step = .purpose })
-        case .wage:
-          WageScreen(
-            data: data,
-            onContinue: showResult,
-            onBack: { step = .job },
-            stepLabel: .onboardingPostAuthStep(2, 2)
-          )
-        case .result:
-          SetupResultScreen(
-            status: status,
-            carriedShiftPay: carriedShiftPay,
-            carriedShiftStatus: shiftStatus,
-            onRetry: { status = .success },
-            onBack: { step = .wage },
-            onSaveCarriedShift: saveShift,
-            onDeclineCarriedShift: restart,
-            onAddFirstShift: restart,
-            onFinish: restart
-          )
-        }
+        content
       }
       .userCurrency(data.currency)
+      .onAppear {
+        let start = ProcessInfo.processInfo.environment["TIDEX_DESIGN_SETUP_STEP"]
+        switch start.flatMap(Step.init(rawValue:)) {
+        case .result: showResult()
+        case .some(let first): step = first
+        case nil: break
+        }
+      }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+      switch step {
+      case .purpose:
+        PurposeScreen(
+          currency: data.currency,
+          friendsSaveStatus: friendsStatus,
+          onSelectPaySetup: { step = .job },
+          onSelectFriendsOnly: selectFriends
+        )
+      case .job:
+        JobBasicsOnboardingScreen(data: data, onContinue: { step = .wage }, onBack: { step = .purpose })
+      case .wage:
+        WageScreen(
+          data: data,
+          onContinue: showResult,
+          onBack: { step = .job },
+          stepLabel: .onboardingPostAuthStep(2, 2)
+        )
+      case .result:
+        SetupResultScreen(
+          status: status,
+          carriedShiftPay: carriedShiftPay,
+          carriedShiftStatus: shiftStatus,
+          payAssumptions: PayAssumptions(
+            snapshot: snapshot, payPeriod: nil, payrollDay: data.payrollDay),
+          onRetry: { status = .success },
+          onBack: { step = .wage },
+          onSaveCarriedShift: saveShift,
+          onDeclineCarriedShift: restart,
+          onAddFirstShift: restart,
+          onFinish: restart
+        )
+      }
     }
 
     private func selectFriends() {
