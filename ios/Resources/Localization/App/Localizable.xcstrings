@@ -244,6 +244,7 @@
       "shouldTranslate" : false
     },
     "%@: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -101514,16 +101515,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "منذ %lld أيام"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "منذ %lld يومًا"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld يوم مضى"
+                  "value" : "منذ يوم واحد"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld أيام مضت"
+                  "value" : "منذ %lld يوم"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "منذ يومين"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "منذ %lld يوم"
                 }
               }
             }
@@ -101586,16 +101611,22 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "před %lld dny"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld den zpět"
+                  "value" : "před %lld dnem"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld dní zpět"
+                  "value" : "před %lld dny"
                 }
               }
             }
@@ -101795,6 +101826,12 @@
                   "state" : "translated",
                   "value" : "לפני %lld ימים"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "לפני יומיים"
+                }
               }
             }
           }
@@ -101820,10 +101857,16 @@
         "hr" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "few" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "prije %lld dana"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "prije %lld dan"
                 }
               },
               "other" : {
@@ -101946,16 +101989,22 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "prieš %lld dienas"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld diena atgal"
+                  "value" : "prieš %lld dieną"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld dienų atgal"
+                  "value" : "prieš %lld dienų"
                 }
               }
             }
@@ -101971,6 +102020,12 @@
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dienas atpakaļ"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld dienas atpakaļ"
@@ -102036,6 +102091,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dni temu"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dni temu"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -102045,7 +102112,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld dni temu"
+                  "value" : "%lld dnia temu"
                 }
               }
             }
@@ -102072,6 +102139,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld zile în urmă"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -102081,7 +102154,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zile în urmă"
+                  "value" : "%lld de zile în urmă"
                 }
               }
             }
@@ -102090,6 +102163,18 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld дня назад"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld дней назад"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -102099,7 +102184,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld дней назад"
+                  "value" : "%lld дня назад"
                 }
               }
             }
@@ -102108,16 +102193,22 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "pred %lld dňami"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld deň pred"
+                  "value" : "pred %lld dňom"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld dní pred"
+                  "value" : "pred %lld dňami"
                 }
               }
             }
@@ -102126,6 +102217,12 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dni nazaj"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -102137,6 +102234,12 @@
                   "state" : "translated",
                   "value" : "%lld dni nazaj"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld dneva nazaj"
+                }
               }
             }
           }
@@ -102144,16 +102247,22 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "pre %lld dana"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld dan pre"
+                  "value" : "pre %lld dan"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld dana pre"
+                  "value" : "pre %lld dana"
                 }
               }
             }
@@ -102252,6 +102361,18 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld дні тому"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld днів тому"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -102261,7 +102382,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld днів тому"
+                  "value" : "%lld дня тому"
                 }
               }
             }
@@ -106296,16 +106417,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "بعد %lld أيام"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "بعد %lld يومًا"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "في %lld يوم"
+                  "value" : "بعد يوم واحد"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "في %lld أيام"
+                  "value" : "بعد %lld يوم"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "بعد يومين"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "بعد %lld يوم"
                 }
               }
             }
@@ -106368,6 +106513,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Za %lld dny"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -106577,6 +106728,12 @@
                   "state" : "translated",
                   "value" : "בעוד %lld ימים"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "בעוד יומיים"
+                }
               }
             }
           }
@@ -106602,6 +106759,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Za %lld dana"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -106728,6 +106891,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Po %lld dienų"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -106753,6 +106922,12 @@
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Pēc %lld dienām"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Pēc %lld dienām"
@@ -106818,6 +106993,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Za %lld dni"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Za %lld dni"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -106827,7 +107014,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Za %lld dni"
+                  "value" : "Za %lld dnia"
                 }
               }
             }
@@ -106854,16 +107041,22 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Peste %lld zile"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "În %lld zi"
+                  "value" : "Peste %lld zi"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "În %lld zile"
+                  "value" : "Peste %lld de zile"
                 }
               }
             }
@@ -106872,6 +107065,18 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Через %lld дня"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Через %lld дней"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -106881,7 +107086,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Через %lld дней"
+                  "value" : "Через %lld дня"
                 }
               }
             }
@@ -106890,6 +107095,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Za %lld dni"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -106908,16 +107119,28 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Čez %lld dni"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "V %lld dnevu"
+                  "value" : "Čez %lld dan"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "V %lld dneh"
+                  "value" : "Čez %lld dni"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Čez %lld dneva"
                 }
               }
             }
@@ -106926,6 +107149,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Za %lld dana"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -107034,6 +107263,18 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld дні"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld днів"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -107043,7 +107284,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "За %lld днів"
+                  "value" : "За %lld дня"
                 }
               }
             }
@@ -112770,16 +113011,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ورديات"
+                }
+              },
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld وردية"
                 }
               },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "وردية واحدة"
+                }
+              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ورديات"
+                  "value" : "%lld وردية"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ورديتان"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld وردية"
                 }
               }
             }
@@ -112842,6 +113107,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld směny"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113051,6 +113322,12 @@
                   "state" : "translated",
                   "value" : "%lld משמרות"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld משמרות"
+                }
               }
             }
           }
@@ -113076,6 +113353,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld smjene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113202,6 +113485,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pamainos"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113211,7 +113500,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld pamainos"
+                  "value" : "%lld pamainų"
                 }
               }
             }
@@ -113227,6 +113516,12 @@
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld maiņas"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld maiņas"
@@ -113292,6 +113587,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld zmiany"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld zmian"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113301,7 +113608,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zmian"
+                  "value" : "%lld zmiany"
                 }
               }
             }
@@ -113328,6 +113635,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ture"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113337,7 +113650,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ture"
+                  "value" : "%lld de ture"
                 }
               }
             }
@@ -113346,6 +113659,18 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld смены"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld смен"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113355,7 +113680,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld смен"
+                  "value" : "%lld смены"
                 }
               }
             }
@@ -113364,6 +113689,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld zmeny"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113382,6 +113713,12 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld izmene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113393,6 +113730,12 @@
                   "state" : "translated",
                   "value" : "%lld izmen"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld izmeni"
+                }
               }
             }
           }
@@ -113400,6 +113743,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld smene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113508,6 +113857,18 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld зміни"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld змін"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -113517,7 +113878,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld змін"
+                  "value" : "%lld зміни"
                 }
               }
             }
@@ -138444,16 +138805,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ورديات مخططة"
+                }
+              },
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld وردية مخططة"
                 }
               },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "وردية واحدة مخططة"
+                }
+              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ورديات مخططة"
+                  "value" : "%lld وردية مخططة"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ورديتان مخططتان"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld وردية مخططة"
                 }
               }
             }
@@ -138516,6 +138901,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld naplánované směny"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -138725,6 +139116,12 @@
                   "state" : "translated",
                   "value" : "%lld משמרות מתוכננות"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld משמרות מתוכננות"
+                }
               }
             }
           }
@@ -138750,6 +139147,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld planirane smjene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -138876,6 +139279,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld suplanuotos pamainos"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -138885,7 +139294,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld suplanuotos pamainos"
+                  "value" : "%lld suplanuotų pamainų"
                 }
               }
             }
@@ -138901,6 +139310,12 @@
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ieplānotas maiņas"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ieplānotas maiņas"
@@ -138966,6 +139381,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld zaplanowane zmiany"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld zaplanowanych zmian"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -138975,7 +139402,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld zaplanowanych zmian"
+                  "value" : "%lld zaplanowanej zmiany"
                 }
               }
             }
@@ -139002,6 +139429,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ture planificate"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -139011,7 +139444,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ture planificate"
+                  "value" : "%lld de ture planificate"
                 }
               }
             }
@@ -139020,6 +139453,18 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld запланированные смены"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld запланированных смен"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -139029,7 +139474,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld запланированных смен"
+                  "value" : "%lld запланированной смены"
                 }
               }
             }
@@ -139038,6 +139483,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld naplánované zmeny"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -139056,6 +139507,12 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld načrtovane izmene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -139067,6 +139524,12 @@
                   "state" : "translated",
                   "value" : "%lld načrtovanih izmen"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld načrtovani izmeni"
+                }
               }
             }
           }
@@ -139074,6 +139537,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld planirane smene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -139182,6 +139651,18 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld заплановані зміни"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld запланованих змін"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -139191,7 +139672,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld запланованих змін"
+                  "value" : "%lld запланованої зміни"
                 }
               }
             }
@@ -201803,16 +202284,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ساعات"
+                }
+              },
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ساعة"
                 }
               },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ساعة واحدة"
+                }
+              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ساعات"
+                  "value" : "%lld ساعة"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "ساعتان"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ساعة"
                 }
               }
             }
@@ -201875,6 +202380,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld hodiny"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202084,6 +202595,12 @@
                   "state" : "translated",
                   "value" : "%lld שעות"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "שעתיים"
+                }
               }
             }
           }
@@ -202109,6 +202626,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sata"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202235,6 +202758,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld valandos"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202244,7 +202773,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld valandos"
+                  "value" : "%lld valandų"
                 }
               }
             }
@@ -202260,6 +202789,12 @@
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld stundas"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld stundas"
@@ -202325,6 +202860,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld godziny"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld godzin"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202334,7 +202881,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld godzin"
+                  "value" : "%lld godziny"
                 }
               }
             }
@@ -202361,6 +202908,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ore"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202370,7 +202923,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ore"
+                  "value" : "%lld de ore"
                 }
               }
             }
@@ -202379,6 +202932,18 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld часа"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld часов"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202388,7 +202953,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld часов"
+                  "value" : "%lld часа"
                 }
               }
             }
@@ -202397,6 +202962,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld hodiny"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202415,6 +202986,12 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ure"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202426,6 +203003,12 @@
                   "state" : "translated",
                   "value" : "%lld ur"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld uri"
+                }
               }
             }
           }
@@ -202433,6 +203016,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sata"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202541,6 +203130,18 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld години"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld годин"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202637,16 +203238,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld ساعات"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld ساعة"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ساعة قبل"
+                  "value" : "قبل ساعة واحدة"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ساعات قبل"
+                  "value" : "قبل %lld ساعة"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل ساعتين"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld ساعة"
                 }
               }
             }
@@ -202709,6 +203334,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld hodiny předem"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -202918,6 +203549,12 @@
                   "state" : "translated",
                   "value" : "%lld שעות לפני"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "שעתיים לפני"
+                }
               }
             }
           }
@@ -202943,6 +203580,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sata prije"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -203069,16 +203712,22 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld valandas prieš"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld valanda prieš"
+                  "value" : "%lld valandą prieš"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld valandos prieš"
+                  "value" : "%lld valandų prieš"
                 }
               }
             }
@@ -203090,10 +203739,16 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld stunda pirms"
+                  "value" : "%lld stundu pirms"
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld stundas pirms"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld stundas pirms"
@@ -203159,16 +203814,28 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld godziny przed"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld godzin przed"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld godzina przed"
+                  "value" : "%lld godzinę przed"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld godzin przed"
+                  "value" : "%lld godziny przed"
                 }
               }
             }
@@ -203195,6 +203862,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ore înainte"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -203204,7 +203877,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ore înainte"
+                  "value" : "%lld de ore înainte"
                 }
               }
             }
@@ -203213,16 +203886,28 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld часа"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld часов"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld час назад"
+                  "value" : "За %lld час"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld часов назад"
+                  "value" : "За %lld часа"
                 }
               }
             }
@@ -203231,6 +203916,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld hodiny pred"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -203249,16 +203940,28 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ure prej"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ura prej"
+                  "value" : "%lld uro prej"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ur prej"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld uri prej"
                 }
               }
             }
@@ -203267,6 +203970,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sata pre"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -203375,16 +204084,28 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld години"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld годин"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld година до"
+                  "value" : "За %lld годину"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld години до"
+                  "value" : "За %lld години"
                 }
               }
             }
@@ -203471,16 +204192,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld ساعات من الوردية"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld ساعة من الوردية"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ساعة قبل الوردية"
+                  "value" : "قبل ساعة واحدة من الوردية"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ساعات قبل الوردية"
+                  "value" : "قبل %lld ساعة من الوردية"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل ساعتين من الوردية"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld ساعة من الوردية"
                 }
               }
             }
@@ -203543,6 +204288,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld hodiny před směnou"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -203752,6 +204503,12 @@
                   "state" : "translated",
                   "value" : "%lld שעות לפני המשמרת"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "שעתיים לפני המשמרת"
+                }
               }
             }
           }
@@ -203777,6 +204534,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sata prije smjene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -203903,16 +204666,22 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld valandas prieš pamainą"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld valanda prieš pasikeitimą"
+                  "value" : "%lld valandą prieš pamainą"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld valandos prieš pasikeitimą"
+                  "value" : "%lld valandų prieš pamainą"
                 }
               }
             }
@@ -203924,10 +204693,16 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld stunda pirms maiņas"
+                  "value" : "%lld stundu pirms maiņas"
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld stundas pirms maiņas"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld stundas pirms maiņas"
@@ -203993,16 +204768,28 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld godziny przed zmianą"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld godzin przed zmianą"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld godzina przed zmianą"
+                  "value" : "%lld godzinę przed zmianą"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld godzin przed zmianą"
+                  "value" : "%lld godziny przed zmianą"
                 }
               }
             }
@@ -204029,16 +204816,22 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ore înainte de tură"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld oră înainte de schimb"
+                  "value" : "%lld oră înainte de tură"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ore înainte de schimb"
+                  "value" : "%lld de ore înainte de tură"
                 }
               }
             }
@@ -204047,16 +204840,28 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld часа до смены"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld часов до смены"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld час до смены"
+                  "value" : "За %lld час до смены"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld часов до смены"
+                  "value" : "За %lld часа до смены"
                 }
               }
             }
@@ -204065,6 +204870,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld hodiny pred zmenou"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204083,16 +204894,28 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ure pred izmeno"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ura pred izmeno"
+                  "value" : "%lld uro pred izmeno"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld ur pred izmeno"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld uri pred izmeno"
                 }
               }
             }
@@ -204101,6 +204924,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sata pre smene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204209,16 +205038,28 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld години до зміни"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld годин до зміни"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld година до зміни"
+                  "value" : "За %lld годину до зміни"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld години до зміни"
+                  "value" : "За %lld години до зміни"
                 }
               }
             }
@@ -204305,16 +205146,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld دقائق"
+                }
+              },
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld دقيقة"
                 }
               },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "دقيقة واحدة"
+                }
+              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld دقائق"
+                  "value" : "%lld دقيقة"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "دقيقتان"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld دقيقة"
                 }
               }
             }
@@ -204377,6 +205242,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuty"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204586,6 +205457,12 @@
                   "state" : "translated",
                   "value" : "%lld דקות"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld דקות"
+                }
               }
             }
           }
@@ -204611,6 +205488,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204737,6 +205620,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minutės"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204746,7 +205635,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minutės"
+                  "value" : "%lld minučių"
                 }
               }
             }
@@ -204762,6 +205651,12 @@
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minūtes"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld minūtes"
@@ -204827,6 +205722,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuty"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minut"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204836,7 +205743,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minut"
+                  "value" : "%lld minuty"
                 }
               }
             }
@@ -204863,6 +205770,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204872,7 +205785,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minute"
+                  "value" : "%lld de minute"
                 }
               }
             }
@@ -204881,6 +205794,18 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld минуты"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld минут"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204890,7 +205815,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld минут"
+                  "value" : "%lld минуты"
                 }
               }
             }
@@ -204899,6 +205824,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minúty"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204917,6 +205848,12 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -204928,6 +205865,12 @@
                   "state" : "translated",
                   "value" : "%lld minut"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuti"
+                }
               }
             }
           }
@@ -204935,6 +205878,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuta"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -205043,6 +205992,18 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld хвилини"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld хвилин"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -205052,7 +206013,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld хвилин"
+                  "value" : "%lld хвилини"
                 }
               }
             }
@@ -205139,16 +206100,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld دقائق"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld دقيقة"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld دقيقة قبل"
+                  "value" : "قبل دقيقة واحدة"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld دقائق قبل"
+                  "value" : "قبل %lld دقيقة"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل دقيقتين"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld دقيقة"
                 }
               }
             }
@@ -205211,10 +206196,16 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuty před"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minuta před"
+                  "value" : "%lld minutu před"
                 }
               },
               "other" : {
@@ -205420,6 +206411,12 @@
                   "state" : "translated",
                   "value" : "%lld דקות לפני"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld דקות לפני"
+                }
               }
             }
           }
@@ -205445,6 +206442,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute prije"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -205571,6 +206574,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minutes prieš"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -205592,10 +206601,16 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minūte pirms"
+                  "value" : "%lld minūti pirms"
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minūtes pirms"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld minūtes pirms"
@@ -205661,6 +206676,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuty przed"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minut przed"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -205670,7 +206697,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minut przed"
+                  "value" : "%lld minuty przed"
                 }
               }
             }
@@ -205697,6 +206724,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute înainte"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -205706,7 +206739,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minute înainte"
+                  "value" : "%lld de minute înainte"
                 }
               }
             }
@@ -205715,16 +206748,28 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld минуты"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld минут"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld минуту до"
+                  "value" : "За %lld минуту"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld минут до"
+                  "value" : "За %lld минуты"
                 }
               }
             }
@@ -205733,6 +206778,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minúty pred"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -205751,16 +206802,28 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute prej"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minuta prej"
+                  "value" : "%lld minuto prej"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld minut prej"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuti prej"
                 }
               }
             }
@@ -205769,6 +206832,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuta pre"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -205877,16 +206946,28 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld хвилини"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld хвилин"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld хвилина перед"
+                  "value" : "За %lld хвилину"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld хвилин перед"
+                  "value" : "За %lld хвилини"
                 }
               }
             }
@@ -205973,16 +207054,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld دقائق من الوردية"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld دقيقة من الوردية"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld دقيقة قبل الوردية"
+                  "value" : "قبل دقيقة واحدة من الوردية"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld دقائق قبل الوردية"
+                  "value" : "قبل %lld دقيقة من الوردية"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل دقيقتين من الوردية"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قبل %lld دقيقة من الوردية"
                 }
               }
             }
@@ -206045,10 +207150,16 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuty před směnou"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minuta před směnou"
+                  "value" : "%lld minutu před směnou"
                 }
               },
               "other" : {
@@ -206254,6 +207365,12 @@
                   "state" : "translated",
                   "value" : "%lld דקות לפני המשמרת"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld דקות לפני המשמרת"
+                }
               }
             }
           }
@@ -206279,6 +207396,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute prije smjene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -206405,6 +207528,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minutes prieš pamainą"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -206426,10 +207555,16 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minūte pirms maiņas"
+                  "value" : "%lld minūti pirms maiņas"
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minūtes pirms maiņas"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld minūtes pirms maiņas"
@@ -206495,16 +207630,28 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuty przed zmianą"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minut przed zmianą"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minutę przed vaktem"
+                  "value" : "%lld minutę przed zmianą"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minut przed vaktem"
+                  "value" : "%lld minuty przed zmianą"
                 }
               }
             }
@@ -206531,6 +207678,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute înainte de tură"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -206540,7 +207693,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minute înainte de tură"
+                  "value" : "%lld de minute înainte de tură"
                 }
               }
             }
@@ -206549,16 +207702,28 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld минуты до смены"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld минут до смены"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld минуту до смены"
+                  "value" : "За %lld минуту до смены"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld минут до смены"
+                  "value" : "За %lld минуты до смены"
                 }
               }
             }
@@ -206567,16 +207732,22 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minúty pred zmenou"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minúta pred službou"
+                  "value" : "%lld minúta pred zmenou"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minút pred službou"
+                  "value" : "%lld minút pred zmenou"
                 }
               }
             }
@@ -206585,16 +207756,28 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute pred začetkom izmene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minuta pred začetkom izmen"
+                  "value" : "%lld minuto pred začetkom izmene"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld minut pred začetkom izmen"
+                  "value" : "%lld minut pred začetkom izmene"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuti pred začetkom izmene"
                 }
               }
             }
@@ -206603,6 +207786,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minuta pre smene"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -206711,16 +207900,28 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld хвилини до зміни"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "За %lld хвилин до зміни"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld хвилина перед змією"
+                  "value" : "За %lld хвилину до зміни"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld хвилин перед змією"
+                  "value" : "За %lld хвилини до зміни"
                 }
               }
             }
@@ -332062,13 +333263,37 @@
         "ar" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "سيؤثر هذا على %lld ورديات. هل أنت متأكد من رغبتك في حذف إعداد الأجر هذا؟"
+                }
+              },
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "سيؤثر هذا على %lld وردية. هل أنت متأكد من رغبتك في حذف إعداد الأجر هذا؟"
                 }
               },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "سيؤثر هذا على وردية واحدة. هل أنت متأكد من رغبتك في حذف إعداد الأجر هذا؟"
+                }
+              },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "سيؤثر هذا على %lld وردية. هل أنت متأكد من رغبتك في حذف إعداد الأجر هذا؟"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "سيؤثر هذا على ورديتين. هل أنت متأكد من رغبتك في حذف إعداد الأجر هذا؟"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "سيؤثر هذا على %lld وردية. هل أنت متأكد من رغبتك في حذف إعداد الأجر هذا؟"
@@ -332134,6 +333359,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "To ovlivní %lld směny. Opravdu chceš smazat toto nastavení platu?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -332343,6 +333574,12 @@
                   "state" : "translated",
                   "value" : "זה ישפיע על %lld משמרות. האם אתה בטוח שברצונך למחוק הגדרת שכר זו?"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "זה ישפיע על %lld משמרות. האם אתה בטוח שברצונך למחוק הגדרת שכר זו?"
+                }
               }
             }
           }
@@ -332368,6 +333605,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Ovo će utjecati na %lld smjene. Jesi li siguran da želiš obrisati ovu postavku plaće?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -332377,7 +333620,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ovo će utjecati na %lld smjene. Jesi li siguran da želiš obrisati ovu postavku plaće?"
+                  "value" : "Ovo će utjecati na %lld smjena. Jesi li siguran da želiš obrisati ovu postavku plaće?"
                 }
               }
             }
@@ -332494,6 +333737,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Tai turės įtakos %lld pamainoms. Ar tikrai norite ištrinti šį algos nustatymą?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -332503,7 +333752,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Tai turės įtakos %lld pamainom. Ar tikrai norite ištrinti šį algos nustatymą?"
+                  "value" : "Tai turės įtakos %lld pamainų. Ar tikrai norite ištrinti šį algos nustatymą?"
                 }
               }
             }
@@ -332515,13 +333764,19 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Tas ietekmēs %lld maiņu. Vai jūs pārliecinat, ka vēlaties dzēst šo algas iestatījumu?"
+                  "value" : "Tas ietekmēs %lld maiņu. Vai tiešām vēlaties dzēst šo algas iestatījumu?"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Tas ietekmēs %lld maiņas. Vai jūs pārliecinat, ka vēlaties dzēst šo algas iestatījumu?"
+                  "value" : "Tas ietekmēs %lld maiņas. Vai tiešām vēlaties dzēst šo algas iestatījumu?"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Tas ietekmēs %lld maiņas. Vai tiešām vēlaties dzēst šo algas iestatījumu?"
                 }
               }
             }
@@ -332584,6 +333839,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Będzie to dotyczyć %lld zmian. Czy na pewno chcesz usunąć to ustawienie płacy?"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Będzie to dotyczyć %lld zmian. Czy na pewno chcesz usunąć to ustawienie płacy?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -332593,7 +333860,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Będzie to dotyczyć %lld zmian. Czy na pewno chcesz usunąć to ustawienie płacy?"
+                  "value" : "Będzie to dotyczyć %lld zmiany. Czy na pewno chcesz usunąć to ustawienie płacy?"
                 }
               }
             }
@@ -332620,16 +333887,22 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Aceasta va afecta %lld ture. Ești sigur că vrei să ștergi această setare de salariu?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Aceasta va afecta %lld schimb. Ești sigur că vrei să ștergi această setare de salariu?"
+                  "value" : "Aceasta va afecta %lld tură. Ești sigur că vrei să ștergi această setare de salariu?"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Aceasta va afecta %lld schimburi. Ești sigur că vrei să ștergi această setare de salariu?"
+                  "value" : "Aceasta va afecta %lld de ture. Ești sigur că vrei să ștergi această setare de salariu?"
                 }
               }
             }
@@ -332638,6 +333911,18 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Это повлияет на %lld смены. Вы уверены, что хотите удалить эту настройку оплаты?"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Это повлияет на %lld смен. Вы уверены, что хотите удалить эту настройку оплаты?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -332656,6 +333941,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "To bude mať vplyv na %lld zmeny. Ste si istí, že chcete odstrániť toto nastavenie platu?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -332674,6 +333965,12 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "To bo vplivalo na %lld izmene. Ali ste prepričani, da želite izbrisati to plačno nastavitev?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -332683,7 +333980,13 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "To bo vplivalo na %lld izmene. Ali ste prepričani, da želite izbrisati to plačno nastavitev?"
+                  "value" : "To bo vplivalo na %lld izmen. Ali ste prepričani, da želite izbrisati to plačno nastavitev?"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "To bo vplivalo na %lld izmeni. Ali ste prepričani, da želite izbrisati to plačno nastavitev?"
                 }
               }
             }
@@ -332692,16 +333995,22 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Ovo će uticati na %lld smene. Da li ste sigurni da želite da izbrišete ovo podešavanje plate?"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ovo će uticati na %lld smenu. Sigurni ste da želite da izbrišete ovu postavku plata?"
+                  "value" : "Ovo će uticati na %lld smenu. Da li ste sigurni da želite da izbrišete ovo podešavanje plate?"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ovo će uticati na %lld smene. Sigurni ste da želite da izbrišete ovu postavku plata?"
+                  "value" : "Ovo će uticati na %lld smena. Da li ste sigurni da želite da izbrišete ovo podešavanje plate?"
                 }
               }
             }
@@ -332800,16 +334109,28 @@
         "uk" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Це вплине на %lld зміни. Ви впевнені, що хочете видалити цей параметр оплати?"
+                }
+              },
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Це вплине на %lld змін. Ви впевнені, що хочете видалити цей параметр оплати?"
                 }
               },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Це вплине на %lld зміну. Ви впевнені, що хочете видалити цей параметр оплати?"
+                }
+              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Це вплине на %lld змін. Ви впевнені, що хочете видалити цей параметр оплати?"
+                  "value" : "Це вплине на %lld зміни. Ви впевнені, що хочете видалити цей параметр оплати?"
                 }
               }
             }
@@ -366454,16 +367775,40 @@
         "ar" : {
           "variations" : {
             "plural" : {
-              "one" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld قواعد"
+                }
+              },
+              "many" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld قاعدة"
                 }
               },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قاعدة واحدة"
+                }
+              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld قواعد"
+                  "value" : "%lld قاعدة"
+                }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "قاعدتان"
+                }
+              },
+              "zero" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld قاعدة"
                 }
               }
             }
@@ -366526,6 +367871,12 @@
         "cs" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pravidla"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -366727,10 +368078,16 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "כלל %lld"
+                  "value" : "כלל אחד"
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld כללים"
+                }
+              },
+              "two" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld כללים"
@@ -366760,6 +368117,12 @@
         "hr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pravila"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -366886,6 +368249,12 @@
         "lt" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld taisyklės"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -366895,7 +368264,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld taisyklės"
+                  "value" : "%lld taisyklių"
                 }
               }
             }
@@ -366911,6 +368280,12 @@
                 }
               },
               "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld noteikumi"
+                }
+              },
+              "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld noteikumi"
@@ -366976,6 +368351,18 @@
         "pl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld reguły"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld reguł"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -366985,7 +368372,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld reguł"
+                  "value" : "%lld reguły"
                 }
               }
             }
@@ -367012,6 +368399,12 @@
         "ro" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld reguli"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -367021,7 +368414,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld reguli"
+                  "value" : "%lld de reguli"
                 }
               }
             }
@@ -367030,6 +368423,18 @@
         "ru" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld правила"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld правил"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -367039,7 +368444,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld правил"
+                  "value" : "%lld правила"
                 }
               }
             }
@@ -367048,6 +368453,12 @@
         "sk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pravidlá"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -367066,6 +368477,12 @@
         "sl" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pravila"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -367077,6 +368494,12 @@
                   "state" : "translated",
                   "value" : "%lld pravil"
                 }
+              },
+              "two" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pravili"
+                }
               }
             }
           }
@@ -367084,6 +368507,12 @@
         "sr" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pravila"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -367192,6 +368621,18 @@
         "uk" : {
           "variations" : {
             "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld правила"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld правил"
+                }
+              },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -367201,7 +368642,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld правил"
+                  "value" : "%lld правила"
                 }
               }
             }
@@ -422840,10 +424281,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "هل أنت متأكد من حذف %lld ورديات؟ لا يمكن التراجع عن هذا الإجراء."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -422904,10 +424341,6 @@
           }
         },
         "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opravdu chcete smazat %lld směn? Tuto akci nelze vrátit zpět."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423010,10 +424443,6 @@
           }
         },
         "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Želite li sigurno izbrisati %lld smjena? To se ne može poništiti."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423050,10 +424479,6 @@
           }
         },
         "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ertu viss um að þú viljir eyða %lld vöktum? Ekki er hægt að afturkalla þetta."
-          },
           "variations" : {
             "plural" : {
               "one" : {
@@ -423090,10 +424515,6 @@
           }
         },
         "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ar tikrai norite ištrinti %lld pamainų? Šio veiksmo atšaukti negalėsite."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423124,10 +424545,6 @@
           }
         },
         "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vai tiešām vēlaties dzēst %lld maiņas? Šo darbību nevar atsaukt."
-          },
           "variations" : {
             "plural" : {
               "one" : {
@@ -423170,10 +424587,6 @@
           }
         },
         "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Czy na pewno chcesz usunąć %lld zmian? Tej czynności nie można cofnąć."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423210,10 +424623,6 @@
           }
         },
         "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sigur vrei să ștergi %lld ture? Această acțiune nu poate fi anulată."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423238,10 +424647,6 @@
           }
         },
         "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Удалить %lld смен? Это действие нельзя отменить."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423272,10 +424677,6 @@
           }
         },
         "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Naozaj chcete odstrániť %lld zmien? Táto akcia sa nedá vrátiť späť."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423306,10 +424707,6 @@
           }
         },
         "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ali res želite izbrisati %lld izmen? Tega ni mogoče razveljaviti."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423340,10 +424737,6 @@
           }
         },
         "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Želite li zaista da izbrišete %lld smena? Ova radnja se ne može opozvati."
-          },
           "variations" : {
             "plural" : {
               "few" : {
@@ -423398,10 +424791,6 @@
           }
         },
         "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ви впевнені, що хочете видалити %lld змін? Цю дію неможливо скасувати."
-          },
           "variations" : {
             "plural" : {
               "few" : {
