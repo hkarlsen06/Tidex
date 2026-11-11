@@ -123,11 +123,14 @@ xa_start_heartbeat() {
 
 xa_stop_heartbeat() {
   if [ -n "${XA_HEARTBEAT_PID:-}" ]; then
-    # Its sleep would otherwise keep our output open, and a reader on a pipe
-    # would wait for it.
-    pkill -P "$XA_HEARTBEAT_PID" 2>/dev/null || true
+    local sleeping
+    sleeping="$(pgrep -P "$XA_HEARTBEAT_PID" || true)"
     kill "$XA_HEARTBEAT_PID" 2>/dev/null || true
     wait "$XA_HEARTBEAT_PID" 2>/dev/null || true
+    # Its sleep would otherwise keep our output open, and a reader on a pipe
+    # would wait for it.
+    # shellcheck disable=SC2086
+    [ -z "$sleeping" ] || kill $sleeping 2>/dev/null || true
     XA_HEARTBEAT_PID=""
   fi
 }
