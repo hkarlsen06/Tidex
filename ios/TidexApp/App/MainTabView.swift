@@ -60,6 +60,7 @@ struct MainTabView: View {
 
   /// The invite link waiting for the user's answer. Its sheet closes the pending invite.
   @State private var inviteConfirmation: InviteConfirmationModel?
+  @State private var presentedInviterId: String?
 
   // Screenshot share prompt state (presented as overlay to keep content visible)
   @State private var showScreenshotPrompt = false
@@ -270,7 +271,7 @@ struct MainTabView: View {
       // An invite opened before sign-up or during onboarding.
       presentPendingInvite()
     }
-    .sheet(item: $inviteConfirmation, onDismiss: { PendingInviteStore.clear() }) { model in
+    .sheet(item: $inviteConfirmation, onDismiss: closePresentedInvite) { model in
       InviteConfirmationSheet(model: model) { activateTab(.friends) }
     }
     .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) { _ in
@@ -505,7 +506,17 @@ struct MainTabView: View {
       let inviterId = PendingInviteStore.inviter(for: userId)
     else { return }
     OnboardingFunnelRecorder.shared.record("friend_invite_opened")
+    presentedInviterId = inviterId
     inviteConfirmation = InviteConfirmationModel(inviterId: inviterId, viewerId: userId)
+  }
+
+  /// Clears the invite whose sheet closed, then shows a newer one opened meanwhile.
+  private func closePresentedInvite() {
+    if let presentedInviterId {
+      PendingInviteStore.clear(inviterId: presentedInviterId)
+    }
+    presentedInviterId = nil
+    presentPendingInvite()
   }
 
   private func activateTab(_ tab: Tab) {

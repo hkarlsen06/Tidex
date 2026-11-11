@@ -47,6 +47,19 @@ internal final class FriendInviteTests: XCTestCase {
     XCTAssertNil(PendingInviteStore.inviter(for: viewerId, defaults: defaults))
   }
 
+  internal func testClosingOneInviteKeepsANewerLinkFromSomeoneElse() {
+    let defaults = makeDefaults()
+    let laterInviterId = "4e1f2a3b-6c7d-4e8f-9a0b-1c2d3e4f5a6b"
+    PendingInviteStore.save(inviterId: inviterId, openedBy: viewerId, defaults: defaults)
+    PendingInviteStore.save(inviterId: laterInviterId, openedBy: viewerId, defaults: defaults)
+
+    PendingInviteStore.clear(inviterId: inviterId, defaults: defaults)
+    XCTAssertEqual(PendingInviteStore.inviter(for: viewerId, defaults: defaults), laterInviterId)
+
+    PendingInviteStore.clear(inviterId: laterInviterId, defaults: defaults)
+    XCTAssertNil(PendingInviteStore.inviter(for: viewerId, defaults: defaults))
+  }
+
   // MARK: - Confirmation
 
   internal func testOpeningAnInviteSharesNothingUntilTheUserConfirms() async {

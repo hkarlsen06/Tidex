@@ -42,4 +42,14 @@ internal enum PendingInviteStore {
   internal static func clear(defaults: UserDefaults = .standard) {
     defaults.removeObject(forKey: key)
   }
+
+  /// Clears the invite from `inviterId` once its sheet closes. A newer link from someone else,
+  /// opened while that sheet was up, stays.
+  internal static func clear(inviterId: String, defaults: UserDefaults = .standard) {
+    guard let data = defaults.data(forKey: key),
+      let invite = try? JSONDecoder().decode(Invite.self, from: data),
+      invite.inviterId == inviterId
+    else { return }
+    clear(defaults: defaults)
+  }
 }
