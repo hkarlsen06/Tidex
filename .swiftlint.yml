@@ -194,6 +194,13 @@ custom_rules:
     message: Use the generated LocalizedStringResource symbol instead of a raw localization key.
     severity: error
 
+  no_presented_navigation_destination:
+    name: Presented navigation destination
+    regex: '\.navigationDestination\(\s*isPresented:'
+    excluded_match_kinds: [comment, doccomment]
+    message: Push a value onto the stack's path instead. Pushes made with isPresented kept SwiftUI's navigation update from settling under heavy CPU load and froze the app.
+    severity: error
+
   no_bare_destructive_swipe_action:
     name: Bare destructive swipe action
     regex: '\.swipeActions[^{]*\{[^}]*role:\s*\.destructive'
