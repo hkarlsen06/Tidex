@@ -39,6 +39,14 @@
 # then frees itself 10 minutes after its last command. A stale lock is taken
 # over with a message. Waiting gives up after TIDEX_LOCK_WAIT_MINUTES
 # (default 90).
+#
+# Waiters take a lock in the order they arrived. A waiter that is stopped, by a
+# tool timeout for example, keeps its place for 15 minutes, and the same
+# request from the same worktree takes it up again. A session that has lasted
+# TIDEX_LOCK_SESSION_MINUTES (default 15) gives its lock to the waiters at
+# its next `acquire` or `run`, and waits in line to get it back. Another
+# worktree has used the simulator by then, so reinstall your app and open your
+# Device panel session again.
 set -euo pipefail
 
 REPO_LOCK_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)/tidex-locks"
@@ -46,6 +54,11 @@ SIMULATOR_LOCK_ROOT="${AGENT_SIMULATOR_LOCK_ROOT:-/tmp/agent-locks}"
 OWNER="$(git rev-parse --show-toplevel)"
 TTL_SECONDS=$(( ${TIDEX_LOCK_TTL_MINUTES:-10} * 60 ))
 WAIT_SECONDS=$(( ${TIDEX_LOCK_WAIT_MINUTES:-90} * 60 ))
+SESSION_SECONDS=$(( ${TIDEX_LOCK_SESSION_MINUTES:-15} * 60 ))
+# A waiter touches its place in the line on every poll, every 5 seconds.
+WAITER_STALE_SECONDS=30
+# How long a waiter that stopped keeps its place for the same request.
+RESERVED_SECONDS=900
 
 # The shared simulators, as slot lock name|simulator name. The first slot keeps
 # the lock name `simulator`, so older copies of this script, which know only
@@ -110,6 +123,10 @@ label() {
 }
 
 describe() {
+  if [ ! -d "$(lock_dir "$1")" ]; then
+    echo "$(label "$1"): free, and an agent that asked earlier takes it first"
+    return
+  fi
   local owner pid started
   IFS='|' read -r owner pid started <<<"$(read_lock "$1")"
   local age=$(( ($(date +%s) - ${started:-0}) / 60 ))
@@ -121,8 +138,12 @@ describe() {
 }
 
 is_stale() {
-  # The taker writes the owner file right after mkdir. Until then, it is not stale.
-  [ -f "$(lock_dir "$1")/owner" ] || return 1
+  # The taker writes the owner file right after mkdir. A lock that still has
+  # none after a minute belongs to a taker that died in between.
+  if [ ! -f "$(lock_dir "$1")/owner" ]; then
+    [ $(( $(date +%s) - $(modified "$(lock_dir "$1")") )) -gt 60 ]
+    return
+  fi
   local owner pid started
   IFS='|' read -r owner pid started <<<"$(read_lock "$1")"
   if [ -n "$pid" ]; then
@@ -154,34 +175,129 @@ describe_all() {
   echo "$text"
 }
 
+modified() {
+  local seconds
+  seconds="$(stat -f %m "$1" 2>/dev/null || true)"
+  case "$seconds" in
+    ''|*[!0-9]*) seconds="$(stat -c %Y "$1" 2>/dev/null || echo 0)" ;;
+  esac
+  echo "$seconds"
+}
+
+# The line of waiters for the locks of one root, in its .waiting directory.
+# Each waiting process keeps a place there: a file named by its arrival time
+# that holds "owner|the locks it may take" and that it touches on every poll.
+# A place nobody has touched for WAITER_STALE_SECONDS belongs to a waiter that
+# stopped. It becomes a reservation, which holds nobody up and which the same
+# request from the same worktree takes up again within RESERVED_SECONDS.
+line_dir() {
+  echo "$(dirname "$(lock_dir "$1")")/.waiting"
+}
+
+# waiter_ahead <lock> <my place> succeeds when a waiter that arrived earlier
+# may take <lock>. With no place, it asks whether another worktree waits for it.
+waiter_ahead() {
+  local file now age owner wanted
+  now="$(date +%s)"
+  for file in "$(line_dir "$1")"/[0-9]*-[0-9]*; do
+    [ -f "$file" ] && [ "$file" != "$2" ] || continue
+    age=$(( now - $(modified "$file") ))
+    case "$file" in
+      *.reserved)
+        [ "$age" -le "$RESERVED_SECONDS" ] || rm -f "$file"
+        continue ;;
+    esac
+    if [ "$age" -gt "$WAITER_STALE_SECONDS" ]; then
+      mv "$file" "$file.reserved" 2>/dev/null || true
+      continue
+    fi
+    [ -z "$2" ] || [[ "$file" < "$2" ]] || continue
+    owner="" wanted=""
+    IFS='|' read -r owner wanted <"$file" || true
+    [ -n "$2" ] || [ "$owner" != "$OWNER" ] || continue
+    case " $wanted " in
+      *" $1 "*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+# Whether this worktree's session on <lock> has had its time while others wait.
+session_over() {
+  local since
+  since="$(cat "$(lock_dir "$1")/since" 2>/dev/null || true)"
+  [ -n "$since" ] && [ $(( $(date +%s) - since )) -ge "$SESSION_SECONDS" ] && waiter_ahead "$1" ""
+}
+
+# join_line <locks> <seconds to add to the arrival time> sets PLACE to this
+# process's place: the one this request left behind when it was stopped, or a
+# new one at the end.
+join_line() {
+  local line file name owner wanted
+  line="$(line_dir "${1%% *}")"
+  mkdir -p "$line"
+  for file in "$line"/[0-9]*-[0-9]*.reserved; do
+    [ -f "$file" ] || continue
+    owner="" wanted=""
+    IFS='|' read -r owner wanted <"$file" || true
+    if [ "$owner|$wanted" = "$OWNER|$1" ]; then
+      name="$(basename "$file")"
+      PLACE="$line/${name%%-*}-$$"
+      mv "$file" "$PLACE" 2>/dev/null && return 0
+    fi
+  done
+  PLACE="$line/$(( $(date +%s) + $2 ))-$$"
+}
+
 # take <name> <pid or empty> sets TAKEN to the lock it took. Returns 0 when it
 # took a free or stale lock, 3 when this worktree already holds one through
 # `acquire`.
 take() {
-  local locks pid="$2" waited=0 lock
+  local locks pid="$2" waited=0 lock handed_over=0
   case "$1" in
     'Shared iPhone 2'|simulator-2)
       [ "$SIMULATOR_COUNT" -ge 2 ] || { echo "Shared iPhone 2 requires IOS_AGENT_SIMULATORS=2 or 3" >&2; return 2; } ;;
     'Shared iPhone 3'|simulator-3)
       [ "$SIMULATOR_COUNT" -ge 3 ] || { echo "Shared iPhone 3 requires IOS_AGENT_SIMULATORS=3" >&2; return 2; } ;;
   esac
-  locks="$(candidates "$1")"
+  # One per line from candidates, one line here.
+  # shellcheck disable=SC2046
+  locks="$(echo $(candidates "$1"))"
+  for lock in $locks; do
+    # Checked again right before the lock goes: a `run` of this worktree may have entered the session.
+    if session_held_by_me "$lock" && session_over "$lock" && session_held_by_me "$lock"; then
+      echo "[lock] $(label "$lock") goes to the agents waiting for it after $(( SESSION_SECONDS / 60 )) min of this session. Waiting in line to get it back. Another worktree will have used it, so reinstall your app and open your Device panel session again." >&2
+      rm -rf "$(lock_dir "$lock")"
+      handed_over=1
+    fi
+  done
+  # After a hand-over, behind every waiter that is already there, also one that arrived this second.
+  join_line "$locks" "$handed_over"
+  # A waiter that is stopped leaves the line at once. Its place stays reserved.
+  trap 'mv "$PLACE" "$PLACE.reserved" 2>/dev/null || true; exit 143' INT TERM HUP
   while true; do
     for lock in $locks; do
       if session_held_by_me "$lock"; then
+        rm -f "$PLACE"
+        trap - INT TERM HUP
         TAKEN="$lock"
         return 3
       fi
     done
+    # Written again on every poll: it is the heartbeat, and it restores the
+    # place if another waiter judged it stale while this Mac slept.
+    echo "$OWNER|$locks" >"$PLACE"
     for lock in $locks; do
-      if mkdir "$(lock_dir "$lock")" 2>/dev/null; then
+      if ! waiter_ahead "$lock" "$PLACE" && mkdir "$(lock_dir "$lock")" 2>/dev/null; then
         echo "$OWNER|$pid|$(date +%s)" >"$(lock_dir "$lock")/owner"
+        rm -f "$PLACE"
+        trap - INT TERM HUP
         TAKEN="$lock"
         return 0
       fi
     done
     for lock in $locks; do
-      if is_stale "$lock"; then
+      if ! waiter_ahead "$lock" "$PLACE" && is_stale "$lock"; then
         echo "[lock] taking over a stale lock. $(describe "$lock")" >&2
         rm -rf "$(lock_dir "$lock")"
         continue 2
@@ -189,6 +305,7 @@ take() {
     done
     if [ "$waited" -ge "$WAIT_SECONDS" ]; then
       echo "[lock] gave up waiting. $(describe_all "$locks")" >&2
+      rm -f "$PLACE"
       exit 1
     fi
     if [ $(( waited % 60 )) -eq 0 ]; then
@@ -316,6 +433,7 @@ case "${1:-}" in
     take "$2" "" || status=$?
     [ "$status" -eq 0 ] || [ "$status" -eq 3 ] || exit "$status"
     [ "$status" -eq 3 ] && renew "$TAKEN"
+    [ -f "$(lock_dir "$TAKEN")/since" ] || date +%s >"$(lock_dir "$TAKEN")/since"
     if [ -n "$(slot_simulator "$TAKEN")" ]; then
       start_simulator "$TAKEN" || { rm -rf "$(lock_dir "$TAKEN")"; exit 1; }
       slot_simulator "$TAKEN"
@@ -347,6 +465,14 @@ case "${1:-}" in
       else
         describe "$name"
       fi
+    done
+    for file in "$REPO_LOCK_ROOT"/.waiting/[0-9]*-[0-9]* "$SIMULATOR_LOCK_ROOT"/.waiting/[0-9]*-[0-9]*; do
+      [ -f "$file" ] && [ "${file%.reserved}" = "$file" ] || continue
+      [ $(( $(date +%s) - $(modified "$file") )) -le "$WAITER_STALE_SECONDS" ] || continue
+      owner="" wanted=""
+      IFS='|' read -r owner wanted <"$file" || true
+      name="$(basename "$file")"
+      echo "waiting for $wanted: $owner for $(( ($(date +%s) - ${name%%-*}) / 60 )) min"
     done
     ;;
   pool)

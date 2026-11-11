@@ -220,6 +220,79 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
     assert ["xcrun", "simctl", "shutdown", "Shared iPhone 2"] in commands
     assert not (root / "sim-locks/simulator-2").exists()
 
+    order = root / "order"
+    line = root / "sim-locks/.waiting"
+
+    def places():
+        return [place for place in line.glob("*") if place.suffix != ".reserved"]
+
+    def wait_in_line(name, **overrides):
+        waiting = len(places())
+        process = subprocess.Popen(["bash", str(scripts / "lock"), "run", "simulator", "--", "sh", "-c", f"echo {name} >>{order}"],
+                                   cwd=root, env=dict(base_env, POLICY_ROOT=str(root / name), **overrides),
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        deadline = time.monotonic() + 5
+        while len(places()) <= waiting:
+            assert time.monotonic() < deadline, name + " never joined the line"
+            time.sleep(0.01)
+        return process
+
+    def finish(process):
+        _, stderr = process.communicate(timeout=20)
+        assert process.returncode == 0, stderr
+
+    run("lock", "acquire", "simulator")
+    waiters = []
+    for name in ("first", "second", "third"):
+        waiters.append(wait_in_line(name))
+        time.sleep(1.1)  # places in the line are named by the second of arrival
+    run("lock", "release", "simulator")
+    for process in waiters:
+        finish(process)
+    assert order.read_text().split() == ["first", "second", "third"], order.read_text()
+
+    session = {REPO.upper() + "_LOCK_SESSION_MINUTES": "0"}
+    run("lock", "acquire", "simulator")
+    result, _ = run("lock", "acquire", "simulator", **session)
+    assert "goes to the agents waiting" not in result.stderr, result.stderr
+    waiter = wait_in_line("fourth")
+    result, _ = run("lock", "acquire", "simulator", **session)
+    assert "goes to the agents waiting" in result.stderr and result.stdout.strip() == "Shared iPhone", (result.stdout, result.stderr)
+    finish(waiter)
+    assert order.read_text().split()[-1] == "fourth"
+    run("lock", "release", "simulator")
+
+    gone = line / "1-1"
+    gone.write_text("gone|simulator")
+    os.utime(gone, (1, 1))
+    run("lock", "run", "simulator", "--", "true")
+    assert not places(), places()
+
+    # A waiter that a tool timeout stops keeps its place for the same request.
+    run("lock", "acquire", "simulator")
+    stopped = wait_in_line("early")
+    time.sleep(1.1)
+    late = wait_in_line("late")
+    stopped.terminate()
+    _, stderr = stopped.communicate(timeout=5)
+    assert stopped.returncode == 143, (stopped.returncode, stderr)
+    again = wait_in_line("early")
+    run("lock", "release", "simulator")
+    finish(again)
+    finish(late)
+    assert order.read_text().split()[-2:] == ["early", "late"], order.read_text()
+
+    # With two slots enabled, a request for any simulator waits in the same line.
+    two = dict(IOS_AGENT_SIMULATORS="2")
+    run("lock", "acquire", "simulator")
+    run("lock", "acquire", "Shared iPhone 2", POLICY_ROOT=str(root / "second-slot"), **two)
+    any_slot = wait_in_line("any-slot", **two)
+    run("lock", "release", "simulator")
+    finish(any_slot)
+    run("lock", "release", "simulator", POLICY_ROOT=str(root / "second-slot"), **two)
+    result, _ = run("lock", "status")
+    assert "waiting" not in result.stdout and not (root / "sim-locks/simulator").exists(), result.stdout
+
     if REPO == "Paeonia":
         scratch = Path("/tmp/paeonia-scenario-" + hashlib.sha1(str(root).encode()).hexdigest()[:10])
         try:
