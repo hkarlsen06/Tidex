@@ -45,6 +45,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
   @State var selectedShift: ShiftWithComputations?
   @State var selectedEvent: EventSheetSelection?
+  @State private var addShiftPath: [AddShiftRoute] = []
   @State var showDeleteConfirmation: Bool = false
   @State var shiftToDelete: ShiftWithComputations?
   @State var showEventDeleteConfirmation: Bool = false
@@ -244,7 +245,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   }
 
   private var navigationContent: some View {
-    NavigationStack {
+    NavigationStack(path: $addShiftPath) {
       ZStack(alignment: .bottom) {
         // Background that fills entire screen including safe areas
         TidexAppBackground()
@@ -268,7 +269,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       .toolbar {
         shiftsToolbarContent
       }
-      .addShiftDestination(in: .shifts)
+      .addShiftRoute(on: .shifts, path: $addShiftPath)
       .onAppear {
         publishToolbarState()
       }

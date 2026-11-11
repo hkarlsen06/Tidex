@@ -51,6 +51,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   /// The pre-auth demo shift, when setup ended before the user kept or declined it.
   @State var carriedDemoShift: CarriedDemoShift?  // swiftlint:disable:this type_contents_order
   @State var payAssumptions: PayAssumptions?  // swiftlint:disable:this type_contents_order
+  @State private var addShiftPath: [AddShiftRoute] = []  // swiftlint:disable:this type_contents_order
 
   // Action to run once the currently-presented sheet finishes dismissing, so two sheets
   // never race to present at once (see `performPendingSheetAction`).
@@ -399,7 +400,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   private var navigationContent: some View {
-    NavigationStack {  // swiftlint:disable:this closure_body_length
+    NavigationStack(path: $addShiftPath) {  // swiftlint:disable:this closure_body_length
       ZStack {
         TidexAppBackground()
 
@@ -455,7 +456,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         StatsView()
           .id(coordinator.userId)
       }
-      .addShiftDestination(in: .home)
+      .addShiftRoute(on: .home, path: $addShiftPath)
       .adaptiveToolbarTransaction()
     }
   }
