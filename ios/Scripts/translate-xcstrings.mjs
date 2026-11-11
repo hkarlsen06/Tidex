@@ -1,26 +1,28 @@
 #!/usr/bin/env bun
 
 import fs from "fs/promises";
+import { rmSync } from "fs";
+import os from "os";
 import path from "path";
 import { execFileSync } from "child_process";
 import { fileURLToPath } from "url";
 import { randomUUID } from "node:crypto";
-import { config } from "dotenv";
 import cliProgress from "cli-progress";
 import pLimit from "p-limit";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load env properly with dotenv
-config({ path: path.join(__dirname, "../../.env.local"), quiet: true });
-
-const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
-const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-6-sol";
-const OPENAI_REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT?.trim() || "low";
-const REQUEST_TIMEOUT_MS = 120_000;
-const MAX_OUTPUT_TOKENS = 16_384;
+const MODEL = process.env.TIDEX_TRANSLATE_MODEL?.trim() || "claude-opus-5-5";
+const EFFORT = process.env.TIDEX_TRANSLATE_EFFORT?.trim() || "high";
+// With this beta, a request that a safety classifier declines reruns on the API's default fallback model.
+const FALLBACK_BETA = "server-side-fallback-2026-07-01";
+const REQUEST_TIMEOUT_MS = 300_000;
+const MAX_TOKENS = 32_000;
 const BATCH_SIZE = 30;
-const CONCURRENCY = 6;
+// One slot per language, so a commit with a few new strings finishes in one round of requests.
+const CONCURRENCY = 48;
+
+const ENGLISH = { code: "en", name: "English" };
 
 const TARGET_LANGUAGES = [
   // Western Europe
@@ -89,14 +91,13 @@ const TARGET_LANGUAGES = [
   { code: "sw", name: "Swahili" },
 ];
 
-// Path to Xcode project file
-const XCODE_PROJECT_PATH = path.join(
-  __dirname,
-  "../Tidex.xcodeproj/project.pbxproj"
-);
+const IOS_ROOT = path.join(__dirname, "..");
+const GUIDE_PATH = path.join(__dirname, "translation-guide.md");
+const DEFAULT_CATALOG = path.join(IOS_ROOT, "Resources/Localization/App/Localizable.xcstrings");
+const XCODE_PROJECT_PATH = path.join(IOS_ROOT, "Tidex.xcodeproj/project.pbxproj");
 
 // Path to TidexApp Resources lproj directory (for InfoPlist.strings)
-const TIDEX_APP_PATH = path.join(__dirname, "../TidexApp/Resources");
+const TIDEX_APP_PATH = path.join(IOS_ROOT, "TidexApp/Resources");
 
 // InfoPlist.strings keys that need translation (others like CFBundleName stay as "Tidex")
 const INFO_PLIST_TRANSLATABLE_KEYS = [
@@ -107,19 +108,27 @@ const INFO_PLIST_TRANSLATABLE_KEYS = [
   "NSCalendarsFullAccessUsageDescription",
 ];
 
-// Stats for reporting
-const stats = {
-  translated: 0,
-  skippedFormatMismatch: 0,
-  skippedNoTranslation: 0,
-  errors: [],
-};
+function newStats() {
+  return {
+    translated: 0,
+    skippedFormatMismatch: 0,
+    skippedNoTranslation: 0,
+    errors: [],
+    requests: 0,
+    inputTokens: 0,
+    cachedInputTokens: 0,
+    outputTokens: 0,
+  };
+}
+
+const stats = newStats();
 
 // Track current file state for graceful shutdown
 let currentSave = null;
 let currentMultibar = null;
 let isShuttingDown = false;
 const shutdownController = new AbortController();
+const openRequestBodies = new Set();
 
 // Graceful shutdown handler
 async function saveAndExit(signal) {
@@ -133,6 +142,7 @@ async function saveAndExit(signal) {
   }
 
   console.log("\n⚠ Interrupt received, saving progress...");
+  for (const bodyPath of openRequestBodies) rmSync(bodyPath, { force: true });
 
   try {
     await currentSave?.();
@@ -146,36 +156,75 @@ async function saveAndExit(signal) {
   process.exit(signal === "SIGINT" ? 130 : 143);
 }
 
-// Extract all format specifiers from a string
-function extractFormatSpecifiers(str) {
-  // Match all iOS/Mac format specifiers including %@, %d, %lld, %ld, %zd, %tu, %1$@, %.2f, etc.
-  const regex = /%(\d+\$)?[-+0 #]*(\d+|\*)?(\.\d+|\.\*)?([hlLzjt]{0,2})?[@diouxXeEfFgGaAcspn%]/g;
-  return (str.match(regex) || []).sort();
-}
+const FORMAT_SPECIFIER = /%(\d+\$)?([-+0 #]*(?:\d+|\*)?(?:\.\d+|\.\*)?[hlLzjt]{0,2}[@dDiuUoOxXeEfFgGaAcCsSpn%])/g;
 
-// Verify format specifiers match between original and translation
-function validateFormatSpecifiers(original, translation) {
-  const originalSpecs = extractFormatSpecifiers(original);
-  const translationSpecs = extractFormatSpecifiers(translation);
-
-  if (originalSpecs.length !== translationSpecs.length) return false;
-
-  for (let i = 0; i < originalSpecs.length; i++) {
-    if (originalSpecs[i] !== translationSpecs[i]) return false;
+// The argument each specifier reads, by position. Unnumbered specifiers read arguments in order.
+// Returns null for a string iOS would format wrongly: numbered and unnumbered specifiers mixed.
+function formatArguments(text) {
+  const byPosition = new Map();
+  // "%%" prints a percent sign. A "%" that starts no specifier is counted apart from it, so a
+  // translation cannot add one that String(format:) would read as the start of a specifier.
+  const strayPercents = text.replace(FORMAT_SPECIFIER, "").split("%").length - 1;
+  let literalPercents = 0;
+  let unnumbered = 0;
+  let numbered = 0;
+  for (const [, position, specifier] of text.matchAll(FORMAT_SPECIFIER)) {
+    if (specifier === "%") {
+      literalPercents++;
+      continue;
+    }
+    if (position) numbered++;
+    const index = position ? Number.parseInt(position, 10) : ++unnumbered;
+    // ios:l10n:validate counts specifiers, so a translation uses each argument once.
+    if (byPosition.has(index)) return null;
+    byPosition.set(index, specifier);
   }
-  return true;
+  return numbered > 0 && unnumbered > 0 ? null : { byPosition, percents: `${literalPercents}/${strayPercents}` };
 }
 
-// Strings that shouldn't be translated
-function shouldSkipString(key, englishValue) {
-  // Don't skip empty strings - if the key exists, it needs translation
-  // (e.g., common.daySuffix is "" in English but "." in German)
-  if (englishValue === undefined || englishValue === null) return true;
+// A translation may reorder arguments by numbering its specifiers, but each one must keep the
+// type of the argument it reads, or the app shows the wrong value or crashes.
+function formatMatches(source, translation, { mayOmitArguments = false } = {}) {
+  const expected = formatArguments(source);
+  const actual = formatArguments(translation);
+  if (!expected || !actual) return false;
+  for (const [position, specifier] of actual.byPosition) {
+    if (expected.byPosition.get(position) !== specifier) return false;
+  }
+  return mayOmitArguments ||
+    (actual.byPosition.size === expected.byPosition.size && actual.percents === expected.percents);
+}
 
-  // Skip internal identifiers (SCREAMING_SNAKE_CASE or camelCase.dotted.keys without spaces)
-  if (/^[A-Z][A-Z0-9_]+$/.test(key) && key === englishValue) return true;
+function hasOneCount(text) {
+  const specifiers = [...text.matchAll(FORMAT_SPECIFIER)].filter(([, , specifier]) => specifier !== "%");
+  return specifiers.length === 1 && /[dDiuU]$/.test(specifiers[0][2]);
+}
 
-  return false;
+const PLURAL_CATEGORY_ORDER = ["zero", "one", "two", "few", "many", "other"];
+const pluralCategoriesByLanguage = new Map();
+
+// The plural categories a language uses for whole numbers up to 200, with the numbers each one
+// covers. Categories that only apply to larger numbers, such as French "many" for a million, are
+// left to "other", which every language has.
+function pluralCategories(code) {
+  if (!pluralCategoriesByLanguage.has(code)) {
+    const rules = new Intl.PluralRules(code);
+    const numbers = { other: [] };
+    for (let number = 0; number <= 200; number++) (numbers[rules.select(number)] ??= []).push(number);
+    pluralCategoriesByLanguage.set(code, PLURAL_CATEGORY_ORDER
+      .filter((category) => numbers[category])
+      .map((category) => ({ category, numbers: numbers[category] })));
+  }
+  return pluralCategoriesByLanguage.get(code);
+}
+
+function numbersOf(code, category) {
+  return pluralCategories(code).find((entry) => entry.category === category)?.numbers ?? [];
+}
+
+function describeNumbers(numbers) {
+  if (numbers.length === 0) return "fractions such as 1.5";
+  return numbers.slice(0, 8).join(", ") + (numbers.length > 8 ? ", …" : "");
 }
 
 // Retry with exponential backoff
@@ -185,8 +234,8 @@ async function withRetry(fn, maxRetries = 3) {
     try {
       return await fn();
     } catch (error) {
-      const isRetryable = error.status === 429 || error.status >= 500 ||
-        error.name === "TimeoutError" || error instanceof TypeError;
+      const isRetryable = error.retryable === true || error.name === "TimeoutError" ||
+        [408, 409, 429].includes(error.status) || error.status >= 500;
       if (shutdownController.signal.aborted) throw error;
       if (!isRetryable || attempt === maxRetries - 1) {
         throw error;
@@ -198,105 +247,107 @@ async function withRetry(fn, maxRetries = 3) {
   }
 }
 
-function toErrorWithStatus(message, status) {
-  const error = new Error(message);
+const TRANSLATION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    translations: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          id: { type: "string" },
+          translation: { type: "string" },
+        },
+        required: ["id", "translation"],
+      },
+    },
+  },
+  required: ["translations"],
+};
+
+function antError(stdout, stderr) {
+  // ant prints the failed call as `POST "<url>": 429 Too Many Requests` and the API's error as JSON.
+  const status = Number(stderr.match(/: (\d{3}) /)?.[1]) || undefined;
+  let detail;
+  try {
+    detail = JSON.parse(stdout).error?.message;
+  } catch {
+    detail = undefined;
+  }
+  const hint = status === 401 ? " Run `ant auth login`." : "";
+  const error = new Error(
+    `Claude request failed${status ? ` (${status})` : ""}: ${detail || stderr.trim() || "ant printed nothing"}.${hint}`
+  );
   error.status = status;
+  error.retryable = status === undefined;
   return error;
 }
 
-function getOpenAIConfig() {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-
-  if (!apiKey) {
-    throw new Error(
-      "OPENAI_API_KEY is not set in .env.local at the repository root. The localization translator now uses OpenAI Responses API."
+// Sends one Messages API request through the ant CLI, which signs it with the `ant auth login`
+// profile or ANTHROPIC_API_KEY. ant replaces any body string that starts with "@" by the contents
+// of the file it names, so every text block in a request starts with fixed text.
+async function sendToClaude(body) {
+  const ant = Bun.which("ant", { PATH: process.env.PATH });
+  if (!ant) {
+    throw new Error("The ant CLI is not installed. Run `brew install anthropics/tap/ant`, then `ant auth login`.");
+  }
+  const signal = AbortSignal.any([
+    shutdownController.signal,
+    AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  ]);
+  // ant reads the body from a file, not a pipe. When many large requests start together a piped
+  // body arrives late, and ant then runs without it and fails with "Required flags not set".
+  const bodyPath = path.join(os.tmpdir(), `tidex-translate-${randomUUID()}.json`);
+  openRequestBodies.add(bodyPath);
+  try {
+    await fs.writeFile(bodyPath, JSON.stringify(body), { mode: 0o600 });
+    const child = Bun.spawn(
+      [ant, "beta:messages", "create", "--beta", FALLBACK_BETA, "--format", "json", "--format-error", "json"],
+      { stdin: Bun.file(bodyPath), stdout: "pipe", stderr: "pipe", env: process.env, signal }
     );
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    signal.throwIfAborted();
+    if (exitCode !== 0) throw antError(stdout, stderr);
+    return JSON.parse(stdout);
+  } finally {
+    await fs.rm(bodyPath, { force: true });
+    openRequestBodies.delete(bodyPath);
   }
-
-  return {
-    apiKey,
-    model: OPENAI_MODEL,
-  };
 }
 
-function buildTranslationSchema() {
-  return {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      translations: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            id: { type: "string" },
-            translation: { type: "string" },
-          },
-          required: ["id", "translation"],
-        },
-      },
+async function askClaude(system, content) {
+  const message = await sendToClaude({
+    model: MODEL,
+    max_tokens: MAX_TOKENS,
+    fallbacks: "default",
+    thinking: { type: "adaptive" },
+    output_config: {
+      effort: EFFORT,
+      format: { type: "json_schema", schema: TRANSLATION_SCHEMA },
     },
-    required: ["translations"],
-  };
-}
-
-function extractOpenAIText(responseJson) {
-  if (typeof responseJson?.output_text === "string" && responseJson.output_text.trim()) {
-    return responseJson.output_text.trim();
+    system,
+    messages: [{ role: "user", content }],
+  });
+  const usage = message.usage ?? {};
+  stats.requests++;
+  stats.inputTokens += (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0);
+  stats.cachedInputTokens += usage.cache_read_input_tokens ?? 0;
+  stats.outputTokens += usage.output_tokens ?? 0;
+  if (message.content?.some((block) => block.type === "fallback")) {
+    reportProgress(`${MODEL} declined a request, so ${message.model} answered it.`);
   }
-
-  const output = Array.isArray(responseJson?.output) ? responseJson.output : [];
-
-  for (const item of output) {
-    const content = Array.isArray(item?.content) ? item.content : [];
-
-    for (const block of content) {
-      if (typeof block?.text === "string" && block.text.trim()) {
-        return block.text.trim();
-      }
-
-      if (
-        block?.text &&
-        typeof block.text === "object" &&
-        typeof block.text.value === "string" &&
-        block.text.value.trim()
-      ) {
-        return block.text.value.trim();
-      }
-    }
-  }
-
-  throw new Error("OpenAI response did not include text output");
-}
-
-function extractOpenAIParsedPayload(responseJson) {
-  if (
-    responseJson?.output_parsed &&
-    typeof responseJson.output_parsed === "object" &&
-    !Array.isArray(responseJson.output_parsed)
-  ) {
-    return responseJson.output_parsed;
-  }
-
-  const output = Array.isArray(responseJson?.output) ? responseJson.output : [];
-
-  for (const item of output) {
-    const content = Array.isArray(item?.content) ? item.content : [];
-
-    for (const block of content) {
-      if (block?.parsed && typeof block.parsed === "object" && !Array.isArray(block.parsed)) {
-        return block.parsed;
-      }
-    }
-  }
-
-  return null;
+  return message;
 }
 
 function normalizeTranslationsPayload(payload, expectedIds) {
   if (!payload || typeof payload !== "object" || !Array.isArray(payload.translations)) {
-    throw new Error("OpenAI translation payload did not match the expected schema");
+    throw new Error("Translation response did not match the expected schema");
   }
 
   const remaining = new Set(expectedIds);
@@ -314,203 +365,271 @@ function normalizeTranslationsPayload(payload, expectedIds) {
   return translations;
 }
 
-async function createStructuredOpenAIResponse({
-  schemaName,
-  instructions,
-  prompt,
-  maxOutputTokens,
-  expectedIds,
-  retryIncomplete = true,
-}) {
-  const { apiKey, model } = getOpenAIConfig();
-
-  const response = await fetch(OPENAI_RESPONSES_API_URL, {
-    method: "POST",
-    signal: AbortSignal.any([
-      shutdownController.signal,
-      AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    ]),
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      store: false,
-      max_output_tokens: maxOutputTokens,
-      reasoning: {
-        effort: OPENAI_REASONING_EFFORT,
-      },
-      instructions,
-      input: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: prompt,
-            },
-          ],
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: schemaName,
-          strict: true,
-          schema: buildTranslationSchema(),
-        },
-      },
-    }),
+async function requestTranslations(system, content, expectedIds) {
+  return withRetry(async () => {
+    const message = await askClaude(system, content);
+    if (message.stop_reason === "max_tokens") {
+      throw Object.assign(new Error("Claude ran out of output space"), { truncated: true });
+    }
+    if (message.stop_reason !== "end_turn") {
+      throw new Error(`Claude stopped without translating (${message.stop_details?.category ?? message.stop_reason})`);
+    }
+    try {
+      const text = message.content.findLast((block) => block.type === "text")?.text ?? "";
+      return normalizeTranslationsPayload(JSON.parse(text), expectedIds);
+    } catch (error) {
+      error.retryable = true;
+      throw error;
+    }
   });
+}
 
-  const responseJson = await response.json().catch((error) => {
-    if (error instanceof SyntaxError) return null;
-    throw error;
-  });
+const DOT_NOTATION_KEY = /^[a-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$/;
 
-  if (!response.ok) {
-    const errorMessage =
-      responseJson?.error?.message ||
-      response.statusText ||
-      "OpenAI Responses API request failed";
-    throw toErrorWithStatus(
-      `OpenAI Responses API request failed (${response.status}): ${errorMessage}`,
-      response.status
-    );
-  }
+// Symbols, format-only compositions and English-only admin text are not translated.
+// Only dot-notation keys are real strings; Xcode extracts the rest from literals.
+function isTranslatable(key, entry) {
+  return entry.shouldTranslate !== false && DOT_NOTATION_KEY.test(key);
+}
 
-  if (responseJson?.status === "incomplete") {
-    const reason = responseJson.incomplete_details?.reason || "unknown reason";
-    if (reason === "max_output_tokens" && retryIncomplete) {
-      reportProgress(`${schemaName}: output limit reached; retrying with more room for reasoning and text.`);
-      return createStructuredOpenAIResponse({
-        schemaName, instructions, prompt, expectedIds,
-        maxOutputTokens: maxOutputTokens * 2,
-        retryIncomplete: false,
+// A localization's text: a string, or its plural forms by category.
+function readText(localization) {
+  const plural = Object.entries(localization?.variations?.plural ?? {});
+  if (plural.length === 0) return localization?.stringUnit?.value;
+  return Object.fromEntries(plural
+    .filter(([, form]) => form.stringUnit?.value !== undefined)
+    .map(([category, form]) => [category, form.stringUnit.value]));
+}
+
+function needsTranslation(unit) {
+  return unit?.value === undefined || unit.state === "needs_review" || unit.state === "new";
+}
+
+// What one language still lacks for one string: [] when it is complete, [null] for a plain
+// translation, or the plural categories to write.
+function pendingCategories(source, targetLang, target) {
+  const existingPlural = target?.variations?.plural ?? {};
+  const hasPlural = Object.keys(existingPlural).length > 0;
+  const sourceIsPlural = typeof source !== "string";
+  const categories = pluralCategories(targetLang.code).map(({ category }) => category);
+  // A plural is complete when it has every category the language needs and none awaits review.
+  const units = sourceIsPlural || hasPlural
+    ? [...categories.map((category) => existingPlural[category]), ...Object.values(existingPlural)]
+      .map((form) => form?.stringUnit)
+    : [target?.stringUnit];
+  if (!units.some(needsTranslation)) return [];
+  // The forms of one plural are written together, so they share one wording.
+  if (sourceIsPlural) return categories;
+  // English "%lld selected" works for every number. Russian, Polish, Arabic and others inflect the
+  // words around the number, so they get plural forms even though the source has none.
+  const inflects = hasOneCount(source) &&
+    (hasPlural || categories.some((category) => category !== "one" && category !== "other"));
+  return inflects ? categories : [null];
+}
+
+function collectTranslationWork(data) {
+  const stringsToTranslate = [];
+  const stringsNeedingEnglish = []; // Strings with Norwegian but missing English
+  let idCounter = 0;
+  const slots = (categories) => categories.map((category) => ({ id: `s${idCounter++}`, category }));
+
+  for (const [key, entry] of Object.entries(data.strings)) {
+    if (!isTranslatable(key, entry)) continue;
+    const localizations = entry.localizations ?? {};
+    const english = readText(localizations.en);
+    const norwegian = readText(localizations.nb);
+
+    if (english === undefined) {
+      if (norwegian !== undefined) {
+        stringsNeedingEnglish.push({
+          key,
+          comment: entry.comment,
+          norwegian,
+          targetLang: ENGLISH,
+          slots: slots(pendingCategories(norwegian, ENGLISH, undefined)),
+        });
+      }
+      continue;
+    }
+
+    for (const targetLang of TARGET_LANGUAGES) {
+      const target = localizations[targetLang.code];
+      const categories = pendingCategories(english, targetLang, target);
+      if (categories.length === 0) continue;
+      stringsToTranslate.push({
+        key,
+        comment: entry.comment,
+        english,
+        norwegian: targetLang.code === "nb" ? undefined : norwegian,
+        current: readText(target),
+        targetLang,
+        slots: slots(categories),
       });
     }
-    throw new Error(`OpenAI response incomplete: ${reason}`);
-  }
-  if (responseJson?.status !== "completed") {
-    throw new Error(`OpenAI response failed: ${responseJson?.error?.message || responseJson?.status || "invalid response"}`);
   }
 
-  const parsedPayload = extractOpenAIParsedPayload(responseJson);
-  if (parsedPayload) {
-    return normalizeTranslationsPayload(parsedPayload, expectedIds);
-  }
-
-  const text = extractOpenAIText(responseJson);
-  return normalizeTranslationsPayload(JSON.parse(text), expectedIds);
+  return { stringsToTranslate, stringsNeedingEnglish };
 }
 
-// Translate a batch using KEY-BASED mapping to avoid context collision
-async function translateBatch(items, targetLang) {
-  // Build context-aware prompt with keys and Norwegian reference
-  const stringsToTranslate = items.map((item) => {
-    const entry = { id: item.id, english: item.english };
-    // Include Norwegian as reference when available (manually verified translations)
-    if (item.norwegian !== undefined) {
-      entry.norwegian = item.norwegian;
-    }
-    entry.context = item.key;
-    if (item.comment) entry.comment = item.comment;
-    return entry;
-  });
-
-  const hasNorwegianRefs = items.some((item) => item.norwegian !== undefined);
-
-  const instructions = `You are a professional translator for Tidex, a work shift tracking app. Return only valid JSON that matches the provided schema.`;
-
-  const prompt = `Translate the following strings from English to ${targetLang.name} for Tidex, a work shift tracking app.
-
-CRITICAL RULES - FOLLOW EXACTLY:
-1. PRESERVE ALL FORMAT SPECIFIERS EXACTLY AS THEY APPEAR:
-   - %@ stays as %@
-   - %lld stays as %lld (NOT %d)
-   - %ld stays as %ld
-   - %1$@ stays as %1$@
-   - %d stays as %d
-   - %.2f stays as %.2f
-   - DO NOT change any format specifier types!
-   - Format specifiers are placeholders for dynamic values passed by code - NEVER hardcode what they represent (e.g., if %@ represents a unit like "min" or "sec", keep it as %@ - do not replace it with the translated unit)
-2. Keep translations concise (mobile UI has limited space)
-3. Preserve leading/trailing whitespace exactly
-4. The "context" field hints at usage - use it to disambiguate meanings
-${hasNorwegianRefs ? `5. The "norwegian" field (when present) is a manually verified translation - use it to understand the intended meaning, especially for ambiguous or short strings` : ""}
-6. Return exactly one translated entry for each input "id"
-
-Strings to translate:
-${JSON.stringify(stringsToTranslate, null, 2)}
-
-Return one translation per input item.`;
-
-  return withRetry(() =>
-    createStructuredOpenAIResponse({
-      schemaName: `translation_batch_${targetLang.code.replace(/[^a-z0-9_]/gi, "_")}`,
-      instructions,
-      prompt,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      expectedIds: items.map((item) => item.id),
-    })
-  );
-}
-
-// Translate a batch FROM Norwegian TO English
-async function translateBatchToEnglish(items) {
-  const stringsToTranslate = items.map((item) => ({
-    id: item.id,
-    norwegian: item.norwegian,
-    context: item.key,
+// Writes an item's translations into its catalog entry. Returns "translated", or the reason the
+// item was left as it was. An item is written whole, so a plural never ends up half updated.
+function applyTranslations(entry, item, translations) {
+  const source = item.english ?? item.norwegian;
+  const reference = typeof source === "string" ? source : source.other ?? Object.values(source)[0] ?? "";
+  const texts = item.slots.map((slot) => translations[slot.id]);
+  if (texts.some((text) => typeof text !== "string" || (text === "" && reference !== ""))) {
+    return "missing";
+  }
+  const formatsMatch = item.slots.every((slot, index) => formatMatches(reference, texts[index], {
+    // "one" covers only 1 in English, so "every week" may drop the number. In Russian it also
+    // covers 21 and 31, so the number has to stay.
+    mayOmitArguments: slot.category !== null && numbersOf(item.targetLang.code, slot.category).length === 1,
   }));
+  if (!formatsMatch) return "format";
 
-  const instructions = `You are a professional translator for Tidex, a work shift tracking app. Return only valid JSON that matches the provided schema.`;
-
-  const prompt = `Translate the following strings from Norwegian (Bokmal) to English for Tidex, a work shift tracking app.
-
-CRITICAL RULES - FOLLOW EXACTLY:
-1. PRESERVE ALL FORMAT SPECIFIERS EXACTLY AS THEY APPEAR:
-   - %@ stays as %@
-   - %lld stays as %lld (NOT %d)
-   - %ld stays as %ld
-   - %1$@ stays as %1$@
-   - %d stays as %d
-   - %.2f stays as %.2f
-   - DO NOT change any format specifier types!
-   - Format specifiers are placeholders for dynamic values passed by code - NEVER hardcode what they represent
-2. Keep translations concise (mobile UI has limited space)
-3. Preserve leading/trailing whitespace exactly
-4. The "context" field hints at usage - use it to disambiguate meanings
-5. Return exactly one translated entry for each input "id"
-
-Strings to translate:
-${JSON.stringify(stringsToTranslate, null, 2)}
-
-Return one translation per input item.`;
-
-  return withRetry(() =>
-    createStructuredOpenAIResponse({
-      schemaName: "translation_batch_en",
-      instructions,
-      prompt,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      expectedIds: items.map((item) => item.id),
-    })
-  );
+  const localization = ((entry.localizations ??= {})[item.targetLang.code] ??= {});
+  if (item.slots[0].category === null || (typeof source === "string" && new Set(texts).size === 1)) {
+    localization.stringUnit = { state: "translated", value: texts[0] };
+    if (localization.variations) delete localization.variations.plural;
+    if (localization.variations && Object.keys(localization.variations).length === 0) {
+      delete localization.variations;
+    }
+    return "translated";
+  }
+  // Xcode keeps the plural forms and drops a plain value next to them. The slots are every
+  // category the language uses, so a leftover category from older data goes too.
+  delete localization.stringUnit;
+  (localization.variations ??= {}).plural = Object.fromEntries(item.slots.map((slot, index) =>
+    [slot.category, { stringUnit: { state: "translated", value: texts[index] } }]));
+  return "translated";
 }
 
-// Deep-set a value at a path without overwriting siblings
-function deepSet(obj, path, value) {
-  let current = obj;
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i];
-    if (!current[key] || typeof current[key] !== "object") {
-      current[key] = {};
-    }
-    current = current[key];
+const SKIPPED_SOURCE_DIRECTORIES = /(^|\/)(DerivedData|build|\.build|Vendor|Scripts|TidexAppTests|TidexAppUITests)\//;
+const CODE_CONTEXT_LINES = 6;
+const CODE_EXCERPTS_PER_STRING = 3;
+
+// Xcode generates `.settingsPayTitle` for the key `settings.pay.title`.
+function symbolName(key) {
+  return key.split(/[._]/).filter(Boolean)
+    .map((part, index) => (index === 0 ? part : part[0].toUpperCase() + part.slice(1)))
+    .join("");
+}
+
+// Finds where the app's Swift code uses each key and returns the surrounding lines, so the
+// translator sees whether a string is a button, a title, a spoken label or a fragment.
+async function findCodeUsage(keys) {
+  const keyByName = new Map();
+  for (const key of keys) keyByName.set(symbolName(key), key).set(key, key);
+  const uses = new Map();
+  const files = (await fs.readdir(IOS_ROOT, { recursive: true }))
+    .filter((file) => file.endsWith(".swift") && !SKIPPED_SOURCE_DIRECTORIES.test(file))
+    .sort();
+  for (const file of files) {
+    const lines = (await fs.readFile(path.join(IOS_ROOT, file), "utf8")).split("\n");
+    lines.forEach((line, index) => {
+      // `.symbol` as an implicit member, or the key as a string literal.
+      for (const match of line.matchAll(/(?<![\w)\]])\.([a-z][A-Za-z0-9]*)\b|"([a-z][A-Za-z0-9_.]*)"/g)) {
+        const key = keyByName.get(match[1] ?? match[2]);
+        if (!key) continue;
+        if (!uses.has(key)) uses.set(key, []);
+        uses.get(key).push({ file, lines, index });
+      }
+    });
   }
-  current[path[path.length - 1]] = value;
+
+  const excerpts = new Map();
+  for (const [key, found] of uses) {
+    // One excerpt per file first, so a string used on several screens shows several screens.
+    const firstPerFile = found.filter((use, index) => found.findIndex((other) => other.file === use.file) === index);
+    const chosen = [...firstPerFile, ...found.filter((use) => !firstPerFile.includes(use))]
+      .slice(0, CODE_EXCERPTS_PER_STRING);
+    const texts = chosen.map(({ file, lines, index }) => {
+      const excerpt = lines.slice(Math.max(0, index - CODE_CONTEXT_LINES), index + CODE_CONTEXT_LINES + 1);
+      const indent = Math.min(...excerpt.filter((line) => line.trim()).map((line) => line.search(/\S/)));
+      return `// ${file}:${index + 1}\n${excerpt.map((line) => line.slice(indent)).join("\n")}`;
+    });
+    if (found.length > chosen.length) texts.push(`// and ${found.length - chosen.length} more uses`);
+    excerpts.set(key, texts);
+  }
+  return excerpts;
+}
+
+// The guide and the whole catalog are identical in every request of a run, so the API caches them
+// after the first request and the other languages read them at a fraction of the price.
+async function buildSystemPrompt(data) {
+  const lines = [];
+  for (const [key, entry] of Object.entries(data.strings)) {
+    if (!isTranslatable(key, entry)) continue;
+    lines.push(JSON.stringify({
+      key,
+      comment: entry.comment,
+      english: readText(entry.localizations?.en),
+      norwegian: readText(entry.localizations?.nb),
+    }));
+  }
+  return [
+    { type: "text", text: await fs.readFile(GUIDE_PATH, "utf8") },
+    {
+      type: "text",
+      text: `Every translatable string in Tidex, one JSON object per line.\n${lines.join("\n")}`,
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+}
+
+// The app's finished translations in one language, for consistent terms and form of address.
+function languageReference(data, targetLang, pendingItems, sharedByBatches) {
+  if (targetLang.code === ENGLISH.code) return [];
+  const pendingKeys = new Set(pendingItems.map((item) => item.key));
+  const lines = [];
+  for (const [key, entry] of Object.entries(data.strings)) {
+    if (!isTranslatable(key, entry) || pendingKeys.has(key)) continue;
+    const translation = readText(entry.localizations?.[targetLang.code]);
+    if (translation === undefined) continue;
+    lines.push(JSON.stringify({ key, english: readText(entry.localizations?.en), translation }));
+  }
+  if (lines.length === 0) return [];
+  const block = {
+    type: "text",
+    text: `Existing ${targetLang.name} translations in Tidex, one JSON object per line.\n${lines.join("\n")}`,
+  };
+  if (sharedByBatches) block.cache_control = { type: "ephemeral" };
+  return [block];
+}
+
+async function warmPromptCache(system) {
+  await withRetry(() => askClaude(system, [
+    { type: "text", text: "Cache warm-up before the translation requests. Return an empty translations list." },
+  ]));
+}
+
+// Translates one batch of items that share a target language. Returns translations by slot id.
+async function translateBatch(items, { system, reference, codeUsage }) {
+  const { targetLang } = items[0];
+  const strings = items.map((item) => ({
+    key: item.key,
+    comment: item.comment,
+    english: item.english,
+    norwegian: item.norwegian,
+    current: item.current,
+    code: codeUsage.get(item.key),
+    translate: item.slots.map(({ id, category }) => (category === null
+      ? { id }
+      : { id, plural: category, numbers: describeNumbers(numbersOf(targetLang.code, category)) })),
+  }));
+  const content = [
+    ...reference,
+    { type: "text", text: JSON.stringify({ targetLanguage: targetLang, strings }, null, 1) },
+  ];
+  try {
+    return await requestTranslations(system, content, items.flatMap((item) => item.slots.map((slot) => slot.id)));
+  } catch (error) {
+    if (!error.truncated || items.length === 1) throw error;
+    const middle = Math.ceil(items.length / 2);
+    const halves = await Promise.all([items.slice(0, middle), items.slice(middle)]
+      .map((half) => translateBatch(half, { system, reference, codeUsage })));
+    return Object.assign(Object.create(null), ...halves);
+  }
 }
 
 // Writes the catalog the way Xcode's String Catalog editor saves it, so a later
@@ -537,8 +656,11 @@ function reportProgress(message) {
 // Concurrent requests must never write the catalog concurrently or overwrite edits.
 function createCatalogSaver(filePath, data, originalContent) {
   let lastSavedContent = originalContent;
+  let queuedSave = null;
   const saveLimit = pLimit(1);
-  return () => saveLimit(async () => {
+  // Formatting the catalog takes about a second, so batches that finish together share one save.
+  return () => queuedSave ??= saveLimit(async () => {
+    queuedSave = null;
     const content = xcstringsStringify(data);
     if (content === lastSavedContent) return;
     const assertUnchanged = async () => {
@@ -560,211 +682,27 @@ function createCatalogSaver(filePath, data, originalContent) {
   });
 }
 
-function needsTranslation(unit) {
-  return unit?.value === undefined || unit.state === "needs_review" || unit.state === "new";
-}
-
-const DOT_NOTATION_KEY = /^[a-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$/;
-
-function collectTranslationWork(data) {
-  // Collect ALL strings that need translation with unique IDs
-  const stringsToTranslate = [];
-  const stringsNeedingEnglish = []; // Strings with Norwegian but missing English
-  let idCounter = 0;
-
-  for (const [key, value] of Object.entries(data.strings)) {
-    // Symbols, format-only compositions and English-only admin text are not translated.
-    // Only dot-notation keys are real strings; Xcode extracts the rest from literals.
-    if (value.shouldTranslate === false || !DOT_NOTATION_KEY.test(key)) continue;
-
-    // Check for plural variations first (they take precedence)
-    const enVariations = value.localizations?.en?.variations?.plural;
-    const nbVariations = value.localizations?.nb?.variations?.plural;
-    const hasPluralVariations = enVariations && Object.keys(enVariations).length > 0;
-    const hasNbPluralVariations = nbVariations && Object.keys(nbVariations).length > 0;
-
-    // Check for simple stringUnit
-    const enStringUnit = value.localizations?.en?.stringUnit;
-    const nbStringUnit = value.localizations?.nb?.stringUnit;
-
-    // In xcstrings, the key itself is the English value when no explicit en localization exists
-    // BUT only use key fallback if there are no plural variations (those need special handling)
-    const norwegianValue = nbStringUnit?.value;
-    const englishValue = enStringUnit?.value ?? (hasPluralVariations || hasNbPluralVariations || norwegianValue !== undefined ? null : key);
-
-    // Check if English is missing but Norwegian exists (for simple strings)
-    if (enStringUnit?.value === undefined && norwegianValue !== undefined && !hasPluralVariations && !shouldSkipString(key, norwegianValue)) {
-      stringsNeedingEnglish.push({
-        id: `en${idCounter++}`,
-        key,
-        norwegian: norwegianValue,
-        type: "simple",
-      });
-    }
-
-    if (englishValue !== null) {
-      for (const targetLang of TARGET_LANGUAGES) {
-        const hasTranslation = !needsTranslation(value.localizations?.[targetLang.code]?.stringUnit);
-        if (!hasTranslation && !shouldSkipString(key, englishValue)) {
-          const item = {
-            id: `s${idCounter++}`,
-            key,
-            comment: value.comment,
-            english: englishValue,
-            targetLang,
-            type: "simple",
-          };
-          // Include Norwegian reference when available
-          if (norwegianValue !== undefined) {
-            item.norwegian = norwegianValue;
-          }
-          stringsToTranslate.push(item);
-        }
-      }
-    }
-
-    // Handle plural variations
-    if (enVariations) {
-      for (const [pluralForm, pluralData] of Object.entries(enVariations)) {
-        const englishValue = pluralData.stringUnit?.value;
-        if (!englishValue) continue;
-
-        // Get Norwegian plural variation as reference
-        const nbPluralValue =
-          value.localizations?.nb?.variations?.plural?.[pluralForm]?.stringUnit?.value;
-
-        for (const targetLang of TARGET_LANGUAGES) {
-          const hasTranslation = !needsTranslation(
-            value.localizations?.[targetLang.code]?.variations?.plural?.[pluralForm]?.stringUnit
-          );
-          if (!hasTranslation && !shouldSkipString(key, englishValue)) {
-            const item = {
-              id: `s${idCounter++}`,
-              key,
-              comment: value.comment,
-              english: englishValue,
-              targetLang,
-              type: "plural",
-              pluralForm,
-            };
-            if (nbPluralValue !== undefined) {
-              item.norwegian = nbPluralValue;
-            }
-            stringsToTranslate.push(item);
-          }
-        }
-      }
-    }
-
-    // Check for Norwegian plural variations missing English equivalents
-    if (hasNbPluralVariations && !hasPluralVariations) {
-      for (const [pluralForm, pluralData] of Object.entries(nbVariations)) {
-        const nbPluralValue = pluralData.stringUnit?.value;
-        if (!nbPluralValue || shouldSkipString(key, nbPluralValue)) continue;
-
-        stringsNeedingEnglish.push({
-          id: `en${idCounter++}`,
-          key,
-          norwegian: nbPluralValue,
-          type: "plural",
-          pluralForm,
-        });
-      }
-    }
-  }
-
-  return { stringsToTranslate, stringsNeedingEnglish };
-}
-
-async function translateXcstrings(filePath) {
-  console.log(`\nProcessing: ${filePath}`);
-  const content = await fs.readFile(filePath, "utf-8");
-  const data = JSON.parse(content);
-  const save = createCatalogSaver(filePath, data, content);
-  currentSave = save;
-  let { stringsToTranslate, stringsNeedingEnglish } = collectTranslationWork(data);
-
-  // First, translate Norwegian to English for strings missing English
-  if (stringsNeedingEnglish.length > 0) {
-    console.log(`Found ${stringsNeedingEnglish.length} strings needing English translation (from Norwegian)`);
-
+// Translates the items into their target languages and saves the catalog after every batch.
+async function translateItems(data, items, save) {
+  const system = await buildSystemPrompt(data);
+  const codeUsage = await findCodeUsage(new Set(items.map((item) => item.key)));
+  const batchesByLanguage = [];
+  const references = new Map();
+  for (const targetLang of [ENGLISH, ...TARGET_LANGUAGES]) {
+    const ofLanguage = items.filter((item) => item.targetLang.code === targetLang.code);
+    if (ofLanguage.length === 0) continue;
+    references.set(targetLang.code, languageReference(data, targetLang, ofLanguage, ofLanguage.length > BATCH_SIZE));
     const batches = [];
-    for (let i = 0; i < stringsNeedingEnglish.length; i += BATCH_SIZE) {
-      batches.push(stringsNeedingEnglish.slice(i, i + BATCH_SIZE));
+    for (let i = 0; i < ofLanguage.length; i += BATCH_SIZE) {
+      batches.push({ targetLang, items: ofLanguage.slice(i, i + BATCH_SIZE) });
     }
-
-    for (const batch of batches) {
-      try {
-        const translations = await translateBatchToEnglish(batch);
-
-        if (isShuttingDown) return;
-        for (const item of batch) {
-          const translation = translations[item.id];
-          if (typeof translation !== "string" || (translation === "" && item.norwegian !== "")) {
-            stats.skippedNoTranslation++;
-            continue;
-          }
-
-          // Validate format specifiers
-          if (!validateFormatSpecifiers(item.norwegian, translation)) {
-            console.log(`  ⚠ Format mismatch for "${item.key}": nb="${item.norwegian}" -> en="${translation}"`);
-            stats.skippedFormatMismatch++;
-            continue;
-          }
-
-          // Apply English translation
-          if (item.type === "simple") {
-            deepSet(
-              data.strings[item.key],
-              ["localizations", "en", "stringUnit"],
-              { state: "translated", value: translation }
-            );
-          } else if (item.type === "plural") {
-            deepSet(
-              data.strings[item.key],
-              ["localizations", "en", "variations", "plural", item.pluralForm, "stringUnit"],
-              { state: "translated", value: translation }
-            );
-          }
-
-          stats.translated++;
-        }
-      } catch (error) {
-        console.error(`  ✗ Error translating to English: ${error.message}`);
-        stats.errors.push(`Norwegian->English: ${error.message}`);
-      }
-    }
-
-    // Save progress after English translations
-    await save();
-    ({ stringsToTranslate } = collectTranslationWork(data));
+    batchesByLanguage.push(batches);
   }
+  const batchCount = batchesByLanguage.flat().length;
+  console.log(`${batchCount} batches, up to ${CONCURRENCY} concurrent requests across languages.`);
+  // Requests sent together cannot read each other's cache entry, so one request writes it first.
+  if (batchCount > 1) await warmPromptCache(system);
 
-  console.log(`Found ${stringsToTranslate.length} strings needing translation to other languages`);
-
-  if (stringsToTranslate.length === 0 && stringsNeedingEnglish.length === 0) {
-    currentSave = null;
-    console.log("Nothing to translate!");
-    return;
-  }
-
-  if (stringsToTranslate.length === 0) {
-    // Only had English translations to add, we're done
-    currentSave = null;
-    console.log(`\n✓ Completed: ${filePath}`);
-    return;
-  }
-
-  // One queue across all languages keeps every request slot useful for small updates.
-  const batches = TARGET_LANGUAGES.flatMap((targetLang) => {
-    const items = stringsToTranslate.filter((item) => item.targetLang.code === targetLang.code);
-    const batches = [];
-    for (let i = 0; i < items.length; i += BATCH_SIZE) {
-      batches.push({ targetLang, items: items.slice(i, i + BATCH_SIZE) });
-    }
-    return batches;
-  });
-  console.log(`${batches.length} batches, up to ${CONCURRENCY} concurrent requests across languages.`);
   const multibar = process.stderr.isTTY ? new cliProgress.MultiBar(
     {
       clearOnComplete: false,
@@ -774,39 +712,38 @@ async function translateXcstrings(filePath) {
     cliProgress.Presets.shades_classic
   ) : null;
   currentMultibar = multibar;
-  const overallBar = multibar?.create(stringsToTranslate.length, 0, { status: "starting..." });
+  const overallBar = multibar?.create(items.length, 0, { status: "starting..." });
   const limit = pLimit(CONCURRENCY);
   const formatWarnings = [];
   let completedStrings = 0;
   let translatedStrings = 0;
   let failedBatches = 0;
+  let startedBatches = 0;
   let saveError = null;
 
-  await Promise.all(batches.map(({ targetLang, items }, batchIndex) => limit(async () => {
+  // One queue across all languages keeps every request slot useful for small updates.
+  const translate = ({ targetLang, items }) => limit(async () => {
     if (isShuttingDown || saveError) return;
+    const batchNumber = ++startedBatches;
     try {
-      const translations = await translateBatch(items, targetLang);
+      const translations = await translateBatch(items, {
+        system, codeUsage, reference: references.get(targetLang.code),
+      });
       if (isShuttingDown || saveError) return;
       for (const item of items) {
-        const translation = translations[item.id];
-        if (typeof translation !== "string" || (translation === "" && item.english !== "")) {
+        const outcome = applyTranslations(data.strings[item.key], item, translations);
+        if (outcome === "missing") {
           stats.skippedNoTranslation++;
           reportProgress(`${targetLang.code}: missing translation for ${item.key}`);
-          continue;
-        }
-        if (!validateFormatSpecifiers(item.english, translation)) {
+        } else if (outcome === "format") {
           const warning = `${targetLang.code}: format mismatch for ${item.key}`;
           formatWarnings.push(warning);
           reportProgress(warning);
           stats.skippedFormatMismatch++;
-          continue;
+        } else {
+          translatedStrings++;
+          stats.translated++;
         }
-        const unitPath = item.type === "simple"
-          ? ["localizations", targetLang.code, "stringUnit"]
-          : ["localizations", targetLang.code, "variations", "plural", item.pluralForm, "stringUnit"];
-        deepSet(data.strings[item.key], unitPath, { state: "translated", value: translation });
-        translatedStrings++;
-        stats.translated++;
       }
       try {
         await save();
@@ -814,10 +751,10 @@ async function translateXcstrings(filePath) {
         saveError = error;
         throw error;
       }
-      reportProgress(`${targetLang.name}: saved batch ${batchIndex + 1}/${batches.length}.`);
+      reportProgress(`${targetLang.name}: saved batch ${batchNumber}/${batchCount}.`);
     } catch (error) {
       if (isShuttingDown) return;
-      const message = `Batch ${batchIndex + 1} error for ${targetLang.name}: ${error.message}`;
+      const message = `Batch ${batchNumber} error for ${targetLang.name}: ${error.message}`;
       stats.errors.push(message);
       failedBatches++;
       reportProgress(message);
@@ -827,13 +764,18 @@ async function translateXcstrings(filePath) {
         status: `${translatedStrings} translated, ${stats.skippedFormatMismatch + stats.skippedNoTranslation} skipped, ${failedBatches} failed batches`,
       });
     }
-  })));
+  });
+  // A language's first batch writes the cache entry for its existing translations, and its other
+  // batches wait for that so they read it.
+  await Promise.all(batchesByLanguage.map(async ([first, ...rest]) => {
+    await translate(first);
+    await Promise.all(rest.map(translate));
+  }));
   multibar?.stop();
   currentMultibar = null;
   if (isShuttingDown) return;
   if (saveError) throw saveError;
 
-  // Show format warnings if any
   if (formatWarnings.length > 0) {
     console.log(`\nFormat specifier mismatches (${formatWarnings.length}):`);
     formatWarnings.slice(0, 10).forEach((w) => console.log(`  - ${w}`));
@@ -841,12 +783,34 @@ async function translateXcstrings(filePath) {
       console.log(`  ... and ${formatWarnings.length - 10} more`);
     }
   }
+}
+
+async function translateXcstrings(filePath) {
+  console.log(`\nProcessing: ${filePath}`);
+  const content = await fs.readFile(filePath, "utf-8");
+  const data = JSON.parse(content);
+  const save = createCatalogSaver(filePath, data, content);
+  currentSave = save;
+
+  // English comes first, because it is the source for every other language.
+  const { stringsNeedingEnglish } = collectTranslationWork(data);
+  if (stringsNeedingEnglish.length > 0) {
+    console.log(`Found ${stringsNeedingEnglish.length} strings needing English translation (from Norwegian)`);
+    await translateItems(data, stringsNeedingEnglish, save);
+    if (isShuttingDown) return;
+  }
+
+  const { stringsToTranslate } = collectTranslationWork(data);
+  console.log(`Found ${stringsToTranslate.length} strings needing translation to other languages`);
+  if (stringsToTranslate.length > 0) {
+    await translateItems(data, stringsToTranslate, save);
+    if (isShuttingDown) return;
+  }
 
   // Clear tracking (file is fully saved)
   currentSave = null;
-  currentMultibar = null;
-
-  console.log(`\nSaved progress: ${filePath}`);
+  const didWork = stringsNeedingEnglish.length + stringsToTranslate.length > 0;
+  console.log(didWork ? `\nSaved progress: ${filePath}` : "Nothing to translate!");
 }
 
 // Sync languages to Xcode project's knownRegions
@@ -924,6 +888,13 @@ function parseInfoPlistStrings(content) {
   return result;
 }
 
+const INFO_PLIST_COMMENTS = {
+  NSCameraUsageDescription: "Camera usage description",
+  NSFaceIDUsageDescription: "Face ID usage description",
+  NSPhotoLibraryAddUsageDescription: "Photo library save description",
+  NSCalendarsFullAccessUsageDescription: "Calendar access description",
+};
+
 // Generate InfoPlist.strings file content
 function generateInfoPlistStrings(langName, strings) {
   const lines = [`/* ${langName} localization for Info.plist strings */`, ""];
@@ -936,19 +907,9 @@ function generateInfoPlistStrings(langName, strings) {
   lines.push('"CFBundleName" = "Tidex";');
   lines.push("");
 
-  // Add translated keys
   for (const [key, value] of Object.entries(strings)) {
-    const comment =
-      key === "NSCameraUsageDescription"
-        ? "/* Camera usage description */"
-        : key === "NSFaceIDUsageDescription"
-          ? "/* Face ID usage description */"
-          : key === "NSPhotoLibraryAddUsageDescription"
-            ? "/* Photo library save description */"
-            : key === "NSCalendarsFullAccessUsageDescription"
-              ? "/* Calendar access description */"
-              : `/* ${key} */`;
-    lines.push(comment);
+    if (key === "CFBundleDisplayName" || key === "CFBundleName") continue;
+    lines.push(`/* ${INFO_PLIST_COMMENTS[key] ?? key} */`);
     // Escape any quotes in the value
     const escapedValue = value.replace(/"/g, '\\"');
     lines.push(`"${key}" = "${escapedValue}";`);
@@ -965,114 +926,66 @@ async function translateInfoPlistStrings() {
   try {
     // Read English source
     const enPath = path.join(TIDEX_APP_PATH, "en.lproj", "InfoPlist.strings");
-    const enContent = await fs.readFile(enPath, "utf-8");
-    const enStrings = parseInfoPlistStrings(enContent);
+    const enStrings = parseInfoPlistStrings(await fs.readFile(enPath, "utf-8"));
+    const translatableKeys = INFO_PLIST_TRANSLATABLE_KEYS.filter((key) => enStrings[key]);
 
-    // Get translatable strings
-    const stringsToTranslate = {};
-    for (const key of INFO_PLIST_TRANSLATABLE_KEYS) {
-      if (enStrings[key]) {
-        stringsToTranslate[key] = enStrings[key];
-      }
-    }
-
-    if (Object.keys(stringsToTranslate).length === 0) {
-      console.log("  No translatable strings found in InfoPlist.strings");
-      return;
-    }
-
-    // Track what we create/update
-    let created = 0;
-    let skipped = 0;
-
+    const pending = [];
     for (const targetLang of TARGET_LANGUAGES) {
-      const lprojDir = path.join(TIDEX_APP_PATH, `${targetLang.code}.lproj`);
-      const infoPlistPath = path.join(lprojDir, "InfoPlist.strings");
-
-      // Check if file already exists with content
+      const infoPlistPath = path.join(TIDEX_APP_PATH, `${targetLang.code}.lproj`, "InfoPlist.strings");
       let existingStrings = {};
       try {
-        const existingContent = await fs.readFile(infoPlistPath, "utf-8");
-        existingStrings = parseInfoPlistStrings(existingContent);
+        existingStrings = parseInfoPlistStrings(await fs.readFile(infoPlistPath, "utf-8"));
       } catch {
         // File doesn't exist, that's fine
       }
+      const missingKeys = translatableKeys.filter((key) => !existingStrings[key]);
+      if (missingKeys.length > 0) pending.push({ targetLang, infoPlistPath, existingStrings, missingKeys });
+    }
+    if (pending.length === 0) {
+      console.log(`  ✓ InfoPlist.strings: ${TARGET_LANGUAGES.length} already complete`);
+      return;
+    }
 
-      // Check if all translatable keys already exist
-      const missingKeys = INFO_PLIST_TRANSLATABLE_KEYS.filter(
-        (key) => !existingStrings[key]
-      );
+    // The app catalog gives the permission texts the same vocabulary as the app.
+    const data = JSON.parse(await fs.readFile(DEFAULT_CATALOG, "utf-8"));
+    const system = await buildSystemPrompt(data);
+    if (pending.length > 1) await warmPromptCache(system);
+    const limit = pLimit(CONCURRENCY);
+    let created = 0;
 
-      if (missingKeys.length === 0) {
-        skipped++;
-        continue;
-      }
-
+    await Promise.all(pending.map(({ targetLang, infoPlistPath, existingStrings, missingKeys }) => limit(async () => {
       console.log(`  Translating InfoPlist.strings for ${targetLang.name}...`);
-
-      // Translate missing keys
-      const items = missingKeys.map((key, idx) => ({
-        id: `ip${idx}`,
+      const items = missingKeys.map((key, index) => ({
         key,
-        english: stringsToTranslate[key],
+        comment: "Shown by iOS in the system prompt that asks the user for this permission. It says why Tidex needs the access.",
+        english: enStrings[key],
+        targetLang,
+        slots: [{ id: `ip${index}`, category: null }],
       }));
 
       try {
-        const instructions =
-          'You are a professional translator for Tidex, a work shift tracking app. Return only valid JSON that matches the provided schema.';
-
-        const prompt = `Translate these iOS permission descriptions from English to ${targetLang.name} for Tidex, a work shift tracking app.
-
-CRITICAL RULES:
-1. Keep "Tidex" as-is (it's the app name)
-2. Keep the tone friendly and clear
-3. These appear in iOS permission dialogs, so be concise
-
-Strings to translate:
-${JSON.stringify(items, null, 2)}
-
-Return one translation per input item.`;
-
-        const translations = await withRetry(() =>
-          createStructuredOpenAIResponse({
-            schemaName: `infoplist_batch_${targetLang.code.replace(/[^a-z0-9_]/gi, "_")}`,
-            instructions,
-            prompt,
-            maxOutputTokens: MAX_OUTPUT_TOKENS,
-            expectedIds: items.map((item) => item.id),
-          })
-        );
-
-        // Merge translations with existing
+        const translations = await translateBatch(items, {
+          system,
+          reference: languageReference(data, targetLang, [], false),
+          codeUsage: new Map(),
+        });
         const mergedStrings = { ...existingStrings };
         for (const item of items) {
-          if (translations[item.id]) {
-            mergedStrings[item.key] = translations[item.id];
-          }
+          const translation = translations[item.slots[0].id];
+          if (translation) mergedStrings[item.key] = translation;
         }
-
-        // Ensure lproj directory exists
-        await fs.mkdir(lprojDir, { recursive: true });
-
-        // Write InfoPlist.strings
-        const content = generateInfoPlistStrings(targetLang.name, mergedStrings);
-        await fs.writeFile(infoPlistPath, content);
-
+        await fs.mkdir(path.dirname(infoPlistPath), { recursive: true });
+        await fs.writeFile(infoPlistPath, generateInfoPlistStrings(targetLang.name, mergedStrings));
         created++;
         stats.translated += missingKeys.length;
       } catch (error) {
-        console.error(
-          `    ✗ Error translating for ${targetLang.name}: ${error.message}`
-        );
+        console.error(`    ✗ Error translating for ${targetLang.name}: ${error.message}`);
         stats.errors.push(`InfoPlist ${targetLang.name}: ${error.message}`);
       }
-
-      // Brief delay between languages
-      await new Promise((r) => setTimeout(r, 100));
-    }
+    })));
 
     console.log(
-      `  ✓ InfoPlist.strings: ${created} created/updated, ${skipped} already complete`
+      `  ✓ InfoPlist.strings: ${created} created/updated, ${TARGET_LANGUAGES.length - pending.length} already complete`
     );
   } catch (error) {
     console.error(`  ✗ Error processing InfoPlist.strings: ${error.message}`);
@@ -1081,18 +994,16 @@ Return one translation per input item.`;
 }
 
 async function main(args = process.argv.slice(2)) {
-  Object.assign(stats, { translated: 0, skippedFormatMismatch: 0, skippedNoTranslation: 0, errors: [] });
-  const defaultXcstringsFiles = [
-    path.join(__dirname, "../Resources/Localization/App/Localizable.xcstrings"),
-  ];
+  Object.assign(stats, newStats());
   const cliXcstringsFiles = args
     .filter((file) => file.endsWith(".xcstrings"))
     .map((file) => path.resolve(process.cwd(), file));
-  const xcstringsFiles = cliXcstringsFiles.length > 0 ? cliXcstringsFiles : defaultXcstringsFiles;
+  const xcstringsFiles = cliXcstringsFiles.length > 0 ? cliXcstringsFiles : [DEFAULT_CATALOG];
   const isTargetedRun = cliXcstringsFiles.length > 0;
 
-  console.log("XCStrings Translator v2");
+  console.log("XCStrings Translator v3");
   console.log("=======================");
+  console.log(`Model: ${MODEL} (effort ${EFFORT}) through the ant CLI`);
   console.log(`Target languages: ${TARGET_LANGUAGES.map((l) => l.name).join(", ")}`);
   if (isTargetedRun) {
     console.log(`Target files: ${xcstringsFiles.join(", ")}`);
@@ -1123,6 +1034,12 @@ async function main(args = process.argv.slice(2)) {
   console.log("SUMMARY");
   console.log("=".repeat(40));
   console.log(`✓ Translated: ${stats.translated}`);
+  if (stats.requests > 0) {
+    console.log(
+      `Claude: ${stats.requests} requests, ${stats.inputTokens} input tokens, ` +
+      `${stats.cachedInputTokens} read from cache, ${stats.outputTokens} output tokens`
+    );
+  }
   if (stats.skippedFormatMismatch > 0) {
     console.log(`⚠ Skipped (format mismatch): ${stats.skippedFormatMismatch}`);
   }
@@ -1143,8 +1060,8 @@ async function main(args = process.argv.slice(2)) {
   return 0;
 }
 
-export { main, translateXcstrings, collectTranslationWork, createCatalogSaver,
-  createStructuredOpenAIResponse, normalizeTranslationsPayload, xcstringsStringify, TARGET_LANGUAGES };
+export { main, translateXcstrings, collectTranslationWork, createCatalogSaver, sendToClaude,
+  normalizeTranslationsPayload, formatMatches, xcstringsStringify, TARGET_LANGUAGES };
 
 if (import.meta.main) {
   process.on("SIGINT", () => { void saveAndExit("SIGINT"); });

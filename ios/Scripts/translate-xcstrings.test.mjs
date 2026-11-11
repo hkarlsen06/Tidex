@@ -1,30 +1,65 @@
-import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, spyOn, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
-  main, collectTranslationWork, createStructuredOpenAIResponse,
-  normalizeTranslationsPayload, xcstringsStringify, TARGET_LANGUAGES,
+  main, collectTranslationWork, formatMatches, normalizeTranslationsPayload, sendToClaude,
+  xcstringsStringify, TARGET_LANGUAGES,
 } from "./translate-xcstrings.mjs";
 
-const originalFetch = globalThis.fetch;
-const originalKey = process.env.OPENAI_API_KEY;
+const originalPath = process.env.PATH;
+let stubDirectory;
+let server;
+let respond;
 let directory;
 let log;
 let errorLog;
 
+// The translator calls Claude through the ant CLI. Here `ant` is a stand-in that posts the request
+// body to this file's server and prints the reply the way ant does, so each test answers in-process.
+beforeAll(async () => {
+  server = Bun.serve({
+    port: 0,
+    fetch: async (request) => {
+      const body = await request.json();
+      let payload;
+      try {
+        payload = JSON.parse(body.messages[0].content.at(-1).text);
+      } catch {
+        return completed([]); // the cache warm-up request
+      }
+      return respond({ body, items: payload.strings, locale: payload.targetLanguage?.code });
+    },
+  });
+  stubDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "tidex-ant-stub-"));
+  await fs.writeFile(path.join(stubDirectory, "ant"), `#!${process.execPath}
+    const response = await fetch(process.env.TIDEX_TEST_ANT_URL, { method: "POST", body: await Bun.stdin.text() });
+    process.stdout.write(await response.text());
+    if (!response.ok) {
+      console.error(\`POST "https://api.anthropic.com/v1/messages?beta=true": \${response.status} \${response.statusText}\`);
+      process.exit(1);
+    }
+  `, { mode: 0o755 });
+  process.env.PATH = `${stubDirectory}:${originalPath}`;
+  process.env.TIDEX_TEST_ANT_URL = server.url.href;
+});
+
+afterAll(async () => {
+  process.env.PATH = originalPath;
+  delete process.env.TIDEX_TEST_ANT_URL;
+  await server.stop(true);
+  await fs.rm(stubDirectory, { recursive: true, force: true });
+});
+
 beforeEach(async () => {
   directory = await fs.mkdtemp(path.join(os.tmpdir(), "tidex-translator-test-"));
-  process.env.OPENAI_API_KEY = "test-key";
+  respond = (job) => completed(job.items);
   log = spyOn(console, "log").mockImplementation(() => {});
   errorLog = spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(async () => {
-  globalThis.fetch = originalFetch;
-  if (originalKey === undefined) delete process.env.OPENAI_API_KEY;
-  else process.env.OPENAI_API_KEY = originalKey;
   log.mockRestore();
   errorLog.mockRestore();
   await fs.rm(directory, { recursive: true, force: true });
@@ -32,6 +67,12 @@ afterEach(async () => {
 
 function unit(value, state = "translated") {
   return { stringUnit: { state, value } };
+}
+
+function plural(forms) {
+  return { variations: { plural: Object.fromEntries(
+    Object.entries(forms).map(([category, value]) => [category, unit(value)])
+  ) } };
 }
 
 function catalog(missing = [], source = "Pay %@") {
@@ -51,10 +92,22 @@ function catalog(missing = [], source = "Pay %@") {
   };
 }
 
+// Every language holds the same plural forms, as the catalog does after English-only translation.
+function pluralCatalog(forms) {
+  const data = catalog();
+  const localizations = data.strings["z.pay"].localizations;
+  for (const locale of Object.keys(localizations)) localizations[locale] = plural(forms);
+  return data;
+}
+
 async function writeCatalog(data) {
   const file = path.join(directory, "Localizable.xcstrings");
   await fs.writeFile(file, xcstringsStringify(data));
   return file;
+}
+
+async function readCatalog(file) {
+  return JSON.parse(await fs.readFile(file, "utf8"));
 }
 
 function setCatalogString(file, ...args) {
@@ -63,88 +116,71 @@ function setCatalogString(file, ...args) {
   ], { encoding: "utf8" });
 }
 
-function request(init) {
-  const body = JSON.parse(init.body);
-  const prompt = body.input[0].content[0].text;
-  const items = JSON.parse(prompt.split("Strings to translate:\n")[1].split("\n\nReturn")[0]);
-  return { body, items, locale: body.text.format.name.replace("translation_batch_", "") };
-}
-
-function completed(items, value = (item) => item.english ?? item.norwegian) {
+function reply(stopReason, translations = []) {
   return Response.json({
-    status: "completed",
-    output: [{ type: "message", content: [{
-      type: "output_text",
-      text: JSON.stringify({ translations: items.map((item) => ({
-        id: item.id, translation: value(item),
-      })) }),
-    }] }],
+    type: "message",
+    stop_reason: stopReason,
+    content: [{ type: "text", text: JSON.stringify({ translations }) }],
+    usage: { input_tokens: 1, output_tokens: 1 },
   });
 }
 
+function completed(items, value = (item) => item.english ?? item.norwegian) {
+  return reply("end_turn", items.flatMap((item) =>
+    item.translate.map((slot) => ({ id: slot.id, translation: value(item, slot) }))));
+}
+
 async function waitUntil(predicate) {
-  const deadline = Date.now() + 2_000;
+  const deadline = Date.now() + 10_000;
   while (!(await predicate())) {
     if (Date.now() > deadline) throw new Error("Timed out waiting for test progress");
     await Bun.sleep(5);
   }
 }
 
-test("uses six slots across languages and preserves every existing entry in Xcode's order", async () => {
+test("translates languages at the same time and preserves every existing entry in Xcode's order", async () => {
   const missing = ["de", "fr", "es", "it", "nl", "ca", "sv", "da"];
   const original = catalog(missing);
   const file = await writeCatalog(original);
   const gate = Promise.withResolvers();
   const started = [];
-  let active = 0;
-  let maximum = 0;
-  globalThis.fetch = async (_url, init) => {
-    const job = request(init);
+  respond = async (job) => {
     started.push(job.locale);
-    maximum = Math.max(maximum, ++active);
     await gate.promise;
-    await Bun.sleep(2);
-    active--;
     return completed(job.items, () => `Translated ${job.locale} %@`);
   };
   const run = main([file]);
   try {
-    await waitUntil(() => started.length === 6);
-    expect(new Set(started).size).toBe(6);
+    await waitUntil(() => started.length === missing.length);
   } finally {
     gate.resolve();
-    await run;
   }
   expect(await run).toBe(0);
-  expect(maximum).toBe(6);
   expect(started.sort()).toEqual(missing.sort());
-  const saved = JSON.parse(await fs.readFile(file, "utf8"));
+  const saved = await readCatalog(file);
   // The fixture lists z.pay first. Saved catalogs use Xcode's key order.
   expect(Object.keys(saved.strings)).toEqual(["a.untouched", "z.pay"]);
   expect(saved.strings["a.untouched"]).toEqual(original.strings["a.untouched"]);
   for (const [locale, entry] of Object.entries(original.strings["z.pay"].localizations)) {
     expect(saved.strings["z.pay"].localizations[locale]).toEqual(entry);
   }
+  expect(saved.strings["z.pay"].localizations.de).toEqual(unit("Translated de %@"));
   expect(collectTranslationWork(saved).stringsToTranslate).toHaveLength(0);
   expect((await fs.readdir(directory)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
 });
 
 test("failed batches report failure, keep successful work, and resume only missing translations", async () => {
   const file = await writeCatalog(catalog(["de", "fr"]));
-  globalThis.fetch = async (_url, init) => {
-    const job = request(init);
-    return job.locale === "de"
-      ? Response.json({ error: { message: "Test failure" } }, { status: 403 })
-      : completed(job.items);
-  };
+  respond = (job) => job.locale === "de"
+    ? Response.json({ type: "error", error: { type: "permission_error", message: "Test failure" } }, { status: 403 })
+    : completed(job.items);
   expect(await main([file])).toBe(1);
-  const partial = JSON.parse(await fs.readFile(file, "utf8"));
+  const partial = await readCatalog(file);
   expect(partial.strings["z.pay"].localizations.de).toBeUndefined();
   expect(partial.strings["z.pay"].localizations.fr.stringUnit.state).toBe("translated");
   expect(errorLog.mock.calls.flat().some((line) => line.includes("Test failure"))).toBe(true);
   const resumed = [];
-  globalThis.fetch = async (_url, init) => {
-    const job = request(init);
+  respond = (job) => {
     resumed.push(job.locale);
     return completed(job.items);
   };
@@ -154,28 +190,38 @@ test("failed batches report failure, keep successful work, and resume only missi
 
 test("invalid placeholders block success while valid results survive", async () => {
   const file = await writeCatalog(catalog(["de", "fr"]));
-  globalThis.fetch = async (_url, init) => {
-    const job = request(init);
-    return completed(job.items, () => job.locale === "de" ? "Missing placeholder" : "Valid %@");
-  };
+  respond = (job) => completed(job.items, () => job.locale === "de" ? "Missing placeholder" : "Valid %@");
   expect(await main([file])).toBe(1);
-  const saved = JSON.parse(await fs.readFile(file, "utf8"));
+  const saved = await readCatalog(file);
   expect(saved.strings["z.pay"].localizations.de).toBeUndefined();
   expect(saved.strings["z.pay"].localizations.fr.stringUnit.value).toBe("Valid %@");
+});
+
+test("a translation may reorder numbered placeholders but never change what one reads", () => {
+  expect(formatMatches("%@ worked %lld shifts", "%2$lld Schichten von %1$@")).toBe(true);
+  expect(formatMatches("%1$@ to %2$@", "%2$@ から %1$@")).toBe(true);
+  // Unnumbered placeholders read in order, so this would read a name as a number.
+  expect(formatMatches("%@ worked %lld shifts", "%lld Schichten von %@")).toBe(false);
+  expect(formatMatches("%lld shifts", "%d Schichten")).toBe(false);
+  expect(formatMatches("%@ and %@", "%1$@ und %1$@")).toBe(false);
+  expect(formatMatches("%1$@ to %2$@", "%1$@ bis %@")).toBe(false);
+  expect(formatMatches("50%% of %@", "50% von %@")).toBe(false);
+  // An extra specifier would read an argument the code never passes.
+  expect(formatMatches("%@", "%@ %S")).toBe(false);
+  expect(formatMatches("Half of %@", "50% - %@")).toBe(false);
 });
 
 test("valid empty translations are retained and never regenerate existing empty English", async () => {
   const original = catalog(["de"], "");
   const file = await writeCatalog(original);
   const locales = [];
-  globalThis.fetch = async (_url, init) => {
-    const job = request(init);
+  respond = (job) => {
     locales.push(job.locale);
     return completed(job.items, () => "");
   };
   expect(await main([file])).toBe(0);
   expect(locales).toEqual(["de"]);
-  const saved = JSON.parse(await fs.readFile(file, "utf8"));
+  const saved = await readCatalog(file);
   expect(saved.strings["z.pay"].localizations.de.stringUnit.value).toBe("");
   expect(collectTranslationWork(saved).stringsNeedingEnglish).toHaveLength(0);
   expect(collectTranslationWork(saved).stringsToTranslate).toHaveLength(0);
@@ -186,7 +232,7 @@ for (const sourceLocale of ["en", "nb"]) {
     const original = catalog();
     const file = await writeCatalog(original);
     setCatalogString(file, `--${sourceLocale}`, "Updated pay %@", "--locale", "de=Updated German %@");
-    const saved = JSON.parse(await fs.readFile(file, "utf8"));
+    const saved = await readCatalog(file);
     const localizations = saved.strings["z.pay"].localizations;
     // The fixture lists z.pay first. Saved catalogs use Xcode's key order.
     expect(Object.keys(saved.strings)).toEqual(["a.untouched", "z.pay"]);
@@ -223,10 +269,10 @@ test("unchanged source text, metadata and target-only edits do not queue other t
   const original = catalog();
   const file = await writeCatalog(original);
   setCatalogString(file, "--en", "Pay %@", "--nb", "Existing %@");
-  expect(JSON.parse(await fs.readFile(file, "utf8"))).toEqual(original);
+  expect(await readCatalog(file)).toEqual(original);
   setCatalogString(file, "--comment", "Updated context");
   setCatalogString(file, "--locale", "de=Updated German %@");
-  const saved = JSON.parse(await fs.readFile(file, "utf8"));
+  const saved = await readCatalog(file);
   const expected = structuredClone(original);
   expected.strings["z.pay"].comment = "Updated context";
   expected.strings["z.pay"].localizations.de = unit("Updated German %@");
@@ -236,32 +282,30 @@ test("unchanged source text, metadata and target-only edits do not queue other t
 
 test("source edits mark nested translation units without replacing their structure", async () => {
   const original = catalog();
-  original.strings["z.pay"].localizations.de = { variations: { plural: {
-    one: unit("One %@"), other: unit("Many %@"),
-  } } };
+  original.strings["z.pay"].localizations.de = plural({ one: "One %@", other: "Many %@" });
   const file = await writeCatalog(original);
   expect(() => setCatalogString(file, "--en", "Updated pay %@")).toThrow();
-  expect(JSON.parse(await fs.readFile(file, "utf8"))).toEqual(original);
+  expect(await readCatalog(file)).toEqual(original);
   setCatalogString(file, "--en", "Updated pay %@", "--allow-complex");
-  const saved = JSON.parse(await fs.readFile(file, "utf8"));
+  const saved = await readCatalog(file);
   expect(saved.strings["z.pay"].localizations.de).toEqual({ variations: { plural: {
     one: unit("One %@", "needs_review"), other: unit("Many %@", "needs_review"),
   } } });
 });
 
-test("needs_review entries are refreshed without retranslating other locales", async () => {
+test("needs_review entries are refreshed from their current text without retranslating other locales", async () => {
   const original = catalog();
   original.strings["z.pay"].localizations.de.stringUnit.state = "needs_review";
   const file = await writeCatalog(original);
-  const locales = [];
-  globalThis.fetch = async (_url, init) => {
-    const job = request(init);
-    locales.push(job.locale);
+  const jobs = [];
+  respond = (job) => {
+    jobs.push(job);
     return completed(job.items, () => "Updated %@");
   };
   expect(await main([file])).toBe(0);
-  expect(locales).toEqual(["de"]);
-  const saved = JSON.parse(await fs.readFile(file, "utf8"));
+  expect(jobs.map((job) => job.locale)).toEqual(["de"]);
+  expect(jobs[0].items[0].current).toBe("Existing %@");
+  const saved = await readCatalog(file);
   expect(saved.strings["z.pay"].localizations.de).toEqual(unit("Updated %@"));
   expect(saved.strings["z.pay"].localizations.nb).toEqual(original.strings["z.pay"].localizations.nb);
 });
@@ -269,8 +313,7 @@ test("needs_review entries are refreshed without retranslating other locales", a
 test("English generated from Norwegian becomes the source for the remaining languages", async () => {
   const file = await writeCatalog(catalog(["en", "de"]));
   const calls = [];
-  globalThis.fetch = async (_url, init) => {
-    const job = request(init);
+  respond = (job) => {
     calls.push(job);
     return completed(job.items, () => "New English %@");
   };
@@ -279,50 +322,123 @@ test("English generated from Norwegian becomes the source for the remaining lang
   expect(calls[1].items[0].english).toBe("New English %@");
 });
 
-test("plural translation preserves existing sibling forms and metadata", async () => {
-  const original = catalog();
-  const localizations = original.strings["z.pay"].localizations;
-  for (const locale of Object.keys(localizations)) {
-    localizations[locale] = { variations: { plural: {
-      one: unit("%lld shift"), other: unit("%lld shifts"),
-    } } };
-  }
-  delete localizations.de.variations.plural.other;
-  const file = await writeCatalog(original);
-  globalThis.fetch = async (_url, init) => completed(request(init).items, () => "%lld Schichten");
+test("each string comes with the Swift code that shows it", async () => {
+  const data = catalog(["de"]);
+  data.strings["common.cancel"] = data.strings["z.pay"];
+  delete data.strings["z.pay"];
+  const file = await writeCatalog(data);
+  const jobs = [];
+  respond = (job) => {
+    jobs.push(job);
+    return completed(job.items);
+  };
   expect(await main([file])).toBe(0);
-  const saved = JSON.parse(await fs.readFile(file, "utf8"));
-  expect(saved.strings["z.pay"].localizations.de.variations.plural).toEqual({
-    one: unit("%lld shift"), other: unit("%lld Schichten"),
-  });
+  expect(jobs[0].items[0].code[0]).toContain(".commonCancel");
+});
+
+test("a plural with a missing form is translated as a whole from its current forms", async () => {
+  const original = pluralCatalog({ one: "%lld shift", other: "%lld shifts" });
+  delete original.strings["z.pay"].localizations.de.variations.plural.other;
+  const file = await writeCatalog(original);
+  const jobs = [];
+  respond = (job) => {
+    jobs.push(job);
+    return completed(job.items, (_item, slot) => `%lld ${slot.plural}`);
+  };
+  expect(await main([file])).toBe(0);
+  expect(jobs.find((job) => job.locale === "de").items[0].current).toEqual({ one: "%lld shift" });
+  const saved = await readCatalog(file);
+  expect(saved.strings["z.pay"].localizations.de).toEqual(plural({ one: "%lld one", other: "%lld other" }));
+  expect(saved.strings["z.pay"].localizations.fr).toEqual(original.strings["z.pay"].localizations.fr);
   expect(saved.strings["z.pay"].comment).toBe(original.strings["z.pay"].comment);
 });
 
-const responseOptions = {
-  schemaName: "test", instructions: "test", prompt: "test",
-  expectedIds: ["s0"], maxOutputTokens: 16_384,
-};
-
-test("truncated responses are retried once with more output space before parsing", async () => {
-  const limits = [];
-  globalThis.fetch = async (_url, init) => {
-    limits.push(JSON.parse(init.body).max_output_tokens);
-    return limits.length === 1
-      ? Response.json({ status: "incomplete", incomplete_details: { reason: "max_output_tokens" }, output_text: "{broken" })
-      : completed([{ id: "s0", english: "Complete" }]);
+test("a language with more plural forms than English gets the forms it lacks", async () => {
+  const file = await writeCatalog(pluralCatalog({ one: "%lld shift", other: "%lld shifts" }));
+  const jobs = [];
+  respond = (job) => {
+    jobs.push(job);
+    return completed(job.items, (_item, slot) => `%lld ${slot.plural}`);
   };
-  expect(await createStructuredOpenAIResponse(responseOptions)).toEqual({ s0: "Complete" });
-  expect(limits).toEqual([16_384, 32_768]);
+  expect(await main([file])).toBe(0);
+  const russian = jobs.find((job) => job.locale === "ru").items[0];
+  expect(russian.current).toEqual({ one: "%lld shift", other: "%lld shifts" });
+  expect(russian.translate.map((slot) => `${slot.plural}: ${slot.numbers}`)).toEqual([
+    "one: 1, 21, 31, 41, 51, 61, 71, 81, …",
+    "few: 2, 3, 4, 22, 23, 24, 32, 33, …",
+    "many: 0, 5, 6, 7, 8, 9, 10, 11, …",
+    "other: fractions such as 1.5",
+  ]);
+  // German and Japanese have no form that English lacks.
+  expect(jobs.some((job) => job.locale === "de" || job.locale === "ja")).toBe(false);
+  const saved = await readCatalog(file);
+  expect(saved.strings["z.pay"].localizations.ru).toEqual(plural({
+    one: "%lld one", few: "%lld few", many: "%lld many", other: "%lld other",
+  }));
+  expect(collectTranslationWork(saved).stringsToTranslate).toHaveLength(0);
 });
 
-test("repeated truncation fails after the bounded retry", async () => {
-  let calls = 0;
-  globalThis.fetch = async () => {
-    calls++;
-    return Response.json({ status: "incomplete", incomplete_details: { reason: "max_output_tokens" } });
+test("a plural form keeps its number unless it covers a single number", async () => {
+  const data = pluralCatalog({ one: "every week", other: "every %lld weeks" });
+  delete data.strings["z.pay"].localizations.de;
+  delete data.strings["z.pay"].localizations.ru;
+  const file = await writeCatalog(data);
+  // German "one" is only 1. Russian "one" is also 21 and 31, where "weekly" would be wrong.
+  respond = (job) => completed(job.items, (_item, slot) => slot.plural === "one" ? "weekly" : "every %lld weeks");
+  expect(await main([file])).toBe(1);
+  const saved = await readCatalog(file);
+  expect(saved.strings["z.pay"].localizations.de).toEqual(plural({ one: "weekly", other: "every %lld weeks" }));
+  expect(saved.strings["z.pay"].localizations.ru).toBeUndefined();
+});
+
+test("a count in a plain string gets plural forms where the language inflects it", async () => {
+  const file = await writeCatalog(catalog(["de", "ru", "pl"], "%lld selected"));
+  respond = (job) => completed(job.items, (_item, slot) =>
+    job.locale === "ru" ? `%lld ${slot.plural}` : "%lld same");
+  expect(await main([file])).toBe(0);
+  const { de, ru, pl } = (await readCatalog(file)).strings["z.pay"].localizations;
+  expect(de).toEqual(unit("%lld same"));
+  expect(ru).toEqual(plural({ one: "%lld one", few: "%lld few", many: "%lld many", other: "%lld other" }));
+  // Polish was asked for every form and answered with one wording, so it stays a plain string.
+  expect(pl).toEqual(unit("%lld same"));
+});
+
+test("a plain string's plural that lacks forms is queued until it has them all", () => {
+  const data = catalog([], "%lld selected");
+  data.strings["z.pay"].localizations.ru = plural({ one: "%lld one" });
+  const work = collectTranslationWork(data).stringsToTranslate;
+  expect(work.map((item) => item.targetLang.code)).toEqual(["ru"]);
+  expect(work[0].slots.map((slot) => slot.category)).toEqual(["one", "few", "many", "other"]);
+});
+
+function twoStringsMissingGerman() {
+  const data = catalog(["de"]);
+  delete data.strings["a.untouched"].localizations.de;
+  return data;
+}
+
+test("a response cut off at the output limit is retried in smaller batches", async () => {
+  const file = await writeCatalog(twoStringsMissingGerman());
+  const sizes = [];
+  respond = (job) => {
+    sizes.push(job.items.length);
+    return job.items.length > 1 ? reply("max_tokens") : completed(job.items);
   };
-  await expect(createStructuredOpenAIResponse(responseOptions)).rejects.toThrow("incomplete: max_output_tokens");
-  expect(calls).toBe(2);
+  expect(await main([file])).toBe(0);
+  expect(sizes).toEqual([2, 1, 1]);
+  expect(collectTranslationWork(await readCatalog(file)).stringsToTranslate).toHaveLength(0);
+});
+
+test("a single string that cannot fit the output limit fails", async () => {
+  const file = await writeCatalog(twoStringsMissingGerman());
+  let calls = 0;
+  respond = () => {
+    calls++;
+    return reply("max_tokens");
+  };
+  expect(await main([file])).toBe(1);
+  expect(calls).toBe(3);
+  expect((await readCatalog(file)).strings["z.pay"].localizations.de).toBeUndefined();
 });
 
 test("missing, duplicate, unexpected and malformed translation IDs are rejected", () => {
@@ -337,15 +453,11 @@ test("missing, duplicate, unexpected and malformed translation IDs are rejected"
 
 test("a hanging request is aborted at its deadline", async () => {
   const originalTimeout = AbortSignal.timeout.bind(AbortSignal);
-  const timeout = spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
-    expect(milliseconds).toBe(120_000);
-    return originalTimeout(5);
-  });
-  globalThis.fetch = async (_url, init) => new Promise((_resolve, reject) => {
-    init.signal.addEventListener("abort", () => reject(init.signal.reason), { once: true });
-  });
+  const timeout = spyOn(AbortSignal, "timeout").mockImplementation(() => originalTimeout(200));
+  respond = () => new Promise(() => {});
   try {
-    await expect(createStructuredOpenAIResponse(responseOptions)).rejects.toMatchObject({ name: "TimeoutError" });
+    await expect(sendToClaude({ messages: [{ role: "user", content: [{ type: "text", text: "{}" }] }] }))
+      .rejects.toMatchObject({ name: "TimeoutError" });
   } finally {
     timeout.mockRestore();
   }
@@ -356,12 +468,12 @@ test("external edits during generation are preserved and reported as a failure",
   const file = await writeCatalog(original);
   const external = structuredClone(original);
   external.strings["z.pay"].comment = "Edited while translating";
-  globalThis.fetch = async (_url, init) => {
+  respond = async (job) => {
     await fs.writeFile(file, xcstringsStringify(external));
-    return completed(request(init).items);
+    return completed(job.items);
   };
   expect(await main([file])).toBe(1);
-  expect(JSON.parse(await fs.readFile(file, "utf8"))).toEqual(external);
+  expect(await readCatalog(file)).toEqual(external);
   expect(errorLog.mock.calls.flat().some((line) => line.includes("Catalog changed on disk"))).toBe(true);
 });
 
@@ -370,33 +482,18 @@ test("SIGTERM saves completed work, aborts pending requests, and exits unsuccess
   const secondFile = path.join(directory, "Second.xcstrings");
   const secondContent = xcstringsStringify(catalog(["de"]));
   await fs.writeFile(secondFile, secondContent);
-  const preload = path.join(directory, "mock-network.mjs");
-  await fs.writeFile(preload, `
-    globalThis.fetch = async (_url, init) => {
-      const body = JSON.parse(init.body);
-      if (body.text.format.name !== "translation_batch_de") {
-        return new Promise((_resolve, reject) => {
-          init.signal.addEventListener("abort", () => reject(init.signal.reason), { once: true });
-        });
-      }
-      const items = JSON.parse(body.input[0].content[0].text.split("Strings to translate:\\n")[1].split("\\n\\nReturn")[0]);
-      return Response.json({ status: "completed", output_text: JSON.stringify({
-        translations: items.map((item) => ({ id: item.id, translation: "Saved %@" }))
-      }) });
-    };
-  `);
-  const child = Bun.spawn([process.execPath, "--preload", preload,
-    path.join(import.meta.dir, "translate-xcstrings.mjs"), file, secondFile], {
-    stdout: "pipe", stderr: "pipe", env: { ...process.env, OPENAI_API_KEY: "test-key" },
+  respond = (job) => job.locale === "de" ? completed(job.items, () => "Saved %@") : new Promise(() => {});
+  const child = Bun.spawn([process.execPath, path.join(import.meta.dir, "translate-xcstrings.mjs"), file, secondFile], {
+    stdout: "pipe", stderr: "pipe", env: process.env,
   });
   const output = new Response(child.stdout).text();
   const errors = new Response(child.stderr).text();
   try {
-    await waitUntil(async () => JSON.parse(await fs.readFile(file, "utf8"))
+    await waitUntil(async () => (await readCatalog(file))
       .strings["z.pay"].localizations.de?.stringUnit.value === "Saved %@");
     child.kill("SIGTERM");
     expect(await child.exited).toBe(143);
-    const saved = JSON.parse(await fs.readFile(file, "utf8"));
+    const saved = await readCatalog(file);
     expect(saved.strings["z.pay"].localizations.de.stringUnit.value).toBe("Saved %@");
     expect(saved.strings["z.pay"].localizations.fr).toBeUndefined();
     expect(await fs.readFile(secondFile, "utf8")).toBe(secondContent);
