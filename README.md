@@ -74,12 +74,13 @@ Open `ios/Tidex.xcodeproj` in Xcode and build.
 
 ### Environment Variables
 
-Create `.env.local` in the repository root when running the iOS localization scripts:
+The iOS string translator (`bun run localize`) calls Claude through the `ant` CLI. Install it with `brew install anthropics/tap/ant` and sign in with `ant auth login`.
+
+The App Store metadata generator (`ios/Scripts/generate-appstore-metadata.mjs`) uses OpenAI. Create `.env.local` in the repository root before running it:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-5.6-luna
-OPENAI_REASONING_EFFORT=max
 ```
 
 ## Documentation
