@@ -13,7 +13,7 @@ TidexApp/
 │   ├── RootView             # Root navigation based on auth state
 │   └── MainTabView          # Tab bar
 ├── Features/                # Feature-specific screens & view models
-│   ├── AddShift/            # Shift creation/editing, addShiftDestination
+│   ├── AddShift/            # Shift creation/editing, addShiftRoute
 │   ├── Auth/                # Login, signup, MFA, password reset
 │   ├── CalendarImport/      # Import shifts from ICS files
 │   ├── Celebration/         # Milestone celebrations

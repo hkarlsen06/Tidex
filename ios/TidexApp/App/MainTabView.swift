@@ -56,7 +56,7 @@ struct MainTabView: View {
   @State private var adminSheetInitialReportId: String?
 
   // State for Home-owned stats navigation
-  @State private var showHomeStats = false
+  @State private var homePath: [HomeRoute] = []
 
   /// The invite link waiting for the user's answer. Its sheet closes the pending invite.
   @State private var inviteConfirmation: InviteConfirmationModel?
@@ -150,7 +150,7 @@ struct MainTabView: View {
               value: Tab.home
             ) {
               tabHost(for: .home) {
-                DashboardView(selectedTab: tabSelection, showStatsView: $showHomeStats)
+                DashboardView(selectedTab: tabSelection, path: $homePath)
               }
             }
 
@@ -421,8 +421,8 @@ struct MainTabView: View {
       // Like any pushed screen, re-tapping the tab goes back to its root.
       addShiftNavigator.hostTab = nil
       pendingCurrentMonthTab = nil
-    } else if tab == .home, showHomeStats {
-      showHomeStats = false
+    } else if tab == .home, homePath.last == .stats {
+      homePath.removeLast()
       pendingCurrentMonthTab = nil
     } else if tab == .friends || tab == .profile {
       NotificationCenter.default.post(

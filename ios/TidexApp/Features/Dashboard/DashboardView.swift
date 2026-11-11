@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// Screens pushed on the Home tab.
+enum HomeRoute: AddShiftPathElement {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  case stats
+  case addShift
+}
+
 /// Dashboard view showing the main financial overview
 /// Displays payroll, total earnings, and featured shift cards
 struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
@@ -9,7 +15,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   /// Binding to the selected tab for navigation
   @Binding var selectedTab: MainTabView.Tab  // swiftlint:disable:this explicit_acl type_contents_order
-  @Binding var showStatsView: Bool  // swiftlint:disable:this explicit_acl type_contents_order
+  /// The Home tab's navigation path. MainTabView owns it so re-tapping Home can pop Stats.
+  @Binding var path: [HomeRoute]  // swiftlint:disable:this explicit_acl type_contents_order
 
   @State var viewModel = DashboardViewModel()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   private let calendarSubscriptionStore = CalendarSubscriptionStore.shared  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
@@ -51,7 +58,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   /// The pre-auth demo shift, when setup ended before the user kept or declined it.
   @State var carriedDemoShift: CarriedDemoShift?  // swiftlint:disable:this type_contents_order
   @State var payAssumptions: PayAssumptions?  // swiftlint:disable:this type_contents_order
-  @State private var addShiftPath: [AddShiftRoute] = []  // swiftlint:disable:this type_contents_order
 
   // Action to run once the currently-presented sheet finishes dismissing, so two sheets
   // never race to present at once (see `performPendingSheetAction`).
@@ -400,7 +406,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   private var navigationContent: some View {
-    NavigationStack(path: $addShiftPath) {  // swiftlint:disable:this closure_body_length
+    NavigationStack(path: $path) {  // swiftlint:disable:this closure_body_length
       ZStack {
         TidexAppBackground()
 
@@ -452,11 +458,16 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           statsToolbarButton
         }
       }
-      .navigationDestination(isPresented: $showStatsView) {
-        StatsView()
-          .id(coordinator.userId)
+      .navigationDestination(for: HomeRoute.self) { route in
+        switch route {
+        case .stats:
+          StatsView()
+            .id(coordinator.userId)
+        case .addShift:
+          AddShiftScreen(tab: .home)
+        }
       }
-      .addShiftRoute(on: .home, path: $addShiftPath)
+      .addShiftRoute(on: .home, path: $path)
       .adaptiveToolbarTransaction()
     }
   }
@@ -464,7 +475,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   private var statsToolbarButton: some View {
     Button {
       Haptics.play(.light)
-      showStatsView = true
+      path.append(.stats)
     } label: {
       Image(systemName: "chart.bar.xaxis")
         .accessibilityHidden(true)
@@ -798,10 +809,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 #Preview {
   struct PreviewWrapper: View {
     @State private var selectedTab: MainTabView.Tab = .home
-    @State private var showStatsView = false  // swiftlint:disable:this explicit_type_interface
+    @State private var path: [HomeRoute] = []  // swiftlint:disable:this explicit_type_interface
 
     var body: some View {
-      DashboardView(selectedTab: $selectedTab, showStatsView: $showStatsView)
+      DashboardView(selectedTab: $selectedTab, path: $path)
         .environment(AppCoordinator.shared)
     }
   }

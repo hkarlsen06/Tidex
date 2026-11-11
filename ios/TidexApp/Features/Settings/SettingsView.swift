@@ -248,7 +248,10 @@ extension SettingsView {
             }
           }
         }
-        .addShiftDestination(in: isTabRoot ? .profile : nil)
+        .navigationDestination(for: AddShiftRoute.self) { _ in
+          AddShiftScreen(tab: isTabRoot ? .profile : nil)
+        }
+        .addShiftRoute(on: isTabRoot ? .profile : nil, path: $navigationPath)
         .navigationDestination(for: SettingsDestination.self) { destination in
           settingsDestinationView(destination)
             .adaptiveContentWidth()

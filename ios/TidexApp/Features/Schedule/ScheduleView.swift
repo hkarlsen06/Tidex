@@ -269,6 +269,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       .toolbar {
         shiftsToolbarContent
       }
+      .navigationDestination(for: AddShiftRoute.self) { _ in AddShiftScreen(tab: .shifts) }
       .addShiftRoute(on: .shifts, path: $addShiftPath)
       .onAppear {
         publishToolbarState()

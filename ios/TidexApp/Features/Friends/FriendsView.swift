@@ -2,9 +2,10 @@ import SwiftUI
 import UIKit
 import os
 
-private enum FriendsRoute: Hashable {
+private enum FriendsRoute: AddShiftPathElement {
   case sharer(SharedUser)
   case chat(FriendChatRoute)
+  case addShift
 
   var isChat: Bool {
     if case .chat = self { true } else { false }
@@ -113,9 +114,10 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
         switch route {
         case .sharer(let sharer): sharedShiftsDetailDestination(for: sharer)
         case .chat(let route): friendChatDestination(for: route)
+        case .addShift: AddShiftScreen(tab: .friends)
         }
       }
-      .addShiftDestination(in: .friends, hidesTabBar: isChatTabBarHidden)
+      .addShiftRoute(on: .friends, path: $navigationPath, hidesTabBar: isChatTabBarHidden)
       .adaptiveToolbarTransaction()
     }
     .task(id: startupTaskID) {
