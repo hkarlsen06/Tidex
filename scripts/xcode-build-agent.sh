@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "${1:-}" = "--devices" ]; then
+  if command -v ios-agent >/dev/null 2>&1; then
+    exec ios-agent devices --json
+  fi
+  echo "ios-agent is unavailable; use XCODE_TEST_AGENT_DESTINATION for an explicit destination" >&2
+  exit 2
+fi
+
 MODE="text"
 EXTRA_ARGS=()
 while [ $# -gt 0 ]; do

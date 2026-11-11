@@ -20,7 +20,7 @@ for destination, expected in [
 ]:
     result = subprocess.check_output([
         "bash", "-c",
-        'DESTINATION="$1"\nBUILD_DESTINATION=' + destination_selection
+        'DESTINATION="$1"\nSAFE_SELECTION=1\nUNSAFE_SELECTION=0\nBUILD_DESTINATION=' + destination_selection
         + 'esac\nprintf "%s" "$BUILD_DESTINATION"', "test", destination,
     ], text=True)
     assert result == expected, (destination, result, expected)

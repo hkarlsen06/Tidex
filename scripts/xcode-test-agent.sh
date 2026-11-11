@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# A run has two phases, so one agent's tests and another agent's build run at
-# the same time:
-#   1. build-for-testing for the destination platform under the machine-wide
-#      xcodebuild lock (scripts/lib/xcode-agent-throttle.sh), then release it
-#   2. test-without-building on the destination
-# Without XCODE_TEST_AGENT_DESTINATION, phase 2 tests on any free shared
-# simulator, or on the one this worktree took with `scripts/lock acquire
-# simulator`, under that simulator's lock from scripts/lock. A destination that
-# names a shared simulator waits for that one. A physical device (platform=iOS)
-# or any other simulator takes no simulator lock. A run never holds both locks,
-# nor waits for one while it holds the other.
+if [ "${1:-}" = "--devices" ]; then
+  if command -v ios-agent >/dev/null 2>&1; then
+    exec ios-agent devices --json
+  fi
+  echo "ios-agent is unavailable; use XCODE_TEST_AGENT_DESTINATION for an explicit destination" >&2
+  exit 2
+fi
+
+# The host shim queues both invocations. Audited suites prefer the approved
+# spare returned by ios-agent; full suites and UI tests use the simulator.
+# An explicit destination is preserved. Physical app data is never reset.
 
 MODE="text"
 EXTRA_ARGS=()
@@ -157,9 +157,40 @@ SIMULATOR_LOCK=simulator
 TEST_SIMULATOR_UDID=""
 SHUTDOWN_TEST_SIMULATOR=0
 DESTINATION="${XCODE_TEST_AGENT_DESTINATION:-}"
+AUTO_DEVICE=1
+SAFE_SELECTION=0
+UNSAFE_SELECTION=0
+EXPECT_DESTINATION=0
+for arg in ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}; do
+  if [ "$EXPECT_DESTINATION" = "1" ]; then
+    [ -n "$DESTINATION" ] || DESTINATION="$arg"
+    EXPECT_DESTINATION=0
+    continue
+  fi
+  case "$arg" in
+    -destination) AUTO_DEVICE=0; EXPECT_DESTINATION=1 ;;
+    -only-testing:TidexAppTests/ISO8601TimestampTests|-only-testing:TidexAppTests/ISO8601TimestampTests/*|-only-testing:TidexAppTests/AppDeepLinkResolverTests|-only-testing:TidexAppTests/AppDeepLinkResolverTests/*) SAFE_SELECTION=1 ;;
+    -only-testing*|-skip-testing*|-testPlan*|-xctestrun*) AUTO_DEVICE=0; UNSAFE_SELECTION=1 ;;
+  esac
+done
+if [ "$SAFE_SELECTION" = "0" ]; then
+  AUTO_DEVICE=0
+fi
+if [ "${INCLUDE_UI:-0}" = "1" ] || [ "${XCODE_TEST_AGENT_INCLUDE_UI_TESTS:-0}" = "1" ]; then
+  AUTO_DEVICE=0
+  UNSAFE_SELECTION=1
+fi
+if [ -z "$DESTINATION" ] && [ "$AUTO_DEVICE" = "1" ]; then
+  DESTINATION="$(xa_physical_destination)"
+fi
 BUILD_DESTINATION='generic/platform=iOS Simulator'
 case "$DESTINATION" in
-  platform=iOS,*|platform=iOS) BUILD_DESTINATION='generic/platform=iOS' ;;
+  platform=iOS,*|platform=iOS)
+    if [ "$SAFE_SELECTION" != "1" ] || [ "$UNSAFE_SELECTION" = "1" ]; then
+      echo "Physical tests require audited device-safe -only-testing selections; use a simulator for other suites" >&2
+      exit 2
+    fi
+    BUILD_DESTINATION='generic/platform=iOS' ;;
 esac
 if [ -n "$DESTINATION" ]; then
   SIMULATOR_LOCK=""
@@ -168,11 +199,10 @@ if [ -n "$DESTINATION" ]; then
     DESTINATION_SIMULATOR=""
   fi
   if [ -n "$DESTINATION_SIMULATOR" ]; then
-    if grep -qxF "${DESTINATION_SIMULATOR#*|}" <<<"$("$(dirname "$0")/lock" pool)"; then
-      SIMULATOR_LOCK="${DESTINATION_SIMULATOR#*|}"
-    else
-      TEST_SIMULATOR_UDID="${DESTINATION_SIMULATOR%%|*}"
-    fi
+    case "${DESTINATION_SIMULATOR#*|}" in
+      'Shared iPhone'|'Shared iPhone 2'|'Shared iPhone 3') SIMULATOR_LOCK="${DESTINATION_SIMULATOR#*|}" ;;
+      *) TEST_SIMULATOR_UDID="${DESTINATION_SIMULATOR%%|*}" ;;
+    esac
   fi
 fi
 

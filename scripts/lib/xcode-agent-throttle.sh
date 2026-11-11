@@ -15,13 +15,14 @@
 #   XCODE_AGENT_LOCK_DIR               lock path (default /tmp/xcode-agent.lock)
 #   XCODE_AGENT_NO_LOCK=1              skip the machine-wide lock
 #   XCODE_AGENT_NICE=N                 nice level, 0 disables (default 10)
-#   XCODE_AGENT_JOBS=N                 xcodebuild -jobs (default: xcodebuild's own)
+#   XCODE_AGENT_JOBS=N                 xcodebuild -jobs (default 2)
 #   XCODE_TEST_AGENT_PARALLEL=1        allow Xcode parallel testing (clones simulators)
 #   XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1  run *UITests targets in an unfiltered run
 
 XA_LOCK_DIR="${XCODE_AGENT_LOCK_DIR:-/tmp/xcode-agent.lock}"
 XA_LOCK_HELD=0
 XA_NICE="${XCODE_AGENT_NICE:-10}"
+XA_JOBS="${XCODE_AGENT_JOBS:-2}"
 XA_ARGS=()
 XA_PREFIX=()
 
@@ -113,9 +114,7 @@ xa_configure() {
     exportArchive) return 0 ;;
   esac
 
-  if [ -n "${XCODE_AGENT_JOBS:-}" ]; then
-    XA_ARGS=(-jobs "$XCODE_AGENT_JOBS")
-  fi
+  XA_ARGS=(-jobs "$XA_JOBS")
 
   if [ "$mode" != "test" ]; then
     return 0
@@ -146,3 +145,21 @@ xa_configure() {
     xa_log "unfiltered run: skipping UI test targets:$skipped (XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1 to include)"
   fi
 }
+
+xa_physical_destination() {
+  if ! command -v ios-agent >/dev/null 2>&1; then
+    xa_log "ios-agent is unavailable; using a shared simulator (set XCODE_TEST_AGENT_DESTINATION for an explicit destination)"
+    return 0
+  fi
+  local destination
+  if destination="$(ios-agent physical-destination)"; then
+    printf '%s\n' "$destination"
+  else
+    xa_log "device discovery failed; using a shared simulator"
+  fi
+}
+
+if ! [[ "$XA_JOBS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "XCODE_AGENT_JOBS must be a positive integer" >&2
+  exit 2
+fi

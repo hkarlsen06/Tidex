@@ -13,6 +13,8 @@
 # `simulator` is a pool of shared simulators with one lock each. Taking it
 # renews the slot this worktree's session holds, or else takes the first free
 # slot, boots its simulator if needed, and waits while every slot is busy.
+# Only Shared iPhone is enabled by default. IOS_AGENT_SIMULATORS=2 or 3
+# explicitly enables extra slots, which shut down when their locks release.
 # `acquire simulator` prints the simulator's name on stdout, as in
 # SIM="$(scripts/lock acquire simulator)" && xcrun simctl install "$SIM" ...
 # `run simulator` passes AGENT_SIMULATOR_NAME and AGENT_SIMULATOR_UDID to its
@@ -52,6 +54,12 @@ SIMULATOR_POOL="simulator|Shared iPhone
 simulator-2|Shared iPhone 2
 simulator-3|Shared iPhone 3"
 
+SIMULATOR_COUNT="${IOS_AGENT_SIMULATORS:-1}"
+case "$SIMULATOR_COUNT" in
+  1|2|3) ;;
+  *) echo "IOS_AGENT_SIMULATORS must be 1, 2, or 3" >&2; exit 2 ;;
+esac
+
 mkdir -p "$REPO_LOCK_ROOT" "$SIMULATOR_LOCK_ROOT"
 
 # Prints the simulator of a slot lock, or nothing for any other lock.
@@ -66,9 +74,10 @@ slot_simulator() {
 # Prints the locks that <name> may take, one per line: every slot for
 # `simulator`, one slot for a shared simulator's name, else the name itself.
 candidates() {
-  local slot simulator found=0
+  local slot simulator found=0 index=0
   while IFS='|' read -r slot simulator; do
-    if [ "$1" = simulator ] || [ "$1" = "$simulator" ]; then
+    index=$((index + 1))
+    if { [ "$1" = simulator ] && [ "$index" -le "$SIMULATOR_COUNT" ]; } || [ "$1" = "$simulator" ]; then
       echo "$slot"
       found=1
     fi
@@ -150,6 +159,12 @@ describe_all() {
 # `acquire`.
 take() {
   local locks pid="$2" waited=0 lock
+  case "$1" in
+    'Shared iPhone 2'|simulator-2)
+      [ "$SIMULATOR_COUNT" -ge 2 ] || { echo "Shared iPhone 2 requires IOS_AGENT_SIMULATORS=2 or 3" >&2; return 2; } ;;
+    'Shared iPhone 3'|simulator-3)
+      [ "$SIMULATOR_COUNT" -ge 3 ] || { echo "Shared iPhone 3 requires IOS_AGENT_SIMULATORS=3" >&2; return 2; } ;;
+  esac
   locks="$(candidates "$1")"
   while true; do
     for lock in $locks; do
@@ -184,8 +199,7 @@ take() {
   done
 }
 
-# Sets SIMULATOR_UDID for the simulator of slot <lock> and boots it when it is
-# shut down. Shared simulators stay booted.
+# Sets SIMULATOR_UDID for the simulator of slot <lock> and boots it when shut down.
 start_simulator() {
   local simulator state
   simulator="$(slot_simulator "$1")"
@@ -209,6 +223,15 @@ for devices in runtimes.values():
   fi
 }
 
+shutdown_extra_simulator() {
+  local simulator
+  case "$1" in
+    simulator-2|simulator-3)
+      simulator="$(slot_simulator "$1")"
+      xcrun simctl shutdown "$simulator" >/dev/null 2>&1 || true ;;
+  esac
+}
+
 # Marks this worktree's session as used now, so it stays ahead of the TTL.
 renew() {
   echo "$OWNER||$(date +%s)" >"$(lock_dir "$1")/owner"
@@ -228,16 +251,22 @@ restore_session() {
 release_run() {
   local pid
   IFS='|' read -r _ pid _ <<<"$(read_lock "$1")"
-  [ "$pid" != "$$" ] || rm -rf "$(lock_dir "$1")"
+  if [ "$pid" = "$$" ]; then
+    shutdown_extra_simulator "$1"
+    rm -rf "$(lock_dir "$1")"
+  fi
 }
 
 release() {
-  local name="$1" dir lock
-  if [ -n "$(slot_simulator "$(candidates "$name" | head -1)")" ]; then
+  local name="$1" dir lock locks
+  locks="$(candidates "$name")"
+  [ "$name" != simulator ] || locks="simulator simulator-2 simulator-3"
+  if [ -n "$(slot_simulator "${locks%% *}")" ] || [ "$name" = simulator ]; then
     # A slot this worktree's `run` holds belongs to that run, maybe another
     # agent's in this worktree, so only sessions are released.
-    for lock in $(candidates "$name"); do
+    for lock in $locks; do
       if session_held_by_me "$lock"; then
+        shutdown_extra_simulator "$lock"
         rm -rf "$(lock_dir "$lock")"
       fi
     done
@@ -318,9 +347,9 @@ case "${1:-}" in
     done
     ;;
   pool)
-    while IFS='|' read -r _ simulator; do
-      echo "$simulator"
-    done <<<"$SIMULATOR_POOL"
+    for slot in $(candidates simulator); do
+      slot_simulator "$slot"
+    done
     ;;
   *)
     usage
