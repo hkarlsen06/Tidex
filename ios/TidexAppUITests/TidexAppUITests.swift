@@ -1294,7 +1294,7 @@ final class TidexAppUITests: XCTestCase {
     let addFriend = makeFriendsDesignApp(view: "add-friend")
     addFriend.launch()
     assertExists(
-      text(containingLabel: "right away. You can stop sharing", in: addFriend),
+      text(containingLabel: "see your shifts right away", in: addFriend),
       in: addFriend, timeout: defaultTimeout,
       message: "Expected the add friend form to say sharing starts right away")
     attachAppStoreScreenshot(addFriend, name: "friends-add-friend")

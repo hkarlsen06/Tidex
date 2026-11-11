@@ -237,12 +237,33 @@ struct SharerListView: View {
   var highlightedChatUserId: String?
   // swiftlint:disable:next explicit_acl
   var openingThreadUserId: String?
-  var onAddFriend: (() -> Void)?
+  /// Friends who share with the user while the user does not share back.
+  var shareBackUserIds: Set<String> = []
+  var sharingBackUserId: String?
+  var onShareBack: ((SharedUser) -> Void)?
+  var onInvite: () -> Void = {}
+  var onAddByIdentifier: () -> Void = {}
   /// Shown instead of the empty state when loading failed and nobody is cached.
   var loadErrorMessage: String?
   var onRetry: (() -> Void)?
+  /// The visible height of the scroll view, so the states without a list sit in its middle.
+  var viewportHeight: CGFloat = 0
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  private enum Content: Equatable {
+    case loading
+    case loadFailed(String)
+    case empty
+    case list
+  }
+
+  private var content: Content {
+    let hasNobody = sharers.isEmpty && hiddenSharers.isEmpty
+    if hasNobody, !hasFinishedInitialLoad || isLoading { return .loading }
+    if hasNobody, let loadErrorMessage { return .loadFailed(loadErrorMessage) }
+    return sortedVisibleSharers.isEmpty ? .empty : .list
+  }
 
   private var sortedVisibleSharers: [SharedUser] {
     ordering.visibleSharers(visible: sharers, hidden: hiddenSharers)
@@ -260,19 +281,31 @@ struct SharerListView: View {
   }
 
   var body: some View {
-    Group {
-      if (!hasFinishedInitialLoad && sharers.isEmpty && hiddenSharers.isEmpty)
-        || (isLoading && sharers.isEmpty && hiddenSharers.isEmpty)
-      {
-        loadingState
-      } else if sharers.isEmpty, hiddenSharers.isEmpty, let loadErrorMessage {
-        loadErrorState(message: loadErrorMessage)
-      } else if sortedVisibleSharers.isEmpty {
-        FriendsListEmptyState(onAddFriend: onAddFriend)
-      } else {
+    // ZStack, not Group, so the swap between states animates.
+    ZStack {
+      switch content {
+      case .loading:
+        centered(loadingState)
+
+      case .loadFailed(let message):
+        centered(loadErrorState(message: message))
+
+      case .empty:
+        centered(
+          FriendsListEmptyState(onInvite: onInvite, onAddByIdentifier: onAddByIdentifier))
+
+      case .list:
         sharersList
+          .transition(.opacity)
       }
     }
+    .motionAnimation(.pageTransition, value: content, reduceMotion: reduceMotion)
+  }
+
+  private func centered(_ state: some View) -> some View {
+    state
+      .frame(maxWidth: .infinity, minHeight: viewportHeight)
+      .transition(.opacity)
   }
 
   private func loadErrorState(message: String) -> some View {
@@ -287,7 +320,6 @@ struct SharerListView: View {
           .tint(.tidexBlue)
       }
     }
-    .padding(.vertical, Spacing.xl)
     .announcesToVoiceOver(message)
   }
 
@@ -300,8 +332,6 @@ struct SharerListView: View {
         .font(.tidexSubheadline)
         .foregroundStyle(Color.tidexTextMuted)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .padding(.vertical, 80)
   }
 
   private var sharersList: some View {
@@ -352,7 +382,11 @@ struct SharerListView: View {
       },
       isCalendarAvailable: isCalendarAvailable,
       isOpeningMessage: isOpeningMessage,
-      unreadMessageCount: unreadChatCountsByUserId[sharer.id] ?? 0
+      unreadMessageCount: unreadChatCountsByUserId[sharer.id] ?? 0,
+      connection: chatOnlyUserIds.contains(sharer.id)
+        ? .userSharesOnly : (shareBackUserIds.contains(sharer.id) ? .theyShareOnly : .mutual),
+      isSharingBack: sharingBackUserId == sharer.id,
+      onShareBack: onShareBack.map { onShareBack in { onShareBack(sharer) } }
     )
   }
 }

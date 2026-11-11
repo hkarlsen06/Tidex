@@ -373683,6 +373683,24 @@
         }
       }
     },
+    "sharing.addByIdentifier" : {
+      "comment" : "Button that opens the sheet for adding a friend by typing their email or username",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add with email or username"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til med e-post eller brukernavn"
+          }
+        }
+      }
+    },
     "sharing.addFriend" : {
       "comment" : "Title of the add friend sheet and button that opens it.",
       "extractionState" : "manual",
@@ -373966,564 +373984,564 @@
       }
     },
     "sharing.addFriend.sharesRightAway" : {
-      "comment" : "Note under the add friend form. Adding a friend starts sharing your shifts with them immediately, with no request step.",
+      "comment" : "Footer of the add friend form. Adding someone shares the user's shifts with them at once",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "الشخص الذي تضيفه يرى نوبات عملك فورًا. يمكنك إيقاف المشاركة في أي وقت."
           }
         },
         "bg" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Човекът, когото добавите, веднага вижда смените ви. Можете да спрете споделянето по всяко време."
           }
         },
         "bn" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "আপনি যাকে যোগ করবেন, তিনি আপনার শিফটগুলো সঙ্গে সঙ্গেই দেখতে পাবেন। যেকোনো সময় শেয়ার করা বন্ধ করতে পারেন।"
           }
         },
         "ca" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "La persona que afegeixis veurà els teus torns de seguida. Pots deixar de compartir-los en qualsevol moment."
           }
         },
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba, kterou přidáte, uvidí vaše směny okamžitě. Sdílení můžete kdykoli zastavit."
           }
         },
         "da" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Den person, du tilføjer, kan se dine vagter med det samme. Du kan stoppe delingen når som helst."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Die Person, die du hinzufügst, sieht deine Schichten sofort. Du kannst die Freigabe jederzeit beenden."
           }
         },
         "el" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Το άτομο που προσθέτεις βλέπει αμέσως τις βάρδιές σου. Μπορείς να διακόψεις την κοινοποίηση ανά πάσα στιγμή."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The person you add sees your shifts right away. You can stop sharing at any time."
+            "value" : "They see your shifts right away and can share theirs back. You can stop sharing at any time."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "La persona que añadas verá tus turnos de inmediato. Puedes dejar de compartirlos en cualquier momento."
           }
         },
         "et" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Inimene, kelle lisad, näeb su vahetusi kohe. Jagamise saad igal ajal lõpetada."
           }
         },
         "fa" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "فردی که اضافه می‌کنید، شیفت‌های شما را بلافاصله می‌بیند. هر زمان بخواهید می‌توانید اشتراک‌گذاری را متوقف کنید."
           }
         },
         "fi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Henkilö, jonka lisäät, näkee työvuorosi heti. Voit lopettaa jakamisen milloin tahansa."
           }
         },
         "fil" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Makikita agad ng taong idinadagdag mo ang mga shift mo. Maaari mong ihinto ang pagbabahagi anumang oras."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "La personne que vous ajoutez voit immédiatement vos shifts. Vous pouvez arrêter le partage à tout moment."
           }
         },
         "he" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "האדם שתוסיף יראה את המשמרות שלך מיד. אפשר להפסיק את השיתוף בכל עת."
           }
         },
         "hi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "जिस व्यक्ति को आप जोड़ते हैं, वह आपकी शिफ्टें तुरंत देख सकता है। आप कभी भी शेयर करना बंद कर सकते हैं।"
           }
         },
         "hr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba koju dodaš odmah vidi tvoje smjene. Dijeljenje možeš zaustaviti u bilo kojem trenutku."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "A hozzáadott személy azonnal látja a műszakjaidat. A megosztást bármikor leállíthatod."
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Orang yang Anda tambahkan langsung dapat melihat shift Anda. Anda dapat berhenti berbagi kapan saja."
           }
         },
         "is" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Aðilinn sem þú bætir við sér vaktirnar þínar strax. Þú getur hætt að deila hvenær sem er."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "La persona che aggiungi vede subito i tuoi turni. Puoi interrompere la condivisione in qualsiasi momento."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "追加した相手には、すぐにあなたのシフトが表示されます。いつでも共有を停止できます。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "추가한 사람은 내 근무를 바로 볼 수 있습니다. 언제든 공유를 중지할 수 있습니다."
           }
         },
         "lt" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Asmuo, kurį pridėsite, iškart matys jūsų pamainas. Bendrinimą galite bet kada sustabdyti."
           }
         },
         "lv" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Persona, ko pievienosi, uzreiz redzēs tavas maiņas. Kopīgošanu vari pārtraukt jebkurā laikā."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Personen du legger til ser vaktene dine med en gang. Du kan slutte å dele når som helst."
+            "value" : "Personen ser vaktene dine med en gang og kan dele sine tilbake. Du kan slutte å dele når som helst."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "De persoon die je toevoegt, ziet je diensten meteen. Je kunt op elk moment stoppen met delen."
           }
         },
         "nn" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Personen du legg til ser vaktene dine med ein gong. Du kan slutte å dele når som helst."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba, którą dodasz, od razu zobaczy Twoje zmiany. W każdej chwili możesz przestać je udostępniać."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "A pessoa que você adicionar verá seus turnos imediatamente. Você pode parar de compartilhar a qualquer momento."
           }
         },
         "ro" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Persoana pe care o adaugi îți vede turele imediat. Poți opri partajarea oricând."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Добавленный вами человек сразу увидит ваши смены. Вы можете прекратить делиться ими в любое время."
           }
         },
         "sk" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba, ktorú pridáte, uvidí vaše smeny okamžite. Zdieľanie môžete kedykoľvek zastaviť."
           }
         },
         "sl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Oseba, ki jo dodate, bo vaše izmene videla takoj. Deljenje lahko kadar koli prekinete."
           }
         },
         "sr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba koju dodaš odmah vidi tvoje smene. Deljenje možeš da prekineš u bilo kom trenutku."
           }
         },
         "sv" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Personen du lägger till ser dina arbetspass direkt. Du kan sluta dela när som helst."
           }
         },
         "sw" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Mtu unayemuongeza anaona zamu zako mara moja. Unaweza kuacha kushiriki wakati wowote."
           }
         },
         "ta" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "நீங்கள் சேர்க்கும் நபர் உங்கள் ஷிப்ட்களை உடனே பார்க்கலாம். எப்போது வேண்டுமானாலும் பகிர்வதை நிறுத்தலாம்."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "คนที่คุณเพิ่มจะเห็นกะงานของคุณทันที คุณหยุดแชร์ได้ทุกเมื่อ"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Eklediğiniz kişi vardiyalarınızı hemen görür. Paylaşmayı istediğiniz zaman durdurabilirsiniz."
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Додана вами особа одразу бачить ваші зміни. Ви можете припинити ділитися ними будь-коли."
           }
         },
         "ur" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "جسے آپ شامل کرتے ہیں، وہ آپ کی شفٹیں فوراً دیکھ سکتا ہے۔ آپ کسی بھی وقت شیئرنگ روک سکتے ہیں۔"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Người bạn thêm sẽ thấy các ca làm của bạn ngay lập tức. Bạn có thể ngừng chia sẻ bất cứ lúc nào."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "你添加的人会立即看到你的班次。你可以随时停止分享。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "你新增的人會立即看到你的班次。你可以隨時停止分享。"
           }
         }
       }
     },
     "sharing.addFriend.sharesRightAwayWithEarnings" : {
-      "comment" : "Note under the add friend form when Show earnings is on. Adding a friend starts sharing your shifts and earnings immediately, with no request step.",
+      "comment" : "Footer of the add friend form while Show earnings is on",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "الشخص الذي تضيفه يرى نوبات عملك وأرباحك فورًا. يمكنك إيقاف المشاركة في أي وقت."
           }
         },
         "bg" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Човекът, когото добавите, веднага вижда смените и приходите ви. Можете да спрете споделянето по всяко време."
           }
         },
         "bn" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "আপনি যাকে যোগ করবেন, তিনি আপনার শিফট ও উপার্জন সঙ্গে সঙ্গেই দেখতে পাবেন। যেকোনো সময় শেয়ার করা বন্ধ করতে পারেন।"
           }
         },
         "ca" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "La persona que afegeixis veurà els teus torns i els teus ingressos de seguida. Pots deixar de compartir-ho en qualsevol moment."
           }
         },
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba, kterou přidáte, uvidí vaše směny a výdělky okamžitě. Sdílení můžete kdykoli zastavit."
           }
         },
         "da" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Den person, du tilføjer, kan se dine vagter og din indtjening med det samme. Du kan stoppe delingen når som helst."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Die Person, die du hinzufügst, sieht deine Schichten und Einnahmen sofort. Du kannst die Freigabe jederzeit beenden."
           }
         },
         "el" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Το άτομο που προσθέτεις βλέπει αμέσως τις βάρδιες και τις αποδοχές σου. Μπορείς να διακόψεις την κοινοποίηση ανά πάσα στιγμή."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The person you add sees your shifts and earnings right away. You can stop sharing at any time."
+            "value" : "They see your shifts and earnings right away and can share their shifts back. You can stop sharing at any time."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "La persona que añadas verá tus turnos e ingresos de inmediato. Puedes dejar de compartirlos en cualquier momento."
           }
         },
         "et" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Inimene, kelle lisad, näeb su vahetusi ja teenistust kohe. Jagamise saad igal ajal lõpetada."
           }
         },
         "fa" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "فردی که اضافه می‌کنید، شیفت‌ها و درآمد شما را بلافاصله می‌بیند. هر زمان بخواهید می‌توانید اشتراک‌گذاری را متوقف کنید."
           }
         },
         "fi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Henkilö, jonka lisäät, näkee työvuorosi ja ansiosi heti. Voit lopettaa jakamisen milloin tahansa."
           }
         },
         "fil" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Makikita agad ng taong idinadagdag mo ang mga shift at kinikita mo. Maaari mong ihinto ang pagbabahagi anumang oras."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "La personne que vous ajoutez voit immédiatement vos shifts et vos revenus. Vous pouvez arrêter le partage à tout moment."
           }
         },
         "he" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "האדם שתוסיף יראה מיד את המשמרות ואת ההכנסות שלך. אפשר להפסיק את השיתוף בכל עת."
           }
         },
         "hi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "जिस व्यक्ति को आप जोड़ते हैं, वह आपकी शिफ्टें और कमाई तुरंत देख सकता है। आप कभी भी शेयर करना बंद कर सकते हैं।"
           }
         },
         "hr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba koju dodaš odmah vidi tvoje smjene i zaradu. Dijeljenje možeš zaustaviti u bilo kojem trenutku."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "A hozzáadott személy azonnal látja a műszakjaidat és a keresetedet. A megosztást bármikor leállíthatod."
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Orang yang Anda tambahkan langsung dapat melihat shift dan penghasilan Anda. Anda dapat berhenti berbagi kapan saja."
           }
         },
         "is" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Aðilinn sem þú bætir við sér vaktirnar þínar og tekjurnar þínar strax. Þú getur hætt að deila hvenær sem er."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "La persona che aggiungi vede subito i tuoi turni e i tuoi guadagni. Puoi interrompere la condivisione in qualsiasi momento."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "追加した相手には、すぐにあなたのシフトと収入が表示されます。いつでも共有を停止できます。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "추가한 사람은 내 근무와 수입을 바로 볼 수 있습니다. 언제든 공유를 중지할 수 있습니다."
           }
         },
         "lt" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Asmuo, kurį pridėsite, iškart matys jūsų pamainas ir uždarbį. Bendrinimą galite bet kada sustabdyti."
           }
         },
         "lv" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Persona, ko pievienosi, uzreiz redzēs tavas maiņas un ienākumus. Kopīgošanu vari pārtraukt jebkurā laikā."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Personen du legger til ser vaktene og inntjeningen din med en gang. Du kan slutte å dele når som helst."
+            "value" : "Personen ser vaktene og inntjeningen din med en gang og kan dele vaktene sine tilbake. Du kan slutte å dele når som helst."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "De persoon die je toevoegt, ziet je diensten en inkomsten meteen. Je kunt op elk moment stoppen met delen."
           }
         },
         "nn" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Personen du legg til ser vaktene og innteninga di med ein gong. Du kan slutte å dele når som helst."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba, którą dodasz, od razu zobaczy Twoje zmiany i zarobki. W każdej chwili możesz przestać je udostępniać."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "A pessoa que você adicionar verá seus turnos e ganhos imediatamente. Você pode parar de compartilhar a qualquer momento."
           }
         },
         "ro" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Persoana pe care o adaugi îți vede turele și veniturile imediat. Poți opri partajarea oricând."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Добавленный вами человек сразу увидит ваши смены и заработок. Вы можете прекратить делиться ими в любое время."
           }
         },
         "sk" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba, ktorú pridáte, uvidí vaše smeny a zárobky okamžite. Zdieľanie môžete kedykoľvek zastaviť."
           }
         },
         "sl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Oseba, ki jo dodate, bo vaše izmene in zaslužek videla takoj. Deljenje lahko kadar koli prekinete."
           }
         },
         "sr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Osoba koju dodaš odmah vidi tvoje smene i zaradu. Deljenje možeš da prekineš u bilo kom trenutku."
           }
         },
         "sv" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Personen du lägger till ser dina arbetspass och inkomster direkt. Du kan sluta dela när som helst."
           }
         },
         "sw" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Mtu unayemuongeza anaona zamu zako na mapato yako mara moja. Unaweza kuacha kushiriki wakati wowote."
           }
         },
         "ta" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "நீங்கள் சேர்க்கும் நபர் உங்கள் ஷிப்ட்களையும் வருவாயையும் உடனே பார்க்கலாம். எப்போது வேண்டுமானாலும் பகிர்வதை நிறுத்தலாம்."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "คนที่คุณเพิ่มจะเห็นกะงานและรายได้ของคุณทันที คุณหยุดแชร์ได้ทุกเมื่อ"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Eklediğiniz kişi vardiyalarınızı ve kazançlarınızı hemen görür. Paylaşmayı istediğiniz zaman durdurabilirsiniz."
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Додана вами особа одразу бачить ваші зміни й заробіток. Ви можете припинити ділитися ними будь-коли."
           }
         },
         "ur" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "جسے آپ شامل کرتے ہیں، وہ آپ کی شفٹیں اور آمدنی فوراً دیکھ سکتا ہے۔ آپ کسی بھی وقت شیئرنگ روک سکتے ہیں۔"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Người bạn thêm sẽ thấy các ca làm và thu nhập của bạn ngay lập tức. Bạn có thể ngừng chia sẻ bất cứ lúc nào."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "你添加的人会立即看到你的班次和收入。你可以随时停止分享。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "你新增的人會立即看到你的班次和收入。你可以隨時停止分享。"
           }
         }
@@ -375107,6 +375125,60 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已封鎖的使用者"
+          }
+        }
+      }
+    },
+    "sharing.card.cannotSeeYours" : {
+      "comment" : "Next to the Share back button on a friend's card. %@ is the friend's first name",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ can't see your shifts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ser ikke vaktene dine"
+          }
+        }
+      }
+    },
+    "sharing.card.noShiftsYet" : {
+      "comment" : "On a friend's card in the Friends list when they share with the user but have no shifts. Short, the space is narrow",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No shifts yet"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen vakter ennå"
+          }
+        }
+      }
+    },
+    "sharing.card.notSharingYet" : {
+      "comment" : "On a friend's card when the user shares with them but they do not share back. Short, the space is narrow",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not sharing shifts yet"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deler ikke vakter ennå"
           }
         }
       }
@@ -377085,6 +377157,60 @@
         }
       }
     },
+    "sharing.empty.body" : {
+      "comment" : "Explains invite links on the empty Friends tab",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send a link to a friend. When they open it, they share their shifts with you. You can share back."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send en lenke til en venn. Når de åpner den, deler de vaktene sine med deg. Du kan dele tilbake."
+          }
+        }
+      }
+    },
+    "sharing.empty.gotLink" : {
+      "comment" : "Hint on the empty Friends tab for someone who was sent an invite link but lost it",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Got a link? Open it again to connect."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Har du fått en lenke? Åpne den på nytt for å koble til."
+          }
+        }
+      }
+    },
+    "sharing.empty.title" : {
+      "comment" : "Title of the Friends tab when nobody shares their shifts with the user",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See when your friends work"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se når vennene dine jobber"
+          }
+        }
+      }
+    },
     "sharing.error.addFriend" : {
       "comment" : "Error when adding a friend fails.",
       "extractionState" : "manual",
@@ -377363,288 +377489,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法新增好友"
-          }
-        }
-      }
-    },
-    "sharing.error.addFriendEmpty" : {
-      "comment" : "Error when the add friend field is submitted empty.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يرجى إدخال بريد إلكتروني أو رقم هاتف"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Моля, въведете имейл или телефонен номер"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "দয়া করে একটি ইমেল বা ফোন নম্বর প্রবেশ করুন"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introdueix un correu electrònic o número de telèfon"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prosím zadejte e-mail nebo telefonní číslo"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Angiv venligst en e-mail eller telefonnummer"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bitte geben Sie eine E-Mail oder Telefonnummer ein"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Παρακαλώ εισάγετε ένα email ή αριθμό τηλεφώνου"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please enter an email or phone number"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Por favor, ingresa un correo electrónico o número de teléfono"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Palun sisestage e-posti aadress või telefoninumber"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لطفاً ایمیل یا شماره تلفن وارد کنید"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anna sähköpostiosoite tai puhelinnumero"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mangyaring magbigay ng email o numero ng telepono"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Veuillez entrer une e-mail ou un numéro de téléphone"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "אנא הזן דוא״ל או מספר טלפון"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कृपया ईमेल या फोन नंबर दर्ज करें"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unesite e-poštu ili telefonski broj"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kérjük, adjon meg egy e-mail-címet vagy telefonszámot"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Silakan masukkan email atau nomor telepon"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vinsamlegast sláðu inn netfang eða símanúmer"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inserisci un'e-mail o un numero di telefono"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メールアドレスまたは電話番号を入力してください"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이메일 또는 전화번호를 입력해주세요"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Įveskite el. pašto adresą arba telefono numerį"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lūdzu ievadiet e-pasta adresi vai tālruņa numuru"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vennligst oppgi en e-post eller telefonnummer"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vennligst oppgi en e-post eller telefonnummer"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vennligst oppgi ein e-post eller telefonnummer"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Proszę podać e-mail lub numer telefonu"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Por favor, insira um e-mail ou número de telefone"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vă rugăm introduceți o adresă de e-mail sau un număr de telefon"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Пожалуйста, введите электронную почту или номер телефона"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prosím zadajte e-mail alebo telefónne číslo"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vnesite e-pošto ali telefonsko številko"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Molimo unesite e-poštu ili broj telefona"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ange en e-postadress eller telefonnummer"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tafadhali ingiza barua pepe au namba ya simu"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ஈமெயிল் அல்லது தொலைபேசி எண்ணை உள்ளிடவும்"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "โปรดป้อนอีเมลหรือเบอร์โทรศัพท์"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lütfen bir e-posta veya telefon numarası girin"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Будь ласка, введіть електронну пошту або номер телефону"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "براہ کرم ای میل یا فون نمبر درج کریں"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vui lòng nhập email hoặc số điện thoại"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请输入电子邮件或电话号码"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請輸入電子郵件或電話號碼"
           }
         }
       }
@@ -382871,570 +382715,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "向 %@ 顯示我的收入"
-          }
-        }
-      }
-    },
-    "sharing.noSharers" : {
-      "comment" : "Empty state title on the friends screen when nobody shares shifts with the user.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا أحد يشارك معك"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Никой не споделя с вас"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "কেউ আপনার সাথে শেয়ার করছে না"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nadie comparteix contigo"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nikdo s vámi nesdílí"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen deler med dig"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niemand teilt mit Ihnen"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Κανείς δεν κοινοποιεί με εσάς"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No one is sharing with you"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nadie comparte contigo"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keegi sinu vahte jagama ei ole"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "هیچ کسی با شما اشتراک نمی‌کند"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kukaan ei jaa sinulle"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Walang nagbabahagi sa iyo"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Personne ne partage avec vous"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "אף אחד לא משתף איתך"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कोई भी आपके साथ शेयर नहीं कर रहा है"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nitko ne dijeli s tobom"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senki sem oszt meg veled"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak ada yang berbagi dengan Anda"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enginn er að deila með þér"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessuno condivide con te"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あなたとシェアしている人はいません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "당신과 공유하는 사람이 없음"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niekas su tavimi nebendrina"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neviens ar jums nekoplietoja"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen deler med deg"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen deler med deg"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen deler med deg"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nikt nie udostępnia z tobą"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ninguém está compartilhando com você"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nimeni nu partajează cu tine"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Никто не делится с вами"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nikto s vami nezdieľa"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nihče ne deli s tabo"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niko ne deli sa vama"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen delar med dig"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hakuna anayehisa na wewe"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "யாரும் உனக்குப் பகிர்ந்துகொள்ளவில்லை"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ไม่มีใครแชร์กับคุณ"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seninle kimse paylaşmıyor"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ніхто не ділиться з вами"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "کوئی آپ کے ساتھ شیئر نہیں کر رہا"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không ai chia sẻ với bạn"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有人与您分享"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有人與你分享"
-          }
-        }
-      }
-    },
-    "sharing.noSharersDescription" : {
-      "comment" : "Empty state text under the no sharers title on the friends screen.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "عندما يشارك شخص ما وردياته معك، ستظهر هنا"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Когато някой споделя смените си с вас, те ще се появят тук"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "যখন কেউ তাদের শিফট আপনার সাথে শেয়ার করে, তখন সেগুলি এখানে প্রদর্শিত হবে"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quan algú comparteixi els seus torns amb tu, apareixeran aquí"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Když si někdo sdílí své směny s vámi, zobrazí se zde"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Når nogen deler deres vakter med dig, vises de her"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wenn jemand seine Schichten mit Ihnen teilt, werden diese hier angezeigt"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Όταν κάποιος κοινοποιεί τις βάρδιες του με εσάς, θα εμφανίζονται εδώ"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When someone shares their shifts with you, they will appear here"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuando alguien comparta sus turnos contigo, aparecerán aquí"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kui keegi jagab sinuga oma vahte, kuvatakse need siin"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "هنگامی که کسی شیفت‌های خود را با شما به اشتراک بگذارد، اینجا نمایش داده می‌شود"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kun joku jakaa vuoronsa sinulle, ne näkyvät täällä"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kapag may nagbahagi ng kanilang mga shift sa iyo, lilitaw sila dito"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quand quelqu'un partage ses vagues avec vous, elles apparaîtront ici"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "כאשר מישהו משתף איתך את משמרותיו, הם יופיעו כאן"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "जब कोई आपके साथ अपनी शिफ्ट शेयर करता है, तो वह यहां दिखाई देगी"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kada netko podijeli svoje smjene s tobom, pojavit će se ovdje"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Amikor valaki megosztja a műszakait veled, itt fognak megjelenni"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ketika seseorang membagikan shift mereka dengan Anda, mereka akan muncul di sini"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Þegar einhver deilir vöktum sínum með þér munu þær birtast hér"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quando qualcuno condivide le sue vature con te, appariranno qui"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "誰かがシフトをあなたとシェアすると、ここに表示されます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "누군가 근무를 당신과 공유하면 여기에 표시됩니다"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kai kas nors bendrina savo pamainas su tavimi, jos bus rodomos čia"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kad kāds ar jums koplietos savas maiņas, tās parādīsies šeit"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Når noen deler vaktene sine med deg, vil de vises her"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Når noen deler vaktene sine med deg, vil de vises her"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Når nokon deler vaktene sine med deg, vil dei vislast her"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gdy ktoś udostępni z tobą swoje wakt, pojawią się tutaj"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quando alguém compartilhar seus turnos com você, eles aparecerão aqui"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Când cineva vă partajează schimburile sale cu dumneavoastră, vor apărea aici"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Когда кто-то делится своими сменами с вами, они появятся здесь"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keď si niekto zdieli svoje zmeny s vami, objavia sa tu"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ko nekdo deli svoje izmene s tabo, se bodo prikazale tukaj"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kada neko podeli svoje smene sa vama, pojaviće se ovde"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "När någon delar sina vakter med dig visas de här"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wakati mtu yeyote anahisa zamu zake na wewe, zitaonekana hapa"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "யாரேனும் தங்கள் ஷிப்டுகளை உனக்குப் பகிர்ந்துகொள்ளும் போது, அவை இங்கே தோன்றும்"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เมื่อใครบางคนแชร์เวรของพวกเขากับคุณ จะปรากฏที่นี่"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Biri vardiyalarını seninle paylaştığında, buraya görünecekler"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Коли хтось поділиться своїми змінами з вами, вони з'являться тут"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "جب کوئی اپنی شفٹوں کو آپ کے ساتھ شیئر کرے گا، وہ یہاں دکھائی دیں گی"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khi ai đó chia sẻ ca làm việc của họ với bạn, chúng sẽ xuất hiện ở đây"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当有人与您分享他们的班次时，将显示在这里"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "當有人與你分享他們的班次時，將顯示在這裡"
           }
         }
       }

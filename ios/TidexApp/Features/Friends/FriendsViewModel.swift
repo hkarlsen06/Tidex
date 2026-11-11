@@ -139,6 +139,18 @@ final class SharingViewModel: MonthNavigable {
     blockedFriends: []
   )
 
+  /// Friends who share with the user while the user does not share back.
+  var shareBackUserIds: Set<String> {
+    Set(
+      managementSnapshot.friends.filter { $0.sharesWithMe != nil && $0.iShareWith == nil }
+        .map(\.id))
+  }
+
+  /// The friend a Share back from the list is running for.
+  private(set) var sharingBackUserId: String?
+  /// Why the last Share back from the list failed.
+  var shareBackErrorMessage: String?
+
   /// Whether shift previews are being loaded
   private(set) var isLoadingPreviews = false
 
@@ -434,6 +446,23 @@ final class SharingViewModel: MonthNavigable {
       map[preview.sharerId] = preview
     }
     return map
+  }
+
+  /// Starts sharing the user's shifts with a friend who already shares with them.
+  func shareBack(with userId: String) async {
+    guard sharingBackUserId == nil else { return }
+    sharingBackUserId = userId
+    defer { sharingBackUserId = nil }
+    do {
+      try await sharingService.shareBack(recipientId: userId)
+    } catch {
+      shareBackErrorMessage = ErrorTranslations.translate(error, fallback: .sharingErrorShareBack)
+      Haptics.play(.error)
+      return
+    }
+    Haptics.play(.success)
+    FriendInvite.didStartSharing()
+    await loadSharers()
   }
 
   func applyFriendsTabBootstrap(_ bootstrap: FriendsTabBootstrapData) async {

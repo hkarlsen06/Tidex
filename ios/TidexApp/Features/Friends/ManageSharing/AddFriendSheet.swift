@@ -11,6 +11,8 @@ struct AddFriendSheet: View {
 
   @State private var viewModel: ManageSharingViewModel
   @State private var didRequestInitialFocus = false
+  /// Set once a share started, to confirm it by name.
+  @State private var addedName: String?
   @FocusState private var isIdentifierFocused: Bool
 
   private let onBootstrapRefresh: ((FriendsTabBootstrapData) async -> Void)?
@@ -35,9 +37,13 @@ struct AddFriendSheet: View {
     NavigationStack {
       Form {
         Group {
-          addFriendSection
+          if let addedName {
+            SharingStartedSection(name: addedName)
+          } else {
+            addFriendSection
+          }
 
-          if viewModel.hasHiddenOrBlockedPeople {
+          if addedName == nil, viewModel.hasHiddenOrBlockedPeople {
             Section {
               NavigationLink {
                 HiddenAndBlockedPeopleView(viewModel: viewModel)
@@ -81,6 +87,19 @@ struct AddFriendSheet: View {
 
   @ToolbarContentBuilder
   private var toolbarContent: some ToolbarContent {
+    if addedName != nil {
+      ToolbarItem(placement: .confirmationAction) {
+        Button(String(localized: .commonDone)) {
+          dismiss()
+        }
+      }
+    } else {
+      addToolbarContent
+    }
+  }
+
+  @ToolbarContentBuilder
+  private var addToolbarContent: some ToolbarContent {
     ToolbarItem(placement: .cancellationAction) {
       Button(String(localized: .commonCancel)) {
         dismiss()
@@ -127,7 +146,7 @@ struct AddFriendSheet: View {
         if viewModel.areServerActionsUnavailable {
           Text(.sharingOfflineAddFriendUnavailable)
         } else {
-          // Adding someone starts sharing at once; there is no request for them to accept.
+          // Adding someone starts sharing at once. There is no request for them to accept.
           Text(
             viewModel.addShowEarnings
               ? .sharingAddFriendSharesRightAwayWithEarnings : .sharingAddFriendSharesRightAway
@@ -143,10 +162,41 @@ struct AddFriendSheet: View {
   private func add() {
     guard canAdd else { return }
     Task {
-      if await viewModel.addFriend() {
+      if let name = await viewModel.addFriend() {
         Haptics.play(.success)
-        dismiss()
+        isIdentifierFocused = false
+        addedName = name
       }
+    }
+  }
+}
+
+// MARK: - Sharing Started
+
+/// Confirms by name that a share started and says what happens next for the other person.
+internal struct SharingStartedSection: View {
+  let name: String
+
+  var body: some View {
+    Section {
+      VStack(spacing: Spacing.sm) {
+        Image(systemName: "checkmark.circle.fill")
+          .font(.tidexTitle)
+          .foregroundStyle(Color.tidexSuccess)
+          .accessibilityHidden(true)
+
+        Text(.sharingSharedWith(name))
+          .font(.tidexHeadline)
+          .foregroundStyle(Color.tidexTextPrimary)
+
+        Text(.sharingAskedToShareBack)
+          .font(.tidexSubheadline)
+          .foregroundStyle(Color.tidexTextSecondary)
+      }
+      .multilineTextAlignment(.center)
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, Spacing.sm)
+      .accessibilityElement(children: .combine)
     }
   }
 }

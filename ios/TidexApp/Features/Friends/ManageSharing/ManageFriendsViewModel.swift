@@ -162,48 +162,33 @@ final class ManageSharingViewModel {
 
   // MARK: - Add Friend
 
-  /// Add a new friend by email or username. Returns whether the friend was added.
-  @discardableResult
-  func addFriend() async -> Bool {
-    // Prevent duplicate taps
-    guard !isAdding else { return false }
-
+  /// Starts sharing with a person found by email or username. Returns the name to confirm the
+  /// share with, or nil when it failed and `addError` says why.
+  func addFriend() async -> String? {
     let identifier = addIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !identifier.isEmpty else {
-      addError = String(localized: .sharingErrorAddFriendEmpty)
-      return false
-    }
+    guard !isAdding, !identifier.isEmpty else { return nil }
 
     isAdding = true
     addError = nil
+    defer { isAdding = false }
+    let sharedWithBefore = Set(friends.filter { $0.iShareWith != nil }.map(\.id))
 
     do {
       try await sharingService.createShare(identifier: identifier, showEarnings: addShowEarnings)
-
-      await reconcileAfterSuccessfulAction()
-
-      // Reset form
-      addIdentifier = ""
-      addShowEarnings = false
-
-      logger.info("Added friend: \(identifier)")
-      isAdding = false
-      return true
-    } catch let error as SharingServiceError {
-      logger.error("Failed to add friend: \(error.localizedDescription)")
-      addError = userFacingActionError(for: error, fallback: .sharingErrorAddFriend)
     } catch {
       logger.error("Failed to add friend: \(error.localizedDescription)")
-      addError = userFacingActionError(
-        for: error,
-        fallback: .sharingErrorAddFriend
-      )
+      addError = userFacingActionError(for: error, fallback: .sharingErrorAddFriend)
+      return nil
     }
 
-    isAdding = false
-    return false
+    FriendInvite.didStartSharing()
+    await reconcileAfterSuccessfulAction()
+    addIdentifier = ""
+    addShowEarnings = false
+    // The reply names nobody, so find the person among the friends I now share with.
+    let added = friends.first { $0.iShareWith != nil && !sharedWithBefore.contains($0.id) }
+    return added?.displayName ?? identifier
   }
-
 }
 
 // MARK: - Actions
@@ -547,6 +532,7 @@ extension ManageSharingViewModel {
 
     do {
       try await sharingService.shareBack(recipientId: friend.id)
+      FriendInvite.didStartSharing()
       await reconcileAfterSuccessfulAction()
       logger.info("Shared back with \(friend.id)")
     } catch {
@@ -696,7 +682,8 @@ extension ManageSharingViewModel {
     hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
   }
 
-  private func userFacingActionError(for error: Error, fallback: LocalizedStringResource) -> String? {
+  private func userFacingActionError(for error: Error, fallback: LocalizedStringResource) -> String?
+  {
     guard !Task.isCancelled, !ErrorTranslations.isCancellation(error) else { return nil }
     if ErrorTranslations.isOffline(error) {
       areServerActionsUnavailable = true

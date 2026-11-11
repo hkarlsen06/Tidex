@@ -55,6 +55,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
   @State private var latestIncomingMessageIdsByUserId: [String: String] = [:]
   @State private var unreadRefreshTask: Task<Void, Never>?
   @State private var isChatTabBarHidden = false
+  @State private var listViewportHeight: CGFloat = 0
 
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
@@ -280,6 +281,17 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     } message: {
       Text(chatOpenErrorMessage ?? String(localized: .friendsChatOpenFailed))
     }
+    .alert(
+      String(localized: .sharingErrorShareBack),
+      isPresented: .init(
+        get: { viewModel.shareBackErrorMessage != nil },
+        set: { if !$0 { viewModel.shareBackErrorMessage = nil } }
+      )
+    ) {
+      Button(String(localized: .commonOk), role: .cancel) {}
+    } message: {
+      Text(viewModel.shareBackErrorMessage ?? "")
+    }
   }
 
   // MARK: - Deep Link Handling
@@ -461,19 +473,31 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
           },
           highlightedChatUserId: activeChatHighlightUserId,
           openingThreadUserId: openingThreadUserId,
-          onAddFriend: {
+          shareBackUserIds: viewModel.shareBackUserIds,
+          sharingBackUserId: viewModel.sharingBackUserId,
+          onShareBack: { sharer in
+            Task { await viewModel.shareBack(with: sharer.id) }
+          },
+          onInvite: inviteFriend,
+          onAddByIdentifier: {
             showAddFriendSheet = true
           },
           loadErrorMessage: viewModel.sharersLoadErrorMessage,
           onRetry: {
             Task { await refreshFriendsTab() }
-          }
+          },
+          viewportHeight: max(listViewportHeight - Spacing.md - Spacing.xl, 0)
         )
       }
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .padding(.top, Spacing.md)
       .padding(.bottom, Spacing.xl)
       .frame(maxWidth: .infinity)
+    }
+    .onGeometryChange(for: CGFloat.self) {
+      $0.size.height
+    } action: {
+      listViewportHeight = $0
     }
     .refreshable {
       await refreshFriendsTab()
@@ -505,12 +529,24 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
   private var friendsToolbarContent: some ToolbarContent {
     TabTitleToolbarItem(title: .tabsSharing)
     ToolbarItem(placement: .topBarTrailing) {
-      Button {
-        showAddFriendSheet = true
+      Menu {
+        Button(action: inviteFriend) {
+          Label(String(localized: .sharingInviteAction), systemImage: "link")
+        }
+        Button {
+          showAddFriendSheet = true
+        } label: {
+          Label(String(localized: .sharingAddByIdentifier), systemImage: "at")
+        }
       } label: {
         Label(String(localized: .sharingAddFriend), systemImage: "person.badge.plus")
       }
     }
+  }
+
+  private func inviteFriend() {
+    guard let userId = coordinator.userId else { return }
+    FriendInvite.presentShareSheet(for: userId)
   }
 
   private func sharedShiftsDetailDestination(for sharer: SharedUser) -> some View {

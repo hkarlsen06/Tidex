@@ -23,6 +23,9 @@ struct FriendCard: View {
   var isOpeningMessage = false
   var unreadMessageCount = 0
   var surfaceStyle: SurfaceStyle = .standard
+  var connection: Connection = .mutual
+  var isSharingBack = false
+  var onShareBack: (() -> Void)?
 
   private let ringWidth: CGFloat = 3
   private let ringGap: CGFloat = 3
@@ -79,10 +82,6 @@ struct FriendCard: View {
     isTyping || messagePreview != nil
   }
 
-  private var showsShiftTile: Bool {
-    isCalendarAvailable || shiftTiming != nil
-  }
-
   var body: some View {
     // Stack the shift tile under the conversation when large text leaves no room beside it.
     // Side by side, bottom alignment puts the shift status on the name's line and the times
@@ -93,27 +92,29 @@ struct FriendCard: View {
       ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.sm))
       : AnyLayout(HStackLayout(alignment: .bottom, spacing: Spacing.md))
 
-    // Tick every second only while a shift needs a live countdown.
-    TimelineView(.periodic(from: .now, by: shiftTiming == nil ? 60 : 1)) { context in
-      layout {
-        conversation(at: context.date)
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      // Tick every second only while a shift needs a live countdown.
+      TimelineView(.periodic(from: .now, by: shiftTiming == nil ? 60 : 1)) { context in
+        layout {
+          conversation(at: context.date)
 
-        // Without a tile the empty column still holds its width, so the message times line up
-        // with the other cards.
-        if showsShiftTile || !isStacked {
           shiftTile(at: context.date)
             // The line sits on the tile's edge rather than mid-gap. The tile centers its text, so
             // this leaves about as much room on the text's side as on the bubble's.
             .overlay(alignment: .leading) {
-              if showsShiftTile && !isStacked {
+              if !isStacked {
                 Rectangle()
                   .fill(Color.tidexSeparator)
                   .frame(width: 1 / displayScale)
               }
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
       }
-      .fixedSize(horizontal: false, vertical: true)
+
+      if connection == .theyShareOnly, let onShareBack {
+        shareBackRow(action: onShareBack)
+      }
     }
     .padding(Spacing.sm)
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -307,6 +308,17 @@ struct FriendCard: View {
   }
 }
 
+extension FriendCard {
+  /// Which way shifts are shared between the user and this friend.
+  enum Connection: Equatable {
+    case mutual
+    /// They share with the user, who does not share back yet. The card offers Share back.
+    case theyShareOnly
+    /// The user shares with them, and they do not share back yet.
+    case userSharesOnly
+  }
+}
+
 // MARK: - Shift tile
 
 extension FriendCard {
@@ -332,6 +344,9 @@ extension FriendCard {
   /// Names the friend, since every card has a shift tile, then reads the status and times.
   private func shiftTileAccessibilityLabel(at now: Date) -> String {
     var parts = [String(localized: .friendsAccessibilityShiftsFor(sharer.firstNameOnly))]
+    if let emptyTileText, !isRefreshing {
+      parts.append(String(localized: emptyTileText))
+    }
     if let timing = shiftTiming, let interval = shiftInterval, !isRefreshing {
       parts.append(timing.statusText(at: now, compact: false))
       // The globe beside the clocks marks times converted to the viewer's zone.
@@ -439,6 +454,12 @@ extension FriendCard {
       } else {
         clocks(timing, interval, at: now)
       }
+    } else if let emptyTileText {
+      Text(emptyTileText)
+        .font(.tidexCaptionStrong)
+        .foregroundStyle(Color.tidexTextMuted)
+        .lineLimit(3)
+        .fixedSize(horizontal: false, vertical: true)
     } else if isCalendarAvailable {
       Image(systemName: "calendar")
         .font(.tidexHeadline)
@@ -446,6 +467,54 @@ extension FriendCard {
 
       Text(.tabsShifts)
         .font(.tidexCaptionStrong)
+    }
+  }
+
+  /// Says plainly why the tile has no shift: they share nothing yet, or have no shifts yet.
+  private var emptyTileText: LocalizedStringResource? {
+    guard shiftTiming == nil else { return nil }
+    if connection == .userSharesOnly { return .sharingCardNotSharingYet }
+    return isCalendarAvailable ? nil : .sharingCardNoShiftsYet
+  }
+
+  /// For a friend who shares with the user while the user shares nothing back.
+  private func shareBackRow(action: @escaping () -> Void) -> some View {
+    let title = String(localized: .sharingShareBack)
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+    return layout {
+      Text(.sharingCardCannotSeeYours(sharer.firstNameOnly))
+        .font(.tidexFootnote)
+        .foregroundStyle(Color.tidexTextSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+      Button(action: action) {
+        Text(title)
+          .font(.tidexLabelStrong)
+          .opacity(isSharingBack ? 0 : 1)
+          .overlay {
+            if isSharingBack {
+              ProgressView()
+                .tint(.tidexTextOnBrand)
+            }
+          }
+          .foregroundStyle(Color.tidexTextOnBrand)
+          .padding(.horizontal, Spacing.md)
+          .padding(.vertical, Spacing.xs)
+          .background(Color.tidexBlue, in: Capsule())
+      }
+      .buttonStyle(.plain)
+      .disabled(isSharingBack)
+      .accessibilityLabel("\(title), \(sharer.displayName)")
+      .accessibilityInputLabels([title])
+    }
+    .padding(.top, Spacing.sm)
+    .overlay(alignment: .top) {
+      Rectangle()
+        .fill(Color.tidexSeparator)
+        .frame(height: 1 / displayScale)
     }
   }
 
@@ -479,49 +548,55 @@ extension FriendCard {
 // MARK: - Empty State
 
 /// Shown when no one has shared shifts with the user
+/// Shown when nobody shares with the user. It leads with sending an invite link, since
+/// opening one is how a friend starts sharing with the user.
 struct FriendsListEmptyState: View {
-  var onAddFriend: (() -> Void)?
+  let onInvite: () -> Void
+  let onAddByIdentifier: () -> Void
 
   @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 48
 
   var body: some View {
     VStack(spacing: Spacing.md) {
-      Image(systemName: "person.2.slash")
+      Image(systemName: "person.2")
         .font(.system(size: iconSize))
-        .foregroundStyle(Color.tidexTextMuted)
+        .foregroundStyle(Color.tidexBlueText)
         .accessibilityHidden(true)
 
-      Text(.sharingNoSharers)
-        .font(.tidexBodyMedium)
-        .foregroundStyle(Color.tidexTextPrimary)
+      VStack(spacing: Spacing.xs) {
+        Text(.sharingEmptyTitle)
+          .font(.tidexTitle)
+          .foregroundStyle(Color.tidexTextPrimary)
+          .accessibilityAddTraits(.isHeader)
 
-      Text(.sharingNoSharersDescription)
-        .font(.tidexSubheadline)
-        .foregroundStyle(Color.tidexTextMuted)
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, Spacing.xl)
-
-      if let onAddFriend {
-        Button(action: onAddFriend) {
-          HStack(spacing: Spacing.xxxs) {
-            Image(systemName: "plus")
-              .font(.tidexLabelStrong)
-              .accessibilityHidden(true)
-            Text(.sharingAddFriend)
-              .font(.tidexLabelStrong)
-          }
-          .foregroundStyle(Color.tidexTextOnBrand)
-          .padding(.horizontal, Spacing.mlg)
-          .padding(.vertical, Spacing.xsm)
-          .background(Color.tidexBlue)
-          .clipShape(.rect(cornerRadius: CornerRadius.md))
-        }
-        .buttonStyle(PlainButtonStyle())
-        .padding(.top, Spacing.xxs)
+        Text(.sharingEmptyBody)
+          .font(.tidexSubheadline)
+          .foregroundStyle(Color.tidexTextSecondary)
       }
+
+      VStack(spacing: Spacing.xxs) {
+        PrimaryButton(title: String(localized: .sharingInviteAction), action: onInvite)
+
+        Button(action: onAddByIdentifier) {
+          Text(.sharingAddByIdentifier)
+            .font(.tidexButton)
+            .foregroundStyle(Color.tidexBlueText)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: Spacing.buttonHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+      }
+      .frame(maxWidth: 360)
+      .padding(.top, Spacing.xs)
+
+      Text(.sharingEmptyGotLink)
+        .font(.tidexFootnote)
+        .foregroundStyle(Color.tidexTextMuted)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .padding(.vertical, 80)
+    .multilineTextAlignment(.center)
+    .padding(.horizontal, Spacing.xl)
+    .frame(maxWidth: .infinity)
   }
 }
 
