@@ -2,7 +2,10 @@
   import SwiftUI
 
   /// Friend cards in their main states, for TIDEX_DESIGN_SCREEN=friends. Set
-  /// TIDEX_DESIGN_FRIENDS_VIEW to add-friend, profile, schedule or chat-header for the others.
+  /// TIDEX_DESIGN_FRIENDS_VIEW to add-friend, profile, schedule or chat-header for the others,
+  /// to empty for the Friends tab with nobody in it, to invite-loading, invite-failed, invite-own,
+  /// invite-unavailable, invite-already, invite-confirm, invite-noname or invite-shared for the
+  /// invite link sheet, or to no-job or no-job-home for a user without a job.
   /// TIDEX_DESIGN_FRIENDS_TIME_ZONE=1 puts the friends in another time zone, except Nora's card,
   /// and =unknown leaves the schedule without one. TIDEX_DESIGN_FRIENDS_NAME renames the schedule's
   /// friend.
@@ -24,6 +27,10 @@
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color.tidexBackground)
         .userCurrency("kr")
+      case "empty": DesignReviewEmptyFriends()
+      case let invite where invite.hasPrefix("invite-"): Self.inviteSheet(invite)
+      case "no-job": Self.noJob(withFriends: false)
+      case "no-job-home": Self.noJob(withFriends: true)
       default: cards
       }
     }
@@ -167,6 +174,8 @@
             card("Ella", minutesAgo: 12, state: .incomingUnread, unread: 2, shift: (-120, 180))
             card("Jonas Berg", minutesAgo: 90, state: .outgoingOpened, shift: (1_200, 480))
             card("Maja", isTyping: true, shift: (-1_800, 420))
+            card("Lars", minutesAgo: 240, connection: .theyShareOnly, shift: (2_400, 480))
+            card("Ingrid", connection: .userSharesOnly, isCalendarAvailable: false)
             card("Oskar Lie", isCalendarAvailable: false)
             card("Sofie", minutesAgo: 4, state: .outgoingFailed, isCalendarAvailable: false)
             card(
@@ -205,6 +214,7 @@
       state: FriendCardMessageState = .incomingOpened,
       unread: Int = 0,
       isTyping: Bool = false,
+      connection: FriendCard.Connection = .mutual,
       isCalendarAvailable: Bool = true,
       shift: (Double, Double)? = nil,
       convertedAtUTCHour: Double? = 5
@@ -226,7 +236,7 @@
         },
         messagePreview: message, isTyping: isTyping, isSelected: false, isRefreshing: false,
         onChatTap: {}, onCalendarTap: {}, isCalendarAvailable: isCalendarAvailable,
-        unreadMessageCount: unread)
+        unreadMessageCount: unread, connection: connection, onShareBack: {})
     }
 
     private static func minutesUntilTomorrow(atHour hour: Int) -> Double {
@@ -240,6 +250,61 @@
   }
 
   extension DesignReviewFriendCards {
+    /// The invite sheet with a fake server, in the state that `view` names.
+    private static func inviteSheet(_ view: String) -> some View {
+      let viewerId = "design-viewer"
+      let inviter = InvitePreview(
+        id: "design-inviter", firstName: view == "invite-noname" ? nil : "Ella Hansen",
+        username: view == "invite-noname" ? nil : "ellah", profilePictureUrl: nil,
+        oauthAvatarUrl: nil, alreadySharing: view == "invite-already")
+      let model = InviteConfirmationModel(
+        inviterId: view == "invite-own" ? viewerId : inviter.id, viewerId: viewerId,
+        loadPreview: { _ in
+          switch view {
+          case "invite-loading":
+            try await Task.sleep(for: .seconds(3_600))
+            return nil
+          case "invite-failed": throw URLError(.notConnectedToInternet)
+          case "invite-unavailable": return nil
+          default: return inviter
+          }
+        },
+        share: { _, _ in })
+      return Color.tidexBackground
+        .ignoresSafeArea()
+        .sheet(isPresented: .constant(true)) {
+          InviteConfirmationSheet(model: model)
+            .task {
+              guard view == "invite-shared" else { return }
+              try? await Task.sleep(for: .milliseconds(500))
+              await model.confirm()
+            }
+        }
+    }
+
+    private static func noJob(withFriends: Bool) -> some View {
+      let names = withFriends ? ["Ella", "Henrik"] : []
+      return NavigationStack {
+        WorkSetupRequiredPlaceholder {
+          FriendsNextShiftsList(
+            sharers: names.map { name in
+              SharedUser(
+                id: name, email: nil, phone: nil, firstName: name, profilePictureUrl: nil,
+                oauthAvatarUrl: nil, sharedAt: "2026-01-01", showEarnings: false, hidden: false)
+            },
+            previews: Dictionary(
+              uniqueKeysWithValues: zip(names, [(-60.0, 480.0), (1_200, 420)]).map { name, shift in
+                (name, Self.preview(for: name, startOffset: shift.0, duration: shift.1))
+              }),
+            onOpen: { _ in })
+        }
+        .background(TidexAppBackground())
+        .navigationTitle(String(localized: .tabsHome))
+        .navigationBarTitleDisplayMode(.inline)
+      }
+      .environment(AppCoordinator.shared)
+    }
+
     private static func preview(
       for id: String, startOffset: Double, duration: Double, convertedAtUTCHour: Double? = 5
     ) -> SharerShiftPreview {
@@ -280,6 +345,38 @@
         ownerTimeZone: sourceZone?.identifier)
       return SharerShiftPreview(
         sharerId: id, shift: shift, status: status, showEarnings: true, currency: "kr")
+    }
+  }
+
+  /// The Friends tab with nobody sharing, laid out like `FriendsView` lays out its list.
+  private struct DesignReviewEmptyFriends: View {
+    @State private var viewportHeight: CGFloat = 0
+
+    var body: some View {
+      NavigationStack {
+        ScrollView {
+          SharerListView(
+            sharers: [], hiddenSharers: [], chatOnlyUserIds: [], typingUserIds: [],
+            unreadChatUserIds: [], bottomedUserIds: [], unreadChatCountsByUserId: [:],
+            chatPreviewsByUserId: [:], selectedSharer: nil, shiftPreviews: [:], isLoading: false,
+            isLoadingPreviews: false, hasFinishedInitialLoad: true, isRefreshing: false,
+            onSelectSharer: { _ in }, onMessageTap: { _ in }, onProfileRequested: { _ in },
+            viewportHeight: max(viewportHeight - Spacing.md - Spacing.xl, 0)
+          )
+          .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+          .padding(.top, Spacing.md)
+          .padding(.bottom, Spacing.xl)
+          .frame(maxWidth: .infinity)
+        }
+        .onGeometryChange(for: CGFloat.self) {
+          $0.size.height
+        } action: {
+          viewportHeight = $0
+        }
+        .background(TidexAppBackground())
+        .navigationTitle(String(localized: .tabsSharing))
+        .navigationBarTitleDisplayMode(.inline)
+      }
     }
   }
 #endif
