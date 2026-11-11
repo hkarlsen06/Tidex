@@ -367,7 +367,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         // ZStack, not Group: Group would apply .animation to each branch, so the swap wouldn't animate.
         ZStack {
           if shouldShowWorkSetupRequiredPlaceholder {
-            WorkSetupRequiredPlaceholder()
+            WorkSetupRequiredPlaceholder { HomeFriendsShifts() }
           } else if let data = viewModel.dashboardData {
             // Keep loaded content visible when a later refresh fails
             cardContent(data: data)

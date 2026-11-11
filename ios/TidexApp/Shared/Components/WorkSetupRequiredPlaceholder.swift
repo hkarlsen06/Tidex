@@ -8,7 +8,12 @@
 // swiftlint:disable no_magic_numbers
 import SwiftUI
 
-struct WorkSetupRequiredPlaceholder: View {
+/// Shown on Home, Schedule, Stats and Add for a user without a job. Friends-only use is a
+/// complete way to use Tidex, so this invites the user to add a job instead of blocking them.
+struct WorkSetupRequiredPlaceholder<Header: View>: View {
+  /// Content above the invitation, such as friends' next shifts on Home.
+  private let header: Header
+
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var isRefreshingBeforeSetup = false
@@ -22,20 +27,24 @@ struct WorkSetupRequiredPlaceholder: View {
   private let syncCoordinator = SyncCoordinator.shared
   private let workSetupStatusService = WorkSetupStatusService.shared
 
+  init(@ViewBuilder header: () -> Header) {
+    self.header = header()
+  }
+
   var body: some View {
     GeometryReader { geometry in
       ScrollView {
         VStack(spacing: Spacing.lg) {
-          setupPreview
+          header
 
           VStack(spacing: Spacing.xs) {
-            Text(.settingsPaySetupScheduleTitle)
+            Text(.settingsPaySetupInviteTitle)
               .font(.tidexTitle)
               .foregroundStyle(Color.tidexTextPrimary)
               .multilineTextAlignment(.center)
               .fixedSize(horizontal: false, vertical: true)
 
-            Text(.workSetupRequiredDescription)
+            Text(.settingsPaySetupInviteBody)
               .font(.tidexSubheadline)
               .foregroundStyle(Color.tidexTextSecondary)
               .multilineTextAlignment(.center)
@@ -43,7 +52,14 @@ struct WorkSetupRequiredPlaceholder: View {
               .fixedSize(horizontal: false, vertical: true)
           }
 
+          benefits
+
           setupButton
+
+          Label(String(localized: .settingsPaySetupInviteFriendsNote), systemImage: "person.2")
+            .font(.tidexFootnote)
+            .foregroundStyle(Color.tidexTextSecondary)
+            .multilineTextAlignment(.center)
         }
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, Spacing.lg)
@@ -70,55 +86,12 @@ struct WorkSetupRequiredPlaceholder: View {
     }
   }
 
-  private var setupPreview: some View {
-    VStack(spacing: Spacing.md) {
-      HStack(spacing: Spacing.md) {
-        ZStack {
-          RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
-            .fill(Color.tidexBlue.opacity(0.12))
-
-          Image(systemName: "building.2")
-            .font(.system(size: 24, weight: .semibold))
-            .foregroundStyle(Color.tidexBlueText)
-            .accessibilityHidden(true)
-        }
-        .frame(width: 52, height: 52)
-
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(.settingsPaySetupRequiredBadge)
-            .font(.tidexCaptionStrong)
-            .foregroundStyle(Color.tidexBlueText)
-            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-            .minimumScaleFactor(0.85)
-
-          Text(.settingsPaySetupFinishTitle)
-            .font(.tidexFootnote)
-            .foregroundStyle(Color.tidexTextSecondary)
-            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-            .minimumScaleFactor(0.85)
-        }
-
-        Spacer(minLength: Spacing.sm)
-      }
-
-      Rectangle()
-        .fill(Color.tidexBorderSubtle.opacity(0.35))
-        .frame(height: 1)
-
-      VStack(spacing: Spacing.xs) {
-        WorkSetupPreviewRow(
-          icon: "banknote.fill",
-          title: .settingsPayEditorWageSource
-        )
-        WorkSetupPreviewRow(
-          icon: "calendar",
-          title: .tabsShifts
-        )
-        WorkSetupPreviewRow(
-          icon: "chart.bar.xaxis",
-          title: .tabsStats
-        )
-      }
+  /// What a job adds, one row per tab it fills.
+  private var benefits: some View {
+    VStack(spacing: Spacing.xs) {
+      WorkSetupPreviewRow(icon: "banknote.fill", title: .settingsPaySetupInviteBenefitPay)
+      WorkSetupPreviewRow(icon: "calendar", title: .settingsPaySetupInviteBenefitShifts)
+      WorkSetupPreviewRow(icon: "chart.bar.xaxis", title: .settingsPaySetupInviteBenefitStats)
     }
     .padding(Spacing.mlg)
     .tidexRowSurface(
@@ -140,7 +113,7 @@ struct WorkSetupRequiredPlaceholder: View {
             .scaleEffect(0.8)
         }
 
-        Text(.workSetupRequiredCta)
+        Text(.settingsPaySetupInviteCta)
           .font(.tidexButton)
           .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
           .minimumScaleFactor(0.85)
@@ -284,7 +257,6 @@ struct WorkSetupRequiredPlaceholder: View {
 private struct WorkSetupPreviewRow: View {
   let icon: String
   let title: LocalizedStringResource
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     HStack(spacing: Spacing.sm) {
@@ -301,17 +273,17 @@ private struct WorkSetupPreviewRow: View {
       Text(title)
         .font(.tidexFootnoteMedium)
         .foregroundStyle(Color.tidexTextPrimary)
-        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-        .minimumScaleFactor(0.85)
+        .fixedSize(horizontal: false, vertical: true)
 
       Spacer(minLength: Spacing.sm)
-
-      Image(systemName: "lock.fill")
-        .font(.system(size: 11, weight: .semibold))
-        .foregroundStyle(Color.tidexTextMuted)
-        .accessibilityHidden(true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, Spacing.xxs)
+  }
+}
+
+extension WorkSetupRequiredPlaceholder where Header == EmptyView {
+  init() {
+    self.init { EmptyView() }
   }
 }

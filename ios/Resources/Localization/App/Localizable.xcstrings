@@ -361275,6 +361275,132 @@
         }
       }
     },
+    "settings.pay.setup.invite.benefitPay" : {
+      "comment" : "What adding a job gives, on Home",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expected pay for each pay period"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forventet lønn for hver lønnsperiode"
+          }
+        }
+      }
+    },
+    "settings.pay.setup.invite.benefitShifts" : {
+      "comment" : "What adding a job gives, in the Schedule tab",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your shifts in a calendar"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaktene dine i en kalender"
+          }
+        }
+      }
+    },
+    "settings.pay.setup.invite.benefitStats" : {
+      "comment" : "What adding a job gives, in Stats",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hours and earnings over time"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timer og inntjening over tid"
+          }
+        }
+      }
+    },
+    "settings.pay.setup.invite.body" : {
+      "comment" : "Says what a job is used for, under the add a job title",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex uses your wage and shifts to show what you earn before payday."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex bruker lønnen og vaktene dine til å vise hva du tjener før lønningsdag."
+          }
+        }
+      }
+    },
+    "settings.pay.setup.invite.cta" : {
+      "comment" : "Button that starts adding a job",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a job"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til en jobb"
+          }
+        }
+      }
+    },
+    "settings.pay.setup.invite.friendsNote" : {
+      "comment" : "Under the add a job button. Friends is the name of the tab",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can use Friends without a job."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan bruke Venner uten en jobb."
+          }
+        }
+      }
+    },
+    "settings.pay.setup.invite.title" : {
+      "comment" : "Title on Home, Schedule, Stats and Add for a user without a job",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a job to see your pay"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til en jobb for å se lønnen din"
+          }
+        }
+      }
+    },
     "settings.pay.setup.laterButton" : {
       "comment" : "Button that dismisses the pay setup prompt for now.",
       "extractionState" : "manual",
@@ -380963,6 +381089,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已隱藏與封鎖"
+          }
+        }
+      }
+    },
+    "sharing.home.nextShifts" : {
+      "comment" : "Heading on Home, for a user without a job, above the next shifts of friends who share with them",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Friends' next shifts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vennenes neste vakter"
           }
         }
       }
@@ -473503,570 +473647,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "昨天"
-          }
-        }
-      }
-    },
-    "workSetup.required.cta" : {
-      "comment" : "Button on the placeholder shown on locked tabs. Opens the work setup flow.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إعداد العمل"
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Настройте работа"
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "কাজ সেট আপ করুন"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configura la feina"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nastavit práci"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sæt arbejde op"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arbeit einrichten"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ρύθμιση εργασίας"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set up work"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configurar trabajo"
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seadista töö"
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تنظیم کار"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Määritä työ"
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I-set up ang trabaho"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configurer le travail"
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "הגדר עבודה"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "काम सेट अप करें"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Postavite posao"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Munka beállítása"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Atur pekerjaan"
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setja upp vinnu"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configura il lavoro"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仕事を設定"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "일 설정하기"
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nustatyti darbą"
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Iestatīt darbu"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sett opp jobb"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Werk instellen"
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set opp arbeid"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skonfiguruj pracę"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configurar trabalho"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configurează munca"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Настроить работу"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nastaviť prácu"
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nastavi delo"
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Podesi posao"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ställ in jobb"
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Weka kazi"
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "பணியை அமைக்கவும்"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตั้งค่างาน"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "İşi kur"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Налаштувати роботу"
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "کام سیٹ اپ کریں"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thiết lập công việc"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设置工作"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "設定工作"
-          }
-        }
-      }
-    },
-    "workSetup.required.description" : {
-      "comment" : "Text on the placeholder shown on locked tabs until work setup is finished. Friends and Settings are tab names.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أكمل إعداد العمل لفتح الرواتب والنوبات والإحصاءات. لا يزال الأصدقاء والإعدادات يعملان الآن."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Завършете настройката на работа, за да отключите заплата, смени и статистика. Приятели и Настройки работят и сега."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "পেরোল, শিফট ও পরিসংখ্যান আনলক করতে কাজের সেটআপ শেষ করুন। বন্ধু ও সেটিংস এখনো ব্যবহার করা যাবে।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acaba de configurar la feina per desbloquejar nòmina, torns i estadístiques. Amics i Configuració encara funcionen ara mateix."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dokončete nastavení práce a odemkněte mzdu, směny a statistiky. Přátelé a Nastavení zatím fungují."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fuldfør arbejdsopsætningen for at låse op for løn, vagter og statistik. Venner og Indstillinger virker stadig nu."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schließe die Arbeitseinrichtung ab, um Lohn, Schichten und Statistiken freizuschalten. Freunde und Einstellungen funktionieren jetzt schon."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ολοκληρώστε τη ρύθμιση εργασίας για να ξεκλειδώσετε μισθοδοσία, βάρδιες και στατιστικά. Οι Φίλοι και οι Ρυθμίσεις λειτουργούν ήδη."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finish work setup to unlock payroll, shifts, and stats. Friends and Settings still work right now."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Completa la configuración del trabajo para desbloquear nómina, turnos y estadísticas. Amigos y Ajustes siguen funcionando ahora."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lõpeta töö seadistamine, et avada palk, vahetused ja statistika. Sõbrad ja Seaded töötavad praegu ikka."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "برای باز شدن حقوق، شیفت‌ها و آمار، تنظیم کار را کامل کنید. دوستان و تنظیمات فعلاً کار می‌کنند."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Viimeistele työasetukset, niin saat palkanlaskennan, vuorot ja tilastot käyttöön. Ystävät ja Asetukset toimivat silti nytkin."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tapusin ang pag-set up ng trabaho para ma-unlock ang payroll, mga shift, at stats. Gumagana pa rin ngayon ang Mga Kaibigan at Mga Setting."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminez la configuration du travail pour débloquer la paie, les shifts et les stats. Amis et Réglages fonctionnent déjà."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "השלם את הגדרת העבודה כדי לפתוח שכר, משמרות וסטטיסטיקות. חברים והגדרות עדיין זמינים עכשיו."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पेरोल, शिफ्ट्स और आँकड़े अनलॉक करने के लिए काम का सेटअप पूरा करें। दोस्त और सेटिंग्स अभी भी काम करेंगे।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dovršite postavljanje posla za obračun plaće, smjene i statistiku. Prijatelji i Postavke i dalje rade."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fejezd be a munka beállítását a bérszámfejtés, műszakok és statisztikák feloldásához. A Barátok és a Beállítások most is működnek."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Selesaikan pengaturan kerja untuk membuka penggajian, shift, dan statistik. Teman dan Pengaturan tetap bisa digunakan sekarang."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ljúktu við vinnuuppsetningu til að opna laun, vaktir og tölfræði. Vinir og Stillingar virka samt núna."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Completa la configurazione del lavoro per sbloccare busta paga, turni e statistiche. Amici e Impostazioni funzionano già ora."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "給与、シフト、統計を使うには仕事の設定を完了してください。友達と設定は今すぐ使えます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "급여, 근무, 통계를 사용하려면 일 설정을 완료하세요. 친구와 설정은 지금도 사용할 수 있어요."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Užbaikite darbo nustatymą, kad atrakintumėte atlyginimą, pamainas ir statistiką. Draugai ir Nustatymai vis tiek veikia dabar."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pabeidziet darba iestatīšanu, lai atbloķētu algu, maiņas un statistiku. Draugi un Iestatījumi joprojām darbojas."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fullfør jobboppsettet for å låse opp lønn, vakter og statistikk. Venner og Innstillinger fungerer fortsatt nå."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voltooi de werkconfiguratie om loon, diensten en statistieken te ontgrendelen. Vrienden en Instellingen werken nu nog wel."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fullfør arbeidsoppsettet for å låse opp løn, vakter og statistikk. Venner og Innstillingar fungerer framleis no."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dokończ konfigurację pracy, aby odblokować płace, zmiany i statystyki. Znajomi i Ustawienia nadal działają."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conclua a configuração do trabalho para desbloquear folha, turnos e estatísticas. Amigos e Ajustes ainda funcionam agora."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finalizează configurarea muncii ca să deblochezi salarizarea, turele și statisticile. Prieteni și Setări funcționează acum."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Завершите настройку работы, чтобы открыть зарплату, смены и статистику. Друзья и Настройки уже доступны."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dokončite nastavenie práce a odomknite mzdu, zmeny a štatistiky. Priatelia a Nastavenia zatiaľ fungujú."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dokončaj nastavitev dela za dostop do plače, izmen in statistike. Prijatelji in Nastavitve še vedno delujejo."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Završi podešavanje posla da otključaš obračun plate, smene i statistiku. Prijatelji i Podešavanja i dalje rade."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Slutför jobbinställningen för att låsa upp lön, arbetspass och statistik. Vänner och Inställningar fungerar fortfarande nu."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamilisha usanidi wa kazi ili kufungua malipo, zamu na takwimu. Marafiki na Mipangilio bado zinafanya kazi sasa."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ஊதியம், பணிப்பகுதிகள் மற்றும் புள்ளிவிவரங்களைத் திறக்க, பணி அமைப்பை முடிக்கவும். நண்பர்கள் மற்றும் அமைப்புகள் இப்போது வேலை செய்யும்."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ตั้งค่างานให้เสร็จเพื่อปลดล็อกเงินเดือน กะงาน และสถิติ ตอนนี้เพื่อนและการตั้งค่ายังใช้งานได้"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Maaş, vardiyalar ve istatistiklerin kilidini açmak için iş kurulumunu tamamla. Arkadaşlar ve Ayarlar şu anda çalışır."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Завершіть налаштування роботи, щоб відкрити зарплату, зміни й статистику. Друзі та Налаштування вже доступні."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "پے رول، شفٹیں اور اعدادوشمار کھولنے کے لیے کام کا سیٹ اپ مکمل کریں۔ دوست اور سیٹنگز ابھی بھی کام کرتے ہیں۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hoàn tất thiết lập công việc để mở khóa lương, ca làm và thống kê. Bạn bè và Cài đặt vẫn dùng được ngay bây giờ."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完成工作设置以解锁工资、班次和统计。好友和设置目前仍可使用。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完成工作設定即可解鎖薪資、班次和統計。朋友和設定目前仍可使用。"
           }
         }
       }
