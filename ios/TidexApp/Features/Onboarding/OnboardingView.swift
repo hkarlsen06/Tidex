@@ -1,288 +1,107 @@
 import SwiftUI
 
-/// Pre-auth onboarding flow container: the welcome screen, then the add-shift simulator.
-/// Shows value proposition before requiring authentication
+/// Pre-auth onboarding: the welcome page, then the Add screen demo. Each page draws its own
+/// header and buttons, so a page change moves them with the page.
 struct OnboardingView: View {
-  let onNavigateToSignup: () -> Void
+  /// Gets the demo shift when the user saved one, nil when they skipped.
+  let onNavigateToSignup: (PreAuthDemoShift?) -> Void
   var onNavigateToLogin: () -> Void = {}
 
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-  @State private var currentPage = 0
-  @State private var preAuthCurrency: String = {
-    OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
-      ?? OnboardingCurrencyResolver.detectDefaultCurrency()
-  }()
-  @State private var shouldPreloadSimulatorScreen = false
-  @State private var isCompletingPreAuth = false
+  private enum Page {
+    case welcome
+    case demo
 
-  private let totalPages = 2
-  private let simulatorPage = 1
-  private let completionHandoffDelay: TimeInterval = 0.32
-
-  private var isSimulatorPage: Bool {
-    currentPage == simulatorPage
+    var funnelStep: String {
+      switch self {
+      case .welcome: "welcome"
+      case .demo: "add_shift_simulator"
+      }
+    }
   }
+
+  /// Set when the user leaves for sign-up. The pages fade out before the hand-off.
+  private struct Exit: Equatable {
+    let shift: PreAuthDemoShift?
+  }
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var page = Page.welcome
+  @State private var exit: Exit?
+  @State private var currency: String =
+    OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
+    ?? OnboardingCurrencyResolver.detectDefaultCurrency()
 
   var body: some View {
     ZStack {
-      // Background
       Color.tidexBackground
         .ignoresSafeArea()
 
-      if shouldPreloadSimulatorScreen {
-        preloadedSimulatorScreen
-      }
+      switch page {
+      case .welcome:
+        WelcomeScreen(
+          currency: Binding(get: { currency }, set: setCurrency),
+          onContinue: { show(.demo) },
+          onLogin: onNavigateToLogin
+        )
+        .transition(MotionTokens.mirroredMoveTransition(edge: .leading, reduceMotion: reduceMotion))
 
-      VStack(spacing: 0) {
-        // Page content - takes full height, skip button overlaid
-        pageTabs
-
-        // Bottom controls area - constrained for iPad
-        if !isSimulatorPage {
-          bottomControls
-        }
-      }
-      .opacity(isCompletingPreAuth ? 0 : 1)
-      .scaleEffect(isCompletingPreAuth ? 0.985 : 1)
-      .offset(y: isCompletingPreAuth ? -18 : 0)
-      .motionAnimation(.emphasis, value: isCompletingPreAuth, reduceMotion: reduceMotion)
-      .allowsHitTesting(!isCompletingPreAuth)
-    }
-    .safeAreaInset(edge: .top, spacing: 0) {
-      if !isSimulatorPage {
-        topHeader
-          .opacity(isCompletingPreAuth ? 0 : 1)
-          .offset(
-            y: isCompletingPreAuth ? -10 : 0
-          )
-          .animation(
-            reduceMotion ? nil : .easeInOut(duration: 0.16),
-            value: isCompletingPreAuth
-          )
+      case .demo:
+        PreAuthAddShiftSimulatorScreen(
+          initialCurrency: currency,
+          onCurrencyChanged: setCurrency,
+          onSave: { shift in
+            OnboardingFunnelRecorder.shared.recordPreAuth("demo_shift_added")
+            leave(with: shift)
+          },
+          onSkip: {
+            OnboardingFunnelRecorder.shared.recordPreAuth("demo_skipped")
+            OnboardingFirstShiftCarryoverStore.clear()
+            leave(with: nil)
+          },
+          onBack: { show(.welcome) }
+        )
+        .transition(MotionTokens.mirroredMoveTransition(edge: .trailing, reduceMotion: reduceMotion))
       }
     }
-    .task(id: isCompletingPreAuth) {
-      guard isCompletingPreAuth else { return }
-      do { try await Task.sleep(for: .seconds(completionHandoffDelay)) } catch { return }
-      onNavigateToSignup()
+    .opacity(exit == nil ? 1 : 0)
+    .motionAnimation(.emphasis, value: exit, reduceMotion: reduceMotion)
+    .allowsHitTesting(exit == nil)
+    .task(id: exit) {
+      guard let exit else { return }
+      do { try await Task.sleep(for: .seconds(0.32)) } catch { return }
+      onNavigateToSignup(exit.shift)
     }
     .onAppear {
-      OnboardingCurrencyCarryoverStore.writePreferredCurrency(preAuthCurrency)
-      shouldPreloadSimulatorScreen = currentPage < simulatorPage
-      recordFunnelStep(for: currentPage)
+      OnboardingCurrencyCarryoverStore.writePreferredCurrency(currency)
+      OnboardingFunnelRecorder.shared.recordPreAuth(page.funnelStep)
+    }
+    .onChange(of: page) { _, newPage in
+      OnboardingFunnelRecorder.shared.recordPreAuth(newPage.funnelStep)
     }
   }
 
-  private func recordFunnelStep(for page: Int) {
-    OnboardingFunnelRecorder.shared.recordPreAuth(
-      page == simulatorPage ? "add_shift_simulator" : "welcome")
-  }
-
-  private func advanceToNextPage() {
+  private func show(_ newPage: Page) {
     MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-      currentPage += 1
+      page = newPage
     }
   }
 
-  private func goBackToPreviousPage() {
-    MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-      currentPage = max(currentPage - 1, 0)
-    }
+  private func setCurrency(_ newCurrency: String) {
+    guard newCurrency != currency else { return }
+    currency = newCurrency
+    OnboardingCurrencyCarryoverStore.writePreferredCurrency(newCurrency)
   }
 
-  private func completeAndNavigateToSignup() {
-    guard !isCompletingPreAuth else { return }
-
+  private func leave(with shift: PreAuthDemoShift?) {
+    guard exit == nil else { return }
     guard !reduceMotion else {
-      onNavigateToSignup()
+      onNavigateToSignup(shift)
       return
     }
-
-    isCompletingPreAuth = true
-  }
-}
-
-extension OnboardingView {
-  /// Page content - takes full height, skip button overlaid
-  private var pageTabs: some View {
-    TabView(selection: $currentPage) {
-      WelcomeScreen(currency: preAuthCurrency)
-        .tag(0)
-
-      simulatorScreen
-        .tag(simulatorPage)
-    }
-    .tabViewStyle(.page(indexDisplayMode: .never))
-    .clipped()
-    .motionAnimation(.pageTransition, value: currentPage, reduceMotion: reduceMotion)
-    .onChange(of: currentPage) { _, newPage in
-      shouldPreloadSimulatorScreen = newPage < simulatorPage
-      recordFunnelStep(for: newPage)
-    }
-  }
-
-  private var simulatorScreen: some View {
-    PreAuthAddShiftSimulatorScreen(
-      initialCurrency: preAuthCurrency,
-      onCurrencyChanged: { currency in
-        preAuthCurrency = currency
-      },
-      onContinue: {
-        OnboardingFunnelRecorder.shared.recordPreAuth("demo_shift_added")
-        completeAndNavigateToSignup()
-      },
-      onSkip: {
-        completeAndNavigateToSignup()
-      },
-      isPreloaded: false,
-      onBack: {
-        goBackToPreviousPage()
-      }
-    )
-  }
-
-  private var preloadedSimulatorScreen: some View {
-    PreAuthAddShiftSimulatorScreen(
-      initialCurrency: preAuthCurrency,
-      onCurrencyChanged: { _ in },
-      onContinue: {},
-      onSkip: {},
-      isPreloaded: true
-    )
-    .frame(width: 1, height: 1)
-    .clipped()
-    .opacity(0.001)
-    .allowsHitTesting(false)
-    .accessibilityHidden(true)
-  }
-
-  private var topHeader: some View {
-    HStack(alignment: .center, spacing: Spacing.sm) {
-      Image("MarketingAppIcon")
-        .resizable()
-        .scaledToFit()
-        .frame(width: 54, height: 54)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .accessibilityLabel(Text("Tidex"))
-
-      Spacer(minLength: 0)
-
-      OnboardingCurrencyCapsuleSelector(
-        selectedCurrency: Binding(
-          get: { preAuthCurrency },
-          set: { selectedCurrency in
-            guard selectedCurrency != preAuthCurrency else { return }
-            preAuthCurrency = selectedCurrency
-            OnboardingCurrencyCarryoverStore.writePreferredCurrency(selectedCurrency)
-          }
-        )
-      )
-      .fixedSize(horizontal: true, vertical: false)
-    }
-    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-    .frame(maxWidth: .infinity)
-    .padding(.horizontal, Spacing.lg)
-    .padding(.top, Spacing.lg)
-    .padding(.bottom, Spacing.xl)
-    .background(Color.tidexBackground)
-  }
-
-  private var bottomControls: some View {
-    VStack(spacing: Spacing.sm) {
-      firstPageActionRow
-
-      PageIndicator(totalPages: totalPages, currentPage: currentPage)
-        .padding(.top, Spacing.xxs)
-
-      loginButton
-    }
-    .fixedSize(horizontal: false, vertical: true)
-    .padding(.horizontal, Spacing.lg)
-    .adaptiveContentWidth()
-    .padding(.bottom, Spacing.xs)
-    .motionAnimation(.emphasis, value: currentPage, reduceMotion: reduceMotion)
-  }
-
-  @ViewBuilder
-  private var firstPageActionRow: some View {
-    if dynamicTypeSize.isAccessibilitySize {
-      VStack(spacing: Spacing.sm) {
-        OnboardingButton(
-          title: String(localized: .commonContinue),
-          action: advanceToNextPage
-        )
-        skipButton(showsTitle: true)
-      }
-    } else {
-      GeometryReader { geometry in
-        let availableWidth = max(0, geometry.size.width - Spacing.sm)
-        let skipWidth = availableWidth / 5
-        let continueWidth = availableWidth - skipWidth
-
-        HStack(spacing: Spacing.sm) {
-          skipButton(showsTitle: false)
-            .frame(width: skipWidth)
-
-          OnboardingButton(
-            title: String(localized: .commonContinue),
-            action: advanceToNextPage
-          )
-          .frame(width: continueWidth)
-        }
-      }
-      .frame(height: 54)
-    }
-  }
-
-  private func skipButton(showsTitle: Bool) -> some View {
-    Button {
-      Haptics.play(.light)
-      completeAndNavigateToSignup()
-    } label: {
-      HStack(spacing: Spacing.xs) {
-        Image(systemName: "forward.end.fill")
-          .font(.body.weight(.semibold))
-          .accessibilityHidden(true)
-        if showsTitle {
-          Text(.onboardingSkip)
-            .font(.tidexHeadline)
-            .multilineTextAlignment(.center)
-        }
-      }
-      .foregroundStyle(Color.tidexTextSecondary)
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, showsTitle ? Spacing.xs : 0)
-      .frame(minHeight: 54)
-      .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
-    }
-    .buttonStyle(SnappyButtonStyle())
-    .accessibilityLabel(Text(.onboardingSkip))
-  }
-
-  /// Lets returning users go straight to login instead of through the intro.
-  private var loginButton: some View {
-    Button {
-      Haptics.play(.light)
-      onNavigateToLogin()
-    } label: {
-      Text(.onboardingGetstartedLogin)
-        .fixedSize(horizontal: false, vertical: true)
-        .font(.tidexLabelStrong)
-        .foregroundStyle(Color.tidexBlueText)
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.xxs)
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
+    exit = Exit(shift: shift)
   }
 }
 
 #Preview {
-  OnboardingView(
-    onNavigateToSignup: {}
-  )
+  OnboardingView(onNavigateToSignup: { _ in })
 }

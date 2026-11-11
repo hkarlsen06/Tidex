@@ -85,6 +85,8 @@ private struct RootContent: View {
   // Navigation state for transitioning from onboarding to auth
   @State private var showAuthAfterOnboarding = false
   @State private var authDestination: AuthDestination = .login
+  /// The shift saved in the pre-auth demo, shown on the sign-up screen.
+  @State private var demoShift: PreAuthDemoShift?
 
   @State private var activeChatToast: InAppChatToastPayload?
   @State private var chatToastDismissTask: Task<Void, Never>?
@@ -126,9 +128,10 @@ private struct RootContent: View {
 
           case .unauthenticated:
             if !hasCompletedPreAuthOnboarding, !showAuthAfterOnboarding {
-              // Show pre-auth onboarding (screens 1-3)
+              // The welcome page and the Add screen demo.
               OnboardingView(
-                onNavigateToSignup: {
+                onNavigateToSignup: { shift in
+                  demoShift = shift
                   completePreAuthOnboarding(destination: .signup)
                 },
                 onNavigateToLogin: {
@@ -138,8 +141,11 @@ private struct RootContent: View {
               .transition(.opacity)
             } else {
               // Show auth navigation with the selected destination
-              AuthNavigationView(initialScreen: authDestination == .signup ? .signup : .login)
-                .transition(.opacity)
+              AuthNavigationView(
+                initialScreen: authDestination == .signup ? .signup : .login,
+                demoShift: demoShift
+              )
+              .transition(.opacity)
             }
 
           case .termsRequired:

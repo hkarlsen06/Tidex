@@ -78,7 +78,7 @@ struct LoginView: View {
         title: .loginTitle,
         logoSize: 132,
         currency: currency,
-        onLogoTap: restartOnboarding
+        onBack: viewModel.currentStep == .input ? restartOnboarding : nil
       )
       .padding(.bottom, heroControlsGap)
 

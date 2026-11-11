@@ -39,8 +39,8 @@
           DesignReviewTariffCatalogue()
         case "screenshot-prompt":
           ScreenshotSharePromptOverlay(onDismiss: {}, onUseShareButton: {})
-        case "onboarding":
-          OnboardingView(onNavigateToSignup: {}, onNavigateToLogin: {})
+        case "onboarding", "signup-demo-shift":
+          DesignReviewPreAuthFlow(startsAtSignup: screen == "signup-demo-shift")
         case "onboarding-setup":
           DesignReviewOnboardingSetup()
         case "friends":

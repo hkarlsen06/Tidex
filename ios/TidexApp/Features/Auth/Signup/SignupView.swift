@@ -5,6 +5,8 @@ import SwiftUI
 struct SignupView: View {
   @Bindable var viewModel: SignupViewModel
   let currency: String
+  /// The shift saved in the pre-auth demo. The screen then says the account is for saving it.
+  var demoShift: PreAuthDemoShift?
   var onNavigateToLogin: (() -> Void)?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var hasPlayedEntrance = false
@@ -17,10 +19,12 @@ struct SignupView: View {
     viewModel: SignupViewModel,
     currency: String = OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
       ?? OnboardingCurrencyResolver.detectDefaultCurrency(),
+    demoShift: PreAuthDemoShift? = nil,
     onNavigateToLogin: (() -> Void)? = nil
   ) {
     self.viewModel = viewModel
     self.currency = currency
+    self.demoShift = demoShift
     self.onNavigateToLogin = onNavigateToLogin
   }
 
@@ -76,8 +80,9 @@ struct SignupView: View {
         title: .signupTitle,
         logoSize: 132,
         currency: currency,
-        subtitle: .signupSubtitle,
-        onLogoTap: restartOnboarding
+        subtitle: subtitle,
+        demoShift: demoShift,
+        onBack: viewModel.step == .form ? restartOnboarding : nil
       )
       .padding(.bottom, heroControlsGap)
       .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.00)
@@ -94,6 +99,11 @@ struct SignupView: View {
   }
 
   // MARK: - Header Section
+
+  private var subtitle: LocalizedStringResource {
+    guard let demoShift else { return .signupSubtitle }
+    return demoShift.dates.count > 1 ? .signupDemoShiftMany : .signupDemoShiftOne
+  }
 
   private var restartOnboarding: () -> Void {
     {

@@ -1,10 +1,11 @@
 import SwiftUI
 import UIKit
 
-/// Screen 1: Welcome/Hero
-/// Establishes brand, creates emotional connection, sets expectation
+/// The first pre-auth page. It names what Tidex is for and leads to the Add screen demo.
 struct WelcomeScreen: View {
-  let currency: String
+  @Binding var currency: String
+  let onContinue: () -> Void
+  let onLogin: () -> Void
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -69,6 +70,12 @@ struct WelcomeScreen: View {
       .clipped()
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .safeAreaInset(edge: .top, spacing: 0) {
+      header
+    }
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      bottomControls
+    }
     .onAppear {
       // Staggered entrance choreography - motion with a cause, then stillness
       withAnimation(.easeOut(duration: 0.4)) {
@@ -233,7 +240,6 @@ struct WelcomeScreen: View {
         .foregroundStyle(Color.tidexTextSecondary)
         .multilineTextAlignment(.leading)
         .lineSpacing(2)
-        .lineLimit(usesFlowingTitle ? nil : 3)
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
         .opacity(showSubheadline ? 1 : 0)
@@ -252,7 +258,59 @@ struct WelcomeScreen: View {
   }
 }
 
+extension WelcomeScreen {
+  private var header: some View {
+    HStack(alignment: .center, spacing: Spacing.sm) {
+      Image("MarketingAppIcon")
+        .resizable()
+        .scaledToFit()
+        .frame(width: 54, height: 54)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityLabel(Text(verbatim: "Tidex"))
+
+      Spacer(minLength: 0)
+
+      OnboardingCurrencyCapsuleSelector(selectedCurrency: $currency)
+        .fixedSize(horizontal: true, vertical: false)
+    }
+    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, Spacing.lg)
+    .padding(.top, Spacing.lg)
+    .padding(.bottom, Spacing.xl)
+    .background(Color.tidexBackground)
+  }
+
+  private var bottomControls: some View {
+    VStack(spacing: Spacing.sm) {
+      OnboardingButton(title: String(localized: .commonContinue), action: onContinue)
+        .accessibilityIdentifier("onboarding.welcome.continue")
+
+      // Lets returning users go straight to login instead of through the demo.
+      Button {
+        Haptics.play(.light)
+        onLogin()
+      } label: {
+        Text(.onboardingGetstartedLogin)
+          .fixedSize(horizontal: false, vertical: true)
+          .font(.tidexLabelStrong)
+          .foregroundStyle(Color.tidexBlueText)
+          .multilineTextAlignment(.center)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.xxs)
+          .frame(minHeight: 44)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+    }
+    .padding(.horizontal, Spacing.lg)
+    .adaptiveContentWidth()
+    .padding(.bottom, Spacing.xs)
+    .background(Color.tidexBackground)
+  }
+}
+
 #Preview {
-  WelcomeScreen(currency: "kr")
+  WelcomeScreen(currency: .constant("kr"), onContinue: {}, onLogin: {})
     .background(Color.tidexBackground)
 }

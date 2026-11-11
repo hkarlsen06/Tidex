@@ -1,284 +1,80 @@
 import SwiftUI
-import UIKit
 
-struct OnboardingHintShimmerText: View {
-  let text: String
-  let trigger: Int
-
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @State private var shimmerStartDate: Date?
-  @State private var isShimmerActive = false
-  @ScaledMetric(relativeTo: .footnote) private var basePointSize: CGFloat = 13
-
-  private let shimmerDuration = PreAuthSimulatorAnimationTiming.hintSweepDuration
-  private let shimmerCleanupDelay = PreAuthSimulatorAnimationTiming.hintCleanupDelay
-
-  var body: some View {
-    Group {
-      if isShimmerActive {
-        TimelineView(.animation) { context in
-          shimmerText(styledText(at: context.date))
-        }
-      } else {
-        shimmerText(staticText)
-      }
-    }
-    .task(id: trigger) {
-      guard trigger > 0 else { return }
-      await runShimmerCycle()
-    }
-    .onDisappear {
-      isShimmerActive = false
-      shimmerStartDate = nil
-    }
-  }
-
-  private var staticText: AttributedString {
-    var attributed = AttributedString(text)
-    attributed.font = .system(size: basePointSize, weight: .regular, design: .default)
-    attributed.foregroundColor = .tidexTextMuted
-    return attributed
-  }
-
-  private func shimmerText(_ attributed: AttributedString) -> some View {
-    Text(attributed)
-      .multilineTextAlignment(.center)
-      .lineLimit(3)
-      .fixedSize(horizontal: false, vertical: true)
-      .frame(maxWidth: .infinity, alignment: .center)
-  }
-
-  private func styledText(at currentDate: Date) -> AttributedString {
-    var attributed = AttributedString(text)
-    let characterCount = max(text.count, 1)
-
-    guard
-      isShimmerActive,
-      let shimmerStartDate
-    else {
-      attributed.font = .system(size: basePointSize, weight: .regular, design: .default)
-      attributed.foregroundColor = .tidexTextMuted
-      return attributed
-    }
-
-    let elapsed = max(currentDate.timeIntervalSince(shimmerStartDate), 0)
-    let progress = CGFloat(min(elapsed / shimmerDuration, 1))
-    let radius = max(CGFloat(characterCount) * 0.24, 4)
-    let startCenter = -radius
-    let endCenter = CGFloat(max(characterCount - 1, 1)) + radius
-    let center = startCenter + ((endCenter - startCenter) * progress)
-
-    var charIndex = 0
-    var stringIndex = text.startIndex
-
-    while stringIndex < text.endIndex {
-      let nextIndex = text.index(after: stringIndex)
-      let charRange = stringIndex..<nextIndex
-      if let attributedRange = Range(charRange, in: attributed) {
-        let distance = abs(CGFloat(charIndex) - center)
-        let intensity = max(0, 1 - (distance / radius))
-        let weight: Font.Weight =
-          intensity > 0.6 ? .bold : (intensity > 0.25 ? .semibold : .regular)
-        let size = basePointSize * (1 + (0.09 * intensity))
-        let color: Color = intensity > 0.08 ? .tidexBlueText : .tidexTextMuted
-
-        attributed[attributedRange].font = .system(size: size, weight: weight, design: .default)
-        attributed[attributedRange].foregroundColor = color
-      }
-      stringIndex = nextIndex
-      charIndex += 1
-    }
-
-    return attributed
-  }
-
-  private func runShimmerCycle() async {
-    // The per-frame font sweep is motion, so Reduce Motion keeps the static hint.
-    guard !reduceMotion else { return }
-    shimmerStartDate = Date()
-    isShimmerActive = true
-
-    do {
-      try await Task.sleep(for: .seconds(shimmerDuration + shimmerCleanupDelay))
-    } catch { return }
-    isShimmerActive = false
-    shimmerStartDate = nil
-  }
-}
-
-enum PreAuthSimulatorAnimationTiming {
-  static let hintSweepDuration: TimeInterval = 1.28
-  static let hintCleanupDelay: TimeInterval = 0.08
-  static let totalsIndicatorStartDelay: TimeInterval = hintSweepDuration + hintCleanupDelay
-}
-
-enum PreAuthSimulatorFocusStage {
-  case calendar
-  case times
-  case totals
-  case add
-}
-
-extension View {
-  @ViewBuilder
-  func simulatorFocusStyle(isFocused: Bool) -> some View {
-    // Sections that are not in focus lose color, not opacity or sharpness, so their text stays readable.
-    saturation(isFocused ? 1 : 0.45)
-  }
-}
-
-/// Blue focus indicator under totals: dot -> line to the right -> dot again from the left.
-struct TotalsFocusSweepIndicator: View {
-  let isActive: Bool
-  let reduceMotion: Bool
-  let trackWidth: CGFloat
-
-  @State private var leadingProgress: CGFloat = 0
-  @State private var trailingProgress: CGFloat = 0
-  @State private var indicatorOpacity: CGFloat = 0
-
-  private let dotDiameter: CGFloat = 7
-  private let lineHeight: CGFloat = 5
-  private let expandDuration: TimeInterval = 0.54
-  private let collapseDuration: TimeInterval = 0.58
-  private let fadeOutDuration: TimeInterval = 0.18
-  private let startDelay = PreAuthSimulatorAnimationTiming.totalsIndicatorStartDelay
-
-  var body: some View {
-    let travel = trackWidth - dotDiameter
-    let startX = travel * leadingProgress
-    let endX = travel * trailingProgress
-    let width = max(dotDiameter, (endX - startX) + dotDiameter)
-
-    Capsule(style: .continuous)
-      .fill(Color.tidexBlue)
-      .frame(width: width, height: lineHeight)
-      .offset(x: startX)
-      .frame(width: trackWidth, height: dotDiameter, alignment: .leading)
-      .opacity(indicatorOpacity)
-      .allowsHitTesting(false)
-      .accessibilityHidden(true)
-      .task(id: isActive) {
-        await syncAnimationState()
-      }
-  }
-
-  private func syncAnimationState() async {
-    if !isActive {
-      withAnimation(.easeOut(duration: 0.2)) {
-        leadingProgress = 0
-        trailingProgress = 0
-        indicatorOpacity = 0
-      }
-      return
-    }
-
-    leadingProgress = 0
-    trailingProgress = 0
-    indicatorOpacity = 0
-
-    await runSingleCycle()
-  }
-
-  private func runSingleCycle() async {
-    do { try await Task.sleep(for: .seconds(startDelay)) } catch { return }
-    guard !reduceMotion else {
-      indicatorOpacity = 1
-      return
-    }
-
-    indicatorOpacity = 1
-    withAnimation(.easeInOut(duration: expandDuration)) {
-      trailingProgress = 1
-    }
-    do { try await Task.sleep(for: .seconds(expandDuration)) } catch { return }
-    withAnimation(.easeInOut(duration: collapseDuration)) {
-      leadingProgress = 1
-    }
-    do { try await Task.sleep(for: .seconds(collapseDuration)) } catch { return }
-    withAnimation(.easeOut(duration: fadeOutDuration)) {
-      indicatorOpacity = 0
-    }
-  }
-}
-
-/// Compact earnings display used in the simulator toolbar.
-struct PreAuthSimulatorToolbarTotals: View {
-  let totals: CalendarHeaderTotals?
-  let baselinePrimary: Double?
-  let showDelta: Bool
+/// What the demo shift pays, large, with the calculation under it.
+struct PreAuthDemoPayCard: View {
+  let pay: PreAuthDemoPay
+  let hourlyRate: Double
+  let currency: String
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @State private var lastDisplayedPrimary: Double = 0
-  @State private var lastDisplayedSecondary: Double = 0
 
   var body: some View {
-    Group {
-      if let totals, let primary = totals.primary {
-        VStack(alignment: .trailing, spacing: Spacing.micro) {
-          animatedAmount(
-            primary,
-            lastDisplayed: lastDisplayedPrimary,
-            onUpdate: { lastDisplayedPrimary = $0 }
-          )
-          .font(.tidexHeadline)
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      VStack(alignment: .leading, spacing: 0) {
+        Text(verbatim: CurrencyConfig.format(pay.net, currency: currency))
+          .font(.tidexAmountLarge)
           .foregroundStyle(Color.tidexTextPrimary)
+          .contentTransition(.numericText(value: pay.net))
+          .motionAnimation(.feedback, value: pay.net, reduceMotion: reduceMotion)
+        Text(.onboardingAddSimulatorAfterTax)
+          .font(.tidexFootnote)
+          .foregroundStyle(Color.tidexTextSecondary)
+      }
+      .accessibilityElement(children: .combine)
+      .accessibilityIdentifier("onboarding.demo.pay")
 
-          if let delta = deltaAmount {
-            HStack(alignment: .center, spacing: Spacing.xxxs) {
-              Image(systemName: "plus")
-                .font(.caption2.weight(.bold))
-                .accessibilityHidden(true)
-
-              animatedAmount(
-                delta,
-                lastDisplayed: lastDisplayedSecondary,
-                onUpdate: { lastDisplayedSecondary = $0 }
-              )
-              .font(.tidexFootnote)
-            }
-            .foregroundStyle(Color.tidexBlueText)
-            .transition(reduceMotion ? .opacity : .offset(y: -4).combined(with: .opacity))
+      VStack(spacing: Spacing.xxxs) {
+        ForEach(pay.lines, id: \.self) { line in
+          HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+            Text(verbatim: label(for: line.kind))
+              .foregroundStyle(Color.tidexTextSecondary)
+            Spacer(minLength: 0)
+            Text(verbatim: amountText(line.amount))
+              .monospacedDigit()
+              .foregroundStyle(Color.tidexTextPrimary)
           }
-        }
-        .accessibilityElement(children: .combine)
-        .transition(reduceMotion ? .opacity : .offset(x: 6).combined(with: .opacity))
-      }
-    }
-    .animation(
-      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86), value: totals?.primary
-    )
-    .animation(
-      reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86), value: deltaAmount
-    )
-  }
-
-  private var deltaAmount: Double? {
-    guard showDelta, let currentPrimary = totals?.primary, let baselinePrimary else { return nil }
-    let delta = max(currentPrimary - baselinePrimary, 0)
-    return delta > 0 ? delta : nil
-  }
-
-  @ViewBuilder
-  private func animatedAmount(
-    _ amount: Double?,
-    lastDisplayed: Double,
-    onUpdate: @escaping (Double) -> Void
-  ) -> some View {
-    if let amount, amount > 0 {
-      CurrencyCountUpText(
-        amount: amount,
-        animateOnAppear: false,
-        animateFrom: lastDisplayed > 0 ? lastDisplayed : nil
-      )
-      .onChange(of: amount) { _, newValue in
-        onUpdate(newValue)
-      }
-      .onAppear {
-        if lastDisplayed == 0 {
-          onUpdate(amount)
+          .font(.tidexSubheadline)
+          .accessibilityElement(children: .combine)
         }
       }
+
+      Text(.onboardingAddSimulatorExampleRate(CurrencyConfig.format(hourlyRate, currency: currency)))
+        .font(.tidexFootnote)
+        .foregroundStyle(Color.tidexTextMuted)
+        .fixedSize(horizontal: false, vertical: true)
     }
+    .padding(Spacing.md)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.tidexSurfacePrimary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+  }
+
+  private func label(for kind: PreAuthDemoPay.Kind) -> String {
+    switch kind {
+    case .hours(let hours, let rate):
+      let hoursText = hours.formatted(.number.precision(.fractionLength(0...2)).locale(.appLocale))
+      return String(
+        localized: .onboardingAddSimulatorLineHours(hoursText, CurrencyConfig.format(rate, currency: currency)))
+    case .supplement(let supplement):
+      let percent = percentText(supplement.percent)
+      switch supplement {
+      case .evening: return String(localized: .onboardingAddSimulatorLineEvening(percent))
+      case .saturday: return String(localized: .onboardingAddSimulatorLineSaturday(percent))
+      case .sunday: return String(localized: .onboardingAddSimulatorLineSunday(percent))
+      }
+    case .unpaidBreak(let minutes):
+      return String(localized: .onboardingAddSimulatorLineUnpaidBreak(minutes))
+    case .tax(let percent):
+      return String(localized: .onboardingAddSimulatorLineTax(percentText(percent)))
+    }
+  }
+
+  private func percentText(_ percent: Double) -> String {
+    (percent / 100).formatted(.percent.precision(.fractionLength(0)).locale(.appLocale))
+  }
+
+  private func amountText(_ amount: Double) -> String {
+    let text = CurrencyConfig.format(abs(amount), currency: currency)
+    return amount < 0 ? "\u{2212}\(text)" : text
   }
 }

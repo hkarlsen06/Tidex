@@ -1,85 +1,168 @@
 import Foundation
 import Observation
 
-/// Local-only Add tab simulator for pre-auth onboarding.
-/// Mirrors single-shift interactions without persisting or requiring auth.
+/// The shift built in the pre-auth demo, carried to the sign-up screen.
+struct PreAuthDemoShift: Equatable {
+  /// Sorted `yyyy-MM-dd` dates.
+  let dates: [String]
+  /// `HH:mm`.
+  let startTime: String
+  let endTime: String
+}
+
+/// What the demo shift pays at the example rate, split the way the payroll calculator computed it.
+/// The lines add up to `net`.
+struct PreAuthDemoPay: Equatable {
+  enum Kind: Hashable {
+    case hours(Double, rate: Double)
+    case supplement(PreAuthDemoSupplement)
+    case unpaidBreak(minutes: Int)
+    case tax(percent: Double)
+  }
+
+  struct Line: Hashable {
+    let kind: Kind
+    let amount: Double
+  }
+
+  let lines: [Line]
+  let net: Double
+}
+
+/// The example supplements. Percentages work for every currency.
+enum PreAuthDemoSupplement: CaseIterable, Hashable {
+  case evening
+  case saturday
+  case sunday
+
+  var percent: Double {
+    switch self {
+    case .evening: 20
+    case .saturday: 30
+    case .sunday: 50
+    }
+  }
+
+  var rule: SupplementRule {
+    switch self {
+    case .evening: SupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "24:00", percent: percent)
+    case .saturday: SupplementRule(days: [6], from: "13:00", to: "24:00", percent: percent)
+    case .sunday: SupplementRule(days: [7], from: "00:00", to: "24:00", percent: percent)
+    }
+  }
+
+  /// The supplement that pays on a weekday, 1 for Monday through 7 for Sunday.
+  static func on(weekday: Int) -> Self {
+    switch weekday {
+    case 6: .saturday
+    case 7: .sunday
+    default: .evening
+    }
+  }
+}
+
+/// Local-only Add tab demo for pre-auth onboarding. Nothing is saved and no account is needed.
 @MainActor
 @Observable
 final class PreAuthAddShiftSimulatorViewModel: AddShiftCalendarViewModeling {
-  var startTime: Date? {  // swiftlint:disable:this explicit_acl
-    didSet { updateConflictsAndPreviews() }
-  }
-
-  var endTime: Date? {  // swiftlint:disable:this explicit_acl
-    didSet { updateConflictsAndPreviews() }
-  }
-
-  var selectedDates: Set<String> = [] {
-    didSet { updateConflictsAndPreviews() }
-  }
+  var startTime: Date?  // swiftlint:disable:this explicit_acl
+  var endTime: Date?  // swiftlint:disable:this explicit_acl
+  var selectedDates: Set<String>
 
   private(set) var currency: String
-  private(set) var conflictDates: Set<String> = []
-  private(set) var previewEarnings: [String: CalendarEarningsData] = [:]
-  private(set) var existingShiftHours: [String: HoursData] = [:]
-  private(set) var baselineToolbarTotals: CalendarHeaderTotals?
-  private(set) var toolbarTotals: CalendarHeaderTotals?
 
   let displayMonth: Date
   let displayYear: Int
-  let displayMonthNumber: Int
-  let presetTimeRanges: [TimeRangeCount]
+  let presetTimeRanges: [TimeRangeCount] = [
+    TimeRangeCount(startTime: "08:00", endTime: "16:00", count: 3),
+    TimeRangeCount(startTime: "10:00", endTime: "18:00", count: 2),
+    TimeRangeCount(startTime: "14:00", endTime: "22:00", count: 1),
+  ]
   let navigationDirection: MonthNavigationDirection? = nil
+  let conflictDates: Set<String> = []
+  let existingShiftHours: [String: HoursData] = [:]
 
-  private let payrollDay: Int = 15
-  private var snapshots: [WageSnapshot]
-  private let existingShifts: [ShiftRow]
-  private var existingShiftEarnings: [String: CalendarEarningsData]
+  private static let payrollDay = 15
+  private static let taxPercentage = 20.0
+
+  init(
+    initialCurrency: String = OnboardingCurrencyResolver.detectDefaultCurrency(),
+    now: Date = Date()
+  ) {
+    let calendar = Calendar.gregorianCurrent
+    let month = calendar.dateInterval(of: .month, for: now)?.start ?? now
+    displayMonth = month
+    displayYear = calendar.component(.year, from: month)
+    selectedDates = [Self.suggestedDate(now: now, calendar: calendar)]
+    currency =
+      OnboardingCurrencyResolver.isSupportedCurrency(initialCurrency)
+      ? initialCurrency
+      : OnboardingCurrencyResolver.detectDefaultCurrency()
+  }
 
   var displayMonthName: String {
     CalendarGridHelper.monthName(from: displayMonth, locale: .appLocale)
   }
 
-  var monthPhase: MonthTransitionPhase {
-    MonthTransitionPhase(year: displayYear, month: displayMonthNumber, direction: nil)
+  var hourlyRate: Double {
+    OnboardingCurrencyResolver.defaultHourlyWage(for: currency)
   }
 
-  var canContinue: Bool {
-    !selectedDates.isEmpty && hasValidTimes
+  /// Set once the user has picked dates and both times.
+  var shift: PreAuthDemoShift? {
+    guard let startTime, let endTime, !selectedDates.isEmpty else { return nil }
+    let start = startTime.toHourMinuteString()
+    var end = endTime.toHourMinuteString()
+    if end == "00:00", start != "00:00" { end = "24:00" }
+    return PreAuthDemoShift(dates: selectedDates.sorted(), startTime: start, endTime: end)
   }
 
-  init(initialCurrency: String = OnboardingCurrencyResolver.detectDefaultCurrency()) {
-    let current = Date.currentYearMonth()
-    displayYear = current.year
-    displayMonthNumber = current.month
+  var pay: PreAuthDemoPay? {
+    guard let shift else { return nil }
+    let computed = computedShifts(shift)
+    var hours = 0.0
+    var base = 0.0
+    var supplements: [PreAuthDemoSupplement: Double] = [:]
+    var breakHours = 0.0
+    var gross = 0.0
+    for (dateISO, result) in computed {
+      hours += result.durationHours
+      gross += result.gross
+      breakHours += result.breakAudit.deductedHours
+      let weekday = Self.weekday(of: dateISO)
+      for period in result.originalWagePeriods where period.durationMinutes > 0 {
+        base += period.durationHours * period.baseRate
+        guard period.supplementRate > 0 else { continue }
+        let dayOffset = Int((period.fromMin / 1_440).rounded(.down))
+        let supplement = PreAuthDemoSupplement.on(weekday: (weekday - 1 + dayOffset) % 7 + 1)
+        supplements[supplement, default: 0] += period.durationHours * period.supplementRate
+      }
+    }
+    let preBreakGross = base + supplements.values.reduce(0, +)
+    let tax = gross * Self.taxPercentage / 100
 
-    var components = DateComponents()
-    components.year = current.year
-    components.month = current.month
-    components.day = 1
-    displayMonth = Calendar.gregorianCurrent.date(from: components) ?? Date()
+    var lines = [PreAuthDemoPay.Line(kind: .hours(hours, rate: hourlyRate), amount: base)]
+    for supplement in PreAuthDemoSupplement.allCases {
+      if let amount = supplements[supplement] {
+        lines.append(.init(kind: .supplement(supplement), amount: amount))
+      }
+    }
+    if breakHours > 0 {
+      lines.append(
+        .init(kind: .unpaidBreak(minutes: Int((breakHours * 60).rounded())), amount: gross - preBreakGross))
+    }
+    lines.append(.init(kind: .tax(percent: Self.taxPercentage), amount: -tax))
+    return PreAuthDemoPay(lines: lines, net: gross - tax)
+  }
 
-    let resolvedCurrency =
-      OnboardingCurrencyResolver.isSupportedCurrency(initialCurrency)
-      ? initialCurrency
-      : OnboardingCurrencyResolver.detectDefaultCurrency()
-    currency = resolvedCurrency
-
-    presetTimeRanges = [
-      TimeRangeCount(startTime: "08:00", endTime: "16:00", count: 9),
-      TimeRangeCount(startTime: "09:00", endTime: "17:00", count: 7),
-      TimeRangeCount(startTime: "12:00", endTime: "20:00", count: 5),
-      TimeRangeCount(startTime: "14:00", endTime: "22:00", count: 3),
-      TimeRangeCount(startTime: "22:00", endTime: "06:00", count: 2),
-    ]
-
-    snapshots = []
-    existingShifts = Self.makeSeededShifts(year: current.year, month: current.month)
-    existingShiftEarnings = [:]
-
-    existingShiftHours = Self.buildExistingHoursMap(from: existingShifts)
-
-    rebuildCurrencyDependentData(for: resolvedCurrency)
+  /// Each selected day's pay, drawn in its calendar cell as in the real Add screen.
+  var previewEarnings: [String: CalendarEarningsData] {
+    guard let shift else { return [:] }
+    return computedShifts(shift).mapValues {
+      CalendarEarningsData(
+        net: $0.netPay(taxEnabled: true, taxPercentage: Self.taxPercentage),
+        gross: $0.gross, hasTaxEnabled: true)
+    }
   }
 
   func toggleDate(_ dateISO: String) {
@@ -88,149 +171,43 @@ final class PreAuthAddShiftSimulatorViewModel: AddShiftCalendarViewModeling {
     } else {
       selectedDates.insert(dateISO)
     }
-
     Haptics.play(.light)
   }
 
   func applyCurrency(_ symbol: String) {
-    let nextCurrency =
-      OnboardingCurrencyResolver.isSupportedCurrency(symbol)
-      ? symbol
-      : OnboardingCurrencyResolver.detectDefaultCurrency()
-
-    guard nextCurrency != currency else { return }
-
-    currency = nextCurrency
-    rebuildCurrencyDependentData(for: nextCurrency)
+    guard OnboardingCurrencyResolver.isSupportedCurrency(symbol) else { return }
+    currency = symbol
   }
 
-  // MARK: - Computation
-
-  private var hasValidTimes: Bool {
-    startTime != nil && endTime != nil
-  }
-
-  private var startTimeString: String {
-    guard let time = startTime else { return "" }
-    return Self.formatTimeAsHHmm(time)
-  }
-
-  private var endTimeString: String {
-    guard let time = endTime else { return "" }
-    let formatted = Self.formatTimeAsHHmm(time)
-    if formatted == "00:00", let start = startTime, Self.formatTimeAsHHmm(start) != "00:00" {
-      return "24:00"
+  private func computedShifts(_ shift: PreAuthDemoShift) -> [String: ShiftComputed] {
+    let snapshot = Self.snapshot(hourlyWage: hourlyRate)
+    var result: [String: ShiftComputed] = [:]
+    for dateISO in shift.dates {
+      let row = ShiftRow(
+        id: "onboarding-preview-\(dateISO)", user_id: nil, shift_date: dateISO,
+        start_time: shift.startTime, end_time: shift.endTime, custom_supplements: nil)
+      result[dateISO] = PayrollCalculator.computeShift(row, snapshot: snapshot)
     }
-    return formatted
+    return result
   }
 
-  private func rebuildCurrencyDependentData(for symbol: String) {
-    snapshots = [
-      Self.makeBaselineSnapshot(
-        hourlyWage: OnboardingCurrencyResolver.defaultHourlyWage(for: symbol))
-    ]
-
-    existingShiftEarnings = Self.buildExistingEarningsMap(
-      shifts: existingShifts,
-      snapshots: snapshots,
-      payrollDay: payrollDay
-    )
-
-    baselineToolbarTotals = computeToolbarTotals(
-      previewByDate: [:],
-      conflicts: []
-    )
-
-    updateConflictsAndPreviews()
+  /// The first Saturday after today in this month, else tomorrow, else today. The calendar
+  /// shows only this month.
+  private static func suggestedDate(now: Date, calendar: Calendar) -> String {
+    let month = calendar.component(.month, from: now)
+    let following = (1...7).compactMap { calendar.date(byAdding: .day, value: $0, to: now) }
+      .filter { calendar.component(.month, from: $0) == month }
+    let saturday = following.first { calendar.component(.weekday, from: $0) == 7 }
+    return (saturday ?? following.first ?? now).toISODateString()
   }
 
-  private func updateConflictsAndPreviews() {
-    guard hasValidTimes, !selectedDates.isEmpty else {
-      conflictDates = []
-      previewEarnings = [:]
-      updateToolbarTotals()
-      return
-    }
-
-    let selected = Array(selectedDates)
-
-    conflictDates = ShiftConflictDetector.detectConflicts(
-      dates: selected,
-      startTime: startTimeString,
-      endTime: endTimeString,
-      existingShifts: existingShifts
-    )
-
-    var nextPreview: [String: CalendarEarningsData] = [:]
-    for dateISO in selected {
-      if let earnings = computeEarningsForDate(dateISO) {
-        nextPreview[dateISO] = earnings
-      }
-    }
-
-    previewEarnings = nextPreview
-    updateToolbarTotals()
+  /// 1 for Monday through 7 for Sunday.
+  private static func weekday(of dateISO: String) -> Int {
+    guard let date = Date.fromISODateString(dateISO) else { return 1 }
+    return (Calendar.gregorianCurrent.component(.weekday, from: date) + 5) % 7 + 1
   }
 
-  private func updateToolbarTotals() {
-    toolbarTotals = computeToolbarTotals(
-      previewByDate: previewEarnings,
-      conflicts: conflictDates
-    )
-  }
-
-  private func computeToolbarTotals(
-    previewByDate: [String: CalendarEarningsData],
-    conflicts: Set<String>
-  ) -> CalendarHeaderTotals? {
-    let totals = ConflictExclusion.combinedEarnings(
-      existingByDate: existingShiftEarnings,
-      previewByDate: previewByDate,
-      conflictDates: conflicts
-    )
-
-    guard totals.gross > 0 else {
-      return nil
-    }
-
-    return CalendarHeaderTotals(
-      primary: totals.hasTaxEnabled ? totals.net : totals.gross,
-      secondary: totals.hasTaxEnabled ? totals.gross : nil
-    )
-  }
-
-  private func computeEarningsForDate(_ dateISO: String) -> CalendarEarningsData? {
-    let wageSnapshot = SnapshotsService.snapshotForDate(dateISO, from: snapshots)
-
-    let payoutDate = PayoutSchedule(period: .calendarMonth, payrollDay: payrollDay).payoutDate(for: dateISO)
-    let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: snapshots)
-
-    let shift = ShiftRow(
-      id: "onboarding-preview-\(dateISO)",
-      user_id: nil,
-      shift_date: dateISO,
-      start_time: startTimeString,
-      end_time: endTimeString,
-      custom_supplements: nil
-    )
-
-    let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
-    let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
-    let net = computed.netPay(
-      taxEnabled: taxEnabled,
-      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
-    )
-
-    return CalendarEarningsData(net: net, gross: computed.gross, hasTaxEnabled: taxEnabled)
-  }
-
-}
-
-// MARK: - Seed Data
-
-extension PreAuthAddShiftSimulatorViewModel {
-
-  private static func makeBaselineSnapshot(hourlyWage: Double) -> WageSnapshot {
+  private static func snapshot(hourlyWage: Double) -> WageSnapshot {
     WageSnapshot(
       id: "onboarding-baseline",
       user_id: "onboarding-demo",
@@ -238,135 +215,14 @@ extension PreAuthAddShiftSimulatorViewModel {
       hourly_wage: hourlyWage,
       wage_level: nil,
       tariff_type_id: nil,
-      // Showcase evening and weekend supplements. Percentages work for every currency.
-      supplements: SupplementRulesSnapshot(rules: [
-        SupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "24:00", percent: 20),
-        SupplementRule(days: [6], from: "13:00", to: "24:00", percent: 30),
-        SupplementRule(days: [7], from: "00:00", to: "24:00", percent: 50),
-      ]),
+      supplements: SupplementRulesSnapshot(rules: PreAuthDemoSupplement.allCases.map(\.rule)),
       tax_enabled: true,
-      tax_percentage: 20,
+      tax_percentage: taxPercentage,
       break_enabled: true,
       break_method: BreakMethod.proportional.rawValue,
       break_threshold_hours: 5.5,
       break_deduction_minutes: 30,
       created_at: nil
     )
-  }
-
-  private static func makeSeededShifts(year: Int, month: Int) -> [ShiftRow] {
-    let daysInMonth = Date.daysInMonth(year: year, month: month)
-
-    let seed: [(day: Int, start: String, end: String)] = [
-      (3, "08:00", "16:00"),
-      (7, "14:00", "22:00"),
-      (12, "09:00", "17:00"),
-      (19, "12:00", "20:00"),
-      (24, "22:00", "06:00"),
-    ]
-
-    return seed.compactMap { item in
-      guard item.day <= daysInMonth,
-        let dateISO = Date.isoDateString(year: year, month: month, day: item.day)
-      else { return nil }
-
-      return ShiftRow(
-        id: "onboarding-seed-\(item.day)",
-        user_id: nil,
-        shift_date: dateISO,
-        start_time: item.start,
-        end_time: item.end,
-        custom_supplements: nil
-      )
-    }
-  }
-
-  private static func buildExistingHoursMap(from shifts: [ShiftRow]) -> [String: HoursData] {
-    var shiftTimesByDate: [String: [(start: String, end: String)]] = [:]
-
-    for shift in shifts {
-      shiftTimesByDate[shift.shift_date, default: []].append(
-        (start: shift.start_time, end: shift.end_time))
-    }
-
-    var result: [String: HoursData] = [:]
-
-    for (date, shiftsOnDate) in shiftTimesByDate {
-      guard !shiftsOnDate.isEmpty else { continue }
-
-      let sortedByStart = shiftsOnDate.sorted {
-        CalendarGridHelper.timeToMinutes($0.start) < CalendarGridHelper.timeToMinutes($1.start)
-      }
-
-      let earliestStart = sortedByStart.first?.start ?? ""
-      let latestEnd =
-        shiftsOnDate.max(by: { lhs, rhs in
-          let lhsStart = CalendarGridHelper.timeToMinutes(lhs.start)
-          let lhsEnd = CalendarGridHelper.timeToMinutes(lhs.end)
-          let lhsAdjustedEnd = lhsEnd <= lhsStart ? lhsEnd + 24 * 60 : lhsEnd
-
-          let rhsStart = CalendarGridHelper.timeToMinutes(rhs.start)
-          let rhsEnd = CalendarGridHelper.timeToMinutes(rhs.end)
-          let rhsAdjustedEnd = rhsEnd <= rhsStart ? rhsEnd + 24 * 60 : rhsEnd
-
-          return lhsAdjustedEnd < rhsAdjustedEnd
-        })?.end ?? ""
-
-      let crossesMidnight = shiftsOnDate.contains {
-        CalendarGridHelper.timeToMinutes($0.end) <= CalendarGridHelper.timeToMinutes($0.start)
-      }
-
-      result[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart),
-        end: CalendarGridHelper.formatTime(latestEnd),
-        crossesMidnight: crossesMidnight
-      )
-    }
-
-    return result
-  }
-
-  private static func buildExistingEarningsMap(
-    shifts: [ShiftRow],
-    snapshots: [WageSnapshot],
-    payrollDay: Int
-  ) -> [String: CalendarEarningsData] {
-    var netByDate: [String: Double] = [:]
-    var grossByDate: [String: Double] = [:]
-    var hasTaxByDate: [String: Bool] = [:]
-
-    for shift in shifts {
-      let wageSnapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: snapshots)
-      let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
-
-      let payoutDate = PayoutSchedule(period: .calendarMonth, payrollDay: payrollDay).payoutDate(for: shift.shift_date)
-      let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: snapshots)
-      let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
-
-      let net = computed.netPay(
-        taxEnabled: taxEnabled,
-        taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
-      )
-
-      netByDate[shift.shift_date, default: 0] += net
-      grossByDate[shift.shift_date, default: 0] += computed.gross
-      hasTaxByDate[shift.shift_date, default: false] =
-        hasTaxByDate[shift.shift_date, default: false] || taxEnabled
-    }
-
-    var result: [String: CalendarEarningsData] = [:]
-    for (date, net) in netByDate {
-      result[date] = CalendarEarningsData(
-        net: net,
-        gross: grossByDate[date] ?? net,
-        hasTaxEnabled: hasTaxByDate[date] ?? false
-      )
-    }
-
-    return result
-  }
-
-  private static func formatTimeAsHHmm(_ date: Date) -> String {
-    date.toHourMinuteString()
   }
 }

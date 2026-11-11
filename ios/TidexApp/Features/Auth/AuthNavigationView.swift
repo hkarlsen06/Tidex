@@ -4,6 +4,7 @@ import SwiftUI
 /// Handles routing between login, signup, and reset password flows
 struct AuthNavigationView: View {
   let initialScreen: AuthScreen
+  let demoShift: PreAuthDemoShift?
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentScreen: AuthScreen
@@ -17,8 +18,9 @@ struct AuthNavigationView: View {
     case resetPassword
   }
 
-  init(initialScreen: AuthScreen = .login) {
+  init(initialScreen: AuthScreen = .login, demoShift: PreAuthDemoShift? = nil) {
     self.initialScreen = initialScreen
+    self.demoShift = demoShift
     self._currentScreen = State(initialValue: initialScreen)
     self._authCurrency = State(
       initialValue: OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
@@ -49,6 +51,7 @@ struct AuthNavigationView: View {
           SignupView(
             viewModel: signupViewModel,
             currency: authCurrency,
+            demoShift: demoShift,
             onNavigateToLogin: { navigateToLoginFromSignup() }
           )
           .transition(

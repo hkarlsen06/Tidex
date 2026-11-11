@@ -7,12 +7,19 @@ struct AuthHeroVisual: View {
   let logoSize: CGFloat
   let currency: String
   var subtitle: LocalizedStringResource?
-  var onLogoTap: (() -> Void)?
+  /// The shift saved in the pre-auth demo. It replaces the sample paycheck card.
+  var demoShift: PreAuthDemoShift?
+  /// Shows a back button beside the logo. Nil on steps that keep their own back link.
+  var onBack: (() -> Void)?
 
   var body: some View {
     VStack(spacing: Spacing.lg) {
-      logoSection
-      ghostedPaycheckPreview
+      logoRow
+      if let demoShift {
+        AuthDemoShiftCard(shift: demoShift)
+      } else {
+        ghostedPaycheckPreview
+      }
       Text(title)
         .font(.tidexTitle)
         .foregroundStyle(Color.tidexTextPrimary)
@@ -30,24 +37,19 @@ struct AuthHeroVisual: View {
     }
   }
 
-  @ViewBuilder
-  private var logoSection: some View {
-    let content = Image("TidexLogo")
+  private var logoRow: some View {
+    Image("TidexLogo")
       .resizable()
       .scaledToFit()
       .frame(width: min(logoSize, Spacing.huge), height: min(logoSize, Spacing.huge))
-      .accessibilityLabel(Text(verbatim: "Tidex"))
-
-    if let onLogoTap {
-      Button(action: onLogoTap) {
-        content
+      .accessibilityHidden(true)
+      .frame(maxWidth: .infinity)
+      .overlay(alignment: .leading) {
+        if let onBack {
+          PreAuthBackButton(action: onBack)
+            .transition(.opacity)
+        }
       }
-      .buttonStyle(.plain)
-      .accessibilityHint(Text(.authRestartPreAuthOnboarding))
-    } else {
-      content
-        .accessibilityHidden(true)
-    }
   }
 
   private var ghostedAmountText: String {
@@ -89,15 +91,7 @@ struct AuthHeroVisual: View {
 
     }
 
-    if let onLogoTap {
-      // Sighted users can tap the card too. The logo is the one control VoiceOver and Voice Control see.
-      card
-        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-        .onTapGesture(perform: onLogoTap)
-        .accessibilityHidden(true)
-    } else {
-      card.accessibilityHidden(true)
-    }
+    card.accessibilityHidden(true)
   }
 
   private func ghostedRow(labelWidth: CGFloat, valueWidth: CGFloat) -> some View {
@@ -116,4 +110,66 @@ struct AuthHeroVisual: View {
     Color.tidexSurfacePrimary
   }
 
+}
+
+/// The demo shift on the sign-up screen: its dates and times.
+private struct AuthDemoShiftCard: View {
+  let shift: PreAuthDemoShift
+
+  private var datesText: String {
+    shift.dates.compactMap { Date.fromISODateString($0) }
+      .map { $0.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale)) }
+      .formatted(.list(type: .and).locale(.appLocale))
+  }
+
+  var body: some View {
+    VStack(spacing: Spacing.xxs) {
+      Text(verbatim: datesText)
+        .font(.tidexHeadline)
+        .foregroundStyle(Color.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+      Text(
+        verbatim: ShiftCardFormatter.localizedTimeRange(
+          start: shift.startTime, end: shift.endTime, locale: .appLocale))
+        .font(.tidexAmountLarge)
+        .monospacedDigit()
+        .foregroundStyle(Color.tidexBlueText)
+    }
+    .padding(.horizontal, Spacing.lg)
+    .padding(.vertical, Spacing.mlg)
+    .frame(minWidth: 280)
+    .background(Color.tidexSurfacePrimary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
+        .stroke(Color.tidexSeparator, lineWidth: 1)
+    )
+    .accessibilityElement(children: .combine)
+  }
+}
+
+/// The chevron pill that leaves a pre-auth or auth screen for the previous page.
+struct PreAuthBackButton: View {
+  let action: () -> Void
+
+  var body: some View {
+    Button {
+      Haptics.play(.light)
+      action()
+    } label: {
+      Image(systemName: "chevron.left")
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(Color.tidexTextSecondary)
+        .accessibilityHidden(true)
+        .frame(width: 46, height: 34)
+        .background(Color.tidexSurfaceSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(SnappyButtonStyle())
+    .accessibilityLabel(Text(.commonBack))
+    .accessibilityIdentifier("auth.back")
+  }
 }
