@@ -104,8 +104,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   @State private var showMixedCurrencyBreakdownPopover = false
 
   private struct DayJobTimeColors {
-    let topColor: Color
-    let bottomColor: Color
+    let start: Color
+    let end: Color
   }
 
   // MARK: - Gesture State
@@ -256,21 +256,16 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
     var result: [String: DayJobTimeColors] = [:]
 
-    for (dateISO, shiftsOnDay) in shiftsByDate where !shiftsOnDay.isEmpty {
-      let sortedShifts = shiftsOnDay.sorted { lhs, rhs in
-        CalendarGridHelper.timeToMinutes(lhs.startTime)
-          < CalendarGridHelper.timeToMinutes(rhs.startTime)
-      }
-
-      guard let earliestShift = sortedShifts.first else {
+    for (dateISO, shiftsOnDay) in shiftsByDate {
+      guard let span = DayShiftSpan(shiftsOnDay, start: { $0.startTime }, end: { $0.endTime }),
+        let start = resolvedJobColor(for: span.opening)
+      else {
         continue
       }
-      guard let topColor = resolvedJobColor(for: earliestShift) else {
-        continue
-      }
-
-      // For days with multiple shifts, always use the earliest shift's workplace color.
-      result[dateISO] = DayJobTimeColors(topColor: topColor, bottomColor: topColor)
+      result[dateISO] = DayJobTimeColors(
+        start: start,
+        end: resolvedJobColor(for: span.closing) ?? start
+      )
     }
 
     return result
@@ -803,8 +798,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .earningsBreakdown(
           earnings,
-          color: dayJobTimeColors.topColor,
-          beforeTaxColor: dayJobTimeColors.bottomColor
+          color: dayJobTimeColors.start,
+          beforeTaxColor: dayJobTimeColors.start
         )
       }
       return .earningsBreakdown(earnings)
@@ -813,8 +808,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .hours(
           hoursData,
-          color: dayJobTimeColors.topColor,
-          secondaryColor: dayJobTimeColors.bottomColor
+          color: dayJobTimeColors.start,
+          secondaryColor: dayJobTimeColors.end
         )
       }
       return .hours(hoursData)

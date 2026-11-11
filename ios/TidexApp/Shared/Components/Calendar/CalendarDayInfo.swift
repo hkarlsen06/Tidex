@@ -55,23 +55,42 @@ struct HoursData: Equatable {
 }
 
 extension HoursData {
-  /// The span of a day's shifts, from the earliest start to the latest end. An end at or before
-  /// its start is on the next day, so "18:00 to 00:00" outlasts "02:00 to 07:30".
   init?(spanning shifts: [(start: String, end: String)]) {
+    guard let span = DayShiftSpan(shifts, start: { $0.start }, end: { $0.end }) else {
+      return nil
+    }
+    self.init(
+      start: CalendarGridHelper.formatTime(span.opening.start),
+      end: CalendarGridHelper.formatTime(span.closing.end),
+      crossesMidnight: span.closesNextDay
+    )
+  }
+}
+
+/// The shifts that open and close a day: the earliest start and the latest end. An end at or
+/// before its start is on the next day, so "18:00 to 00:00" closes a day after "02:00 to 07:30".
+struct DayShiftSpan<Shift> {
+  let opening: Shift
+  let closing: Shift
+  let closesNextDay: Bool
+
+  init?(_ shifts: [Shift], start: (Shift) -> String, end: (Shift) -> String) {
     let minutesPerDay = 24 * 60
     let spans = shifts.map { shift in
-      let start = CalendarGridHelper.timeToMinutes(shift.start)
-      let end = CalendarGridHelper.timeToMinutes(shift.end)
-      return (shift: shift, start: start, end: end <= start ? end + minutesPerDay : end)
+      let startMinutes = CalendarGridHelper.timeToMinutes(start(shift))
+      let endMinutes = CalendarGridHelper.timeToMinutes(end(shift))
+      return (
+        shift: shift,
+        start: startMinutes,
+        end: endMinutes <= startMinutes ? endMinutes + minutesPerDay : endMinutes
+      )
     }
-    guard let earliest = spans.min(by: { $0.start < $1.start }),
-      let latest = spans.max(by: { $0.end < $1.end })
+    guard let opening = spans.min(by: { $0.start < $1.start }),
+      let closing = spans.max(by: { $0.end < $1.end })
     else { return nil }
-    self.init(
-      start: CalendarGridHelper.formatTime(earliest.shift.start),
-      end: CalendarGridHelper.formatTime(latest.shift.end),
-      crossesMidnight: latest.end >= minutesPerDay
-    )
+    self.opening = opening.shift
+    self.closing = closing.shift
+    closesNextDay = closing.end >= minutesPerDay
   }
 }
 

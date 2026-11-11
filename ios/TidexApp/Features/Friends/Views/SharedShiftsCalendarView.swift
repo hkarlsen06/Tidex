@@ -68,8 +68,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   private static let friendIndicatorColor = Color.tidexPurple
 
   private struct DayJobTimeColors {
-    let topColor: Color
-    let bottomColor: Color
+    let start: Color
+    let end: Color
   }
 
   private struct CalendarMetrics {
@@ -130,20 +130,21 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
 
     for (date, shiftsOnDate) in shiftsByDate {
       hoursByDate[date] = HoursData(spanning: shiftsOnDate.map { ($0.startTime, $0.endTime) })
-      let earliestShift = shiftsOnDate.min {
-        CalendarGridHelper.timeToMinutes($0.startTime)
-          < CalendarGridHelper.timeToMinutes($1.startTime)
-      }
 
       if hasMultipleActiveJobs,
-        let earliestShift,
-        let topColor = resolvedJobColor(
-          for: earliestShift,
+        let span = DayShiftSpan(shiftsOnDate, start: { $0.startTime }, end: { $0.endTime }),
+        let start = resolvedJobColor(
+          for: span.opening,
           jobsById: jobsById,
           defaultJobId: defaultJobId
         )
       {
-        dayJobTimeColorsByDate[date] = DayJobTimeColors(topColor: topColor, bottomColor: topColor)
+        let end = resolvedJobColor(
+          for: span.closing,
+          jobsById: jobsById,
+          defaultJobId: defaultJobId
+        )
+        dayJobTimeColorsByDate[date] = DayJobTimeColors(start: start, end: end ?? start)
       }
     }
 
@@ -780,8 +781,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .earningsBreakdown(
           earnings,
-          color: dayJobTimeColors.topColor,
-          beforeTaxColor: dayJobTimeColors.bottomColor.opacity(0.75)
+          color: dayJobTimeColors.start,
+          beforeTaxColor: dayJobTimeColors.start.opacity(0.75)
         )
       }
       return .earningsBreakdown(earnings)
@@ -790,8 +791,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .hours(
           hoursData,
-          color: dayJobTimeColors.topColor,
-          secondaryColor: dayJobTimeColors.bottomColor
+          color: dayJobTimeColors.start,
+          secondaryColor: dayJobTimeColors.end
         )
       }
       return .hours(hoursData)
