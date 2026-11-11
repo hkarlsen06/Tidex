@@ -65,6 +65,43 @@ final class ShiftJourneyUITests: XCTestCase {
     XCTAssertFalse(savedDay.exists, "The deleted shift must leave the schedule")
   }
 
+  /// A user with a job and no shifts adds a first shift from the Home prompt.
+  func testFirstShiftFromHomePromptShowsOnTheSchedule() {
+    let app = XCUIApplication()
+    app.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+      "-defaultStartupTab", "home",
+    ]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    app.launchEnvironment["TIDEX_TEST_NO_SHIFTS"] = "1"
+    app.launch()
+
+    let addFirstShift = app.buttons["first-shift.add-shift"]
+    XCTAssertTrue(addFirstShift.waitForExistence(timeout: timeout), app.debugDescription)
+    addFirstShift.tap()
+
+    let start = app.textFields["Start"]
+    XCTAssertTrue(start.waitForExistence(timeout: timeout), "Add Shift did not open")
+    start.tap()
+    start.typeText("0900")
+    app.textFields["End"].typeText("1700")
+    let preview = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label CONTAINS %@", "after tax")).firstMatch
+    XCTAssertTrue(preview.waitForExistence(timeout: timeout), app.debugDescription)
+    // A complete end time closes the keyboard, which brings back the bottom controls.
+    let save = app.buttons["add-shift.save"]
+    XCTAssertTrue(save.waitForExistence(timeout: timeout), app.debugDescription)
+    save.tap()
+    dismissNotificationPrompt(timeout: 10)
+
+    app.tabBars.buttons["Schedule"].tap()
+    let savedDay = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label BEGINSWITH %@", Self.scheduleLabel(for: .now) + ","))
+      .firstMatch
+    XCTAssertTrue(savedDay.waitForExistence(timeout: timeout), app.debugDescription)
+    XCTAssertTrue(savedDay.label.contains("09:00 to 17:00"), savedDay.label)
+  }
+
   func testPaymentSuggestionCancelPreservesShiftAndSaveLeavesDayWithoutHours() {
     let app = XCUIApplication()
     launchPaymentJourney(app)
@@ -385,16 +422,21 @@ final class ShiftJourneyUITests: XCTestCase {
     let calendar = Calendar(identifier: .gregorian)
     var components = calendar.dateComponents([.year, .month, .day], from: .now)
     components.day = components.day == 23 ? 21 : 23
+    return scheduleLabel(for: calendar.date(from: components) ?? .now)
+  }
+
+  private static func scheduleLabel(for date: Date) -> String {
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "en_US")
     formatter.dateFormat = "EEEE, MMMM d"
-    return formatter.string(from: calendar.date(from: components) ?? .now)
+    return formatter.string(from: date)
   }
 
-  /// Saving a shift can ask for notification permission for shift reminders.
-  private func dismissNotificationPrompt() {
+  /// Saving a shift can ask for notification permission for shift reminders. After a first
+  /// shift the prompt waits for the confetti to fall.
+  private func dismissNotificationPrompt(timeout: TimeInterval = 3) {
     let alert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
-    if alert.waitForExistence(timeout: 3) {
+    if alert.waitForExistence(timeout: timeout) {
       alert.buttons.element(boundBy: 0).tap()
     }
   }
