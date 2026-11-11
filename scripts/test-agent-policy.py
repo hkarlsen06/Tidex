@@ -199,14 +199,29 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
         assert json.loads(result.stdout)["devices"][0]["allowed"] is True
         assert not builds(commands), commands
 
+    result, _ = run("lock", "pool")
+    assert result.stdout.splitlines() == ["Shared iPhone", "Shared iPhone 2", "Shared iPhone 3"], result.stdout
     for count, expected in (("1", 1), ("2", 2), ("3", 3)):
         result, _ = run("lock", "pool", IOS_AGENT_SIMULATORS=count)
         assert len(result.stdout.splitlines()) == expected
     result, _ = run("lock", "pool", IOS_AGENT_SIMULATORS="0", expected=2)
     assert "IOS_AGENT_SIMULATORS" in result.stderr
     for name in ("Shared iPhone 2", "Shared iPhone 3", "simulator-2", "simulator-3"):
-        result, commands = run("lock", "acquire", name, expected=2)
+        result, commands = run("lock", "acquire", name, expected=2, IOS_AGENT_SIMULATORS="1")
         assert not any(command[0] == "xcrun" for command in commands), commands
+
+    # An extra simulator boots only while the ones before it are busy.
+    busy = dict(POLICY_ROOT=str(root / "busy"))
+    run("lock", "acquire", "simulator", **busy)
+    result, commands = run("lock", "acquire", "simulator")
+    assert result.stdout.strip() == "Shared iPhone 2", result.stdout
+    assert ["ios-agent", "simulator-lease", "Shared iPhone 2", "600"] in commands, commands
+    _, commands = run("lock", "release", "simulator")
+    assert ["xcrun", "simctl", "shutdown", "Shared iPhone 2"] in commands, commands
+    run("lock", "release", "simulator", **busy)
+    result, _ = run("lock", "acquire", "simulator")
+    assert result.stdout.strip() == "Shared iPhone", result.stdout
+    run("lock", "release", "simulator")
     _, commands = run("lock", "run", "Shared iPhone 2", "--", "true", IOS_AGENT_SIMULATORS="2")
     assert ["xcrun", "simctl", "shutdown", "Shared iPhone 2"] in commands
     assert not (root / "sim-locks/simulator-2").exists()
@@ -220,6 +235,8 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
     assert ["xcrun", "simctl", "shutdown", "Shared iPhone 2"] in commands
     assert not (root / "sim-locks/simulator-2").exists()
 
+    # The line is easiest to watch on a pool of one.
+    base_env["IOS_AGENT_SIMULATORS"] = "1"
     order = root / "order"
     line = root / "sim-locks/.waiting"
 

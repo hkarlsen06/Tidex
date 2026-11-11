@@ -13,8 +13,9 @@
 # `simulator` is a pool of shared simulators with one lock each. Taking it
 # renews the slot this worktree's session holds, or else takes the first free
 # slot, boots its simulator if needed, and waits while every slot is busy.
-# Only Shared iPhone is enabled by default. IOS_AGENT_SIMULATORS=2 or 3
-# explicitly enables extra slots, which shut down when their locks release.
+# Shared iPhone stays booted. Shared iPhone 2 and 3 boot only while the slots
+# before them are busy, and shut down when their locks release.
+# IOS_AGENT_SIMULATORS=1 or 2 makes the pool smaller.
 # `acquire simulator` prints the simulator's name on stdout, as in
 # SIM="$(scripts/lock acquire simulator)" && xcrun simctl install "$SIM" ...
 # `run simulator` passes AGENT_SIMULATOR_NAME and AGENT_SIMULATOR_UDID to its
@@ -67,7 +68,7 @@ SIMULATOR_POOL="simulator|Shared iPhone
 simulator-2|Shared iPhone 2
 simulator-3|Shared iPhone 3"
 
-SIMULATOR_COUNT="${IOS_AGENT_SIMULATORS:-1}"
+SIMULATOR_COUNT="${IOS_AGENT_SIMULATORS:-3}"
 case "$SIMULATOR_COUNT" in
   1|2|3) ;;
   *) echo "IOS_AGENT_SIMULATORS must be 1, 2, or 3" >&2; exit 2 ;;
@@ -256,9 +257,9 @@ take() {
   local locks pid="$2" waited=0 lock handed_over=0
   case "$1" in
     'Shared iPhone 2'|simulator-2)
-      [ "$SIMULATOR_COUNT" -ge 2 ] || { echo "Shared iPhone 2 requires IOS_AGENT_SIMULATORS=2 or 3" >&2; return 2; } ;;
+      [ "$SIMULATOR_COUNT" -ge 2 ] || { echo "IOS_AGENT_SIMULATORS=$SIMULATOR_COUNT leaves Shared iPhone 2 out of the pool" >&2; return 2; } ;;
     'Shared iPhone 3'|simulator-3)
-      [ "$SIMULATOR_COUNT" -ge 3 ] || { echo "Shared iPhone 3 requires IOS_AGENT_SIMULATORS=3" >&2; return 2; } ;;
+      [ "$SIMULATOR_COUNT" -ge 3 ] || { echo "IOS_AGENT_SIMULATORS=$SIMULATOR_COUNT leaves Shared iPhone 3 out of the pool" >&2; return 2; } ;;
   esac
   # One per line from candidates, one line here.
   # shellcheck disable=SC2046
