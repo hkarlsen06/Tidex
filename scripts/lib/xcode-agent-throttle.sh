@@ -1,37 +1,28 @@
 # shellcheck shell=bash
 # Sourced by scripts/xcode-build-agent.sh and scripts/xcode-test-agent.sh.
 #
-# Keeps agent-driven xcodebuild runs from saturating the Mac:
-#   - one wrapper-driven xcodebuild at a time across every repo on this
-#     machine (shared lock in /tmp), so parallel agents queue instead of
-#     competing for cores
-#   - lower CPU priority (nice), so the desktop and Xcode stay responsive
-#   - tests run without parallel simulator clones, and UI test targets are
-#     skipped unless a run asks for them
+# Xcode work on this Mac goes through ios-agent, the host controller. It
+# queues compiles from every repo first come, first served, and runs them with
+# two jobs at a lower CPU priority. `ios-agent status` shows the queue. A
+# machine without ios-agent, such as CI, runs xcodebuild directly.
+#
+# Tests run without parallel simulator clones, and UI test targets are skipped
+# unless a run asks for them.
 #
 # Must stay compatible with macOS /bin/bash 3.2 (no mapfile, no ${x,,}).
 #
-# Environment overrides:
-#   XCODE_AGENT_LOCK_DIR               lock path (default /tmp/xcode-agent.lock)
-#   XCODE_AGENT_NO_LOCK=1              skip the machine-wide lock
+# Environment overrides, the first two read by ios-agent too:
 #   XCODE_AGENT_NICE=N                 nice level, 0 disables (default 10)
 #   XCODE_AGENT_JOBS=N                 xcodebuild -jobs (default 2)
 #   XCODE_TEST_AGENT_PARALLEL=1        allow Xcode parallel testing (clones simulators)
 #   XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1  run *UITests targets in an unfiltered run
 
-XA_LOCK_DIR="${XCODE_AGENT_LOCK_DIR:-/tmp/xcode-agent.lock}"
-XA_LOCK_HELD=0
 XA_NICE="${XCODE_AGENT_NICE:-10}"
 XA_JOBS="${XCODE_AGENT_JOBS:-2}"
 XA_ARGS=()
-XA_PREFIX=()
-
-if [ "$XA_NICE" != "0" ]; then
-  XA_PREFIX=(nice -n "$XA_NICE")
-fi
 
 # Turn INT/TERM/HUP into a normal exit so the caller's EXIT trap runs,
-# which stops xcodebuild and releases the lock instead of orphaning them.
+# which stops xcodebuild instead of orphaning it.
 xa_install_signal_traps() {
   trap 'exit 130' INT
   trap 'exit 143' TERM HUP
@@ -39,60 +30,6 @@ xa_install_signal_traps() {
 
 xa_log() {
   echo "[$(basename "$0" .sh)] $*" >&2
-}
-
-xa_acquire_lock() {
-  if [ "${XCODE_AGENT_NO_LOCK:-0}" = "1" ]; then
-    return 0
-  fi
-
-  local waited=0 owner pid mtime now
-  while ! mkdir "$XA_LOCK_DIR" 2>/dev/null; do
-    owner="$(cat "$XA_LOCK_DIR/owner" 2>/dev/null || true)"
-    pid="${owner%% *}"
-
-    if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
-      xa_log "removing stale xcodebuild lock left by pid $pid"
-      rm -rf "$XA_LOCK_DIR"
-      continue
-    fi
-
-    if [ -z "$owner" ]; then
-      # Lock dir without an owner file: either another wrapper is between
-      # mkdir and writing the file, or it died there. Clear it after 60s.
-      now="$(date +%s)"
-      mtime="$(stat -f %m "$XA_LOCK_DIR" 2>/dev/null || true)"
-      case "$mtime" in
-        ''|*[!0-9]*) mtime="$(stat -c %Y "$XA_LOCK_DIR" 2>/dev/null || true)" ;;
-      esac
-      case "$mtime" in
-        ''|*[!0-9]*) mtime="$now" ;;
-      esac
-      if [ $((now - mtime)) -gt 60 ]; then
-        rm -rf "$XA_LOCK_DIR"
-        continue
-      fi
-    fi
-
-    if [ $((waited % 20)) -eq 0 ]; then
-      xa_log "waiting for another agent's xcodebuild to finish (${owner:-starting}); ${waited}s waited"
-    fi
-    sleep 2
-    waited=$((waited + 2))
-  done
-
-  echo "$$ $(basename "$(pwd)") $(basename "$0" .sh) since $(date +%H:%M:%S)" >"$XA_LOCK_DIR/owner"
-  XA_LOCK_HELD=1
-  if [ "$waited" -gt 0 ]; then
-    xa_log "xcodebuild lock acquired after ${waited}s"
-  fi
-}
-
-xa_release_lock() {
-  if [ "$XA_LOCK_HELD" = "1" ]; then
-    rm -rf "$XA_LOCK_DIR"
-    XA_LOCK_HELD=0
-  fi
 }
 
 xa_stop_xcodebuild() {
@@ -147,19 +84,104 @@ xa_configure() {
 }
 
 xa_physical_destination() {
-  if ! command -v ios-agent >/dev/null 2>&1; then
+  if [ -z "$XA_IOS_AGENT" ]; then
     xa_log "ios-agent is unavailable; using a shared simulator (set XCODE_TEST_AGENT_DESTINATION for an explicit destination)"
     return 0
   fi
   local destination
-  if destination="$(ios-agent physical-destination)"; then
+  if destination="$("$XA_IOS_AGENT" physical-destination)"; then
     printf '%s\n' "$destination"
   else
     xa_log "device discovery failed; using a shared simulator"
   fi
 }
 
+# xa_start_heartbeat <what> reports every HEARTBEAT_INTERVAL seconds on the
+# xcodebuild in XCODEBUILD_PID: its place in the queue while it waits, then
+# how long it has run.
+xa_start_heartbeat() {
+  local start_time
+  start_time="$(date +%s)"
+  xa_log "$1 started; heartbeat every ${HEARTBEAT_INTERVAL}s"
+
+  (
+    while kill -0 "$XCODEBUILD_PID" 2>/dev/null; do
+      sleep "$HEARTBEAT_INTERVAL"
+      kill -0 "$XCODEBUILD_PID" 2>/dev/null || exit 0
+
+      now="$(date +%s)"
+      queued_for="$(xa_queued_for)"
+      if [ -n "$queued_for" ]; then
+        xa_log "queued for $queued_for ($((now - start_time))s waited)"
+      else
+        xa_log "alive: $1 still running ($((now - $(xa_started "$start_time")))s elapsed)"
+      fi
+    done
+  ) &
+  XA_HEARTBEAT_PID=$!
+}
+
+xa_stop_heartbeat() {
+  if [ -n "${XA_HEARTBEAT_PID:-}" ]; then
+    # Its sleep would otherwise keep our output open, and a reader on a pipe
+    # would wait for it.
+    pkill -P "$XA_HEARTBEAT_PID" 2>/dev/null || true
+    kill "$XA_HEARTBEAT_PID" 2>/dev/null || true
+    wait "$XA_HEARTBEAT_PID" 2>/dev/null || true
+    XA_HEARTBEAT_PID=""
+  fi
+}
+
+# Prints what ios-agent itself said about a failed run, such as why it
+# stopped it. Its output goes to the xcodebuild log with everything else.
+xa_controller_messages() {
+  grep '^\[ios-agent\]' "$1" | grep -v 'queued for' >&2 || true
+}
+
 if ! [[ "$XA_JOBS" =~ ^[1-9][0-9]*$ ]]; then
   echo "XCODE_AGENT_JOBS must be a positive integer" >&2
   exit 2
 fi
+
+# A git client started from the Dock runs the pre-push hook without
+# ~/.local/bin on PATH, and that build must queue too.
+XA_IOS_AGENT="$(command -v ios-agent || true)"
+if [ -z "$XA_IOS_AGENT" ] && [ -x "$HOME/.local/bin/ios-agent" ]; then
+  XA_IOS_AGENT="$HOME/.local/bin/ios-agent"
+fi
+
+# Run xcodebuild as "${XA_XCODEBUILD[@]}" <arguments> &, so that $! is the
+# process to stop.
+if [ -n "$XA_IOS_AGENT" ]; then
+  XA_XCODEBUILD=("$XA_IOS_AGENT" xcodebuild)
+elif [ "$XA_NICE" != "0" ]; then
+  XA_XCODEBUILD=(nice -n "$XA_NICE" xcodebuild)
+else
+  XA_XCODEBUILD=(xcodebuild)
+fi
+
+# ios-agent keeps one line here for the xcodebuild it is running for us:
+# "queued<TAB>what it waits for", then "running<TAB>start time".
+XA_STATUS_FILE="$(mktemp "${TMPDIR:-/tmp}/xcode-agent-status.XXXXXX")"
+export IOS_AGENT_STATUS_FILE="$XA_STATUS_FILE"
+
+# Prints what the current xcodebuild waits for, or nothing once it runs.
+xa_queued_for() {
+  local state detail
+  IFS=$'\t' read -r state detail <"$XA_STATUS_FILE" || true
+  if [ "$state" = queued ]; then
+    echo "$detail"
+  fi
+}
+
+# xa_started <fallback> prints when the last xcodebuild left the queue: now if
+# it never did, and the fallback when no controller reported.
+xa_started() {
+  local state detail
+  IFS=$'\t' read -r state detail <"$XA_STATUS_FILE" || true
+  case "$state" in
+    running) echo "$detail" ;;
+    queued) date +%s ;;
+    *) echo "$1" ;;
+  esac
+}

@@ -59,12 +59,24 @@ elif args == ["physical-destination"]:
     print(os.environ.get("POLICY_PHYSICAL", ""))
 elif args and args[0] == "simulator-lease":
     pass
+elif args and args[0] == "xcodebuild":
+    status = pathlib.Path(os.environ["IOS_AGENT_STATUS_FILE"])
+    if os.environ.get("POLICY_STOP") == "1":
+        print("[ios-agent] stopped after 45m00s because other agents are waiting", file=sys.stderr)
+        sys.exit(124)
+    if os.environ.get("POLICY_QUEUE") and "test-without-building" not in args:
+        status.write_text("queued\\tbuild: position 2 of 2; running now: Other/worktree build since 12:00:00\\n")
+        time.sleep(float(os.environ["POLICY_QUEUE"]))
+    status.write_text("running\\t" + str(int(time.time())) + "\\n")
+    os.environ["POLICY_CONTROLLER"] = "1"
+    os.execv(os.environ["POLICY_ROOT"] + "/bin/xcodebuild", ["xcodebuild", *args[1:]])
 else:
     sys.exit(2)
 ''')
     executable(tools / "xcodebuild", common + '''
-if "build" in args or "build-for-testing" in args:
-    assert pathlib.Path(os.environ["XCODE_AGENT_LOCK_DIR"], "owner").is_file(), "compile escaped the global queue"
+if os.environ.get("POLICY_CONTROLLER", "") != os.environ["POLICY_EXPECT_CONTROLLER"]:
+    print("error: xcodebuild ran outside the host controller, or the controller ran where none is installed")
+    sys.exit(8)
 if os.environ.get("POLICY_BUILD_FAIL") == "1":
     print("error: mock compile failed")
     sys.exit(9)
@@ -96,10 +108,16 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
     executable(tools / "sleep", "#!/usr/bin/python3\nimport time\ntime.sleep(0.01)\n")
     base_env = {key: value for key, value in os.environ.items()
                 if not key.startswith(("XCODE_", "IOS_AGENT_", "AGENT_SIMULATOR_", "PAEONIA_LOCK_"))}
-    base_env.update(PATH=str(tools) + ":/usr/bin:/bin", POLICY_ROOT=str(root), POLICY_LOG=str(log),
-                    XCODE_AGENT_LOCK_DIR=str(root / "compile-lock"),
+    base_env.update(PATH=str(tools) + ":/usr/bin:/bin", HOME=str(root), POLICY_ROOT=str(root), POLICY_LOG=str(log),
                     AGENT_SIMULATOR_LOCK_ROOT=str(root / "sim-locks"), XCODE_AGENT_NICE="0",
-                    TMPDIR=str(root), POLICY_PHYSICAL="platform=iOS,id=spare")
+                    TMPDIR=str(root), POLICY_PHYSICAL="platform=iOS,id=spare", POLICY_EXPECT_CONTROLLER="1")
+    # A machine without the host controller, such as CI.
+    bare_tools = root / "bare-bin"
+    bare_tools.mkdir()
+    for tool in tools.iterdir():
+        if tool.name != "ios-agent":
+            (bare_tools / tool.name).symlink_to(tool)
+    bare = dict(PATH=str(bare_tools) + ":/usr/bin:/bin", POLICY_EXPECT_CONTROLLER="")
 
     def run(script, *arguments, expected=0, **overrides):
         log.write_text("")
@@ -116,7 +134,6 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
         result, commands = run("xcode-test-agent.sh", "--json", *arguments, **overrides)
         phases = builds(commands)
         assert len(phases) == 2, commands
-        assert "-jobs" in phases[0] and phases[0][phases[0].index("-jobs") + 1] == "2", phases
         expected = "generic/platform=iOS" if expected_physical else "generic/platform=iOS Simulator"
         assert phases[0][phases[0].index("-destination") + 1] == expected, phases
         if expected_physical:
@@ -124,6 +141,26 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
                            for command in commands), commands
         assert json.loads(result.stdout.splitlines()[-1])["status"] == "SUCCESS", result.stdout
         return commands
+
+    def check_cancel(script, *arguments):
+        (root / "build-pid").unlink(missing_ok=True)
+        process = subprocess.Popen(["bash", str(scripts / script), *arguments], cwd=root,
+                                   env=dict(base_env, POLICY_BUILD_BLOCK="1"),
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        deadline = time.monotonic() + 5
+        while not (root / "build-pid").exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert (root / "build-pid").exists(), "mock compile never started"
+        child = int((root / "build-pid").read_text())
+        process.send_signal(signal.SIGTERM)
+        _, stderr = process.communicate(timeout=5)
+        assert process.returncode == 143, (script, process.returncode, stderr)
+        try:
+            os.kill(child, 0)
+        except ProcessLookupError:
+            pass
+        else:
+            raise AssertionError(script + ": cancellation orphaned the compile")
 
     safe_selection = ("--", "-only-testing:" + REPO + "AppTests/ISO8601TimestampTests")
     check_test(expected_physical=False)
@@ -146,6 +183,17 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
     result, commands = run("xcode-test-agent.sh", "--json", expected=2, XCODE_TEST_AGENT_DESTINATION="platform=iOS,id=explicit")
     assert "device-safe" in result.stderr and not builds(commands), (result.stderr, commands)
     check_test(XCODE_TEST_AGENT_DESTINATION="platform=iOS Simulator,id=sim1", expected_physical=False)
+    for wrapper, phases in (("xcode-test-agent.sh", 2), ("xcode-build-agent.sh", 1)):
+        result, commands = run(wrapper, "--json", POLICY_QUEUE="2.2")
+        assert "[" + wrapper[:-3] + "] queued for build: position 2 of 2; running now: Other/worktree build since 12:00:00 (" in result.stderr, result.stderr
+        summary = json.loads(result.stdout.splitlines()[-1])
+        assert summary["status"] == "SUCCESS" and 2 <= summary["queued"] <= 4 and summary["compiled"] <= 1, summary
+        result, _ = run(wrapper, expected=124, POLICY_STOP="1")
+        assert "[ios-agent] stopped after 45m00s because other agents are waiting" in result.stderr, result.stderr
+        result, commands = run(wrapper, "--json", **bare)
+        summary = json.loads(result.stdout.splitlines()[-1])
+        assert summary["status"] == "SUCCESS" and summary["queued"] <= 1, summary
+        assert len(builds(commands)) == phases and all(build[build.index("-jobs") + 1] == "2" for build in builds(commands)), commands
     for wrapper in ("xcode-test-agent.sh", "xcode-build-agent.sh"):
         result, commands = run(wrapper, "--devices")
         assert json.loads(result.stdout)["devices"][0]["allowed"] is True
@@ -178,32 +226,18 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
             image = root / "scenario.png"
             _, commands = run("scenario-screenshot", "example", "--wait", "0", "--out", str(image))
             assert image.read_bytes() == b"mock screenshot"
-            assert builds(commands)[0][:2] == ["-jobs", "2"]
-            assert not (root / "compile-lock").exists()
             assert not (root / "sim-locks/simulator").exists()
+            result, _ = run("scenario-screenshot", "example", "--wait", "0", "--out", str(image), POLICY_QUEUE="2.2")
+            assert "[scenario-screenshot] queued for build: position 2 of 2" in result.stderr, result.stderr
+            result, _ = run("scenario-screenshot", "example", expected=1, POLICY_STOP="1")
+            assert "[ios-agent] stopped after 45m00s" in result.stderr, result.stderr
             _, commands = run("scenario-screenshot", "example", expected=1, POLICY_BUILD_FAIL="1")
             assert not any(command[:3] == ["xcrun", "simctl", "install"] for command in commands)
-            assert not (root / "compile-lock").exists()
-            process = subprocess.Popen(["bash", str(scripts / "scenario-screenshot"), "example"], cwd=root,
-                                       env=dict(base_env, POLICY_BUILD_BLOCK="1"),
-                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            deadline = time.monotonic() + 5
-            while not (root / "build-pid").exists() and time.monotonic() < deadline:
-                time.sleep(0.01)
-            assert (root / "build-pid").exists(), "mock compile never started"
-            child = int((root / "build-pid").read_text())
-            process.send_signal(signal.SIGTERM)
-            _, stderr = process.communicate(timeout=5)
-            assert process.returncode == 143, (process.returncode, stderr)
-            assert not (root / "compile-lock").exists()
-            try:
-                os.kill(child, 0)
-            except ProcessLookupError:
-                pass
-            else:
-                raise AssertionError("cancellation orphaned the compile")
+            check_cancel("scenario-screenshot", "example")
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
+    check_cancel("xcode-build-agent.sh")
+    check_cancel("xcode-test-agent.sh")
 
     for jobs in ("0", "-2", "x", "1.5", "01"):
         result = subprocess.run(["bash", "-c", 'source "$1"', "test", str(scripts / "lib/xcode-agent-throttle.sh")],

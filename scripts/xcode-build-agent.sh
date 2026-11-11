@@ -34,7 +34,6 @@ LOG_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-log.XXXXXX")"
 JSON_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-json.XXXXXX")"
 PARSED_FILE="$(mktemp "${TMPDIR:-/tmp}/tidex-build-parsed.XXXXXX")"
 XCODEBUILD_PID=""
-HEARTBEAT_PID=""
 
 if ! [[ "$HEARTBEAT_INTERVAL" =~ ^[0-9]+$ ]]; then
   HEARTBEAT_INTERVAL="$DEFAULT_HEARTBEAT_INTERVAL"
@@ -44,45 +43,14 @@ fi
 
 cleanup() {
   xa_stop_xcodebuild "${XCODEBUILD_PID:-}"
-  xa_release_lock
-  if [ -n "${HEARTBEAT_PID:-}" ]; then
-    kill "$HEARTBEAT_PID" 2>/dev/null || true
-    wait "$HEARTBEAT_PID" 2>/dev/null || true
-  fi
-  rm -f "$LOG_FILE" "$JSON_FILE" "$PARSED_FILE"
+  xa_stop_heartbeat
+  rm -f "$LOG_FILE" "$JSON_FILE" "$PARSED_FILE" "${XA_STATUS_FILE:-}"
   rm -rf "$RESULT_BUNDLE"
 }
 trap cleanup EXIT
 # shellcheck source=lib/xcode-agent-throttle.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/xcode-agent-throttle.sh"
 xa_install_signal_traps
-
-start_heartbeat() {
-  local start_time
-  start_time="$(date +%s)"
-  echo "[xcode-build-agent] build started; heartbeat every ${HEARTBEAT_INTERVAL}s" >&2
-
-  (
-    while kill -0 "$XCODEBUILD_PID" 2>/dev/null; do
-      sleep "$HEARTBEAT_INTERVAL"
-      kill -0 "$XCODEBUILD_PID" 2>/dev/null || exit 0
-
-      local now elapsed
-      now="$(date +%s)"
-      elapsed=$((now - start_time))
-      echo "[xcode-build-agent] alive: build still running (${elapsed}s elapsed)" >&2
-    done
-  ) &
-  HEARTBEAT_PID=$!
-}
-
-stop_heartbeat() {
-  if [ -n "${HEARTBEAT_PID:-}" ]; then
-    kill "$HEARTBEAT_PID" 2>/dev/null || true
-    wait "$HEARTBEAT_PID" 2>/dev/null || true
-    HEARTBEAT_PID=""
-  fi
-}
 
 set +e
 if [[ "$ACTION" == "exportArchive" ]]; then
@@ -102,15 +70,14 @@ if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
 fi
 xa_configure "${ACTION:-build}"
 QUEUE_START="$(date +%s)"
-xa_acquire_lock
-COMPILE_START="$(date +%s)"
-${XA_PREFIX[@]+"${XA_PREFIX[@]}"} xcodebuild ${XA_ARGS[@]+"${XA_ARGS[@]}"} "${XCODEBUILD_ARGS[@]}" >"$LOG_FILE" 2>&1 &
+"${XA_XCODEBUILD[@]}" ${XA_ARGS[@]+"${XA_ARGS[@]}"} "${XCODEBUILD_ARGS[@]}" >"$LOG_FILE" 2>&1 &
 XCODEBUILD_PID=$!
-start_heartbeat
+xa_start_heartbeat build
 wait "$XCODEBUILD_PID"
 EXIT_CODE=$?
-stop_heartbeat
-xa_release_lock
+xa_stop_heartbeat
+[ "$EXIT_CODE" -eq 0 ] || xa_controller_messages "$LOG_FILE"
+COMPILE_START="$(xa_started "$QUEUE_START")"
 QUEUED=$((COMPILE_START - QUEUE_START))
 COMPILED=$(($(date +%s) - COMPILE_START))
 set -e
@@ -232,7 +199,7 @@ else:
         for e in errors:
             print(e)
     # The last line, so `| tail -1` keeps it. queued is the time spent waiting
-    # for the xcodebuild lock.
+    # in the build queue.
     print()
     print(f"SUMMARY: {status} queued={queued}s compiled={compiled}s")
 PY
