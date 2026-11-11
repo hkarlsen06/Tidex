@@ -65,7 +65,7 @@ Place each placeholder where the value reads naturally, and inflect the surround
 
 When an entry in `translate` has a `plural` field, it names a plural category of the target language, and `numbers` lists numbers that category covers. Write the form that is correct for those numbers. `other` also covers fractions.
 
-Include the number placeholder in every form. The one exception is a category that covers a single number. There the text may spell the count out when the source form does, or when that is the natural phrasing.
+Include the number placeholder in every form, with two exceptions. A category that covers a single number may spell the count out when the source form does, or when that is the natural phrasing. A category that covers only 0 and 1, as `one` does in French, may leave the number out when the English `one` form leaves it out and the code never passes 0.
 
 `english` and `norwegian` then hold the source forms by category. English and Norwegian have two forms, so the target language can need forms that the source does not have.
 

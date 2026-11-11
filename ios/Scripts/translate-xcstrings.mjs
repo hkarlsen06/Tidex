@@ -480,11 +480,18 @@ function applyTranslations(entry, item, translations) {
   if (texts.some((text) => typeof text !== "string" || (text === "" && reference !== ""))) {
     return "missing";
   }
-  const formatsMatch = item.slots.every((slot, index) => formatMatches(reference, texts[index], {
-    // "one" covers only 1 in English, so "every week" may drop the number. In Russian it also
-    // covers 21 and 31, so the number has to stay.
-    mayOmitArguments: slot.category !== null && numbersOf(item.targetLang.code, slot.category).length === 1,
-  }));
+  // "one" covers only 1 in English, so "every week" may drop the number. In Russian it also
+  // covers 21 and 31, so the number has to stay. French "one" covers 0 and 1, and may drop the
+  // number where the source's "one" does, because that source wording already rules 0 out.
+  const sourceOneOmits = typeof source !== "string" && source.one !== undefined &&
+    !formatMatches(reference, source.one);
+  const formatsMatch = item.slots.every((slot, index) => {
+    const numbers = slot.category === null ? [] : numbersOf(item.targetLang.code, slot.category);
+    return formatMatches(reference, texts[index], {
+      mayOmitArguments: numbers.length === 1 ||
+        (sourceOneOmits && numbers.length > 0 && numbers.every((number) => number <= 1)),
+    });
+  });
   if (!formatsMatch) return "format";
 
   const localization = ((entry.localizations ??= {})[item.targetLang.code] ??= {});

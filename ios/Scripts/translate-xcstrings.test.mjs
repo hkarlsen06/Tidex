@@ -381,14 +381,26 @@ test("a language with more plural forms than English gets the forms it lacks", a
 test("a plural form keeps its number unless it covers a single number", async () => {
   const data = pluralCatalog({ one: "every week", other: "every %lld weeks" });
   delete data.strings["z.pay"].localizations.de;
+  delete data.strings["z.pay"].localizations.fr;
   delete data.strings["z.pay"].localizations.ru;
   const file = await writeCatalog(data);
-  // German "one" is only 1. Russian "one" is also 21 and 31, where "weekly" would be wrong.
+  // German "one" is only 1, and French "one" is 0 and 1, which "every week" in the source rules
+  // out. Russian "one" is also 21 and 31, where "weekly" would be wrong.
   respond = (job) => completed(job.items, (_item, slot) => slot.plural === "one" ? "weekly" : "every %lld weeks");
   expect(await main([file])).toBe(1);
   const saved = await readCatalog(file);
   expect(saved.strings["z.pay"].localizations.de).toEqual(plural({ one: "weekly", other: "every %lld weeks" }));
+  expect(saved.strings["z.pay"].localizations.fr).toEqual(plural({ one: "weekly", other: "every %lld weeks" }));
   expect(saved.strings["z.pay"].localizations.ru).toBeUndefined();
+});
+
+test("a plural form for 0 and 1 keeps its number when the source's form for 1 has it", async () => {
+  const data = pluralCatalog({ one: "%lld shift", other: "%lld shifts" });
+  delete data.strings["z.pay"].localizations.fr;
+  const file = await writeCatalog(data);
+  respond = (job) => completed(job.items, (_item, slot) => slot.plural === "one" ? "1 shift" : "%lld shifts");
+  expect(await main([file])).toBe(1);
+  expect((await readCatalog(file)).strings["z.pay"].localizations.fr).toBeUndefined();
 });
 
 test("a count in a plain string gets plural forms where the language inflects it", async () => {
