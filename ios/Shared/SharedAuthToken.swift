@@ -60,16 +60,22 @@ enum SharedAuthToken {
 
   /// The `exp` claim of a JWT, read without checking the signature.
   static func expiry(ofJWT token: String) -> TimeInterval? {
+    claims(ofJWT: token)?["exp"] as? Double
+  }
+
+  /// The `sub` claim of a JWT, the user it was issued to, read without checking the signature.
+  static func subject(ofJWT token: String) -> String? {
+    claims(ofJWT: token)?["sub"] as? String
+  }
+
+  private static func claims(ofJWT token: String) -> [String: Any]? {
     let parts = token.split(separator: ".")
     guard parts.count == 3 else { return nil }
     var base64 = parts[1].replacingOccurrences(of: "-", with: "+")
       .replacingOccurrences(of: "_", with: "/")
     base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
-    guard let data = Data(base64Encoded: base64),
-      let claims = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-      let exp = claims["exp"] as? Double
-    else { return nil }
-    return exp
+    guard let data = Data(base64Encoded: base64) else { return nil }
+    return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
   }
 
   /// Clerk's Frontend API host, which the publishable key encodes:

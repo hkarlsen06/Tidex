@@ -96,11 +96,14 @@ struct ConvexAPI: Sendable {
   {
     let body = try JSONEncoder().encode(Body(path: path, args: args))
     var retried = false
+    var firstTokenUser: String?
     while true {
       var request = URLRequest(url: deploymentURL.appending(path: "api/\(kind)"))
       request.httpMethod = "POST"
       request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      if let token = try await token(retried) {
+      let token = try await token(retried)
+      try Self.confirmUser(of: token, retried: retried, firstTokenUser: &firstTokenUser)
+      if let token {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
       }
       request.httpBody = body
@@ -122,6 +125,26 @@ struct ConvexAPI: Sendable {
       if code == "not_authorized" { throw Failure.notSignedIn }
       throw Failure.server(
         code: code, message: reply.errorData?.message ?? reply.errorMessage ?? "Server error")
+    }
+  }
+
+  /// Whether a token fetched for the retry after a 401 belongs to the user the call started
+  /// as. The user can sign out and in as someone else while a call waits, and the retry must
+  /// never act for them, for example by sharing their shifts.
+  static func isSameUser(retryToken: String?, firstTokenUser: String?) -> Bool {
+    retryToken.flatMap(SharedAuthToken.subject(ofJWT:)) == firstTokenUser
+  }
+
+  /// Records who the first token belongs to, and refuses a retry token for anyone else.
+  private static func confirmUser(
+    of token: String?, retried: Bool, firstTokenUser: inout String?
+  ) throws {
+    guard retried else {
+      firstTokenUser = token.flatMap(SharedAuthToken.subject(ofJWT:))
+      return
+    }
+    guard isSameUser(retryToken: token, firstTokenUser: firstTokenUser) else {
+      throw Failure.notSignedIn
     }
   }
 
