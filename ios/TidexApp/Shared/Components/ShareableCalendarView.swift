@@ -39,25 +39,9 @@ struct ShareableCalendarView: View {
       shiftsByDateDict[shift.shiftDate, default: []].append(shift)
     }
 
-    var result: [String: HoursData] = [:]
-    for (date, shiftsOnDate) in shiftsByDateDict {
-      let sorted = shiftsOnDate.sorted { $0.startTime < $1.startTime }
-      let earliestStart = sorted.first?.startTime ?? ""
-      let latestEnd = sorted.map(\.endTime).max() ?? ""
-
-      let crossesMidnight = shiftsOnDate.contains { shift in
-        let startMinutes = CalendarGridHelper.timeToMinutes(shift.startTime)
-        let endMinutes = CalendarGridHelper.timeToMinutes(shift.endTime)
-        return endMinutes <= startMinutes
-      }
-
-      result[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart),
-        end: CalendarGridHelper.formatTime(latestEnd),
-        crossesMidnight: crossesMidnight
-      )
+    return shiftsByDateDict.compactMapValues { shiftsOnDate in
+      HoursData(spanning: shiftsOnDate.map { ($0.startTime, $0.endTime) })
     }
-    return result
   }
 
   /// Monthly totals (net and gross, excludes conflicting shifts)

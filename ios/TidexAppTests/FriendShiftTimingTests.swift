@@ -293,6 +293,18 @@ final class SharedScheduleProjectionTests: XCTestCase {
     XCTAssertEqual(shown.endTime, "04:00")
   }
 
+  func testDayCellSpansToTheEndOfAShiftThatMovedOntoTheSameDay() throws {
+    let shown = viewerDated(
+      [makeShift("2026-10-05", "17:00", "22:30"), makeShift("2026-10-06", "09:00", "15:00")],
+      schedule: "America/Los_Angeles", viewer: "Europe/Oslo", visible: "2026-10-01"..."2026-10-31")
+
+    XCTAssertEqual(shown.map(\.shiftDate), ["2026-10-06", "2026-10-06"])
+    let hours = try XCTUnwrap(HoursData(spanning: shown.map { ($0.startTime, $0.endTime) }))
+    XCTAssertEqual(hours.start, "02:00")
+    XCTAssertEqual(hours.end, "00:00")
+    XCTAssertTrue(hours.crossesMidnight)
+  }
+
   func testUnreadableShiftStaysOnItsRecordedDay() {
     let shown = viewerDated(
       [makeShift("2026-09-14", "25:00", "07:30")], schedule: "Europe/London",

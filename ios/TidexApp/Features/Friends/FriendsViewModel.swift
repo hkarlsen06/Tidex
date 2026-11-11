@@ -1048,25 +1048,9 @@ final class SharingViewModel: MonthNavigable {
       shiftsByDateDict[shift.shift_date, default: []].append(shift)
     }
 
-    var result: [String: HoursData] = [:]
-    for (date, shiftsOnDate) in shiftsByDateDict {
-      let sorted = shiftsOnDate.sorted { $0.start_time < $1.start_time }
-      let earliestStart = sorted.first?.start_time ?? ""
-      let latestEnd = sorted.map(\.end_time).max() ?? ""
-
-      let crossesMidnight = shiftsOnDate.contains { shift in
-        let startMinutes = CalendarGridHelper.timeToMinutes(shift.start_time)
-        let endMinutes = CalendarGridHelper.timeToMinutes(shift.end_time)
-        return endMinutes <= startMinutes
-      }
-
-      result[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart),
-        end: CalendarGridHelper.formatTime(latestEnd),
-        crossesMidnight: crossesMidnight
-      )
+    return shiftsByDateDict.compactMapValues { shiftsOnDate in
+      HoursData(spanning: shiftsOnDate.map { ($0.start_time, $0.end_time) })
     }
-    return result
   }
 
   /// Raw user shifts grouped by ISO date for precise overlap checks.

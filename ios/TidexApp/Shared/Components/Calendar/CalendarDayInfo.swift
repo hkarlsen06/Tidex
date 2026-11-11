@@ -54,6 +54,27 @@ struct HoursData: Equatable {
   let crossesMidnight: Bool
 }
 
+extension HoursData {
+  /// The span of a day's shifts, from the earliest start to the latest end. An end at or before
+  /// its start is on the next day, so "18:00 to 00:00" outlasts "02:00 to 07:30".
+  init?(spanning shifts: [(start: String, end: String)]) {
+    let minutesPerDay = 24 * 60
+    let spans = shifts.map { shift in
+      let start = CalendarGridHelper.timeToMinutes(shift.start)
+      let end = CalendarGridHelper.timeToMinutes(shift.end)
+      return (shift: shift, start: start, end: end <= start ? end + minutesPerDay : end)
+    }
+    guard let earliest = spans.min(by: { $0.start < $1.start }),
+      let latest = spans.max(by: { $0.end < $1.end })
+    else { return nil }
+    self.init(
+      start: CalendarGridHelper.formatTime(earliest.shift.start),
+      end: CalendarGridHelper.formatTime(latest.shift.end),
+      crossesMidnight: latest.end >= minutesPerDay
+    )
+  }
+}
+
 /// Earnings breakdown for calendar cells
 struct CalendarEarningsData: Equatable {
   /// Amount after tax (or gross when tax is disabled)

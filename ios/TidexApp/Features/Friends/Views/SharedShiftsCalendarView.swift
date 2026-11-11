@@ -131,35 +131,11 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     }
 
     for (date, shiftsOnDate) in shiftsByDate {
-      var earliestStart: String?
-      var latestEnd: String?
-      var earliestShift: ShiftWithComputations?
-      var earliestStartMinutes = Int.max
-      var crossesMidnight = false
-
-      for shift in shiftsOnDate {
-        if earliestStart == nil || shift.startTime < (earliestStart ?? "") {
-          earliestStart = shift.startTime
-        }
-        if latestEnd == nil || shift.endTime > (latestEnd ?? "") {
-          latestEnd = shift.endTime
-        }
-
-        let startMinutes = CalendarGridHelper.timeToMinutes(shift.startTime)
-        let endMinutes = CalendarGridHelper.timeToMinutes(shift.endTime)
-        crossesMidnight = crossesMidnight || endMinutes <= startMinutes
-
-        if startMinutes < earliestStartMinutes {
-          earliestStartMinutes = startMinutes
-          earliestShift = shift
-        }
+      hoursByDate[date] = HoursData(spanning: shiftsOnDate.map { ($0.startTime, $0.endTime) })
+      let earliestShift = shiftsOnDate.min {
+        CalendarGridHelper.timeToMinutes($0.startTime)
+          < CalendarGridHelper.timeToMinutes($1.startTime)
       }
-
-      hoursByDate[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart ?? ""),
-        end: CalendarGridHelper.formatTime(latestEnd ?? ""),
-        crossesMidnight: crossesMidnight
-      )
 
       if hasMultipleActiveJobs,
         let earliestShift,

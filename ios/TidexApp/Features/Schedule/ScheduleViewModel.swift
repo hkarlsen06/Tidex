@@ -115,19 +115,7 @@ internal struct ShiftsCalendarPresentation {
         )
       }
 
-      let sorted = shiftsOnDate.sorted { $0.startTime < $1.startTime }
-      let earliestStart = sorted.first?.startTime ?? ""
-      let latestEnd = sorted.map(\.endTime).max() ?? ""
-      let crossesMidnight = shiftsOnDate.contains { shift in
-        let startMinutes = CalendarGridHelper.timeToMinutes(shift.startTime)
-        let endMinutes = CalendarGridHelper.timeToMinutes(shift.endTime)
-        return endMinutes <= startMinutes
-      }
-      hoursByDate[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart),
-        end: CalendarGridHelper.formatTime(latestEnd),
-        crossesMidnight: crossesMidnight
-      )
+      hoursByDate[date] = HoursData(spanning: shiftsOnDate.map { ($0.startTime, $0.endTime) })
 
       guard let shiftDate = Date.fromISODateString(date) else { continue }
       let components = calendar.dateComponents([.year, .month], from: shiftDate)

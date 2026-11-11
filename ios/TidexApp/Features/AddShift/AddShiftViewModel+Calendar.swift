@@ -316,41 +316,7 @@ extension AddShiftViewModel {
   private nonisolated static func buildExistingShiftHours(
     from shiftTimesByDate: [String: [(start: String, end: String)]]
   ) -> [String: HoursData] {
-    let minutesPerDay: Int = CalendarGridHelper.timeToMinutes("24:00")
-    var existingHours: [String: HoursData] = [:]
-    for (date, shiftsOnDate) in shiftTimesByDate {
-      guard !shiftsOnDate.isEmpty else {
-        continue
-      }
-
-      let sortedByStart: [(start: String, end: String)] = shiftsOnDate.sorted { lhs, rhs in
-        CalendarGridHelper.timeToMinutes(lhs.start) < CalendarGridHelper.timeToMinutes(rhs.start)
-      }
-      let earliestStart: String = sortedByStart.first?.start ?? ""
-      let latestEnd: String =
-        shiftsOnDate.max(by: { lhs, rhs in
-          let lhsStart: Int = CalendarGridHelper.timeToMinutes(lhs.start)
-          let lhsEnd: Int = CalendarGridHelper.timeToMinutes(lhs.end)
-          let lhsAdjustedEnd: Int = lhsEnd <= lhsStart ? lhsEnd + minutesPerDay : lhsEnd
-
-          let rhsStart: Int = CalendarGridHelper.timeToMinutes(rhs.start)
-          let rhsEnd: Int = CalendarGridHelper.timeToMinutes(rhs.end)
-          let rhsAdjustedEnd: Int = rhsEnd <= rhsStart ? rhsEnd + minutesPerDay : rhsEnd
-
-          return lhsAdjustedEnd < rhsAdjustedEnd
-        })?.end ?? ""
-      let crossesMidnight: Bool = shiftsOnDate.contains { shift in
-        CalendarGridHelper.timeToMinutes(shift.end) <= CalendarGridHelper.timeToMinutes(shift.start)
-      }
-
-      existingHours[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart),
-        end: CalendarGridHelper.formatTime(latestEnd),
-        crossesMidnight: crossesMidnight
-      )
-    }
-
-    return existingHours
+    shiftTimesByDate.compactMapValues(HoursData.init(spanning:))
   }
 
   nonisolated static func computeConflictsAndPreviewsOffMain(
