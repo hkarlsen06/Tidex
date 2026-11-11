@@ -121956,7 +121956,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidex regner med %@."
+            "value" : "Tidex bruker disse innstillingene: %@."
           }
         }
       }
