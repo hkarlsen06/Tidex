@@ -56,8 +56,7 @@ extension AddShiftRoute: AddShiftPathElement {
 }
 
 /// A navigation path the Add screen can be pushed onto and popped from.
-internal protocol AddShiftStackPath {
-  var count: Int { get }
+internal protocol AddShiftStackPath: Equatable {
   mutating func pushAddShift()
   mutating func removeLast(_ count: Int)
 }
@@ -89,8 +88,9 @@ private struct AddShiftRouteModifier<Path: AddShiftStackPath>: ViewModifier {
   let tab: MainTabView.Tab?
   let hidesTabBar: Bool
   @Binding var path: Path
-  /// The path's length with Add on top, while this stack shows Add.
-  @State private var addShiftDepth: Int?
+  /// The path this modifier produced by pushing Add, while this stack shows Add. The Add screen
+  /// pushes nothing of its own, so any other path means Add was popped or replaced.
+  @State private var pathWithAddShift: Path?
   private let navigator: AddShiftNavigator = .shared
 
   private var hostsAddShift: Bool { tab != nil && navigator.hostTab == tab }
@@ -101,20 +101,20 @@ private struct AddShiftRouteModifier<Path: AddShiftStackPath>: ViewModifier {
       // pushed screen instead makes it pop back in only after the back transition ends.
       .toolbar(hidesTabBar || hostsAddShift ? .hidden : .automatic, for: .tabBar)
       .onChange(of: hostsAddShift, initial: true) { _, hostsAddShift in
-        if hostsAddShift, addShiftDepth == nil {
+        if hostsAddShift, pathWithAddShift == nil {
           path.pushAddShift()
-          addShiftDepth = path.count
-        } else if !hostsAddShift, let depth = addShiftDepth {
-          addShiftDepth = nil
-          if path.count >= depth {
-            path.removeLast(path.count - depth + 1)
+          pathWithAddShift = path
+        } else if !hostsAddShift, let pushed = pathWithAddShift {
+          pathWithAddShift = nil
+          if path == pushed {
+            path.removeLast(1)
           }
         }
       }
-      // Going back pops Add off the path.
-      .onChange(of: path.count) { _, count in
-        guard let depth = addShiftDepth, count < depth else { return }
-        addShiftDepth = nil
+      // Going back, or a link that replaces the path, ends hosting.
+      .onChange(of: path) { _, newPath in
+        guard let pushed = pathWithAddShift, newPath != pushed else { return }
+        pathWithAddShift = nil
         if navigator.hostTab == tab {
           navigator.hostTab = nil
         }
