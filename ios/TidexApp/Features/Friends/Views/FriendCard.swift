@@ -455,11 +455,15 @@ extension FriendCard {
         clocks(timing, interval, at: now)
       }
     } else if let emptyTileText {
+      // Wrapped text fills the tile, so it needs its own gap from the hairline on its leading edge.
+      let isStacked = dynamicTypeSize.isAccessibilitySize
       Text(emptyTileText)
         .font(.tidexCaptionStrong)
         .foregroundStyle(Color.tidexTextMuted)
+        .multilineTextAlignment(isStacked ? .leading : .center)
         .lineLimit(3)
         .fixedSize(horizontal: false, vertical: true)
+        .padding(.leading, isStacked ? 0 : Spacing.xs)
     } else if isCalendarAvailable {
       Image(systemName: "calendar")
         .font(.tidexHeadline)
