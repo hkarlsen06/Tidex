@@ -142,10 +142,13 @@ private func validateUnit(
       "Translations not marked translated \(translateHint)",
       "\(key) [\(locale)] \(unit.state ?? "no state")")
   }
-  // A language can use plural cases English doesn't have (e.g. "few"), so compare with "other".
+  // Code passes the same arguments whichever plural case is chosen, so a plural case is compared
+  // with English "other", which names them all. English "one" can say "every week" where Russian
+  // "one" also covers 21 and needs the number. A plain English string is its own reference.
   let englishOther = englishUnits.first { $0.key.hasSuffix("plural.other/") }?.value
-  let fallback = unit.path.contains("plural.") ? englishOther : nil
-  guard let english = englishUnits[unit.path] ?? fallback else { return }
+  let reference =
+    unit.path.contains("plural.") ? englishOther ?? englishUnits[""] : englishUnits[unit.path]
+  guard let english = reference else { return }
   if !specifiersMatch(unit.value, english: english, path: unit.path) {
     report.add(
       "Format specifiers differ from English",
