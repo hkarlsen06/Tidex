@@ -616,6 +616,7 @@ export const stats = query({
         split("Purpose", [
           ["purpose_pay", "Track pay"],
           ["purpose_friends", "See friends' shifts"],
+          ["purpose_invited", "Skipped, opened an invite"],
         ]),
         split("Wage type", [
           ["wage_hourly", "Own hourly wage"],

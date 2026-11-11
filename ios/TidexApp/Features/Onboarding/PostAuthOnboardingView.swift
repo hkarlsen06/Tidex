@@ -40,6 +40,11 @@ struct PostAuthOnboardingView: View {
       if oldStatus != .success, newStatus == .success {
         handleSetupSaved()
       }
+      // An invited user's save failed before any screen showed. The purpose screen shows the
+      // error on the friends card with Retry.
+      if case .error = newStatus, currentScreen == .loading {
+        currentScreen = .purpose
+      }
     }
     .onChange(of: currentScreen) { _, newScreen in
       if newScreen != .loading {
@@ -78,6 +83,15 @@ struct PostAuthOnboardingView: View {
       OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
       ?? OnboardingCurrencyResolver.detectDefaultCurrency()
     onboardingData.hasInitializedWageForLocale = false
+
+    // Someone who opened a friend's invite link came to see that friend's shifts, so setup
+    // skips the purpose question and the invite sheet opens next. Home still offers job setup.
+    if PendingInviteStore.hasPending {
+      OnboardingFunnelRecorder.shared.record("purpose_invited")
+      completionMode = .friendOnlySkip
+      saveManager.startSave(userId: userId, data: onboardingData, completionMode: .friendOnlySkip)
+      return
+    }
     currentScreen = .purpose
   }
 
