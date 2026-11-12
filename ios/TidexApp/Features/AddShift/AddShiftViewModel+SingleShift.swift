@@ -319,6 +319,8 @@ extension AddShiftViewModel {
       }
       return (iso: dateISO, date: date)
     }
+    // A draft save still waiting from the last edit would store the saved days again.
+    draftSaveTask?.cancel()
     var unsavedDates = selectedDates
     defer { selectedDates = unsavedDates }
     for selection in dates {
