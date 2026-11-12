@@ -52,11 +52,14 @@ struct StatsYearSection: View {
     return Self.incomeHeight - CGFloat(share) * (Self.incomeHeight - Self.incomeTop)
   }
 
+  /// Employment shares the pay plot on a scale of its own, from the baseline to the top line.
+  private static let employmentScale: StatsEmploymentScale = StatsEmploymentScale(
+    height: incomeHeight, top: incomeTop, bottom: incomeHeight - 0.5)
+
   private var chart: some View {
     VStack(spacing: Spacing.sm) {
       incomeRow
       StatsMonthLetters(focus: year.focus, currentMonth: year.currentMonth)
-      StatsEmploymentRow(employment: year.employment)
     }
     .background { playhead }
     .overlay { monthButtons }
@@ -104,12 +107,28 @@ struct StatsYearSection: View {
       .opacity(hasPay ? 1 : 0)
       StatsRule(lineY: Self.incomeHeight - 0.5)
         .stroke(Color.tidexSeparator, lineWidth: 1)
+      employmentScaleLabel
+      StatsEmploymentMarks(
+        employment: year.employment, scale: Self.employmentScale,
+        lineColor: .tidexEmploymentAccent, marksEmptyMonths: false)
     }
     .frame(height: Self.incomeHeight)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(Text(.statsChartsYearlyIncomeTitle(String(year.year))))
     .accessibilityChartDescriptor(incomeDescriptor)
     .accessibilityIdentifier("stats.year.income")
+  }
+
+  /// The right-hand scale belongs to the employment line, so it has the line's color.
+  private var employmentScaleLabel: some View {
+    Text(StatsFormat.percent(100))
+      .font(.tidexMicro)
+      .monospacedDigit()
+      .foregroundStyle(Color.tidexEmploymentAccent)
+      .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+      .frame(maxWidth: .infinity, alignment: .trailing)
+      .offset(y: Self.incomeTop - 15)
+      .opacity(year.employment.hasShifts ? 1 : 0)
   }
 
   private func barHeight(_ month: StatsLattice.MonthSlot) -> CGFloat {
@@ -284,66 +303,36 @@ extension StatsLattice.EmploymentAverage {
 struct StatsEmploymentRow: View {
   let employment: StatsLattice.EmploymentYear
 
+  private let scale: StatsEmploymentScale = .standalone
+
   private var averageValue: Double? {
     if case .average(let value, _) = employment.average { value } else { nil }
   }
 
   var body: some View {
     ZStack(alignment: .topLeading) {
-      StatsRule(lineY: StatsEmploymentScale.top)
+      StatsRule(lineY: scale.top)
         .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
-      StatsRule(lineY: StatsEmploymentScale.y(0))
+      StatsRule(lineY: scale.bottom)
         .stroke(Color.tidexSeparator, lineWidth: 1)
       Text(StatsFormat.percent(100))
         .font(.tidexMicro)
         .foregroundStyle(Color.tidexTextMuted)
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        .offset(y: StatsEmploymentScale.top - 14)
-      StatsRule(lineY: StatsEmploymentScale.y(averageValue ?? 0))
+        .offset(y: scale.top - 14)
+      StatsRule(lineY: scale.y(averageValue ?? 0))
         .stroke(
           Color.tidexEmploymentAccent,
           style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [1, 4])
         )
         .opacity(averageValue == nil ? 0 : 1)
-      StatsEmploymentLine(
-        values: StatsVector(employment.months.map(\.value)),
-        present: employment.months.map { $0 != .noShifts }
-      )
-      .stroke(Color.tidexTextMuted.opacity(0.8), lineWidth: 1.5)
-      HStack(spacing: 0) {
-        ForEach(employment.months.indices, id: \.self) { index in
-          dot(employment.months[index])
-        }
-      }
+      StatsEmploymentMarks(employment: employment, scale: scale)
     }
-    .frame(height: StatsEmploymentScale.height)
+    .frame(height: scale.height)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(Text(.statsChartsEmploymentTitle))
     .accessibilityChartDescriptor(descriptor)
     .accessibilityIdentifier("stats.year.employment")
-  }
-
-  private func dot(_ employment: StatsLattice.Employment) -> some View {
-    let isCounted: Bool = if case .counted = employment { true } else { false }
-    let hasShifts = employment != .noShifts
-    let value = employment.value
-    return ZStack(alignment: .top) {
-      Circle()
-        .fill(Color.tidexTextMuted)
-        .frame(width: 3, height: 3)
-        .offset(y: StatsEmploymentScale.y(0) - 1.5)
-        .opacity(hasShifts ? 0 : 0.5)
-      Circle()
-        .fill(isCounted ? Color.tidexEmploymentAccent : Color.tidexBackground)
-        .overlay(
-          Circle().stroke(
-            isCounted ? Color.tidexBackground : Color.tidexEmploymentAccent, lineWidth: 2)
-        )
-        .frame(width: 8, height: 8)
-        .offset(y: StatsEmploymentScale.y(value) - 4)
-        .opacity(hasShifts ? 1 : 0)
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
   }
 
   private var descriptor: StatsCategoryChartDescriptor {
@@ -365,9 +354,61 @@ struct StatsEmploymentRow: View {
   }
 }
 
+/// The employment line and its month dots, with no frame of their own, so they can also lie over
+/// the pay bars.
+struct StatsEmploymentMarks: View {
+  let employment: StatsLattice.EmploymentYear
+  let scale: StatsEmploymentScale
+  var lineColor: Color = Color.tidexTextMuted.opacity(0.8)
+  /// The small baseline dot of a month with no shifts. Over the pay bars the month's bar stub
+  /// already marks it.
+  var marksEmptyMonths: Bool = true
+
+  var body: some View {
+    ZStack(alignment: .topLeading) {
+      StatsEmploymentLine(
+        values: StatsVector(employment.months.map(\.value)),
+        present: employment.months.map { $0 != .noShifts },
+        scale: scale
+      )
+      .stroke(lineColor, lineWidth: 1.5)
+      HStack(spacing: 0) {
+        ForEach(employment.months.indices, id: \.self) { index in
+          dot(employment.months[index])
+        }
+      }
+    }
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
+  }
+
+  private func dot(_ employment: StatsLattice.Employment) -> some View {
+    let isCounted: Bool = if case .counted = employment { true } else { false }
+    let hasShifts = employment != .noShifts
+    return ZStack(alignment: .top) {
+      Circle()
+        .fill(Color.tidexTextMuted)
+        .frame(width: 3, height: 3)
+        .offset(y: scale.y(0) - 1.5)
+        .opacity(hasShifts || !marksEmptyMonths ? 0 : 0.5)
+      Circle()
+        .fill(isCounted ? Color.tidexEmploymentAccent : Color.tidexBackground)
+        .overlay(
+          Circle().stroke(
+            isCounted ? Color.tidexBackground : Color.tidexEmploymentAccent, lineWidth: 2)
+        )
+        .frame(width: 8, height: 8)
+        .offset(y: scale.y(employment.value) - 4)
+        .opacity(hasShifts ? 1 : 0)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+  }
+}
+
 private struct StatsEmploymentLine: Shape {
   var values: StatsVector
   let present: [Bool]
+  let scale: StatsEmploymentScale
 
   nonisolated var animatableData: StatsVector {
     get { values }
@@ -379,22 +420,27 @@ private struct StatsEmploymentLine: Shape {
     var path = Path()
     for index in present.indices.dropLast() where present[index] && present[index + 1] {
       path.move(
-        to: CGPoint(x: (CGFloat(index) + 0.5) * column, y: StatsEmploymentScale.y(values[index])))
+        to: CGPoint(x: (CGFloat(index) + 0.5) * column, y: scale.y(values[index])))
       path.addLine(
-        to: CGPoint(
-          x: (CGFloat(index) + 1.5) * column, y: StatsEmploymentScale.y(values[index + 1])))
+        to: CGPoint(x: (CGFloat(index) + 1.5) * column, y: scale.y(values[index + 1])))
     }
     return path
   }
 }
 
-private enum StatsEmploymentScale {
-  static let height: CGFloat = 92
-  /// Leaves room for the "100%" label under the month letters.
-  static let top: CGFloat = 24
+/// Where 0 and 100 percent sit in a plot of the given height.
+struct StatsEmploymentScale {
+  let height: CGFloat
+  let top: CGFloat
+  let bottom: CGFloat
 
-  static func y(_ percent: Double) -> CGFloat {
-    top + (1 - CGFloat(min(max(percent, 0), 100) / 100)) * (height - top - 6)
+  /// The employment chart on its own. The top leaves room for the "100%" label under the month
+  /// letters.
+  static let standalone: StatsEmploymentScale = StatsEmploymentScale(
+    height: 92, top: 24, bottom: 86)
+
+  func y(_ percent: Double) -> CGFloat {
+    bottom - CGFloat(min(max(percent, 0), 100) / 100) * (bottom - top)
   }
 }
 
