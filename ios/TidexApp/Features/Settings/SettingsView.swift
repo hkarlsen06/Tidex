@@ -238,10 +238,12 @@ extension SettingsView {
         .listStyle(.insetGrouped)
         .adaptiveContentWidth()
         .tidexListBackground()
-        .navigationTitle(String(localized: .settingsTitle))
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle(isTabRoot ? "" : String(localized: .settingsTitle))
+        .navigationBarTitleDisplayMode(isTabRoot ? .inline : .large)
         .toolbar {
-          if !isTabRoot {
+          if isTabRoot {
+            TabTitleToolbarItem(title: .settingsTitle)
+          } else {
             ToolbarItem(placement: .confirmationAction) {
               Button(String(localized: .commonDone)) {
                 dismiss()
