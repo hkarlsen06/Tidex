@@ -17,8 +17,7 @@ struct FriendPreview: Equatable, Identifiable {
   let daysRemaining: Int?
   /// The schedule's zone differs from the viewer's, so the clocks shown are converted.
   var showsConvertedClock = false
-  var shiftStart: Date?
-  var shiftEnd: Date?
+  var interval: SharedShiftInterval?
   var avatar: UIImage?
 
   enum FriendShiftStatus: Equatable {
@@ -109,6 +108,8 @@ struct FriendsWidgetProvider: TimelineProvider {
   internal func getTimeline(in _: Context, completion: (Timeline<FriendsWidgetEntry>) -> Void) {
     let now = Date()
     let shifts = loadShifts()
+    let sharers = loadSharers()
+    let avatars = loadAvatars(for: sharers)
     let nextMidnight =
       Calendar.gregorianCurrent.nextDate(
         after: now, matching: DateComponents(hour: 0, minute: 0, second: 0),
@@ -118,9 +119,45 @@ struct FriendsWidgetProvider: TimelineProvider {
         date: $0.shiftDate, startTime: $0.startTime, endTime: $0.endTime,
         timeZoneIdentifier: $0.ownerTimeZone)
     }.flatMap { [$0.start, $0.end] }
-    let dates = [now] + Set(boundaries.filter { $0 > now && $0 < nextMidnight }).sorted()
-    let entries = dates.map { createEntry(at: $0, shifts: shifts) }
+    // The day bar's current-time line moves on every quarter hour.
+    let quarter: TimeInterval = 15 * 60
+    let firstQuarter = Date(
+      timeIntervalSinceReferenceDate: (now.timeIntervalSinceReferenceDate / quarter).rounded(.down)
+        * quarter + quarter)
+    let quarterHours = sequence(first: firstQuarter) { $0.addingTimeInterval(quarter) }
+      .prefix { $0 < nextMidnight }
+    let dates =
+      [now] + Set(boundaries.filter { $0 > now && $0 < nextMidnight } + quarterHours).sorted()
+    let entries = dates.map {
+      createEntry(at: $0, shifts: shifts, sharers: sharers, avatars: avatars)
+    }
     completion(Timeline(entries: entries, policy: .after(nextMidnight)))
+  }
+
+  private func loadSharers() -> [WidgetSharer] {
+    guard let defaults = WidgetAppGroup.sharedUserDefaults(),
+      let json = defaults.string(forKey: WidgetAppGroup.friendSharersKey),
+      let data = json.data(using: .utf8),
+      let sharers = try? JSONDecoder().decode([WidgetSharer].self, from: data)
+    else {
+      return []
+    }
+    return sharers
+  }
+
+  /// Loaded once per timeline, so every entry shares the same images.
+  private func loadAvatars(for sharers: [WidgetSharer]) -> [String: UIImage] {
+    guard
+      let directory = FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: WidgetAppGroup.id)?
+        .appendingPathComponent("friend-avatars", isDirectory: true)
+    else { return [:] }
+    var avatars: [String: UIImage] = [:]
+    for sharer in sharers {
+      avatars[sharer.id] = UIImage(
+        contentsOfFile: directory.appendingPathComponent("\(sharer.id).jpg").path)
+    }
+    return avatars
   }
 
   private func loadShifts() -> [StoredFriendShift] {
@@ -134,16 +171,11 @@ struct FriendsWidgetProvider: TimelineProvider {
     return shifts
   }
 
-  private func createEntry(at now: Date, shifts: [StoredFriendShift]) -> FriendsWidgetEntry {
-    // Load sharers
-    guard let userDefaults = WidgetAppGroup.sharedUserDefaults(),
-      let sharersJson = userDefaults.string(forKey: WidgetAppGroup.friendSharersKey),
-      let sharersData = sharersJson.data(using: .utf8),
-      let sharers = try? JSONDecoder().decode([WidgetSharer].self, from: sharersData),
-      !sharers.isEmpty
-    else {
-      return FriendsWidgetEntry.empty()
-    }
+  private func createEntry(
+    at now: Date, shifts: [StoredFriendShift], sharers: [WidgetSharer],
+    avatars: [String: UIImage]
+  ) -> FriendsWidgetEntry {
+    guard !sharers.isEmpty else { return FriendsWidgetEntry.empty() }
 
     // Build friend previews
     var previews: [FriendPreview] = []
@@ -177,8 +209,7 @@ struct FriendsWidgetProvider: TimelineProvider {
             status: status,
             daysRemaining: daysRemaining,
             showsConvertedClock: interval.differs(),
-            shiftStart: interval.start,
-            shiftEnd: interval.end
+            interval: interval
           ))
       } else {
         // No shift for this friend
@@ -240,25 +271,15 @@ struct FriendsWidgetProvider: TimelineProvider {
       return lhs.displayName < rhs.displayName
     }
 
-    // Take top 5
-    let avatarDirectory = FileManager.default
-      .containerURL(forSecurityApplicationGroupIdentifier: WidgetAppGroup.id)?
-      .appendingPathComponent("friend-avatars", isDirectory: true)
-    // Sorting already puts friends with shifts first. The view shows the first
-    // few as rows and the rest as avatars, so only those need image files.
-    let topFriends = previews.enumerated().map { index, preview in
+    let friends = previews.map { preview in
       var preview = preview
-      if index < FriendsWidgetView.maxRows + FriendsWidgetView.maxFooterAvatars,
-        let path = avatarDirectory?.appendingPathComponent("\(preview.id).jpg").path
-      {
-        preview.avatar = UIImage(contentsOfFile: path)
-      }
+      preview.avatar = avatars[preview.id]
       return preview
     }
 
     return FriendsWidgetEntry(
       date: now,
-      friends: topFriends,
+      friends: friends,
       hasAnyFriends: true
     )
   }
@@ -493,6 +514,8 @@ struct FriendsWidgetView: View {
               .lineLimit(1)
           }
         }
+        // The name and badge keep their width. The time range shrinks to make room.
+        .layoutPriority(1)
 
         Spacer(minLength: 8)
 
@@ -505,14 +528,13 @@ struct FriendsWidgetView: View {
               .monospacedDigit()
               .foregroundStyle(primaryTextColor)
               .lineLimit(1)
-              .minimumScaleFactor(0.8)
-              .fixedSize(horizontal: true, vertical: false)
+              .minimumScaleFactor(0.7)
           }
         }
       }
 
-      if let span = shiftSpan(friend) {
-        dayBar(span: span, showNow: isActive)
+      if let interval = friend.interval {
+        dayBar(interval.dayBar(in: .current, now: entry.date), isActive: isActive)
       }
     }
     .padding(14)
@@ -543,27 +565,36 @@ struct FriendsWidgetView: View {
       .accessibilityHidden(true)
   }
 
-  /// A 24-hour track with the shift drawn as a filled segment.
-  private func dayBar(span: ClosedRange<Double>, showNow: Bool) -> some View {
-    let accent = showNow ? activeColor : initialsTextColor
-    let now = Calendar.gregorianCurrent.dateComponents([.hour, .minute], from: entry.date)
-    let nowFraction = (Double(now.hour ?? 0) * 60 + Double(now.minute ?? 0)) / 1_440
-    return VStack(spacing: 4) {
+  /// A 24-hour track with the shift as a filled segment and, on today's bar, a line at the
+  /// current time.
+  private func dayBar(_ bar: ShiftDayBar, isActive: Bool) -> some View {
+    let accent = isActive ? activeColor : initialsTextColor
+    return VStack(spacing: 6) {
       GeometryReader { geo in
-        ZStack(alignment: .leading) {
-          Capsule().fill(mutedTextColor.opacity(0.18))
-          Capsule()
-            .fill(accent)
-            .frame(width: max(6, geo.size.width * (span.upperBound - span.lowerBound)))
-            .offset(x: geo.size.width * span.lowerBound)
-            .widgetAccentable()
-          if showNow {
-            Circle()
-              .fill(primaryTextColor)
-              .frame(width: 10, height: 10)
-              .offset(x: geo.size.width * nowFraction - 5)
+        Capsule()
+          .fill(mutedTextColor.opacity(0.18))
+          .overlay(alignment: .leading) {
+            Capsule()
+              .fill(accent)
+              .frame(width: max(6, geo.size.width * (bar.span.upperBound - bar.span.lowerBound)))
+              .offset(x: geo.size.width * bar.span.lowerBound)
+              .widgetAccentable()
           }
-        }
+          .overlay(alignment: .leading) {
+            if let now = bar.now {
+              // The cut-out gap keeps the line readable on the segment in every rendering mode.
+              ZStack {
+                Capsule()
+                  .frame(width: 6, height: 16)
+                  .blendMode(.destinationOut)
+                Capsule()
+                  .fill(primaryTextColor)
+                  .frame(width: 2, height: 12)
+              }
+              .offset(x: geo.size.width * now - 3)
+            }
+          }
+          .compositingGroup()
       }
       .frame(height: 6)
 
@@ -577,19 +608,6 @@ struct FriendsWidgetView: View {
       }
     }
     .accessibilityHidden(true)
-  }
-
-  /// Shift start and end as fractions of the day. Cross-midnight shifts are clipped at 24:00.
-  private func shiftSpan(_ friend: FriendPreview) -> ClosedRange<Double>? {
-    guard let shiftStart = friend.shiftStart, let shiftEnd = friend.shiftEnd else { return nil }
-    let calendar = Calendar.gregorianCurrent
-    let start = Double(
-      calendar.component(.hour, from: shiftStart) * 60
-        + calendar.component(.minute, from: shiftStart))
-    let end = Double(
-      calendar.component(.hour, from: shiftEnd) * 60 + calendar.component(.minute, from: shiftEnd))
-    let clippedEnd = end > start ? end : 1_440
-    return (start / 1_440)...(clippedEnd / 1_440)
   }
 
   private func compactRow(_ friend: FriendPreview) -> some View {
@@ -635,7 +653,7 @@ struct FriendsWidgetView: View {
       // Leftmost is the next friend in order, so it draws on top. The overflow badge keeps zIndex 0, under all of them.
       ForEach(Array(visible.enumerated()), id: \.element.id) { index, friend in
         avatar(friend, size: 28, fontSize: 11)
-          .overlay(Circle().stroke(WidgetPalette.background, lineWidth: 2))
+          .background(avatarCutout)
           .zIndex(Double(visible.count - index))
       }
       if overflow > 0 {
@@ -644,10 +662,10 @@ struct FriendsWidgetView: View {
           .foregroundStyle(secondaryTextColor)
           .frame(width: 28, height: 28)
           .background(Circle().fill(mutedTextColor.opacity(0.25)))
-          .background(Circle().fill(WidgetPalette.background))
-          .overlay(Circle().stroke(WidgetPalette.background, lineWidth: 2))
+          .background(avatarCutout)
       }
     }
+    .compositingGroup()
     .frame(maxWidth: .infinity)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(
@@ -673,7 +691,6 @@ struct FriendsWidgetView: View {
           .foregroundStyle(initialsTextColor)
           .frame(width: size, height: size)
           .background(Circle().fill(initialsBackground))
-          .background(Circle().fill(WidgetPalette.background))
       }
     }
     .frame(width: size, height: size)
@@ -683,6 +700,12 @@ struct FriendsWidgetView: View {
         Circle().strokeBorder(activeColor, lineWidth: 2)
       }
     }
+  }
+
+  /// Erases the avatars beneath an overlapping one, plus a 2-point gap. An opaque backing would
+  /// turn into a solid white disc in the tinted and clear home screen styles.
+  private var avatarCutout: some View {
+    Circle().padding(-2).blendMode(.destinationOut)
   }
 
   private var activeBadge: some View {
