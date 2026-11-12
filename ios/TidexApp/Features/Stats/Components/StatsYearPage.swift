@@ -221,6 +221,7 @@ struct StatsYearEmploymentSection: View {
         StatsMonthLetters(focus: nil, currentMonth: currentMonth)
         StatsEmploymentRow(employment: employment)
       }
+      .padding(.leading, StatsScaleLabel.gutter)
       .padding(.top, StatsRhythm.headerToBody)
     }
     .accessibilityElement(children: .contain)

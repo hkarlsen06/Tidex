@@ -63,6 +63,25 @@ struct StatsYearSection: View {
     }
     .background { playhead }
     .overlay { monthButtons }
+    .padding(.horizontal, StatsScaleLabel.gutter)
+    .overlay(alignment: .top) { scaleLabels }
+  }
+
+  /// Pay on the left and employment on the right, each in line with the top line and in the
+  /// color of what it measures.
+  private var scaleLabels: some View {
+    HStack(spacing: 0) {
+      StatsScaleLabel(
+        text: StatsFormat.compact(year.yMax), lineY: Self.incomeTop, alignment: .trailing
+      )
+      .opacity(hasPay ? 1 : 0)
+      Spacer(minLength: 0)
+      StatsScaleLabel(
+        text: StatsFormat.percent(100), color: .tidexEmploymentAccent, lineY: Self.incomeTop,
+        alignment: .leading
+      )
+      .opacity(year.employment.hasShifts ? 1 : 0)
+    }
   }
 
   /// Moves one column on a month change. On a year change it fades out and back in at the new
@@ -88,12 +107,6 @@ struct StatsYearSection: View {
       Group {
         StatsRule(lineY: Self.incomeTop)
           .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
-        Text(StatsFormat.compact(year.yMax))
-          .font(.tidexMicro)
-          .monospacedDigit()
-          .foregroundStyle(Color.tidexTextMuted)
-          .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-          .offset(y: Self.incomeTop - 15)
         HStack(alignment: .bottom, spacing: 0) {
           ForEach(year.months) { month in
             StatsIncomeBar(month: month, height: barHeight(month), isFocus: month.id == year.focus)
@@ -107,7 +120,6 @@ struct StatsYearSection: View {
       .opacity(hasPay ? 1 : 0)
       StatsRule(lineY: Self.incomeHeight - 0.5)
         .stroke(Color.tidexSeparator, lineWidth: 1)
-      employmentScaleLabel
       StatsEmploymentMarks(
         employment: year.employment, scale: Self.employmentScale,
         lineColor: .tidexEmploymentAccent, marksEmptyMonths: false)
@@ -117,18 +129,6 @@ struct StatsYearSection: View {
     .accessibilityLabel(Text(.statsChartsYearlyIncomeTitle(String(year.year))))
     .accessibilityChartDescriptor(incomeDescriptor)
     .accessibilityIdentifier("stats.year.income")
-  }
-
-  /// The right-hand scale belongs to the employment line, so it has the line's color.
-  private var employmentScaleLabel: some View {
-    Text(StatsFormat.percent(100))
-      .font(.tidexMicro)
-      .monospacedDigit()
-      .foregroundStyle(Color.tidexEmploymentAccent)
-      .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-      .frame(maxWidth: .infinity, alignment: .trailing)
-      .offset(y: Self.incomeTop - 15)
-      .opacity(year.employment.hasShifts ? 1 : 0)
   }
 
   private func barHeight(_ month: StatsLattice.MonthSlot) -> CGFloat {
@@ -300,6 +300,8 @@ extension StatsLattice.EmploymentAverage {
   }
 }
 
+/// The employment chart on its own. Its scale label hangs in a gutter to its left, which the
+/// section leaves beside the columns.
 struct StatsEmploymentRow: View {
   let employment: StatsLattice.EmploymentYear
 
@@ -315,11 +317,6 @@ struct StatsEmploymentRow: View {
         .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
       StatsRule(lineY: scale.bottom)
         .stroke(Color.tidexSeparator, lineWidth: 1)
-      Text(StatsFormat.percent(100))
-        .font(.tidexMicro)
-        .foregroundStyle(Color.tidexTextMuted)
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        .offset(y: scale.top - 14)
       StatsRule(lineY: scale.y(averageValue ?? 0))
         .stroke(
           Color.tidexEmploymentAccent,
@@ -329,6 +326,10 @@ struct StatsEmploymentRow: View {
       StatsEmploymentMarks(employment: employment, scale: scale)
     }
     .frame(height: scale.height)
+    .overlay(alignment: .topLeading) {
+      StatsScaleLabel(text: StatsFormat.percent(100), lineY: scale.top, alignment: .trailing)
+        .offset(x: -StatsScaleLabel.gutter)
+    }
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(Text(.statsChartsEmploymentTitle))
     .accessibilityChartDescriptor(descriptor)

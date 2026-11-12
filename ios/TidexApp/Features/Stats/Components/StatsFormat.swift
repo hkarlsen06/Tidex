@@ -213,6 +213,36 @@ extension StatsSectionHeader where Trailing == EmptyView {
   }
 }
 
+/// A scale value set in line with the dashed line it names. It sits in a gutter beside the plot,
+/// so a bar or a dot that reaches the line never runs into it.
+struct StatsScaleLabel: View {
+  /// The gutter a plot leaves beside its columns for one label.
+  static let gutter: CGFloat = 32
+  private static let gap: CGFloat = 6
+
+  let text: String
+  var color: Color = .tidexTextMuted
+  /// The line's y in the plot. The label is centered on it.
+  let lineY: CGFloat
+  /// Trailing in a gutter left of the plot, leading in one right of it.
+  let alignment: Alignment
+  /// Hides what passes behind the text, for a label inside a plot.
+  var hasHalo: Bool = false
+
+  var body: some View {
+    Text(text)
+      .font(.tidexMicro)
+      .monospacedDigit()
+      .foregroundStyle(color)
+      .lineLimit(1)
+      .minimumScaleFactor(0.6)
+      .background(hasHalo ? Color.tidexBackground : .clear)
+      .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+      .frame(width: Self.gutter - Self.gap, height: lineY * 2, alignment: alignment)
+      .accessibilityHidden(true)
+  }
+}
+
 struct StatsHairline: View {
   var body: some View {
     Rectangle()

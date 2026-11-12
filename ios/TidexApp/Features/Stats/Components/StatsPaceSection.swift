@@ -55,7 +55,6 @@ struct StatsPaceSection: View {
       StatsPaceHatchShape(startSlot: Double(pace.dayCount))
         .stroke(Color.tidexTextMuted.opacity(0.45), lineWidth: 1)
         .accessibilityHidden(true)
-      scaleLabel
       ForEach([pace.previous, pace.focus]) { series in
         StatsPaceLine(series: series, yMax: pace.yMax)
           .transition(
@@ -67,22 +66,16 @@ struct StatsPaceSection: View {
       }
       todayMarker(geometry)
       scrubLine(geometry)
+      // Inside the plot, where nothing but the today marker on the first days comes near it.
+      StatsScaleLabel(
+        text: StatsFormat.compact(pace.yMax), lineY: StatsPaceGeometry.top, alignment: .leading,
+        hasHalo: true)
     }
     .contentShape(Rectangle())
     .gesture(
       StatsPaceScrubGesture { locationX in
         scrub = locationX.map { .day(geometry.day(at: $0, dayCount: pace.dayCount)) } ?? .idle
       })
-  }
-
-  private var scaleLabel: some View {
-    Text(StatsFormat.compact(pace.yMax))
-      .offset(y: StatsPaceGeometry.top - 15)
-      .font(.tidexMicro)
-      .monospacedDigit()
-      .foregroundStyle(Color.tidexTextMuted)
-      .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-      .accessibilityHidden(true)
   }
 
   private func todayMarker(_ geometry: StatsPaceGeometry) -> some View {

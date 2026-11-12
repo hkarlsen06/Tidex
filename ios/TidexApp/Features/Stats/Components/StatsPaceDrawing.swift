@@ -146,10 +146,12 @@ struct StatsPaceGrid: View {
   var body: some View {
     ZStack {
       Path { path in
-        for lineY in [StatsPaceGeometry.top, geometry.y(geometry.yMax / 2)] {
-          path.move(to: CGPoint(x: 0, y: lineY))
-          path.addLine(to: CGPoint(x: geometry.width, y: lineY))
-        }
+        // The top line starts after its scale label.
+        path.move(to: CGPoint(x: StatsScaleLabel.gutter, y: StatsPaceGeometry.top))
+        path.addLine(to: CGPoint(x: geometry.width, y: StatsPaceGeometry.top))
+        let middle = geometry.y(geometry.yMax / 2)
+        path.move(to: CGPoint(x: 0, y: middle))
+        path.addLine(to: CGPoint(x: geometry.width, y: middle))
       }
       .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
       Path { path in
