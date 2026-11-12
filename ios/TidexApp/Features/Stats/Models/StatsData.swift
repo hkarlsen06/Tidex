@@ -12,6 +12,8 @@ struct StatsData: Codable, Equatable {  // swiftlint:disable:this explicit_acl e
   let lastMonth: MonthStats  // swiftlint:disable:this explicit_acl
   let percentageChange: Double?  // swiftlint:disable:this explicit_acl
   let thisMonthCumulative: [DailyCumulativeData]  // swiftlint:disable:this explicit_acl
+  /// One entry per day of the focus month, days without shifts included.
+  let days: [DayStats]  // swiftlint:disable:this explicit_acl
   let thisWeek: [DailyData]?  // Current week (Mon-Sun) - only for current month // swiftlint:disable:this discouraged_optional_collection explicit_acl line_length
   let bestWeek: BestWeekData?  // Best week - only for past months // swiftlint:disable:this explicit_acl
   let employment: EmploymentData?  // Employment percentage data for the focus year // swiftlint:disable:this explicit_acl line_length
@@ -45,6 +47,18 @@ struct DailyCumulativeData: Codable, Equatable, Identifiable {  // swiftlint:dis
   let lastMonth: Double  // Last month's cumulative earnings up to same day // swiftlint:disable:this explicit_acl
   let isToday: Bool  // Whether this is today's date // swiftlint:disable:this explicit_acl
   let isFuture: Bool  // Whether this day is in the future // swiftlint:disable:this explicit_acl
+
+  var id: Int { day }  // swiftlint:disable:this explicit_acl
+}
+
+/// Pay on one day of the focus month. Earnings, hours and shifts count the primary currency,
+/// and `otherCurrencyShifts` counts the day's shifts paid in another currency.
+struct DayStats: Codable, Equatable, Identifiable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  let day: Int  // swiftlint:disable:this explicit_acl
+  let earnings: Double  // swiftlint:disable:this explicit_acl
+  let hours: Double  // swiftlint:disable:this explicit_acl
+  let shifts: Int  // swiftlint:disable:this explicit_acl
+  let otherCurrencyShifts: Int  // swiftlint:disable:this explicit_acl
 
   var id: Int { day }  // swiftlint:disable:this explicit_acl
 }
@@ -207,87 +221,13 @@ extension StatsData {  // swiftlint:disable:this no_grouping_extension
       ),
       percentageChange: nil,
       thisMonthCumulative: [],
+      days: [],
       thisWeek: nil,
       bestWeek: nil,
       employment: nil,
       yearlyIncome: nil
     )
   }
-
-  /// Sample data for previews and testing
-  static let preview = StatsData(  // swiftlint:disable:this explicit_acl explicit_type_interface
-    focusMonth: FocusMonth(year: 2_025, month: 1),  // swiftlint:disable:this no_magic_numbers
-    tax: TaxSettings(enabled: true, percentage: 7.5),  // swiftlint:disable:this no_magic_numbers
-    currentMonth: MonthStats(
-      totalEarnings: 13_772,  // swiftlint:disable:this no_magic_numbers
-      totalEarningsNet: 12_808,  // swiftlint:disable:this no_magic_numbers
-      totalHours: 60.3,  // swiftlint:disable:this no_magic_numbers
-      shiftCount: 9  // swiftlint:disable:this no_magic_numbers
-    ),
-    currentMonthCurrencyAggregate: nil,
-    lastMonth: MonthStats(
-      totalEarnings: 20_000,  // swiftlint:disable:this no_magic_numbers
-      totalEarningsNet: 18_500,  // swiftlint:disable:this no_magic_numbers
-      totalHours: 85,  // swiftlint:disable:this no_magic_numbers
-      shiftCount: 12  // swiftlint:disable:this no_magic_numbers
-    ),
-    percentageChange: -32,  // swiftlint:disable:this no_magic_numbers
-    thisMonthCumulative: DailyCumulativeData.previewData,
-    thisWeek: DailyData.previewThisWeek,
-    bestWeek: nil,
-    employment: EmploymentData.preview,
-    yearlyIncome: MonthlyIncomeData.previewData
-  )
-
-  /// Preview data for past month (showing best week)
-  static let previewPastMonth = StatsData(  // swiftlint:disable:this explicit_acl explicit_type_interface
-    focusMonth: FocusMonth(year: 2_024, month: 12),  // swiftlint:disable:this no_magic_numbers
-    tax: TaxSettings(enabled: true, percentage: 7.5),  // swiftlint:disable:this no_magic_numbers
-    currentMonth: MonthStats(
-      totalEarnings: 20_000,  // swiftlint:disable:this no_magic_numbers
-      totalEarningsNet: 18_500,  // swiftlint:disable:this no_magic_numbers
-      totalHours: 85,  // swiftlint:disable:this no_magic_numbers
-      shiftCount: 12  // swiftlint:disable:this no_magic_numbers
-    ),
-    currentMonthCurrencyAggregate: nil,
-    lastMonth: MonthStats(
-      totalEarnings: 18_000,  // swiftlint:disable:this no_magic_numbers
-      totalEarningsNet: 16_650,  // swiftlint:disable:this no_magic_numbers
-      totalHours: 75,  // swiftlint:disable:this no_magic_numbers
-      shiftCount: 10  // swiftlint:disable:this no_magic_numbers
-    ),
-    percentageChange: 11,  // swiftlint:disable:this no_magic_numbers
-    thisMonthCumulative: DailyCumulativeData.previewData,
-    thisWeek: nil,
-    bestWeek: BestWeekData.preview,
-    employment: EmploymentData.preview,
-    yearlyIncome: MonthlyIncomeData.previewData
-  )
-
-  /// Empty data for when no shifts exist
-  static let empty = StatsData(  // swiftlint:disable:this explicit_acl explicit_type_interface
-    focusMonth: FocusMonth(year: 2_025, month: 1),  // swiftlint:disable:this no_magic_numbers
-    tax: TaxSettings(enabled: false, percentage: 0),
-    currentMonth: MonthStats(
-      totalEarnings: 0,
-      totalEarningsNet: 0,
-      totalHours: 0,
-      shiftCount: 0
-    ),
-    currentMonthCurrencyAggregate: nil,
-    lastMonth: MonthStats(
-      totalEarnings: 0,
-      totalEarningsNet: 0,
-      totalHours: 0,
-      shiftCount: 0
-    ),
-    percentageChange: nil,
-    thisMonthCumulative: [],
-    thisWeek: nil,
-    bestWeek: nil,
-    employment: nil,
-    yearlyIncome: nil
-  )
 }
 
 // MARK: - DailyData Preview

@@ -298,6 +298,13 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
           now: now
         )
 
+        let dayStats = Self.buildDayStats(  // swiftlint:disable:this explicit_type_interface
+          primaryShifts: primaryCurrentMonthShifts,
+          includedShifts: currentMonthIncluded,
+          year: targetYear,
+          month: targetMonth
+        )
+
         // Determine if viewing current month
         let isCurrentMonth =  // swiftlint:disable:this explicit_type_interface
           targetYear == calendar.component(.year, from: now)
@@ -367,6 +374,7 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
           ),
           percentageChange: percentageChange,
           thisMonthCumulative: cumulativeData,
+          days: dayStats,
           thisWeek: thisWeek,
           bestWeek: bestWeek,
           employment: employmentData,
@@ -697,6 +705,49 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
     }
 
     return cumulativeData
+  }
+
+  /// One entry per day of the month, days without shifts included.
+  /// `includedShifts` holds every currency, so the shifts it has beyond `primaryShifts`
+  /// are the ones paid in another currency.
+  nonisolated static func buildDayStats(  // swiftlint:disable:this explicit_acl
+    primaryShifts: [ShiftWithComputations],
+    includedShifts: [ShiftWithComputations],
+    year: Int,
+    month: Int
+  ) -> [DayStats] {
+    let dayCount = Date.daysInMonth(year: year, month: month)  // swiftlint:disable:this explicit_type_interface
+    var earnings = [Double](repeating: 0, count: dayCount)  // swiftlint:disable:this explicit_type_interface
+    var hours = [Double](repeating: 0, count: dayCount)  // swiftlint:disable:this explicit_type_interface
+    var primaryCounts = [Int](repeating: 0, count: dayCount)  // swiftlint:disable:this explicit_type_interface
+    var allCounts = [Int](repeating: 0, count: dayCount)  // swiftlint:disable:this explicit_type_interface
+
+    func dayIndex(of shift: ShiftWithComputations) -> Int? {
+      let components = shift.shiftDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
+      guard components.count >= 3, let day = Int(components[2]) else { return nil }
+      return (1...dayCount).contains(day) ? day - 1 : nil
+    }
+
+    for shift in primaryShifts {
+      guard let index = dayIndex(of: shift) else { continue }
+      earnings[index] += shift.grossPay
+      hours[index] += shift.paidHours
+      primaryCounts[index] += 1
+    }
+    for shift in includedShifts {
+      guard let index = dayIndex(of: shift) else { continue }
+      allCounts[index] += 1
+    }
+
+    return (0..<dayCount).map { index in
+      DayStats(
+        day: index + 1,
+        earnings: earnings[index],
+        hours: hours[index],
+        shifts: primaryCounts[index],
+        otherCurrencyShifts: max(allCounts[index] - primaryCounts[index], 0)
+      )
+    }
   }
 
   /// Build "This Week" data showing current calendar week (Mon-Sun)

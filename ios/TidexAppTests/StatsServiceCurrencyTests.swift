@@ -19,7 +19,6 @@ final class StatsServiceCurrencyTests: XCTestCase {
       try await withFixture(shifts: shifts) { service, userId, _ in
         let stats = try await service.computeStats(year: 2_026, month: 5)
         let cumulative = try XCTUnwrap(stats.thisMonthCumulative.last)
-        let bestWeek = try XCTUnwrap(stats.bestWeek)
         let aprilIncome = try XCTUnwrap(stats.yearlyIncome?.first { $0.monthNumber == 4 })
         let mayIncome = try XCTUnwrap(stats.yearlyIncome?.first { $0.monthNumber == 5 })
 
@@ -30,7 +29,9 @@ final class StatsServiceCurrencyTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(stats.percentageChange), -50, accuracy: 0.01)
         XCTAssertEqual(cumulative.currentMonth, 1_600, accuracy: 0.01)
         XCTAssertEqual(cumulative.lastMonth, 3_200, accuracy: 0.01)
-        XCTAssertEqual(bestWeek.totalEarnings, 1_600, accuracy: 0.01)
+        XCTAssertEqual(stats.days.count, 31)
+        XCTAssertEqual(stats.days.reduce(0) { $0 + $1.earnings }, 1_600, accuracy: 0.01)
+        XCTAssertEqual(stats.days[1].otherCurrencyShifts, hasCurrentUSD ? 1 : 0)
         XCTAssertEqual(aprilIncome.earnings, 3_200, accuracy: 0.01)
         XCTAssertEqual(mayIncome.earnings, 1_600, accuracy: 0.01)
         XCTAssertEqual(stats.currentMonth.totalHours, hasCurrentUSD ? 16 : 8, accuracy: 0.01)
@@ -69,7 +70,7 @@ final class StatsServiceCurrencyTests: XCTestCase {
     }
   }
 
-  func testCurrentWeekUsesPrimaryCurrencyAndPreservesBreakdown() async throws {
+  func testTodayUsesPrimaryCurrencyAndPreservesBreakdown() async throws {
     let today = Date()
     let yearMonth = today.yearMonth()
     try await withFixture(shifts: [
@@ -78,12 +79,14 @@ final class StatsServiceCurrencyTests: XCTestCase {
     ]) { service, _, _ in
       let stats = try await service.computeStats(year: yearMonth.year, month: yearMonth.month)
       let secondary = try XCTUnwrap(stats.currentMonthCurrencyAggregate?.secondary.first)
-      let week = try XCTUnwrap(stats.thisWeek)
+      let day = stats.days[Calendar.gregorianCurrent.component(.day, from: today) - 1]
 
       XCTAssertEqual(stats.currentMonthCurrencyAggregate?.primary.currency, "kr")
       XCTAssertEqual(stats.currentMonthCurrencyAggregate?.secondary.first?.currency, "$")
       XCTAssertEqual(secondary.grossAmount, 800, accuracy: 0.01)
-      XCTAssertEqual(week.reduce(0) { $0 + $1.earnings }, 800, accuracy: 0.01)
+      XCTAssertEqual(day.earnings, 800, accuracy: 0.01)
+      XCTAssertEqual(day.shifts, 1)
+      XCTAssertEqual(day.otherCurrencyShifts, 1)
       XCTAssertEqual(stats.currentMonth.totalHours, 8, accuracy: 0.01)
     }
   }
@@ -92,13 +95,12 @@ final class StatsServiceCurrencyTests: XCTestCase {
     try await withFixture(shifts: [ShiftInput(job: 2, date: "2026-05-02")]) { service, _, _ in
       let stats = try await service.computeStats(year: 2_026, month: 5)
       let cumulative = try XCTUnwrap(stats.thisMonthCumulative.last)
-      let bestWeek = try XCTUnwrap(stats.bestWeek)
       let mayIncome = try XCTUnwrap(stats.yearlyIncome?.first { $0.monthNumber == 5 })
 
       XCTAssertEqual(stats.currentMonthCurrencyAggregate?.primary.currency, "$")
       XCTAssertEqual(stats.currentMonth.totalEarnings, 1_600, accuracy: 0.01)
       XCTAssertEqual(cumulative.currentMonth, 1_600, accuracy: 0.01)
-      XCTAssertEqual(bestWeek.totalEarnings, 1_600, accuracy: 0.01)
+      XCTAssertEqual(stats.days.reduce(0) { $0 + $1.earnings }, 1_600, accuracy: 0.01)
       XCTAssertEqual(mayIncome.earnings, 1_600, accuracy: 0.01)
     }
   }
