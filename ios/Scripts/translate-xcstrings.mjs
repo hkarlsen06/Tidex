@@ -561,53 +561,89 @@ async function findCodeUsage(keys) {
   return excerpts;
 }
 
-// The guide and the whole catalog are identical in every request of a run, so the API caches them
-// after the first request and the other languages read them at a fraction of the price.
-async function buildSystemPrompt(data) {
-  const lines = [];
+async function buildSystemPrompt() {
+  return [{ type: "text", text: await fs.readFile(GUIDE_PATH, "utf8") }];
+}
+
+// How many existing translations each string brings into its request. Every language gets its own
+// requests, so a commit pays for whatever one request carries 46 times.
+const REFERENCES_PER_STRING = 6;
+// A string on the same screen counts as much as one shared word that about 5% of strings use.
+const SAME_SCREEN_SCORE = 3;
+
+// The words of a text in lowercase, without placeholders.
+function wordsOf(text) {
+  const joined = typeof text === "string" ? text : Object.values(text ?? {}).join(" ");
+  return new Set(joined.replace(FORMAT_SPECIFIER, " ").toLowerCase().match(/\p{L}{3,}/gu) ?? []);
+}
+
+// `settings.pay.title` is on the screen `settings.pay`.
+function screenOf(key) {
+  return key.includes(".") ? key.slice(0, key.lastIndexOf(".")) : null;
+}
+
+// Picks the existing translations that show a translator the terms and form of address a string
+// needs: strings on the same screen, and strings that share its rarer words. `sourceLocale` is the
+// language the strings are translated from.
+function createReferencePicker(data, sourceLocale) {
+  const candidates = [];
+  const stringsWithWord = new Map();
   for (const [key, entry] of Object.entries(data.strings)) {
     if (!isTranslatable(key, entry)) continue;
-    lines.push(JSON.stringify({
-      key,
-      comment: entry.comment,
-      english: readText(entry.localizations?.en),
-      norwegian: readText(entry.localizations?.nb),
-    }));
+    const source = readText(entry.localizations?.[sourceLocale]);
+    if (source === undefined) continue;
+    const words = wordsOf(source);
+    for (const word of words) stringsWithWord.set(word, (stringsWithWord.get(word) ?? 0) + 1);
+    candidates.push({ key, source, words, localizations: entry.localizations });
   }
-  return [
-    { type: "text", text: await fs.readFile(GUIDE_PATH, "utf8") },
-    {
-      type: "text",
-      text: `Every translatable string in Tidex, one JSON object per line.\n${lines.join("\n")}`,
-      cache_control: { type: "ephemeral" },
-    },
-  ];
-}
+  const weight = (word) => Math.log(candidates.length / stringsWithWord.get(word));
 
-// The app's finished translations in one language, for consistent terms and form of address.
-function languageReference(data, targetLang, pendingItems, sharedByBatches) {
-  if (targetLang.code === ENGLISH.code) return [];
-  const pendingKeys = new Set(pendingItems.map((item) => item.key));
-  const lines = [];
-  for (const [key, entry] of Object.entries(data.strings)) {
-    if (!isTranslatable(key, entry) || pendingKeys.has(key)) continue;
-    const translation = readText(entry.localizations?.[targetLang.code]);
-    if (translation === undefined) continue;
-    lines.push(JSON.stringify({ key, english: readText(entry.localizations?.en), translation }));
-  }
-  if (lines.length === 0) return [];
-  const block = {
-    type: "text",
-    text: `Existing ${targetLang.name} translations in Tidex, one JSON object per line.\n${lines.join("\n")}`,
+  // Candidates by relevance to one string. It is the same for every target language.
+  const rankings = new Map();
+  const rank = (key, source) => {
+    if (!rankings.has(key)) {
+      const words = wordsOf(source);
+      const screen = screenOf(key);
+      rankings.set(key, candidates
+        .filter((candidate) => candidate.key !== key)
+        .map((candidate) => {
+          let score = screen !== null && screenOf(candidate.key) === screen ? SAME_SCREEN_SCORE : 0;
+          for (const word of candidate.words) if (words.has(word)) score += weight(word);
+          return { candidate, score };
+        })
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(({ candidate }) => candidate));
+    }
+    return rankings.get(key);
   };
-  if (sharedByBatches) block.cache_control = { type: "ephemeral" };
-  return [block];
-}
 
-async function warmPromptCache(system) {
-  await withRetry(() => askClaude(system, [
-    { type: "text", text: "Cache warm-up before the translation requests. Return an empty translations list." },
-  ]));
+  const sourceName = sourceLocale === ENGLISH.code ? "english" : "norwegian";
+  // The reference block for one batch. Strings still waiting for this language are left out,
+  // because their text there is missing or out of date.
+  return (items, targetLang, pendingKeys) => {
+    const chosen = new Set();
+    for (const item of items) {
+      let taken = 0;
+      for (const candidate of rank(item.key, item.english ?? item.norwegian)) {
+        if (taken === REFERENCES_PER_STRING) break;
+        if (pendingKeys.has(candidate.key)) continue;
+        if (readText(candidate.localizations?.[targetLang.code]) === undefined) continue;
+        chosen.add(candidate);
+        taken++;
+      }
+    }
+    if (chosen.size === 0) return [];
+    const lines = candidates.filter((candidate) => chosen.has(candidate)).map((candidate) => JSON.stringify({
+      key: candidate.key,
+      [sourceName]: candidate.source,
+      translation: readText(candidate.localizations[targetLang.code]),
+    }));
+    return [{
+      type: "text",
+      text: `Existing ${targetLang.name} translations of related strings in Tidex, one JSON object per line.\n${lines.join("\n")}`,
+    }];
+  };
 }
 
 // Translates one batch of items that share a target language. Returns translations by slot id.
@@ -691,24 +727,21 @@ function createCatalogSaver(filePath, data, originalContent) {
 
 // Translates the items into their target languages and saves the catalog after every batch.
 async function translateItems(data, items, save) {
-  const system = await buildSystemPrompt(data);
+  const system = await buildSystemPrompt();
   const codeUsage = await findCodeUsage(new Set(items.map((item) => item.key)));
-  const batchesByLanguage = [];
-  const references = new Map();
+  // Strings without English are translated from Norwegian, in a run of their own.
+  const pickReference = createReferencePicker(data, items[0].english === undefined ? "nb" : ENGLISH.code);
+  const batches = [];
   for (const targetLang of [ENGLISH, ...TARGET_LANGUAGES]) {
     const ofLanguage = items.filter((item) => item.targetLang.code === targetLang.code);
-    if (ofLanguage.length === 0) continue;
-    references.set(targetLang.code, languageReference(data, targetLang, ofLanguage, ofLanguage.length > BATCH_SIZE));
-    const batches = [];
+    const pendingKeys = new Set(ofLanguage.map((item) => item.key));
     for (let i = 0; i < ofLanguage.length; i += BATCH_SIZE) {
-      batches.push({ targetLang, items: ofLanguage.slice(i, i + BATCH_SIZE) });
+      const batchItems = ofLanguage.slice(i, i + BATCH_SIZE);
+      batches.push({ targetLang, items: batchItems, reference: pickReference(batchItems, targetLang, pendingKeys) });
     }
-    batchesByLanguage.push(batches);
   }
-  const batchCount = batchesByLanguage.flat().length;
+  const batchCount = batches.length;
   console.log(`${batchCount} batches, up to ${CONCURRENCY} concurrent requests across languages.`);
-  // Requests sent together cannot read each other's cache entry, so one request writes it first.
-  if (batchCount > 1) await warmPromptCache(system);
 
   const multibar = process.stderr.isTTY ? new cliProgress.MultiBar(
     {
@@ -729,13 +762,11 @@ async function translateItems(data, items, save) {
   let saveError = null;
 
   // One queue across all languages keeps every request slot useful for small updates.
-  const translate = ({ targetLang, items }) => limit(async () => {
+  const translate = ({ targetLang, items, reference }) => limit(async () => {
     if (isShuttingDown || saveError) return;
     const batchNumber = ++startedBatches;
     try {
-      const translations = await translateBatch(items, {
-        system, codeUsage, reference: references.get(targetLang.code),
-      });
+      const translations = await translateBatch(items, { system, codeUsage, reference });
       if (isShuttingDown || saveError) return;
       for (const item of items) {
         const outcome = applyTranslations(data.strings[item.key], item, translations);
@@ -772,12 +803,7 @@ async function translateItems(data, items, save) {
       });
     }
   });
-  // A language's first batch writes the cache entry for its existing translations, and its other
-  // batches wait for that so they read it.
-  await Promise.all(batchesByLanguage.map(async ([first, ...rest]) => {
-    await translate(first);
-    await Promise.all(rest.map(translate));
-  }));
+  await Promise.all(batches.map(translate));
   multibar?.stop();
   currentMultibar = null;
   if (isShuttingDown) return;
@@ -953,10 +979,10 @@ async function translateInfoPlistStrings() {
       return;
     }
 
-    // The app catalog gives the permission texts the same vocabulary as the app.
-    const data = JSON.parse(await fs.readFile(DEFAULT_CATALOG, "utf-8"));
-    const system = await buildSystemPrompt(data);
-    if (pending.length > 1) await warmPromptCache(system);
+    // Related strings from the app catalog give the permission texts the app's vocabulary.
+    const pickReference = createReferencePicker(
+      JSON.parse(await fs.readFile(DEFAULT_CATALOG, "utf-8")), ENGLISH.code);
+    const system = await buildSystemPrompt();
     const limit = pLimit(CONCURRENCY);
     let created = 0;
 
@@ -973,7 +999,7 @@ async function translateInfoPlistStrings() {
       try {
         const translations = await translateBatch(items, {
           system,
-          reference: languageReference(data, targetLang, [], false),
+          reference: pickReference(items, targetLang, new Set()),
           codeUsage: new Map(),
         });
         const mergedStrings = { ...existingStrings };

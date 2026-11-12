@@ -26,9 +26,7 @@ Keep "Tidex" and other product names unchanged. For Apple features such as Live 
 
 ## What each request contains
 
-The system prompt ends with every translatable string in the app, one JSON object per line, with its key, the developer's comment, the English text and the Norwegian Bokmål text. Read it as a map of the app. The key names the screen and the element, and neighbouring keys show what else is on that screen.
-
-The user message starts with the app's existing translations in the target language, each next to its English text. They show which terms and which form of address the app already uses. Stay consistent with them. Earlier translations were made with less context than you have, so when one is clearly wrong, translate your strings correctly instead of repeating the mistake.
+The user message starts with existing translations in the target language of strings related to yours, each next to its source text: strings on the same screen and strings that share words with yours. A key names the screen and the element, so keys that share all but their last part are on one screen. The translations show which terms and which form of address the app already uses. Stay consistent with them. Earlier translations were made with less context than you have, so when one is clearly wrong, translate your strings correctly instead of repeating the mistake.
 
 The last part of the user message is a JSON object with the target language and the strings to translate. Each string has:
 

@@ -23,12 +23,7 @@ beforeAll(async () => {
     port: 0,
     fetch: async (request) => {
       const body = await request.json();
-      let payload;
-      try {
-        payload = JSON.parse(body.messages[0].content.at(-1).text);
-      } catch {
-        return completed([]); // the cache warm-up request
-      }
+      const payload = JSON.parse(body.messages[0].content.at(-1).text);
       return respond({ body, items: payload.strings, locale: payload.targetLanguage?.code });
     },
   });
@@ -334,6 +329,31 @@ test("each string comes with the Swift code that shows it", async () => {
   };
   expect(await main([file])).toBe(0);
   expect(jobs[0].items[0].code[0]).toContain(".commonCancel");
+});
+
+test("a request carries existing translations of related strings, not the whole catalog", async () => {
+  const data = catalog(["de"]);
+  // Complete in every language, so German is the only work.
+  const string = (en, de) => ({ localizations: {
+    ...structuredClone(data.strings["a.untouched"].localizations), en: unit(en), de: unit(de),
+  } });
+  data.strings["z.title"] = string("Overview", "Übersicht");
+  data.strings["b.wage"] = string("Night pay", "Nachtzuschlag");
+  for (let index = 0; index < 40; index++) {
+    data.strings[`c.unrelated${index}`] = string(`Something else ${index}`, `Etwas anderes ${index}`);
+  }
+  const file = await writeCatalog(data);
+  const bodies = [];
+  respond = (job) => {
+    bodies.push(JSON.stringify(job.body));
+    return completed(job.items);
+  };
+  expect(await main([file])).toBe(0);
+  expect(bodies).toHaveLength(1);
+  // The same screen, and a shared word.
+  expect(bodies[0]).toContain("Übersicht");
+  expect(bodies[0]).toContain("Nachtzuschlag");
+  expect(bodies[0]).not.toContain("unrelated");
 });
 
 test("a plural with a missing form is translated as a whole from its current forms", async () => {
