@@ -544,7 +544,7 @@ struct MainTabView: View {
         .overlay(alignment: .bottom) {
           if selectedTab == tab, shouldShowMonthPicker {
             MonthPickerControls(
-              period: tab == .stats ? statsPeriod : .month,
+              period: tab == .stats ? $statsPeriod : nil,
               showsViewModeToggle: showsViewModeToggle,
               showsAddButton: showsAddButton,
               onAddShift: { addShiftNavigator.hostTab = selectedTab }
@@ -564,9 +564,11 @@ struct MainTabView: View {
 
 /// Month picker above the tab bar, with the list toggle on its leading side
 /// and the add button on its trailing side, each as its own glass control.
-/// Stats in year mode shows a year picker in the same pill.
+/// Stats puts its month or year choice on the leading side, and in year mode shows a year
+/// picker in the same pill.
 struct MonthPickerControls: View {
-  var period: StatsPeriod = .month
+  /// Set only on Stats.
+  var period: Binding<StatsPeriod>?
   let showsViewModeToggle: Bool
   let showsAddButton: Bool
   let onAddShift: () -> Void
@@ -584,13 +586,19 @@ struct MonthPickerControls: View {
           viewModeToggleButton
         }
 
+        if let period {
+          // Gets its full width first. The pill shortens its month before the words here shrink.
+          StatsPeriodPicker(period: period)
+            .layoutPriority(1)
+        }
+
         Group {
-          switch period {
+          switch period?.wrappedValue ?? .month {
           case .month: SharedMonthPicker()
           case .year: StatsYearPicker()
           }
         }
-        .frame(maxWidth: .infinity)
+        .frame(minWidth: MonthPickerLayout.minimumWidth, maxWidth: .infinity)
         .frame(height: MonthPickerLayout.height)
         .tidexGlass(
           shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),

@@ -5,12 +5,11 @@ import SwiftUI
 struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   /// The tab stays alive behind the other tabs, so it is told when it is the one on screen.
   let isSelected: Bool  // swiftlint:disable:this explicit_acl
-  /// Owned by the tab view, which shows a year instead of a month in the floating picker.
+  /// Owned by the tab view. Its floating picker row sets it and shows a year instead of a month.
   @Binding var period: StatsPeriod  // swiftlint:disable:this explicit_acl
 
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface line_length
-  @Environment(\.horizontalSizeClass) private var horizontalSizeClass  // swiftlint:disable:this explicit_type_interface line_length
   @ScaledMetric(relativeTo: .largeTitle) private var errorIconSize: CGFloat = 48
 
   @State private var viewModel = StatsViewModel()  // swiftlint:disable:this explicit_type_interface
@@ -25,6 +24,8 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   @State private var addShiftPath: [AddShiftRoute] = []  // swiftlint:disable:this explicit_type_interface
   @State private var scrollPosition = ScrollPosition(edge: .top)  // swiftlint:disable:this explicit_type_interface
   @State private var isScrolledDown = false  // swiftlint:disable:this explicit_type_interface
+  /// Written on every scroll tick without drawing the page again.
+  @State private var scrollDepth = ScrollDepth()  // swiftlint:disable:this explicit_type_interface
   private let syncStatusManager = SyncStatusManager.shared  // swiftlint:disable:this explicit_type_interface
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
@@ -269,10 +270,19 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     }
   }
 
+  /// A period with no shifts is only as tall as what it shows. Landing on one while scrolled
+  /// down keeps the content as tall as what was on screen, so the page does not jump. Read
+  /// when the page is drawn, so it is the height at that moment.
+  private func emptyPageMinHeight(for page: StatsContent.Page) -> CGFloat? {
+    guard isScrolledDown, !page.hasShifts else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    return scrollDepth.heightOnScreen
+  }
+
   private var statsContent: some View {
-    ScrollView {
+    let page: StatsContent.Page = statsPage
+    return ScrollView {
       StatsContent(
-        page: statsPage,
+        page: page,
         onSelectMonth: { month in
           viewModel.goToMonth(year: month.year, month: month.month)
           period = .month
@@ -283,6 +293,7 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         onScrubbingChange: { isScrubbing = $0 }
       )
       .statsContentFrame()
+      .frame(minHeight: emptyPageMinHeight(for: page), alignment: .top)
       .contentShape(Rectangle())
       .monthSwipeGesture(
         onSwipeLeft: {
@@ -295,43 +306,26 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         isEnabled: !isScrubbing
       )
     }
-    .safeAreaInset(edge: .bottom, spacing: 0) {
-      periodPicker
-    }
+    // The floating month picker row sits in the tab's overlay above the tab bar.
+    .contentMargins(.bottom, MonthPickerLayout.totalBottomInset, for: .scrollContent)
     .scrollPosition($scrollPosition)
     .onScrollGeometryChange(for: Bool.self) { geometry in
       geometry.contentOffset.y + geometry.contentInsets.top > 1
     } action: { _, isScrolled in
       isScrolledDown = isScrolled
     }
+    .onScrollGeometryChange(for: CGFloat.self) { geometry in
+      // The content height that keeps this offset in range. Clamped so a bounce past the
+      // bottom does not count.
+      min(
+        geometry.contentOffset.y + geometry.containerSize.height - geometry.contentInsets.bottom,
+        geometry.contentSize.height)
+    } action: { _, height in
+      scrollDepth.heightOnScreen = height
+    }
     .userCurrency(displayedCurrency)
     .refreshable {
       await refreshStatsContent()
-    }
-  }
-
-  /// Sits right above the floating month picker. The clear space under it is the picker's, so
-  /// the scroll content clears both.
-  private var periodPicker: some View {
-    VStack(spacing: MonthPickerLayout.bottomPadding) {
-      AdaptiveCalendarPicker(
-        selection: $period,
-        options: [
-          CalendarPickerOption(value: StatsPeriod.month, title: .commonMonth),
-          CalendarPickerOption(value: StatsPeriod.year, title: .commonYear),
-        ]
-      )
-      .accessibilityIdentifier("stats.period")
-      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .frame(maxWidth: .infinity)
-      .padding(
-        .horizontal,
-        horizontalSizeClass == .regular
-          ? MonthPickerLayout.horizontalPadding : MonthPickerLayout.tabBarAlignedHorizontalPadding
-      )
-      Color.clear
-        .frame(height: MonthPickerLayout.totalBottomInset)
-        .accessibilityHidden(true)
     }
   }
 
@@ -440,4 +434,9 @@ private struct ExportedFile: Identifiable {
   let url: URL
 
   var id: URL { url }
+}
+
+/// The scroll view's latest depth. A class without observation, so writing it draws nothing.
+private final class ScrollDepth {
+  var heightOnScreen: CGFloat = 0
 }

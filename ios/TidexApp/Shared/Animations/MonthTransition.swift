@@ -50,6 +50,10 @@ enum MonthPickerLayout {
 
   /// Total inset needed to keep content above the floating month picker
   internal static let totalBottomInset: CGFloat = height + bottomPadding
+
+  /// Room for both chevrons and a short month, so a control beside the pill gives way before
+  /// the pill clips.
+  internal static let minimumWidth: CGFloat = 140
 }
 
 // MARK: - Month Transition Configuration
@@ -441,6 +445,13 @@ struct AnimatedMonthHeader: View {
     String(format: "%02d", year % 100)
   }
 
+  /// "Sep" for September, in the locale `SharedMonthContext` names the month in.
+  private var shortMonthName: String {
+    let symbols =
+      FormatterCache.monthNameFormatter(locale: .current).shortStandaloneMonthSymbols ?? []
+    return symbols.indices.contains(phase.month - 1) ? symbols[phase.month - 1] : monthName
+  }
+
   private var previousIcon: String {
     layoutDirection == .rightToLeft ? "chevron.right" : "chevron.left"
   }
@@ -522,11 +533,11 @@ struct AnimatedMonthHeader: View {
   private var defaultLayout: some View {
     ZStack {
       // Center section: Month and Year (fills available space, text centered)
+      // A narrow pill shortens the month before the year.
       ViewThatFits(in: .horizontal) {
-        // Try full year first
-        monthYearLabel(yearText: String(year))
-        // Fall back to short year if needed
-        monthYearLabel(yearText: shortYear)
+        monthYearLabel(month: monthName, yearText: String(year))
+        monthYearLabel(month: shortMonthName, yearText: String(year))
+        monthYearLabel(month: shortMonthName, yearText: shortYear)
       }
       .frame(maxWidth: .infinity)
       .padding(.horizontal, navTextSafeInset)
@@ -572,9 +583,9 @@ struct AnimatedMonthHeader: View {
 
   /// Reusable month/year label for ViewThatFits (default layout - horizontal)
   @ViewBuilder
-  private func monthYearLabel(yearText: String) -> some View {
+  private func monthYearLabel(month: String, yearText: String) -> some View {
     HStack(spacing: Spacing.xxxs) {
-      Text(monthName.sentenceCased())
+      Text(month.sentenceCased())
         .font(.tidexBodyMedium)
         .foregroundStyle(Color.tidexTextPrimary)
         .lineLimit(1)
