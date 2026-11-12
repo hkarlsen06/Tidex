@@ -170,7 +170,7 @@ extension AddShiftViewModel {
       note: draft.note, earnedFromDate: draft.earnedFromDate, earnedToDate: draft.earnedToDate,
       payoutDate: draft.payoutDate)
     guard (try? AppCoordinator.shared.requireUserId()) == owner else { return }
-    clearForm()
+    clearDraft()
     paymentSaved = true
   }
 
@@ -279,8 +279,8 @@ extension AddShiftViewModel {
       CelebrationManager.shared.celebrateFirstShift()
     }
 
-    // Clear form
-    clearForm()
+    // Saving leaves the screen, so the form keeps its values while it slides away.
+    clearDraft()
 
     // Success haptic
     Haptics.playShiftCreationSuccess()
@@ -379,7 +379,7 @@ extension AddShiftViewModel {
   ) async {
     addShiftViewModelLogger.info("Created private event")
 
-    clearForm()
+    clearDraft()
     Haptics.playShiftCreationSuccess()
     AccessibilityNotification.Announcement(String(localized: .shiftsAccessibilitySaved)).post()
     NotificationCenter.default.postShiftsDidChange(

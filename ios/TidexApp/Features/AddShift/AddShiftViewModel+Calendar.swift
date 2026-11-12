@@ -644,52 +644,6 @@ extension AddShiftViewModel {
     return results
   }
 
-  /// Clear the form after successful submission
-  func clearForm() {
-    // Clear the saved draft since submission was successful
-    clearDraft()
-
-    // Clear date selections
-    selectedDates.removeAll()
-    selectedDays.removeAll()
-
-    // Clear cached computation data
-    cachedPreviewEarnings.removeAll()
-    cachedConflictDatesForCalendar.removeAll()
-    cachedProjectedRecurringDates.removeAll()
-    cachedAnchorEarnings.removeAll()
-
-    // Cancel any pending preview update before clearing times
-    previewUpdateTask?.cancel()
-    previewUpdateTask = nil
-
-    // Clear times so user can start fresh
-    startTime = nil
-    endTime = nil
-
-    // Reset recurring options to defaults (biweekly, indefinite)
-    repeatInterval = 1
-    endCondition = nil
-
-    // Reset event-specific fields.
-    eventNote = ""
-    isEventAllDay = false
-    let defaultEventDate = Self.defaultEventDate()
-    eventDate = defaultEventDate
-    eventStartDate = defaultEventDate
-    eventEndDate = defaultEventDate
-    eventReminderTimes = []
-    eventReminderAnchorTime = nil
-    eventRangeAnchorDate = defaultEventDate
-
-    // NOTE: Do NOT reset the month context here!
-    // The user should stay on the month where they just added shifts
-    // so that when they're navigated to the Shifts tab, they see their new shifts.
-
-    // Clear error state
-    error = nil
-  }
-
   /// Default start time (09:00)
   private static func defaultStartTime() -> Date {
     let calendar = Calendar.gregorianCurrent

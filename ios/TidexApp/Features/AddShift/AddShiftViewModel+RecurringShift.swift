@@ -119,7 +119,8 @@ extension AddShiftViewModel {
 
       finishRecurringSubmission(conflicts: conflicts, userId: userId, isFirstShift: isFirstShift)
     } catch {
-      addShiftViewModelLogger.error("Failed to create recurring shift: \(error.localizedDescription)")
+      addShiftViewModelLogger.error(
+        "Failed to create recurring shift: \(error.localizedDescription)")
       self.error = ErrorTranslations.translate(error)
       Haptics.play(.error)
     }
@@ -145,8 +146,8 @@ extension AddShiftViewModel {
 
     refreshDistinctShiftTimePairCount(for: userId)
 
-    // Clear form
-    clearForm()
+    // The preview sheet keeps its values while it slides away.
+    clearDraft()
 
     // Dismiss preview sheet
     showPreviewSheet = false
