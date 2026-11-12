@@ -14,7 +14,8 @@ struct StatsMonthsSection: View {
       VStack(spacing: 0) {
         ForEach(months.rows) { row in
           StatsMonthRow(
-            row: row, year: months.year, yMax: months.yMax, onSelect: onSelectMonth)
+            row: row, year: months.year, yMax: months.yMax,
+            hasPreviousYear: months.hasPreviousYear, onSelect: onSelectMonth)
         }
       }
       .padding(.top, StatsRhythm.headerToBody)
@@ -33,11 +34,16 @@ struct StatsMonthsSection: View {
         .accessibilityHidden(true)
       Text(verbatim: String(months.year))
         .padding(.trailing, Spacing.xxs)
-      Rectangle()
-        .fill(Color.tidexTextMuted)
-        .frame(width: 2, height: 12)
-        .accessibilityHidden(true)
-      Text(verbatim: String(months.year - 1))
+      // Hidden rather than removed, so the year on screen keeps its place across years.
+      HStack(spacing: Spacing.xxs) {
+        Rectangle()
+          .fill(Color.tidexTextMuted)
+          .frame(width: 2, height: 12)
+          .accessibilityHidden(true)
+        Text(verbatim: String(months.year - 1))
+      }
+      .opacity(months.hasPreviousYear ? 1 : 0)
+      .accessibilityHidden(!months.hasPreviousYear)
     }
     .fontWeight(.regular)
     .monospacedDigit()
@@ -86,6 +92,7 @@ private struct StatsMonthRow: View {
   let row: StatsYearLattice.MonthRow
   let year: Int
   let yMax: Double
+  let hasPreviousYear: Bool
   let onSelect: (Int) -> Void
 
   @Environment(\.userCurrency) private var currency
@@ -190,10 +197,13 @@ private struct StatsMonthRow: View {
       StatsFormat.money(row.earnings, currency: currency),
       String(localized: .statsWeeksHours(StatsFormat.hours(row.hours))),
       String(localized: .commonShiftCount(row.shifts)),
-      String(
-        localized: .statsYearTotal(
-          StatsFormat.money(row.previousEarnings, currency: currency), String(year - 1))),
     ]
+    if hasPreviousYear {
+      parts.append(
+        String(
+          localized: .statsYearTotal(
+            StatsFormat.money(row.previousEarnings, currency: currency), String(year - 1))))
+    }
     if row.isBest {
       parts.append(String(localized: .statsAccessibilityBestMonth))
     }
