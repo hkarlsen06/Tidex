@@ -47,7 +47,8 @@
           DesignReviewFriendCards()
         case "money", "money-payroll":
           DesignReviewMoneyCards(screen: screen)
-        case "stats", "stats-empty", "stats-february":
+        case "stats", "stats-empty", "stats-february", "stats-year", "stats-year-empty",
+          "stats-year-past":
           DesignReviewStats(screen: screen)
         case "settings", "settings-profile", "settings-security", "settings-notifications",
           "settings-appearance", "settings-calendar", "settings-data", "settings-recurring",

@@ -4,6 +4,8 @@
   /// Stats from fixtures with a fixed today, 12 November 2026, so the screens look the same on
   /// any day. TIDEX_DESIGN_SCREEN=stats shows a busy current month, stats-empty a past month
   /// without shifts, and stats-february a short month with pay in a second currency.
+  /// stats-year shows the running year with tax and scheduled December pay, stats-year-empty a
+  /// year without shifts, and stats-year-past a finished year with a second currency.
   internal struct DesignReviewStats: View {
     let screen: String
 
@@ -15,7 +17,7 @@
       NavigationStack {
         ScrollView {
           StatsContent(
-            page: .month(StatsLattice(stats: stats, now: Self.now, calendar: .gregorianCurrent)),
+            page: page,
             onSelectMonth: { _ in },
             onExport: {}
           )
@@ -28,12 +30,23 @@
       .userCurrency("kr")
     }
 
-    private var stats: StatsData {
+    private var page: StatsContent.Page {
       switch screen {
-      case "stats-empty": Self.emptyMarch
-      case "stats-february": Self.february
-      default: Self.busyNovember
+      case "stats-year": year(Self.runningYear)
+      case "stats-year-empty": year(Self.emptyYear)
+      case "stats-year-past": year(Self.pastYear)
+      case "stats-empty": month(Self.emptyMarch)
+      case "stats-february": month(Self.february)
+      default: month(Self.busyNovember)
       }
+    }
+
+    private func month(_ stats: StatsData) -> StatsContent.Page {
+      .month(StatsLattice(stats: stats, now: Self.now, calendar: .gregorianCurrent))
+    }
+
+    private func year(_ stats: YearStatsData) -> StatsContent.Page {
+      .year(StatsYearLattice(stats: stats, now: Self.now, calendar: .gregorianCurrent))
     }
 
     // MARK: Fixtures
@@ -189,6 +202,76 @@
         MonthlyIncomeData(
           month: names.short[index], fullMonth: names.full[index], year: year,
           monthNumber: index + 1, earnings: earnings, hours: 0, shifts: 0)
+      }
+    }
+
+    // MARK: Year fixtures
+
+    /// 2026 up to 12 November with 15% tax, scheduled pay in December and pay in 2025 to compare.
+    private static var runningYear: YearStatsData {
+      var pay = year2026.pay
+      pay[10] = busyNovember.currentMonth.totalEarnings
+      let previous: [Double] = [
+        12_400, 9_800, 14_100, 13_300, 15_600, 19_900, 26_400, 22_800, 15_100, 16_900, 18_200,
+        21_300,
+      ]
+      let net = { (gross: Double) in gross * 0.85 }
+      let november = days(year: 2_025, month: 11, worked: [3, 4, 6, 7, 10, 11])
+      return YearStatsData(
+        year: 2_026,
+        tax: TaxSettings(enabled: true, percentage: 15),
+        months: yearMonths(pay, net: net),
+        previousMonths: yearMonths(previous, net: net),
+        currencyAggregate: nil,
+        toDate: YearToDate(
+          focus: net(pay.prefix(10).reduce(0, +) + 7_380),
+          previous: net(previous.prefix(10).reduce(0, +) + november.reduce(0) { $0 + $1.earnings })
+        ),
+        employment: employmentData(year: 2_026, percentages: year2026.employment)
+      )
+    }
+
+    private static var emptyYear: YearStatsData {
+      YearStatsData(
+        year: 2_024,
+        tax: TaxSettings(enabled: false, percentage: 0),
+        months: yearMonths(Array(repeating: 0, count: 12)),
+        previousMonths: yearMonths(Array(repeating: 0, count: 12)),
+        currencyAggregate: nil,
+        toDate: nil,
+        employment: employmentData(year: 2_024, percentages: Array(repeating: nil, count: 12))
+      )
+    }
+
+    /// 2025 without tax, starting in June, with one euro job beside the kroner and no pay in 2024.
+    private static var pastYear: YearStatsData {
+      let pay: [Double] = [0, 0, 0, 0, 0, 9_400, 20_100, 17_300, 12_600, 12_200, 14_100, 18_700]
+      let kroner = pay.reduce(0, +)
+      return YearStatsData(
+        year: 2_025,
+        tax: TaxSettings(enabled: false, percentage: 0),
+        months: yearMonths(pay),
+        previousMonths: yearMonths(Array(repeating: 0, count: 12)),
+        currencyAggregate: JobCurrencyAggregateResolution(
+          primary: aggregateEntry(currency: "kr", amount: kroner),
+          secondary: [aggregateEntry(currency: "€", amount: 4_850)],
+          hasMixedCurrency: true
+        ),
+        toDate: nil,
+        employment: employmentData(
+          year: 2_025, percentages: [nil, nil, nil, nil, nil, 34, 75, 65, 46, 45, 53, 70])
+      )
+    }
+
+    /// Hours and shift counts follow the pay at about 200 per hour and 1 700 per shift.
+    private static func yearMonths(_ pay: [Double], net: (Double) -> Double = { $0 })
+      -> [YearMonthStats]
+    {
+      pay.enumerated().map { index, gross in
+        let hours = (gross / 200).rounded()
+        return YearMonthStats(
+          month: index + 1, earnings: gross, earningsNet: net(gross), earningsHours: hours,
+          hours: hours, shifts: Int((gross / 1_700).rounded(.up)))
       }
     }
 
