@@ -1,0 +1,799 @@
+#!/usr/bin/env python3
+"""Turn a recorded animation into numbers and one still image.
+
+The loop:
+  1. Tag the animated value in Swift with .motionProbe("name", value).
+  2. Launch a Debug build with the argument -motion-probe, record the screen
+     with `agent-device record start --hide-touches <file>`, play the animation, and stop.
+  3. Run `scripts/motion-check report` to read Library/Caches/motion-probe.tsv
+     from the app on the simulator this worktree holds. It prints one line per
+     animation and fails on a break in the motion:
+       SNAP    the value moved far in one frame, or was set with no animation
+       JUMP    the speed changed in one frame, or when an animation took over from a finger
+       JITTER  the speed went up and down on consecutive frames
+     A STALL line is frames with no new value, and a PACING line is uneven frames right
+     after one. Both depend on machine load. They are hints and never fail the report.
+  4. A break that is by design passes with `--allow <name>=<count>`.
+  5. Add `--video <file> --row 0.5` (horizontal motion) or `--column 0.5`
+     (vertical motion) for a slit-scan PNG, and look at it.
+
+Run `scripts/motion-check report --help` for every option.
+"""
+
+import argparse
+import math
+import shutil
+import statistics
+import struct
+import subprocess
+import sys
+import zlib
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import NamedTuple
+
+
+# A pause this long ends an episode. Animation frames arrive every 8 to 17 ms.
+IDLE_SPLIT = 0.25
+# SwiftUI can evaluate a view several times while it prepares one frame, and views that share
+# a probe name record the same frame. Those samples carry one timestamp, and only the last
+# value is drawn. A 120 Hz frame is 8.3 ms.
+BURST_WINDOW = 0.004
+# Values closer than this count as equal.
+VALUE_EPSILON = 1e-6
+# A pause longer than IDLE_SPLIT still belongs to the episode when the value was moving and
+# picks up where that motion would have taken it: up to this many seconds, at between a quarter
+# and twice the speed it had.
+STALL_MAX = 1.0
+STALL_SLOWEST = 0.25
+STALL_FASTEST = 2.0
+# 2.5 frames with no new value in the middle of an episode is a stall worth a line.
+STALL_FACTOR = 2.5
+# A step this many times its neighbours is a teleport. A dropped frame makes a step 2 or 3 times larger.
+SNAP_FACTOR = 4
+# A teleport below 10% of the episode's range is too small to see.
+SNAP_MIN_FRACTION = 0.1
+# A change in per-frame step above half the episode's peak step is a visible change in speed.
+JUMP_FACTOR = 0.5
+# A fast curve keeps changing speed in one direction for several frames. A jump is this many
+# times the same-direction changes beside it.
+JUMP_ISOLATION = 2.5
+# A jump whose larger step is below 1% of the episode's range is too small to see.
+JUMP_MIN_FRACTION = 0.01
+# Below 10% of the peak step the value counts as standing still, so what follows is a start.
+STANDSTILL_FRACTION = 0.1
+# An animation's first frame repeats the value it starts from, so its speed shows a few frames in.
+HANDOFF_FRAMES = 3
+# Jitter is the speed going up, down, up, down on consecutive frames: three flips in a row,
+# each at least 20% of the peak step.
+JITTER_FLIPS = 3
+JITTER_FRACTION = 0.2
+# For a few frames after a stall the display paces frames unevenly while it catches up. That
+# depends on machine load, so jitter that starts this soon after a stall is a hint.
+PACING_FRAMES = 6
+# Steps below 0.5% of the range are noise when counting direction changes.
+REVERSAL_MIN_FRACTION = 0.005
+# A spring's tail runs long after the eye sees it stop. Within 1% of the range counts as settled.
+SETTLE_FRACTION = 0.01
+# A run that moves less than 0.1% of everything its name moved in the log is standing still.
+STATIC_FRACTION = 0.001
+# --end accepts this fraction of the range, and never less than END_MIN_TOLERANCE.
+END_TOLERANCE_FRACTION = 0.005
+END_MIN_TOLERANCE = 0.01
+# Simulator recordings have a variable frame rate, so the slit-scan resamples to this.
+SLIT_FPS = 60
+# More frames than this make an image too long to read. Window the video instead.
+SLIT_MAX_FRAMES = 600
+# Each frame becomes this many pixels along the time axis.
+SLIT_SCALE = 4
+# A simulator recording has frames only while the screen changes. A pause this long ends a stretch.
+STRETCH_GAP = 0.5
+# Context kept before and after the stretch the slit-scan picks.
+STRETCH_PADDING = 0.1
+
+BUNDLE_ID = "no.tidex.app"
+LOG_IN_CONTAINER = Path("Library/Caches/motion-probe.tsv")
+LAUNCH_HINT = ("Launch a Debug build with the argument -motion-probe, and give the view "
+               "a .motionProbe(\"name\", value) call.")
+
+
+class Sample(NamedTuple):
+    name: str
+    t: float
+    value: float
+    # False when the value was set with no animation, as a finger drag does.
+    animated: bool = True
+
+
+class ToolError(Exception):
+    """A failure of the environment or a tool, reported with exit code 2."""
+
+
+@dataclass
+class Episode:
+    name: str
+    start: float
+    first: float
+    last: float
+    duration: float
+    settled: float
+    samples: int
+    frame: float
+    peak_step: float
+    value_range: float
+    overshoot: float
+    reversals: int
+    dropped: int
+    # True for a value set with no animation: a run too short to be one.
+    instant: bool = False
+    snaps: list = field(default_factory=list)  # (offset seconds, value before, value after)
+    jumps: list = field(default_factory=list)  # (offset seconds, rate before, rate after, how)
+    jitter: list = field(default_factory=list)  # (offset seconds, rates in the run, after a stall)
+    stalls: list = field(default_factory=list)  # (offset seconds, interval seconds)
+
+    @property
+    def jitter_runs(self):
+        """Jitter the animation itself produced, which fails the report."""
+        return sum(1 for _, _, after_stall in self.jitter if not after_stall)
+
+    @property
+    def breaks(self):
+        return len(self.snaps) + len(self.jumps) + self.jitter_runs
+
+
+# Analysis
+
+
+def parse_log(text):
+    """Return (samples, malformed line count). Blank lines are neither."""
+    samples, malformed = [], 0
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        try:
+            if len(parts) not in (3, 4) or not parts[0] or parts[3:] not in ([], ["a"], ["d"]):
+                raise ValueError
+            sample = Sample(parts[0], float(parts[1]), float(parts[2]), parts[3:] != ["d"])
+            if not (math.isfinite(sample.t) and math.isfinite(sample.value)):
+                raise ValueError
+        except ValueError:
+            malformed += 1
+            continue
+        samples.append(sample)
+    return samples, malformed
+
+
+def collapse_bursts(samples):
+    """Keep the last sample of each burst, sorted by name then time."""
+    kept, burst_start = [], None
+    for sample in sorted(samples, key=lambda s: (s.name, s.t)):
+        if kept and kept[-1].name == sample.name and sample.t - burst_start < BURST_WINDOW:
+            kept[-1] = sample
+        else:
+            kept.append(sample)
+            burst_start = sample.t
+    return kept
+
+
+def split_episodes(samples):
+    """Split samples sorted by name then time into (resting value, run) with no pause over IDLE_SPLIT.
+
+    The resting value is where the name stood before the run, or None for its first run.
+    """
+    def resumes(run, sample):
+        """True when `sample` continues the motion `run` was in before a long pause."""
+        if len(run) < 2 or sample.t - run[-1].t > STALL_MAX:
+            return False
+        rates = [(b.value - a.value) / (b.t - a.t) for a, b in zip(run, run[1:])]
+        before = rates[-1]
+        if abs(before) < STANDSTILL_FRACTION * max(abs(rate) for rate in rates) or before == 0:
+            return False
+        across = (sample.value - run[-1].value) / (sample.t - run[-1].t)
+        return STALL_SLOWEST <= across / before <= STALL_FASTEST
+
+    episodes, previous = [], None
+    for sample in samples:
+        same_name = previous is not None and previous.name == sample.name
+        if same_name and (sample.t - previous.t <= IDLE_SPLIT or resumes(episodes[-1][1], sample)):
+            episodes[-1][1].append(sample)
+        else:
+            episodes.append((previous.value if same_name else None, [sample]))
+        previous = sample
+    return episodes
+
+
+def find_snaps(steps, value_range):
+    """Indexes of intervals where the value teleports: a step far larger than the steps around it."""
+    snaps = []
+    for i, step in enumerate(steps):
+        around = [abs(steps[j]) for j in (i - 2, i - 1, i + 1, i + 2) if 0 <= j < len(steps)]
+        if around and abs(step) >= SNAP_MIN_FRACTION * value_range \
+                and abs(step) > SNAP_FACTOR * statistics.median(around):
+            snaps.append(i)
+    return snaps
+
+
+def find_jumps(steps, counts, snaps, stalls, animated, value_range):
+    """Find where an animation takes over at a different speed within one frame.
+
+    Returns ([(interval index, step before, step after)], peak step). Left out on purpose:
+    - Snaps, which have their own line.
+    - Finger-driven intervals, because a finger changes speed freely.
+    - A start from standstill and the interval after it. A curve may begin at any speed.
+    - The last interval, which can be a partial frame.
+    - A change with a similar change in the same direction beside it. That is a fast curve.
+    A stall has no reliable speed, so the steps on both sides of it are compared instead.
+    """
+    def reliable(i):
+        return 0 <= i < len(steps) and i not in snaps and i not in stalls
+
+    def before(i):
+        """The interval that precedes i, looking past one stall."""
+        previous = i - 1
+        return previous - 1 if previous in stalls and previous not in snaps else previous
+
+    def change(i):
+        """Per-frame change in step entering interval i, or None when it cannot be measured."""
+        if not reliable(i) or not reliable(before(i)):
+            return None
+        frames = 1 + sum(counts[j] for j in range(before(i) + 1, i))
+        return (steps[i] - steps[before(i)]) / frames
+
+    peak = max((abs(steps[i]) for i in range(len(steps)) if reliable(i)), default=0.0)
+    still = STANDSTILL_FRACTION * peak
+    jumps, last_flagged = [], None
+    for i in range(1, len(steps) - 1):
+        first, second = before(before(i)), before(i)
+        if not animated[i] or not reliable(i) or not reliable(first) or not reliable(second):
+            continue
+        if abs(steps[first]) < still or abs(steps[second]) < still:
+            continue
+        here = steps[i] - steps[second]
+        if abs(here) <= JUMP_FACTOR * peak:
+            continue
+        if max(abs(steps[i]), abs(steps[second])) < JUMP_MIN_FRACTION * value_range:
+            continue
+        after = i + 1 if reliable(i + 1) else i + 2
+        beside = [abs(c) for c in (change(second), change(after)) if c is not None and c * here > 0]
+        if beside and abs(change(i)) <= JUMP_ISOLATION * max(beside):
+            continue
+        # A one-frame spike changes the speed twice. Report it once.
+        if last_flagged != i - 1:
+            jumps.append((i, steps[second], steps[i]))
+        last_flagged = i
+    return jumps, peak
+
+
+def find_handoffs(steps, unreliable, animated, peak):
+    """Find where an animation takes over from a moving finger at a different speed.
+
+    Returns [(interval index, finger step, animation step)]. A snap or a stall is not a
+    finger's speed, so neither starts a hand-off.
+    """
+    still = STANDSTILL_FRACTION * peak
+    handoffs = []
+    for i in range(1, len(steps)):
+        if not animated[i] or animated[i - 1] or i - 1 in unreliable:
+            continue
+        finger = steps[i - 1]
+        ahead = [steps[j] for j in range(i, min(i + HANDOFF_FRAMES, len(steps))) if animated[j]]
+        # An animation's first frame repeats the value it starts from, so skip to where it moves.
+        animation = next((step for step in ahead if abs(step) >= still), ahead[-1])
+        if abs(finger) >= still and abs(animation - finger) > JUMP_FACTOR * peak:
+            handoffs.append((i, finger, animation))
+    return handoffs
+
+
+def find_jitter(steps, unreliable, animated, peak):
+    """Find runs where an animation's speed flips up and down on consecutive frames.
+
+    Returns [(first interval index, steps in the run)]. Finger-driven intervals are left out.
+    """
+    runs, run = [], []
+
+    def close():
+        if len(run) > JITTER_FLIPS:
+            runs.append((run[0] - 1, [steps[i] for i in range(run[0] - 1, run[-1] + 1)]))
+        run.clear()
+
+    for i in range(1, len(steps)):
+        change = steps[i] - steps[i - 1]
+        usable = (animated[i] and i not in unreliable and i - 1 not in unreliable
+                  and abs(change) >= JITTER_FRACTION * peak)
+        if not usable:
+            close()
+            continue
+        if run and (steps[run[-1]] - steps[run[-1] - 1]) * change > 0:
+            close()
+        run.append(i)
+    close()
+    return runs
+
+
+def analyze_episode(samples, rest=None):
+    """Measure one run of at least three samples. `rest` is the value the name held before it."""
+    times = [s.t for s in samples]
+    values = [s.value for s in samples]
+    # Interval i ends at sample i + 1, and that sample says whether an animation produced it.
+    animated = [s.animated for s in samples[1:]]
+    frame = statistics.median(b - a for a, b in zip(times, times[1:]))
+    if rest is not None and abs(rest - values[0]) > VALUE_EPSILON:
+        # The value sat at rest until the frame before the first sample.
+        times.insert(0, times[0] - frame)
+        values.insert(0, rest)
+        animated.insert(0, samples[0].animated)
+    intervals = [b - a for a, b in zip(times, times[1:])]
+    # The probe stamps a sample with its display frame's time, so an interval is a whole
+    # number of frames, or a fraction right after a hitch.
+    counts = [dt / frame for dt in intervals]
+    steps = [(b - a) / count for a, b, count in zip(values, values[1:], counts)]
+    first, last = values[0], values[-1]
+    value_range = max(values) - min(values)
+
+    snaps = find_snaps(steps, value_range)
+    stalls = [i for i, dt in enumerate(intervals) if dt > STALL_FACTOR * frame]
+    jumps, peak = find_jumps(steps, counts, set(snaps), set(stalls), animated, value_range)
+    jitter = find_jitter(steps, set(snaps) | set(stalls), animated, peak)
+    handoffs = find_handoffs(steps, set(snaps) | set(stalls), animated, peak)
+    # A hand-off can also trip the general check a frame or two later, and so can every frame
+    # of a jitter run. Report each once.
+    jumps = [jump for jump in jumps
+             if not any(0 <= jump[0] - i < HANDOFF_FRAMES for i, _, _ in handoffs)
+             and not any(i <= jump[0] <= i + len(run) for i, run in jitter)]
+
+    if abs(last - first) > VALUE_EPSILON:
+        direction = 1 if last > first else -1
+        travel = abs(last - first)
+    else:
+        # Out and back: the overshoot is what crosses the resting value on the far side.
+        direction = -1 if max(values) - last >= last - min(values) else 1
+        travel = value_range
+    beyond = max((value - last) * direction for value in values)
+    overshoot = max(0.0, beyond) / travel * 100 if travel > VALUE_EPSILON else 0.0
+
+    reversals, sign = 0, 0
+    for step in steps:
+        if abs(step) < REVERSAL_MIN_FRACTION * value_range or step == 0:
+            continue
+        new_sign = 1 if step > 0 else -1
+        if sign and new_sign != sign:
+            reversals += 1
+        sign = new_sign
+
+    settled = 0.0
+    for i, value in enumerate(values[:-1]):
+        if abs(value - last) > SETTLE_FRACTION * value_range:
+            settled = times[i + 1] - times[0]
+
+    def offset(i):
+        return times[i] - times[0]
+
+    return Episode(
+        name=samples[0].name, start=times[0], first=first, last=last,
+        duration=times[-1] - times[0], settled=settled, samples=len(samples), frame=frame,
+        peak_step=peak, value_range=value_range, overshoot=overshoot, reversals=reversals,
+        dropped=sum(max(0, round(count) - 1) for count in counts),
+        snaps=[(offset(i), values[i], values[i + 1]) for i in snaps],
+        jumps=[(offset(i), before / frame, after / frame, "within one frame")
+               for i, before, after in jumps]
+        + [(offset(i), before / frame, after / frame, "when the animation took over from the finger")
+           for i, before, after in handoffs],
+        jitter=[(offset(i), [step / frame for step in run],
+                 any(0 <= i - stall <= PACING_FRAMES for stall in stalls))
+                for i, run in jitter],
+        stalls=[(offset(i), intervals[i]) for i in stalls])
+
+
+def instant_episode(samples, rest):
+    """A run of one or two samples that moved the value: it was set with no animation."""
+    first = samples[0].value if rest is None else rest
+    last = samples[-1].value
+    return Episode(
+        name=samples[0].name, start=samples[0].t, first=first, last=last,
+        duration=samples[-1].t - samples[0].t, settled=0.0, samples=len(samples), frame=0.0,
+        peak_step=0.0, value_range=abs(last - first), overshoot=0.0, reversals=0, dropped=0,
+        instant=True, snaps=[(0.0, first, last)])
+
+
+def number(value):
+    """Short human form: 412, 2.5, 0.031."""
+    magnitude = abs(value)
+    if magnitude >= 100:
+        text = f"{value:.0f}"
+    elif magnitude >= 1:
+        text = f"{value:.2f}"
+    else:
+        text = f"{value:.4f}"
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return "0" if text in ("-0", "") else text
+
+
+def format_episode(episode, origin):
+    line = (f"{episode.name}  t={episode.start - origin:.3f}s  "
+            f"{number(episode.first)} -> {number(episode.last)}  ")
+    if episode.instant:
+        return [line + "SNAP: set with no animation"]
+    if abs(episode.last - episode.first) <= VALUE_EPSILON:
+        line += f"range={number(episode.value_range)} "
+    line += (f"settled={episode.settled:.2f}s duration={episode.duration:.2f}s "
+             f"samples={episode.samples} frame={episode.frame * 1000:.1f}ms "
+             f"peak={number(episode.peak_step / episode.frame)}/s overshoot={episode.overshoot:.1f}% "
+             f"reversals={episode.reversals} dropped={episode.dropped}")
+    lines = [line]
+    for offset, before, after in episode.snaps:
+        lines.append(f"  SNAP at +{offset:.2f}s: value {number(before)} -> {number(after)} in one frame")
+    for offset, before, after, how in sorted(episode.jumps):
+        lines.append(f"  JUMP at +{offset:.2f}s: speed {number(before)}/s -> {number(after)}/s {how}")
+    for offset, rates, after_stall in episode.jitter:
+        label = "PACING" if after_stall else "JITTER"
+        reason = " while the display catches up after the stall" if after_stall else ""
+        lines.append(f"  {label} at +{offset:.2f}s: speed alternates for {len(rates)} frames"
+                     f"{reason} ({', '.join(number(rate) + '/s' for rate in rates[:6])})")
+    for offset, interval in episode.stalls:
+        lines.append(f"  STALL at +{offset:.2f}s: no new value for {interval * 1000:.0f}ms "
+                     f"({round(interval / episode.frame)} frames)")
+    return lines
+
+
+def parse_expectation(text):
+    name, separator, value = text.rpartition("=")
+    try:
+        if not separator or not name or not math.isfinite(float(value)):
+            raise ValueError
+        return name, float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected NAME=NUMBER, got {text!r}") from None
+
+
+def parse_limit(text):
+    name, value = parse_expectation(text)
+    if value < 0:
+        raise argparse.ArgumentTypeError(f"expected NAME=SECONDS of zero or more, got {text!r}")
+    return name, value
+
+
+def parse_allowance(text):
+    name, separator, value = text.rpartition("=")
+    if not separator or not name or not value.isdecimal():
+        raise argparse.ArgumentTypeError(f"expected NAME=COUNT with a whole count, got {text!r}")
+    return name, int(value)
+
+
+def check_expectations(episodes, ends, max_durations):
+    """Return (lines, failed count) for --end and --max-duration."""
+    lines, failed = [], 0
+    for name, target in ends:
+        mine = [e for e in episodes if e.name == name]
+        if not mine:
+            lines.append(f"EXPECTATION FAILED: {name} should end at {number(target)}, "
+                         "but it never moved")
+            failed += 1
+            continue
+        last = mine[-1]
+        tolerance = max(END_MIN_TOLERANCE, END_TOLERANCE_FRACTION * last.value_range)
+        ok = abs(last.last - target) <= tolerance
+        failed += not ok
+        lines.append(f"EXPECTATION {'ok' if ok else 'FAILED'}: {name} ended at {number(last.last)}, "
+                     f"expected {number(target)} within {number(tolerance)}")
+    for name, limit in max_durations:
+        longest = max((e.settled for e in episodes if e.name == name), default=None)
+        if longest is None:
+            lines.append(f"EXPECTATION ok: {name} has no episode, so none settles after {number(limit)}s")
+            continue
+        ok = longest <= limit
+        failed += not ok
+        lines.append(f"EXPECTATION {'ok' if ok else 'FAILED'}: {name} took at most "
+                     f"{longest:.2f}s to settle, limit {number(limit)}s")
+    return lines, failed
+
+
+def build_report(text, prefixes=(), ends=(), max_durations=(), allowed_breaks=()):
+    """Return (output lines, passed) for one log's text, or None text for a missing log."""
+    lines = []
+    samples, malformed = parse_log(text or "")
+    origin = min((s.t for s in samples), default=0.0)
+    if prefixes:
+        samples = [s for s in samples if any(s.name.startswith(p) for p in prefixes)]
+    if malformed:
+        lines.append(f"Skipped {malformed} malformed line{'s' if malformed != 1 else ''}.")
+    expected = bool(ends or max_durations)
+    if not samples:
+        lines.append("No samples. " + LAUNCH_HINT)
+        _, failed = check_expectations([], ends, max_durations)
+        counts = "episodes=0 static=0 snaps=0 jumps=0 jitter=0 stalls=0"
+        if expected:
+            counts += f" expectations_failed={failed}"
+        lines.append(f"SUMMARY: FAIL {counts}")
+        return lines, False
+
+    spans = {}
+    for sample in samples:
+        low, high = spans.get(sample.name, (sample.value, sample.value))
+        spans[sample.name] = (min(low, sample.value), max(high, sample.value))
+    episodes, static = [], 0
+    for rest, run in split_episodes(collapse_bursts(samples)):
+        values = [s.value for s in run] + ([rest] if rest is not None else [])
+        low, high = spans[run[0].name]
+        if max(values) - min(values) <= STATIC_FRACTION * (high - low):
+            static += 1
+        elif len(run) < 3:
+            episodes.append(instant_episode(run, rest))
+        else:
+            episodes.append(analyze_episode(run, rest))
+    episodes.sort(key=lambda e: e.start)
+    for episode in episodes:
+        lines.extend(format_episode(episode, origin))
+
+    expectation_lines, failed = check_expectations(episodes, ends, max_durations)
+    lines.extend(expectation_lines)
+    allowance = dict(allowed_breaks)
+    unexplained = sum(max(0, e.breaks - allowance.get(e.name, 0)) for e in episodes)
+    passed = not (unexplained or failed)
+    counts = (f"episodes={len(episodes)} static={static} snaps={sum(len(e.snaps) for e in episodes)} "
+              f"jumps={sum(len(e.jumps) for e in episodes)} "
+              f"jitter={sum(e.jitter_runs for e in episodes)} "
+              f"stalls={sum(len(e.stalls) for e in episodes)}")
+    if allowance:
+        counts += f" unexplained={unexplained}"
+    if expected:
+        counts += f" expectations_failed={failed}"
+    lines.append(f"SUMMARY: {'PASS' if passed else 'FAIL'} {counts}")
+    return lines, passed
+
+
+# Log location
+
+
+def run_tool(command):
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=600)
+    except FileNotFoundError:
+        raise ToolError(f"{command[0]} was not found.") from None
+    except subprocess.TimeoutExpired:
+        raise ToolError(f"{' '.join(command)} timed out.") from None
+    if result.returncode:
+        raise ToolError(f"{' '.join(command)} failed: {(result.stderr or result.stdout).strip()}")
+    return result.stdout.strip()
+
+
+def simulator_log_path(simulator):
+    if not simulator:
+        lock = Path(__file__).resolve().with_name("lock")
+        simulator = run_tool([str(lock), "acquire", "simulator"]).splitlines()[-1].strip()
+    container = run_tool(["xcrun", "simctl", "get_app_container", simulator, BUNDLE_ID, "data"])
+    return Path(container) / LOG_IN_CONTAINER
+
+
+# Slit-scan
+
+
+def write_png(path, width, height, rows):
+    """Write 8-bit RGB rows (bytes of width * 3) as a PNG."""
+    def chunk(kind, payload):
+        return (struct.pack(">I", len(payload)) + kind + payload
+                + struct.pack(">I", zlib.crc32(kind + payload)))
+    raw = b"".join(b"\x00" + row for row in rows)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n"
+                     + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+                     + chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b""))
+
+
+def read_ppm_frames(stream):
+    """Yield (width, height, rgb bytes) for each binary PPM frame ffmpeg writes."""
+    while True:
+        header = []
+        while len(header) < 4:
+            token = b""
+            while True:
+                byte = stream.read(1)
+                if not byte:
+                    if header or token:
+                        raise ToolError("ffmpeg ended in the middle of a frame.")
+                    return
+                if byte.isspace():
+                    if token:
+                        break
+                    continue
+                token += byte
+            header.append(token)
+        if header[0] != b"P6" or header[3] != b"255":
+            raise ToolError("ffmpeg wrote an unexpected frame format.")
+        width, height = int(header[1]), int(header[2])
+        data = stream.read(width * height * 3)
+        if len(data) != width * height * 3:
+            raise ToolError("ffmpeg ended in the middle of a frame.")
+        yield width, height, data
+
+
+def busiest_stretch(video):
+    """Return (start, seconds, note) for the stretch of the video with the most frames.
+
+    A simulator recording holds a frame only when the screen changed, so its frames bunch up
+    where something moved. The note is None when the whole video is one stretch.
+    """
+    listing = run_tool(["ffprobe", "-v", "error", "-select_streams", "v:0",
+                        "-show_entries", "frame=pts_time", "-of", "csv=p=0", str(video)])
+    times = []
+    for line in listing.splitlines():
+        try:
+            times.append(float(line.strip().strip(",")))
+        except ValueError:
+            continue
+    stretches = []
+    for t in sorted(times):
+        if stretches and t - stretches[-1][1] <= STRETCH_GAP:
+            stretches[-1][1] = t
+            stretches[-1][2] += 1
+        else:
+            stretches.append([t, t, 1])
+    if len(stretches) < 2:
+        return None, None, None
+    first, last, _ = max(stretches, key=lambda stretch: stretch[2])
+    start = max(0.0, first - STRETCH_PADDING)
+    seconds = last + STRETCH_PADDING - start
+    moving = ", ".join(f"{a:.2f}s to {b:.2f}s ({count} frames)" for a, b, count in stretches
+                       if count > 2)
+    note = (f"The screen changed from {moving}. Showing {start:.2f}s to {start + seconds:.2f}s. "
+            "Pass --from and --seconds for another stretch.")
+    return start, seconds, note
+
+
+def slit_scan(video, row=None, column=None, start=None, seconds=None, out=None):
+    """Write the slit-scan PNG and return (path, sentences that explain it)."""
+    if not shutil.which("ffmpeg"):
+        raise ToolError("ffmpeg was not found. Install it with `brew install ffmpeg`.")
+    if not video.is_file():
+        raise ToolError(f"{video} does not exist.")
+    note = None
+    if start is None and seconds is None:
+        start, seconds, note = busiest_stretch(video)
+    fraction = row if row is not None else column
+    # ffmpeg reads \, as a comma inside the expression instead of a filter separator.
+    if row is not None:
+        crop = f"crop=iw:1:0:min(ih-1\\,floor(ih*{fraction}))"
+    else:
+        crop = f"crop=1:ih:min(iw-1\\,floor(iw*{fraction})):0"
+    command = ["ffmpeg", "-v", "error", "-nostdin"]
+    if start is not None:
+        command += ["-ss", str(start)]
+    command += ["-i", str(video)]
+    if seconds is not None:
+        command += ["-t", str(seconds)]
+    command += ["-vf", f"fps={SLIT_FPS},format=rgb24,{crop}", "-f", "image2pipe", "-vcodec", "ppm", "-"]
+
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    slices, too_long = [], False
+    try:
+        for width, height, data in read_ppm_frames(process.stdout):
+            if len(slices) == SLIT_MAX_FRAMES:
+                too_long = True
+                break
+            slices.append((width, height, data))
+    finally:
+        if too_long:
+            process.kill()
+        _, errors = process.communicate()
+    if too_long:
+        raise ToolError(f"The video has more than {SLIT_MAX_FRAMES} frames at {SLIT_FPS} fps "
+                        f"({SLIT_MAX_FRAMES / SLIT_FPS:.0f} s). Pick a window with --from and --seconds.")
+    if process.returncode:
+        raise ToolError(f"ffmpeg failed: {errors.decode(errors='replace').strip()}")
+    if not slices:
+        raise ToolError("ffmpeg produced no frames. Check --from and --seconds against the video length.")
+
+    out = out or video.with_name(f"{video.stem}-slitscan.png")
+    if row is not None:
+        width = slices[0][0]
+        rows = [data for _, _, data in slices for _ in range(SLIT_SCALE)]
+        write_png(out, width, len(rows), rows)
+        sentence = (f"Time runs top to bottom, {SLIT_SCALE} px per frame at {SLIT_FPS} fps; "
+                    f"each line is the pixel row at {fraction:.0%} of the height.")
+    else:
+        height = slices[0][1]
+        rows = []
+        for y in range(height):
+            pixels = b"".join(data[y * 3:y * 3 + 3] * SLIT_SCALE for _, _, data in slices)
+            rows.append(pixels)
+        write_png(out, len(slices) * SLIT_SCALE, height, rows)
+        sentence = (f"Time runs left to right, {SLIT_SCALE} px per frame at {SLIT_FPS} fps; "
+                    f"each strip is the pixel column at {fraction:.0%} of the width.")
+    return out, " ".join(filter(None, [note, sentence]))
+
+
+# Command line
+
+
+def fraction(text):
+    value = float(text)
+    if not 0 <= value <= 1:
+        raise argparse.ArgumentTypeError("must be between 0 and 1")
+    return value
+
+
+def parser():
+    top = argparse.ArgumentParser(
+        prog="scripts/motion-check", description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = top.add_subparsers(dest="command", required=True)
+    report = commands.add_parser(
+        "report", help="analyze the probe log, and optionally make a slit-scan image",
+        description="Print one line per animation episode from the motion probe log and a "
+                    "SUMMARY line. Exit 0 on PASS, 1 on FAIL, 2 on a usage or tool error. "
+                    "FAIL means a snap, jump or jitter run that --allow does not cover, a "
+                    "failed --end or --max-duration, or an empty log.")
+    source = report.add_argument_group("log source")
+    source.add_argument("--log", type=Path, help="read this TSV file instead of the simulator's")
+    source.add_argument("--simulator", help="simulator name, instead of `scripts/lock acquire simulator`")
+    source.add_argument("--no-log", action="store_true", help="only make the slit-scan image")
+    report.add_argument("--name", action="append", default=[], metavar="PREFIX",
+                        help="only report probe names with this prefix (repeatable)")
+    report.add_argument("--end", action="append", default=[], type=parse_expectation,
+                        metavar="NAME=VALUE", help="the last episode of NAME must end at VALUE")
+    report.add_argument("--max-duration", action="append", default=[], type=parse_limit,
+                        metavar="NAME=SECONDS", help="no episode of NAME may take longer to settle")
+    report.add_argument("--allow", action="append", default=[], type=parse_allowance,
+                        metavar="NAME=COUNT",
+                        help="each episode of NAME may have COUNT snaps, jumps or jitter runs "
+                             "that are by design")
+    image = report.add_argument_group("slit-scan image")
+    image.add_argument("--video", type=Path, help="screen recording to slice")
+    axis = image.add_mutually_exclusive_group()
+    axis.add_argument("--row", type=fraction, help="pixel row at this fraction of the height, for horizontal motion")
+    axis.add_argument("--column", type=fraction, help="pixel column at this fraction of the width, for vertical motion")
+    image.add_argument("--from", dest="start", type=float, metavar="SECONDS",
+                       help="start of the video window (default: the stretch with the most frames)")
+    image.add_argument("--seconds", type=float, help="length of the video window")
+    image.add_argument("--out", type=Path, help="PNG path (default: <video stem>-slitscan.png next to the video)")
+    return top, report
+
+
+def main(argv=None, out=sys.stdout):
+    top, report = parser()
+    args = top.parse_args(argv)
+    if args.video and args.row is None and args.column is None:
+        report.error("--video needs --row or --column")
+    if not args.video and (args.row is not None or args.column is not None or args.out
+                           or args.start is not None or args.seconds is not None):
+        report.error("--row, --column, --from, --seconds and --out need --video")
+    if args.no_log and not args.video:
+        report.error("--no-log needs --video")
+    if args.no_log and (args.log or args.simulator or args.name or args.end or args.max_duration
+                        or args.allow):
+        report.error("--no-log takes no log options")
+    if args.log and args.simulator:
+        report.error("use --log or --simulator, not both")
+
+    def emit(line):
+        print(line, file=out)
+
+    try:
+        # The image comes first so that a missing log or simulator still leaves it on disk.
+        if args.video:
+            image, sentence = slit_scan(args.video, args.row, args.column, args.start,
+                                        args.seconds, args.out)
+            emit(f"Slit-scan: {image}")
+            emit(sentence)
+        text = None
+        if not args.no_log:
+            path = args.log or simulator_log_path(args.simulator)
+            if path.is_file():
+                text = path.read_text(encoding="utf-8", errors="replace")
+            else:
+                emit(f"No log at {path}.")
+    except ToolError as error:
+        emit(f"ERROR: {error}")
+        return 2
+
+    if args.no_log:
+        emit("SUMMARY: PASS image-only")
+        return 0
+    lines, passed = build_report(text, args.name, args.end, args.max_duration, args.allow)
+    for line in lines:
+        emit(line)
+    return 0 if passed else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
