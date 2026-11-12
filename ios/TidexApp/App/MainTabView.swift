@@ -431,7 +431,7 @@ struct MainTabView: View {
       // Like any pushed screen, re-tapping the tab goes back to its root.
       addShiftNavigator.hostTab = nil
       pendingCurrentMonthTab = nil
-    } else if tab == .friends || tab == .profile {
+    } else if tab == .stats || tab == .friends || tab == .profile {
       NotificationCenter.default.post(
         name: .tabReselected, object: nil, userInfo: ["tab": tab])
     } else if tab == .shifts, showListView, pendingCurrentMonthTab != tab {

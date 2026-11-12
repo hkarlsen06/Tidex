@@ -2,11 +2,12 @@ import AppIntents
 import Combine
 import SwiftUI
 
-struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   /// The tab stays alive behind the other tabs, so it is told when it is the one on screen.
   let isSelected: Bool  // swiftlint:disable:this explicit_acl
 
   @Environment(AppCoordinator.self) private var coordinator
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface line_length
   @ScaledMetric(relativeTo: .largeTitle) private var errorIconSize: CGFloat = 48
 
   @State private var viewModel = StatsViewModel()  // swiftlint:disable:this explicit_type_interface
@@ -17,6 +18,8 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   /// False only for a user with no shifts at all, who sees one add-shift action instead of empty charts.
   @State private var hasAnyShifts = true  // swiftlint:disable:this explicit_type_interface
   @State private var addShiftPath: [AddShiftRoute] = []  // swiftlint:disable:this explicit_type_interface
+  @State private var scrollPosition = ScrollPosition(edge: .top)  // swiftlint:disable:this explicit_type_interface
+  @State private var isScrolledDown = false  // swiftlint:disable:this explicit_type_interface
   private let syncStatusManager = SyncStatusManager.shared  // swiftlint:disable:this explicit_type_interface
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
@@ -114,6 +117,10 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     .onChange(of: coordinator.userId) { _, _ in
       refreshWorkSetupPresentationState()
     }
+    .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
+      guard notification.userInfo?["tab"] as? MainTabView.Tab == .stats else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
+      handleTabReselected()
+    }
     .onChange(of: viewModel.stats?.focusMonth) { oldMonth, _ in
       // The month swaps in place, so VoiceOver gets no other cue that it changed.
       guard oldMonth != nil else { return }  // swiftlint:disable:this conditional_returns_on_newline
@@ -178,6 +185,19 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     viewModel.reloadWhenOnScreen()
   }
 
+  /// Like the Schedule list, a re-tap first scrolls up, and the next one goes to the current month.
+  private func handleTabReselected() {  // swiftlint:disable:this type_contents_order
+    guard isScrolledDown else {
+      viewModel.goToCurrentMonth()
+      return
+    }
+    // Cleared here too, in case the scroll view was replaced while scrolled down.
+    isScrolledDown = false
+    withAnimation(reduceMotion ? nil : .default) {
+      scrollPosition.scrollTo(edge: .top)
+    }
+  }
+
   // MARK: - Stats Content
 
   private func statsContent(stats: StatsData) -> some View {  // swiftlint:disable:this type_contents_order
@@ -199,6 +219,12 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         edgeExclusion: 24,  // swiftlint:disable:this no_magic_numbers
         isEnabled: !isScrubbing
       )
+    }
+    .scrollPosition($scrollPosition)
+    .onScrollGeometryChange(for: Bool.self) { geometry in
+      geometry.contentOffset.y + geometry.contentInsets.top > 1
+    } action: { _, isScrolled in
+      isScrolledDown = isScrolled
     }
     .userCurrency(displayedCurrency)
     .refreshable {
