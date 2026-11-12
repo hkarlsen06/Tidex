@@ -21,13 +21,16 @@ private struct StartupStatsCache: Codable {
 /// Computes statistics locally from on-device shift data
 @MainActor
 @Observable
-final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
 
   // MARK: - Observed State
 
   private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
   private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
   private(set) var error: Error?  // swiftlint:disable:this explicit_acl
+  /// When `stats` was computed. Stats measures today from it, so the reload after midnight
+  /// moves today in the charts even when the numbers are unchanged and `stats` doesn't notify.
+  private(set) var computedAt = Date()  // swiftlint:disable:this explicit_acl explicit_type_interface
 
   /// User's selected currency (from settings)
   private(set) var currency: String = "kr"  // swiftlint:disable:this explicit_acl
@@ -58,6 +61,9 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   @ObservationIgnored private var settings: UserSettings?
   @ObservationIgnored private var activeLoadTask: Task<Void, Never>?
   @ObservationIgnored private var loadGeneration: Int = 0
+  /// False while another tab covers Stats. Loads wait until it shows again, like Home's.
+  @ObservationIgnored private var isOnScreen = true  // swiftlint:disable:this explicit_type_interface
+  @ObservationIgnored private var hasDeferredLoad = false  // swiftlint:disable:this explicit_type_interface
 
   // MARK: - Initialization
 
@@ -108,7 +114,7 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
         navigationDirection = monthContext.navigationDirection
 
         // Reload stats for new month
-        scheduleLoadStats()
+        reloadWhenOnScreen()
       }
       .store(in: &cancellables)
   }
@@ -222,7 +228,7 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   func selectJobFilter(_ jobId: String?) {  // swiftlint:disable:this explicit_acl
     guard selectedJobId != jobId else { return }  // swiftlint:disable:this conditional_returns_on_newline
     selectedJobId = jobId
-    scheduleLoadStats()
+    reloadWhenOnScreen()
   }
 
   // MARK: - Public Methods
@@ -235,7 +241,19 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     await performLoadStats(generation: generation)
   }
 
-  private func scheduleLoadStats() {
+  func setOnScreen(_ onScreen: Bool) {  // swiftlint:disable:this explicit_acl
+    isOnScreen = onScreen
+    guard onScreen, hasDeferredLoad else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    reloadWhenOnScreen()
+  }
+
+  /// Loads stats now if Stats is on screen, otherwise when it shows again.
+  func reloadWhenOnScreen() {  // swiftlint:disable:this explicit_acl
+    guard isOnScreen else {
+      hasDeferredLoad = true
+      return
+    }
+    hasDeferredLoad = false
     let generation = nextLoadGeneration()  // swiftlint:disable:this explicit_type_interface
     activeLoadTask?.cancel()
     activeLoadTask = Task { @MainActor [weak self] in
@@ -285,6 +303,7 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
         logger.info("Ignoring stale stats load (generation \(generation))")
         return
       }
+      computedAt = Date()
       stats = computedStats
       if selectedJobId == nil {
         persistStartupStatsCache(stats: computedStats, userId: userId)

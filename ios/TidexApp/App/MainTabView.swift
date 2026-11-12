@@ -169,7 +169,7 @@ struct MainTabView: View {
               value: Tab.stats
             ) {
               tabHost(for: .stats) {
-                StatsView()
+                StatsView(isSelected: selectedTab == .stats)
                   .id(coordinator.userId)
               }
             }

@@ -1,7 +1,11 @@
 import AppIntents
+import Combine
 import SwiftUI
 
 struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  /// The tab stays alive behind the other tabs, so it is told when it is the one on screen.
+  let isSelected: Bool  // swiftlint:disable:this explicit_acl
+
   @Environment(AppCoordinator.self) private var coordinator
   @ScaledMetric(relativeTo: .largeTitle) private var errorIconSize: CGFloat = 48
 
@@ -13,6 +17,7 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   /// False only for a user with no shifts at all, who sees one add-shift action instead of empty charts.
   @State private var hasAnyShifts = true  // swiftlint:disable:this explicit_type_interface
   @State private var addShiftPath: [AddShiftRoute] = []  // swiftlint:disable:this explicit_type_interface
+  private let syncStatusManager = SyncStatusManager.shared  // swiftlint:disable:this explicit_type_interface
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
   private func refreshStatsContent() async {  // swiftlint:disable:this type_contents_order
@@ -81,37 +86,33 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       refreshHasAnyShifts()
       await loadStatsContent()
     }
+    .onChange(of: isSelected, initial: true) { _, selected in
+      viewModel.setOnScreen(selected)
+    }
     .onAppear {
       refreshWorkSetupPresentationState()
       // Teaches Siri that the user checks earnings, so it can suggest the shortcut.
       _ = EarningsIntent(period: .thisMonth).donate()
     }
-    .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
-      let hadShifts = hasAnyShifts  // swiftlint:disable:this explicit_type_interface
-      refreshHasAnyShifts()
-      // Stats doesn't reload on shift changes, so load it after the first shift is added.
-      guard !hadShifts, hasAnyShifts else { return }  // swiftlint:disable:this conditional_returns_on_newline
-      Task {
-        await loadStatsContent()
-      }
+    // Every outside change that can make the numbers out of date. Add a new one here.
+    // The view model reloads for its own month and job filter changes.
+    .onReceive(statsDataChanges) { _ in
+      reloadAfterDataChange()
     }
     .onChange(of: coordinator.initialSyncComplete) { _, _ in
-      refreshHasAnyShifts()
-      let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()  // swiftlint:disable:this explicit_type_interface line_length
-      guard shouldLoadAfterSetupCompleted else { return }  // swiftlint:disable:this conditional_returns_on_newline
-      Task {
-        await loadStatsContent()
-      }
+      reloadAfterDataChange()
+    }
+    .onChange(of: syncStatusManager.lastSuccessfulSyncSummary) { _, summary in
+      // Stats shows the same money as Home, so it reloads for the same synced tables.
+      // Its own pull to refresh reloads after its sync.
+      guard let summary, summary.userId == coordinator.userId,
+        summary.dashboardChangeContext != nil,
+        !(summary.reason == .manualRefresh && isSelected)
+      else { return }
+      reloadAfterDataChange()
     }
     .onChange(of: coordinator.userId) { _, _ in
       refreshWorkSetupPresentationState()
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
-      let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()  // swiftlint:disable:this explicit_type_interface line_length
-      guard shouldLoadAfterSetupCompleted else { return }  // swiftlint:disable:this conditional_returns_on_newline
-      Task {
-        await loadStatsContent()
-      }
     }
     .onChange(of: viewModel.stats?.focusMonth) { oldMonth, _ in
       // The month swaps in place, so VoiceOver gets no other cue that it changed.
@@ -157,10 +158,30 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     }
   }
 
+  // MARK: - Reloading
+
+  /// Notifications after which Stats can show out-of-date numbers. Foreground and the
+  /// significant time change cover a new day, which moves today in the charts.
+  private var statsDataChanges: some Publisher<Notification, Never> {
+    Publishers.MergeMany(
+      NotificationCenter.default.publisher(for: .shiftsDidChange),
+      NotificationCenter.default.publisher(for: .workSetupDataDidChange),
+      NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification),
+      NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)
+    )
+  }
+
+  private func reloadAfterDataChange() {  // swiftlint:disable:this type_contents_order
+    refreshHasAnyShifts()
+    refreshWorkSetupPresentationState()
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    viewModel.reloadWhenOnScreen()
+  }
+
   // MARK: - Stats Content
 
   private func statsContent(stats: StatsData) -> some View {  // swiftlint:disable:this type_contents_order
-    let lattice = StatsLattice(stats: stats, now: .now, calendar: .gregorianCurrent)  // swiftlint:disable:this explicit_type_interface line_length
+    let lattice = StatsLattice(stats: stats, now: viewModel.computedAt, calendar: .gregorianCurrent)  // swiftlint:disable:this explicit_type_interface line_length
     return ScrollView {
       StatsContent(
         lattice: lattice,
@@ -186,7 +207,9 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   }
 
   private func announceDisplayedMonth() {  // swiftlint:disable:this type_contents_order
-    let hero = StatsLattice(stats: displayedStats, now: .now, calendar: .gregorianCurrent).hero  // swiftlint:disable:this explicit_type_interface line_length
+    let hero = StatsLattice(
+      stats: displayedStats, now: viewModel.computedAt, calendar: .gregorianCurrent
+    ).hero  // swiftlint:disable:this explicit_type_interface line_length
     let month = StatsFormat.monthName(hero.month, withYear: hero.showsYear)  // swiftlint:disable:this explicit_type_interface line_length
     let amount = StatsFormat.money(hero.amount, currency: displayedCurrency)  // swiftlint:disable:this explicit_type_interface line_length
     let announcement: String = [month, amount].joined(separator: ", ")
@@ -270,6 +293,6 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 }
 
 #Preview {
-  StatsView()
+  StatsView(isSelected: true)
     .environment(AppCoordinator.shared)
 }
