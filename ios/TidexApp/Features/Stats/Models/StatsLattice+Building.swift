@@ -18,7 +18,8 @@ extension StatsLattice {
     year = Self.makeYear(stats: stats, now: now, calendar: calendar, today: today)
   }
 
-  private struct Today {
+  /// The real date, read once so every part of a lattice agrees on it.
+  struct Today {
     let year: Int
     let month: Int
     let day: Int
@@ -59,12 +60,9 @@ extension StatsLattice {
     } else {
       qualifier = .untaxed
     }
-    let aggregate = stats.currentMonthCurrencyAggregate
-    let secondary = aggregate?.hasMixedCurrency == true ? aggregate?.secondary ?? [] : []
+    let secondary = otherCurrencyEntries(stats.currentMonthCurrencyAggregate)
     return Hero(
-      month: stats.focusMonth,
-      previousMonth: stats.focusMonth.previous,
-      showsYear: stats.focusMonth.year != today.year,
+      period: .month(stats.focusMonth, showsYear: stats.focusMonth.year != today.year),
       isAfterTax: stats.tax.enabled,
       amount: stats.tax.enabled ? net : gross,
       qualifier: qualifier,
@@ -74,7 +72,13 @@ extension StatsLattice {
     )
   }
 
-  private static func otherCurrencies(_ entries: [JobCurrencyAggregateEntry]) -> OtherCurrencies {
+  static func otherCurrencyEntries(_ aggregate: JobCurrencyAggregateResolution?)
+    -> [JobCurrencyAggregateEntry]
+  {
+    aggregate?.hasMixedCurrency == true ? aggregate?.secondary ?? [] : []
+  }
+
+  static func otherCurrencies(_ entries: [JobCurrencyAggregateEntry]) -> OtherCurrencies {
     let byCurrency = Dictionary(grouping: entries, by: \.currency)
     guard let only = byCurrency.first, byCurrency.count == 1 else {
       return byCurrency.isEmpty ? .absent : .several(count: byCurrency.count)
@@ -94,7 +98,8 @@ extension StatsLattice {
 
   // MARK: Pace
 
-  private static func makePace(stats: StatsData, phase: Phase, dayCount: Int, today: Today) -> Pace {
+  private static func makePace(stats: StatsData, phase: Phase, dayCount: Int, today: Today) -> Pace
+  {
     let month = stats.focusMonth
     let focusValues = slotValues(stats.thisMonthCumulative.map(\.currentMonth), dayCount: dayCount)
     let previousValues = slotValues(stats.thisMonthCumulative.map(\.lastMonth), dayCount: dayCount)
@@ -169,7 +174,9 @@ extension StatsLattice {
   }
 
   /// Six rows of Monday to Sunday, starting with the ISO week that holds day 1.
-  private static func makeWeekRows(month: FocusMonth, days: [DayStats], phase: Phase, calendar: Calendar)
+  private static func makeWeekRows(
+    month: FocusMonth, days: [DayStats], phase: Phase, calendar: Calendar
+  )
     -> [WeekRow]
   {
     let firstDay =
@@ -223,8 +230,8 @@ extension StatsLattice {
     }
   }
 
-  /// The row with the highest total, or nil when every week is zero or two weeks share the top.
-  private static func bestIndex(_ totals: [Double]) -> Int? {
+  /// The index of the highest total, or nil when every total is zero or two share the top.
+  static func bestIndex(_ totals: [Double]) -> Int? {
     guard let top = totals.max(), top > 0 else { return nil }
     let leaders = totals.indices.filter { abs(totals[$0] - top) < 0.005 }
     return leaders.count == 1 ? leaders.first : nil
@@ -262,7 +269,9 @@ extension StatsLattice {
 
   // MARK: Year
 
-  private static func makeYear(stats: StatsData, now: Date, calendar: Calendar, today: Today) -> Year {
+  private static func makeYear(stats: StatsData, now: Date, calendar: Calendar, today: Today)
+    -> Year
+  {
     let focus = stats.focusMonth
     let income = Dictionary(
       (stats.yearlyIncome ?? []).map { ($0.monthNumber, $0.earnings) }, uniquingKeysWith: +)
@@ -270,8 +279,7 @@ extension StatsLattice {
       MonthSlot(
         id: number,
         earnings: income[number] ?? 0,
-        isAhead: FocusMonth(year: focus.year, month: number).monthIndex > today.monthIndex,
-        employment: monthEmployment(month: number, data: stats.employment, now: now, calendar: calendar)
+        isAhead: FocusMonth(year: focus.year, month: number).monthIndex > today.monthIndex
       )
     }
     let total = months.reduce(0) { $0 + $1.earnings }
@@ -285,12 +293,27 @@ extension StatsLattice {
       perPaidMonth: paidMonths > 0 ? total / Double(paidMonths) : nil,
       focus: focus.month,
       currentMonth: focus.year == today.year ? today.month : nil,
-      average: employmentAverage(stats.employment, now: now, calendar: calendar),
-      fullTimeHoursPerWeek: stats.employment?.fullTimeHoursPerWeek ?? 37.5
+      employment: makeEmploymentYear(
+        year: focus.year, data: stats.employment, now: now, calendar: calendar)
     )
   }
 
-  private static func monthEmployment(month: Int, data: EmploymentData?, now: Date, calendar: Calendar)
+  static func makeEmploymentYear(year: Int, data: EmploymentData?, now: Date, calendar: Calendar)
+    -> EmploymentYear
+  {
+    EmploymentYear(
+      year: year,
+      months: (1...monthSlots).map {
+        monthEmployment(month: $0, data: data, now: now, calendar: calendar)
+      },
+      average: employmentAverage(data, now: now, calendar: calendar),
+      fullTimeHoursPerWeek: data?.fullTimeHoursPerWeek ?? 37.5
+    )
+  }
+
+  private static func monthEmployment(
+    month: Int, data: EmploymentData?, now: Date, calendar: Calendar
+  )
     -> Employment
   {
     guard let data, let entry = data.monthlyData.first(where: { $0.monthNumber == month }),

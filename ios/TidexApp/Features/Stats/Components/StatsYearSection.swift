@@ -28,8 +28,8 @@ struct StatsYearSection: View {
   private var chart: some View {
     VStack(spacing: Spacing.sm) {
       incomeRow
-      monthLetters
-      StatsEmploymentRow(year: year)
+      StatsMonthLetters(focus: year.focus, currentMonth: year.currentMonth)
+      StatsEmploymentRow(employment: year.employment)
     }
     .background { playhead }
     .overlay { monthButtons }
@@ -84,28 +84,6 @@ struct StatsYearSection: View {
     return max(CGFloat(share) * (Self.incomeHeight - Self.incomeTop), 2)
   }
 
-  private var monthLetters: some View {
-    HStack(spacing: 0) {
-      ForEach(Array(StatsFormat.monthLetters.enumerated()), id: \.offset) { index, letter in
-        Text(letter)
-          .fontWeight(index + 1 == year.focus ? .bold : .medium)
-          .foregroundStyle(index + 1 == year.focus ? Color.tidexTextPrimary : Color.tidexTextMuted)
-          .frame(maxWidth: .infinity)
-          .overlay(alignment: .bottom) {
-            Capsule()
-              .fill(Color.tidexBlueText)
-              .frame(width: 10, height: 2)
-              .offset(y: 2)
-              .opacity(index + 1 == year.currentMonth ? 1 : 0)
-          }
-      }
-    }
-    .statsSlot()
-    .font(.tidexMicro)
-    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-    .accessibilityHidden(true)
-  }
-
   private var monthButtons: some View {
     HStack(spacing: 0) {
       ForEach(year.months) { month in
@@ -132,12 +110,7 @@ struct StatsYearSection: View {
       Text(employmentText)
         .monospacedDigit()
         .frame(maxWidth: .infinity, alignment: .leading)
-      StatsEmploymentInfoButton(
-        message: String(
-          localized: .statsChartsEmploymentInfo(
-            year.fullTimeHoursPerWeek.formatted(
-              .number.precision(.fractionLength(2)).locale(Locale.appLocale))))
-      )
+      StatsEmploymentInfoButton(fullTimeHoursPerWeek: year.employment.fullTimeHoursPerWeek)
     }
     .statsSlot(lines: dynamicTypeSize.isAccessibilitySize ? 2 : 1)
     .font(.tidexFootnote)
@@ -163,36 +136,22 @@ struct StatsYearSection: View {
   }
 
   private var employmentText: AttributedString {
-    let focus = year.months.first { $0.id == year.focus }
-    let value = focus.flatMap { percent($0.employment) }.map { StatsFormat.percent($0.rounded()) }
+    let value = employment(month: year.focus)?.percent.map { StatsFormat.percent($0.rounded()) }
     let month = StatsFormat.shortMonthName(FocusMonth(year: year.year, month: year.focus))
     let focusPart = StatsFormat.emphasized(
       .statsYearEmployment(value ?? "–", month), color: .tidexTextPrimary)
-    let averagePart: AttributedString
-    switch year.average {
-    case .noCompletedMonths:
-      averagePart = StatsFormat.plain(String(localized: .statsYearNoCompletedMonths))
-    case .average(let average, let range?):
-      averagePart = StatsFormat.emphasized(
-        .statsYearAverage(StatsFormat.percent(average), range), color: .tidexEmploymentAccent)
-    case .average(let average, nil):
-      averagePart = StatsFormat.emphasized(
-        .statsYearAverageAll(StatsFormat.percent(average)), color: .tidexEmploymentAccent)
-    }
-    return focusPart + AttributedString(" · ") + averagePart
+    return focusPart + AttributedString(" · ") + year.employment.average.text()
   }
 
-  private func percent(_ employment: StatsLattice.Employment) -> Double? {
-    switch employment {
-    case .noShifts: nil
-    case .counted(let value), .running(let value): value
-    }
+  private func employment(month: Int) -> StatsLattice.Employment? {
+    let months = year.employment.months
+    return months.indices.contains(month - 1) ? months[month - 1] : nil
   }
 
   private func accessibilityValue(_ month: StatsLattice.MonthSlot) -> String {
     let pay = money(month.earnings)
-    guard let employment = percent(month.employment) else { return pay }
-    let share = StatsFormat.percent(employment)
+    guard let percent = employment(month: month.id)?.percent else { return pay }
+    let share = StatsFormat.percent(percent)
     return "\(pay), \(share) \(String(localized: .statsChartsEmploymentEmployment))"
   }
 
@@ -236,11 +195,59 @@ private struct StatsIncomeBar: View {
   }
 }
 
-private struct StatsEmploymentRow: View {
-  let year: StatsLattice.Year
+/// The month letters under a year's columns. The focus month is bold and the real current
+/// month has a blue mark.
+struct StatsMonthLetters: View {
+  let focus: Int?
+  let currentMonth: Int?
+
+  var body: some View {
+    HStack(spacing: 0) {
+      ForEach(Array(StatsFormat.monthLetters.enumerated()), id: \.offset) { index, letter in
+        Text(letter)
+          .fontWeight(index + 1 == focus ? .bold : .medium)
+          .foregroundStyle(index + 1 == focus ? Color.tidexTextPrimary : Color.tidexTextMuted)
+          .frame(maxWidth: .infinity)
+          .overlay(alignment: .bottom) {
+            Capsule()
+              .fill(Color.tidexBlueText)
+              .frame(width: 10, height: 2)
+              .offset(y: 2)
+              .opacity(index + 1 == currentMonth ? 1 : 0)
+          }
+      }
+    }
+    .statsSlot()
+    .font(.tidexMicro)
+    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    .accessibilityHidden(true)
+  }
+}
+
+extension StatsLattice.EmploymentAverage {
+  /// "avg 54,1% jan.–okt.", with the percent in the employment color.
+  func text(sentenceCased: Bool = false) -> AttributedString {
+    let resource: LocalizedStringResource
+    switch self {
+    case .noCompletedMonths:
+      let text = String(localized: .statsYearNoCompletedMonths)
+      return StatsFormat.plain(sentenceCased ? text.sentenceCased() : text)
+    case .average(let average, let range?):
+      resource = .statsYearAverage(StatsFormat.percent(average), range)
+    case .average(let average, nil):
+      resource = .statsYearAverageAll(StatsFormat.percent(average))
+    }
+    let text = String(localized: resource)
+    return StatsFormat.emphasized(
+      sentenceCased ? text.sentenceCased() : text, color: .tidexEmploymentAccent)
+  }
+}
+
+struct StatsEmploymentRow: View {
+  let employment: StatsLattice.EmploymentYear
 
   private var averageValue: Double? {
-    if case .average(let value, _) = year.average { value } else { nil }
+    if case .average(let value, _) = employment.average { value } else { nil }
   }
 
   var body: some View {
@@ -261,13 +268,13 @@ private struct StatsEmploymentRow: View {
         )
         .opacity(averageValue == nil ? 0 : 1)
       StatsEmploymentLine(
-        values: StatsVector(year.months.map { $0.employmentValue }),
-        present: year.months.map { $0.employment != .noShifts }
+        values: StatsVector(employment.months.map(\.value)),
+        present: employment.months.map { $0 != .noShifts }
       )
       .stroke(Color.tidexTextMuted.opacity(0.8), lineWidth: 1.5)
       HStack(spacing: 0) {
-        ForEach(year.months) { month in
-          dot(month.employment)
+        ForEach(employment.months.indices, id: \.self) { index in
+          dot(employment.months[index])
         }
       }
     }
@@ -281,7 +288,7 @@ private struct StatsEmploymentRow: View {
   private func dot(_ employment: StatsLattice.Employment) -> some View {
     let isCounted: Bool = if case .counted = employment { true } else { false }
     let hasShifts = employment != .noShifts
-    let value = StatsLattice.MonthSlot.value(of: employment)
+    let value = employment.value
     return ZStack(alignment: .top) {
       Circle()
         .fill(Color.tidexTextMuted)
@@ -309,25 +316,14 @@ private struct StatsEmploymentRow: View {
       },
       categoryAxisTitle: String(localized: .commonMonth),
       valueAxisTitle: String(localized: .statsChartsEmploymentTitle),
-      points: year.months.map { month in
-        let name = StatsFormat.monthName(FocusMonth(year: year.year, month: month.id))
+      points: employment.months.indices.map { index in
+        let name = StatsFormat.monthName(FocusMonth(year: employment.year, month: index + 1))
+        let value = employment.months[index].value
         return StatsCategoryChartDescriptor.Point(
-          category: name, value: month.employmentValue,
-          label: "\(name), \(StatsFormat.percent(month.employmentValue))")
+          category: name, value: value, label: "\(name), \(StatsFormat.percent(value))")
       },
       formatValue: { StatsFormat.percent($0) }
     )
-  }
-}
-
-extension StatsLattice.MonthSlot {
-  fileprivate var employmentValue: Double { Self.value(of: employment) }
-
-  fileprivate static func value(of employment: StatsLattice.Employment) -> Double {
-    switch employment {
-    case .noShifts: 0
-    case .counted(let value), .running(let value): value
-    }
   }
 }
 
@@ -380,8 +376,8 @@ private struct StatsRule: Shape {
   }
 }
 
-private struct StatsEmploymentInfoButton: View {
-  let message: String
+struct StatsEmploymentInfoButton: View {
+  let fullTimeHoursPerWeek: Double
 
   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
   @State private var showPopover: Bool = false
@@ -402,6 +398,13 @@ private struct StatsEmploymentInfoButton: View {
       get: { showPopover && usesCompactPresentation },
       set: { if !$0 { showPopover = false } }
     )
+  }
+
+  private var message: String {
+    String(
+      localized: .statsChartsEmploymentInfo(
+        fullTimeHoursPerWeek.formatted(
+          .number.precision(.fractionLength(2)).locale(Locale.appLocale))))
   }
 
   var body: some View {

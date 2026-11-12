@@ -16,13 +16,24 @@ struct StatsLattice: Equatable {
 
   enum Qualifier: Equatable {
     case noShifts
-    case taxed(gross: Double, taxPercent: Double)
+    /// A year leaves out the percent, because the deduction can differ between its months.
+    case taxed(gross: Double, taxPercent: Double?)
     case untaxed
   }
 
   enum Change: Equatable {
+    /// Against the whole previous month or year.
     case percent(Double)
+    /// The running year against the previous year on the same date.
+    case percentSameTime(Double)
     case noPreviousPay
+  }
+
+  /// What the hero sums, which decides its copy.
+  enum Period: Equatable {
+    /// `showsYear` is true outside the current year, so the month name carries the year.
+    case month(FocusMonth, showsYear: Bool)
+    case year(Int)
   }
 
   /// Pay this month in currencies other than the one the screen shows.
@@ -33,10 +44,7 @@ struct StatsLattice: Equatable {
   }
 
   struct Hero: Equatable {
-    let month: FocusMonth
-    let previousMonth: FocusMonth
-    /// The focus month is outside the current year, so its name carries the year.
-    let showsYear: Bool
+    let period: Period
     let isAfterTax: Bool
     let amount: Double
     let qualifier: Qualifier
@@ -163,12 +171,20 @@ struct StatsLattice: Equatable {
     let earnings: Double
     /// After the real current month, so its pay is only scheduled.
     let isAhead: Bool
-    let employment: Employment
   }
 
   enum EmploymentAverage: Equatable {
     case noCompletedMonths
     case average(Double, range: String?)
+  }
+
+  /// Employment for each month of a year, drawn on both the month and the year page.
+  struct EmploymentYear: Equatable {
+    let year: Int
+    /// One entry per month slot.
+    let months: [Employment]
+    let average: EmploymentAverage
+    let fullTimeHoursPerWeek: Double
   }
 
   struct Year: Equatable {
@@ -180,8 +196,7 @@ struct StatsLattice: Equatable {
     let focus: Int
     /// The real current month when the focus year is this year.
     let currentMonth: Int?
-    let average: EmploymentAverage
-    let fullTimeHoursPerWeek: Double
+    let employment: EmploymentYear
   }
 
   let month: FocusMonth
@@ -198,6 +213,20 @@ struct StatsLattice: Equatable {
     let power = pow(10, floor(log10(value)))
     let steps: [Double] = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]
     return (steps.first { $0 * power >= value } ?? 10) * power
+  }
+}
+
+extension StatsLattice.Employment {
+  /// The month's employment percent, 0 without shifts.
+  var value: Double {
+    switch self {
+    case .noShifts: 0
+    case .counted(let value), .running(let value): value
+    }
+  }
+
+  var percent: Double? {
+    self == .noShifts ? nil : value
   }
 }
 

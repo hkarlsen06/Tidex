@@ -71,7 +71,10 @@ enum StatsFormat {
   /// Catalog copy whose `**marked**` part carries the number. The marked part turns bold and
   /// takes `color`, so the number stands out without a second string that breaks word order.
   static func emphasized(_ resource: LocalizedStringResource, color: Color) -> AttributedString {
-    let localized = String(localized: resource)
+    emphasized(String(localized: resource), color: color)
+  }
+
+  static func emphasized(_ localized: String, color: Color) -> AttributedString {
     guard
       var text = try? AttributedString(
         markdown: localized,

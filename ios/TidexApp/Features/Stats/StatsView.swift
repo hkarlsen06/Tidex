@@ -227,7 +227,8 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     let hero = StatsLattice(
       stats: displayedStats, now: viewModel.computedAt, calendar: .gregorianCurrent
     ).hero  // swiftlint:disable:this explicit_type_interface line_length
-    let month = StatsFormat.monthName(hero.month, withYear: hero.showsYear)  // swiftlint:disable:this explicit_type_interface line_length
+    guard case .month(let focus, let showsYear) = hero.period else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    let month = StatsFormat.monthName(focus, withYear: showsYear)  // swiftlint:disable:this explicit_type_interface
     let amount = StatsFormat.money(hero.amount, currency: displayedCurrency)  // swiftlint:disable:this explicit_type_interface line_length
     let announcement: String = [month, amount].joined(separator: ", ")
     AccessibilityNotification.Announcement(announcement).post()

@@ -19,7 +19,7 @@ struct StatsHero: View {
       }
       StatsMetricStrip(metrics: metrics)
     }
-    .onChange(of: hero.month) {
+    .onChange(of: hero.period) {
       isBreakdownShown = false
     }
   }
@@ -114,14 +114,24 @@ struct StatsHero: View {
 
   // MARK: Copy
 
-  private var monthName: String {
-    StatsFormat.monthName(hero.month, withYear: hero.showsYear)
+  private var periodName: String {
+    switch hero.period {
+    case .month(let month, let showsYear): StatsFormat.monthName(month, withYear: showsYear)
+    case .year(let year): String(year)
+    }
+  }
+
+  private var previousPeriodName: String {
+    switch hero.period {
+    case .month(let month, _): StatsFormat.monthName(month.previous)
+    case .year(let year): String(year - 1)
+    }
   }
 
   private var caption: String {
     let resource: LocalizedStringResource =
       hero.isAfterTax
-      ? .statsHeroCaptionAfterTax(monthName) : .statsHeroCaptionBeforeTax(monthName)
+      ? .statsHeroCaptionAfterTax(periodName) : .statsHeroCaptionBeforeTax(periodName)
     return String(localized: resource).sentenceCased()
   }
 
@@ -142,12 +152,16 @@ struct StatsHero: View {
       return StatsFormat.plain(String(localized: .statsHeroNoShifts), color: .tidexTextMuted)
     case .untaxed:
       return StatsFormat.plain(String(localized: .statsHeroUntaxed))
-    case .taxed(let gross, let taxPercent):
+    case .taxed(let gross, let taxPercent?):
       return StatsFormat.emphasized(
         .statsHeroTaxed(
           StatsFormat.money(gross, currency: currency), StatsFormat.percent(taxPercent)),
         color: .tidexTextPrimary
       )
+    case .taxed(let gross, nil):
+      return StatsFormat.emphasized(
+        .statsHeroTaxedYear(StatsFormat.money(gross, currency: currency)),
+        color: .tidexTextPrimary)
     }
   }
 
@@ -165,7 +179,10 @@ struct StatsHero: View {
   }
 
   private var wholeChange: Double? {
-    if case .percent(let change) = hero.change { change.rounded() } else { nil }
+    switch hero.change {
+    case .percent(let change), .percentSameTime(let change): change.rounded()
+    case .noPreviousPay: nil
+    }
   }
 
   private var changeColor: Color {
@@ -183,7 +200,7 @@ struct StatsHero: View {
   }
 
   private var changeText: AttributedString {
-    let previous = StatsFormat.monthName(hero.previousMonth)
+    let previous = previousPeriodName
     switch hero.change {
     case .noPreviousPay:
       return StatsFormat.plain(
@@ -191,6 +208,10 @@ struct StatsHero: View {
     case .percent(let change):
       return StatsFormat.emphasized(
         .statsHeroChange(MonthlyEarningsChange.percentText(change), previous), color: changeColor)
+    case .percentSameTime(let change):
+      return StatsFormat.emphasized(
+        .statsHeroChangeSameTime(MonthlyEarningsChange.percentText(change), previous),
+        color: changeColor)
     }
   }
 
