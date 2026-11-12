@@ -6,12 +6,11 @@ struct StatsPaceSection: View {
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-  @GestureState private var scrub: Scrub = .idle
+  @State private var scrub: Scrub = .idle
   @State private var voiceOverDay: Int?
 
   private enum Scrub: Equatable {
     case idle
-    case holding
     case day(Int)
   }
 
@@ -70,7 +69,10 @@ struct StatsPaceSection: View {
       scrubLine(geometry)
     }
     .contentShape(Rectangle())
-    .gesture(scrubGesture(geometry))
+    .gesture(
+      StatsPaceScrubGesture { locationX in
+        scrub = locationX.map { .day(geometry.day(at: $0, dayCount: pace.dayCount)) } ?? .idle
+      })
   }
 
   private func scaleLabels(_ geometry: StatsPaceGeometry) -> some View {
@@ -116,18 +118,6 @@ struct StatsPaceSection: View {
       .opacity(scrubbedDay == nil ? 0 : 1)
       .allowsHitTesting(false)
       .accessibilityHidden(true)
-  }
-
-  /// The hold keeps the scrub apart from scrolling and from the month swipe.
-  private func scrubGesture(_ geometry: StatsPaceGeometry) -> some Gesture {
-    let dayCount = pace.dayCount
-    return LongPressGesture(minimumDuration: 0.2)
-      .sequenced(before: DragGesture(minimumDistance: 0))
-      .updating($scrub) { value, state, _ in
-        guard case .second(true, let drag) = value else { return }
-        state =
-          drag.map { Scrub.day(geometry.day(at: $0.location.x, dayCount: dayCount)) } ?? .holding
-      }
   }
 
   private var ticks: some View {
@@ -268,5 +258,28 @@ struct StatsPaceSection: View {
       ],
       formatValue: { [currency] in StatsFormat.money($0, currency: currency) }
     )
+  }
+}
+
+/// Touch and hold, then drag. A UIKit long press leaves a drag that starts on the plot to the
+/// scroll view until the hold completes, and takes the touch from it afterwards. SwiftUI's
+/// long press followed by a drag kept every touch on the plot away from the scroll view.
+private struct StatsPaceScrubGesture: UIGestureRecognizerRepresentable {
+  /// The finger's x position in the plot, or nil when the scrub ends.
+  let onChange: (CGFloat?) -> Void
+
+  func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+    let recognizer = UILongPressGestureRecognizer()  // swiftlint:disable:this explicit_type_interface
+    recognizer.minimumPressDuration = 0.2  // swiftlint:disable:this no_magic_numbers
+    return recognizer
+  }
+
+  func handleUIGestureRecognizerAction(
+    _ recognizer: UILongPressGestureRecognizer, context: Context
+  ) {
+    switch recognizer.state {
+    case .began, .changed: onChange(context.converter.localLocation.x)
+    default: onChange(nil)
+    }
   }
 }
