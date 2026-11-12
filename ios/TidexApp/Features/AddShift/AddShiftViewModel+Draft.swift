@@ -33,14 +33,14 @@ extension AddShiftViewModel {
     }
   }
 
-  /// Save the current form state as a draft
-  func saveDraft() {
+  /// Save the current form state as a draft, with `dates` in place of the selection when given.
+  func saveDraft(selectedDates dates: Set<String>? = nil) {
     let draft = ShiftDraft(
       mode: mode,
       startTime: startTime.map { formatTimeAsHHmm($0) },
       endTime: endTimeString.isEmpty ? nil : endTimeString,
       jobId: selectedJobId,
-      selectedDates: Array(selectedDates),
+      selectedDates: Array(dates ?? selectedDates),
       selectedDays: selectedDays,
       repeatInterval: repeatInterval,
       endCondition: endCondition,
@@ -62,7 +62,8 @@ extension AddShiftViewModel {
 
     if let data = try? JSONEncoder().encode(draft) {
       draftDefaults.set(data, forKey: ShiftDraft.userDefaultsKey)
-      addShiftViewModelLogger.debug("Saved draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count)")
+      addShiftViewModelLogger.debug(
+        "Saved draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count)")
     }
   }
 

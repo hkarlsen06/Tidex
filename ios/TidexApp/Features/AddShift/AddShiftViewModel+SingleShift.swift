@@ -308,6 +308,7 @@ extension AddShiftViewModel {
 
   /// Check all dates before writing, then retire each saved date from the retryable draft.
   /// A failure leaves only the failed and unattempted dates selected, including after relaunch.
+  /// The calendar keeps the whole selection until the save ends, so days don't clear one by one.
   func saveSelectedSingleShifts(
     createShift: (Date) async throws -> Void
   ) async throws {
@@ -317,10 +318,12 @@ extension AddShiftViewModel {
       }
       return (iso: dateISO, date: date)
     }
+    var unsavedDates = selectedDates
+    defer { selectedDates = unsavedDates }
     for selection in dates {
       try await createShift(selection.date)
-      selectedDates.remove(selection.iso)
-      saveDraft()
+      unsavedDates.remove(selection.iso)
+      saveDraft(selectedDates: unsavedDates)
     }
   }
 
