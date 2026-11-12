@@ -133,10 +133,10 @@ struct InAppChatToastView: View {
     .padding(.vertical, Spacing.sm)
     .background(Color.tidexSurfacePrimary.opacity(0.98))
     .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
         .stroke(Color.tidexBorder, lineWidth: 1)
     )
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
     .shadow(color: Color.black.opacity(0.14), radius: 18, y: 6)
     .announcesToVoiceOver("\(payload.senderName): \(payload.previewText)")
   }

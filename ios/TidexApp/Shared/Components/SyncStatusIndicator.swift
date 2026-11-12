@@ -42,7 +42,7 @@ struct SyncStatusIndicator: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
-      .clipShape(.rect(cornerRadius: CornerRadius.xxxl))
+      .clipShape(.rect(cornerRadius: CornerRadius.card))
       .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
       .accessibilityElement(children: .combine)
 
@@ -70,10 +70,10 @@ struct SyncStatusIndicator: View {
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexWarning.opacity(0.12))
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xxxl)
+        RoundedRectangle(cornerRadius: CornerRadius.card)
           .stroke(Color.tidexWarning.opacity(0.25), lineWidth: 1)
       )
-      .clipShape(.rect(cornerRadius: CornerRadius.xxxl))
+      .clipShape(.rect(cornerRadius: CornerRadius.card))
 
     case .offline:
       HStack(spacing: Spacing.xs) {
@@ -94,7 +94,7 @@ struct SyncStatusIndicator: View {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
       .background(Color.tidexSurfacePrimary)
-      .clipShape(.rect(cornerRadius: CornerRadius.xxxl))
+      .clipShape(.rect(cornerRadius: CornerRadius.card))
       .accessibilityElement(children: showsOfflineRetry ? .contain : .combine)
     }
   }

@@ -29,7 +29,7 @@ struct FriendCard: View {
 
   private let ringWidth: CGFloat = 3
   private let ringGap: CGFloat = 3
-  private let cardCornerRadius = CornerRadius.xxxl
+  private let cardCornerRadius = CornerRadius.card
 
   private var shiftTiming: FriendShiftTiming? {
     preview?.shift.flatMap { FriendShiftTiming(shift: $0) }

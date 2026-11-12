@@ -113,7 +113,7 @@ struct PreAuthBackButton: View {
         .accessibilityHidden(true)
         .frame(width: 46, height: 34)
         .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+        .clipShape(Capsule())
         .frame(minHeight: 44)
         .contentShape(Rectangle())
     }

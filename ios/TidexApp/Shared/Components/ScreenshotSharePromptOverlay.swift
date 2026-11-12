@@ -48,7 +48,7 @@ struct ScreenshotSharePromptOverlay: View {
         .frame(maxWidth: AdaptiveMaxWidth.content)
         .background(
           Color.tidexBackground
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.panel, style: .continuous))
             .shadow(color: .black.opacity(0.15), radius: 20, y: -5)
         )
         .offset(y: showContent ? dragOffset : geometry.size.height + 100)

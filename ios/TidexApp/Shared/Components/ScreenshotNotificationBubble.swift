@@ -54,7 +54,7 @@ struct ScreenshotNotificationBubble: View {
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)
-    .clipShape(.rect(cornerRadius: CornerRadius.xxxl))
+    .clipShape(.rect(cornerRadius: CornerRadius.card))
     .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
   }
 

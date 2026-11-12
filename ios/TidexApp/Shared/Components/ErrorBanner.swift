@@ -104,7 +104,7 @@ struct SuccessBanner: View {
       return CornerRadius.md
 
     case .toast:
-      return CornerRadius.xxxl
+      return CornerRadius.card
     }
   }
 

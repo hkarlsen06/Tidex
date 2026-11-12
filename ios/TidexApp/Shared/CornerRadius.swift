@@ -4,48 +4,45 @@
 // swiftlint:disable explicit_acl explicit_top_level_acl
 import SwiftUI
 
-/// Design system corner radius constants.
-/// Provides consistent border radii throughout the app.
+/// Corner radii for the app's rounded shapes, ordered by size.
 ///
-/// Usage:
+/// Main action buttons draw as `Capsule()` and person avatars as `Circle()`,
+/// so neither has a token here.
+///
 /// ```swift
-/// RoundedRectangle(cornerRadius: CornerRadius.lg)
-/// .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+/// .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
 /// ```
 enum CornerRadius {
-  /// 4pt - Pills, badges, toggles
+  /// 4pt. Small bars, skeleton lines, indicators and bubble tails.
   static let xxs: CGFloat = 4
 
-  /// 6pt - Small UI elements, settings icons
+  /// 6pt. Small icons, skeleton blocks and inline value boxes.
   static let xs: CGFloat = 6
 
-  /// 8pt - Input fields, chips
+  /// 8pt. Chips, badges and compact inline buttons.
   static let sm: CGFloat = 8
 
-  /// 10pt - Buttons, small cards
+  /// 10pt. Option buttons, workplace badges, inline banners and admin tiles.
   static let md: CGFloat = 10
 
-  /// 12pt - Cards, sections
+  /// 12pt. Option cards, rule cards, picker backgrounds and small panels.
   static let lg: CGFloat = 12
 
-  /// 12pt - Text fields and code boxes
+  /// 12pt. Text fields, note editors and code boxes.
   static let field: CGFloat = 12
 
-  /// 14pt - Medium cards
+  /// 14pt. Share destination tiles and the shareable calendar.
   static let xl: CGFloat = 14
 
-  /// 16pt - Large cards
+  /// 16pt. Sheet sections and detail cards.
   static let xxl: CGFloat = 16
 
-  /// 20pt - Major cards, sheets
-  static let xxxl: CGFloat = 20
-
-  /// 18pt - Chat bubbles
+  /// 18pt. Chat bubbles.
   static let bubble: CGFloat = 18
 
-  /// 20pt - Primary shift cards
+  /// 20pt. Shift, friend and dashboard cards, toasts and status pills.
   static let card: CGFloat = 20
 
-  /// 32pt - Pill shapes, large overlays
-  static let pill: CGFloat = 32
+  /// 32pt. Floating panels and prompts.
+  static let panel: CGFloat = 32
 }

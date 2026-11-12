@@ -67,12 +67,12 @@ rounded:
   sm: "8pt"
   md: "10pt"
   lg: "12pt"
+  field: "12pt"
   xl: "14pt"
   xxl: "16pt"
-  xxxl: "20pt"
   bubble: "18pt"
-  card: "24pt"
-  pill: "32pt"
+  card: "20pt"
+  panel: "32pt"
 spacing:
   micro: "2pt"
   xxs: "4pt"
@@ -93,21 +93,21 @@ components:
     backgroundColor: "{colors.workday-blue}"
     textColor: "{colors.paper-surface}"
     typography: "{typography.label}"
-    rounded: "{rounded.pill}"
+    rounded: "capsule"
     height: "48pt"
     padding: "0 16pt"
   button-primary-disabled:
     backgroundColor: "{colors.workday-blue}"
     textColor: "{colors.paper-surface}"
     typography: "{typography.label}"
-    rounded: "{rounded.pill}"
+    rounded: "capsule"
     height: "48pt"
     padding: "0 16pt"
   input-default:
     backgroundColor: "{colors.night-surface-raised}"
     textColor: "{colors.text-primary-dark}"
     typography: "{typography.body}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.field}"
     padding: "12pt 16pt"
   card-primary:
     backgroundColor: "{colors.night-surface}"
@@ -223,7 +223,7 @@ Tidex uses tonal layering first and adaptive shadows second. In light mode, subt
 
 Buttons should feel confident and native. The main action is a full-width pill when it completes a flow, and a compact icon or text button when it acts inside a toolbar.
 
-- **Shape:** Full primary actions use a pill radius (32pt) and 48pt height. Compact sheet actions can use large rounded rectangles (12-14pt).
+- **Shape:** Full-width actions, sheet actions included, draw as capsules. Full primary actions are 48pt tall.
 - **Primary:** Workday Blue or Brand Primary background, text on brand, SF Pro semibold label. Disabled uses the same color at reduced strength, never a new gray meaning.
 - **Hover / Focus:** iOS press feedback scales to 0.97 for 100 ms when motion is allowed. Web buttons use color transitions and focus-visible rings.
 - **Secondary / Ghost:** Use text color or subdued surface backgrounds. Ghost actions must still show tappable affordance through icon, label, placement, or focus ring.
@@ -239,7 +239,7 @@ Chips are compact state markers, not decorations.
 
 Cards should read as ledger sections: grouped, calm, and close to the calculation they explain.
 
-- **Corner Style:** Standard cards use 24pt for primary shift cards, 16pt for calculation cards, 12pt for small panels, and 8-10pt for fields and chips.
+- **Corner Style:** Standard cards use 20pt for primary shift cards, 16pt for calculation cards, 12pt for small panels and fields, and 8-10pt for chips. Person avatars are circles.
 - **Background:** Primary cards use Night Surface or Paper Surface. Detail cards use Night Surface Raised or Paper Surface Muted at reduced emphasis.
 - **Shadow Strategy:** Use the Elevation vocabulary. Avoid stacking shadows on nested cards.
 - **No Nested Cards:** Do not place card-like rounded panels inside another card. Inside a card, use inline rows, dividers, typography, icons, chips, progress bars, or unframed tonal bands instead.
@@ -250,7 +250,7 @@ Cards should read as ledger sections: grouped, calm, and close to the calculatio
 
 Inputs are quiet, explicit, and error-aware.
 
-- **Style:** Secondary surface background, 10pt radius, 16pt horizontal padding, 12pt vertical padding, 1pt border.
+- **Style:** Secondary surface background, 12pt radius (`CornerRadius.field`), 16pt horizontal padding, 12pt vertical padding, 1pt border.
 - **Focus:** Border shifts to Workday Blue or Brand Primary. Chat composer focus may add a subtle blue tint and shadow.
 - **Error / Disabled:** Error border and caption use Error Red. Disabled fields reduce interaction and contrast, but labels remain readable.
 
