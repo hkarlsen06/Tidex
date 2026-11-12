@@ -206,25 +206,6 @@ extension StatsSectionHeader where Trailing == EmptyView {
   }
 }
 
-/// What a plot shows in place of its data when it has none. It fades in over the plot, so the
-/// section keeps its size.
-struct StatsEmptyGlyph: View {
-  let systemName: String
-  let isShown: Bool
-
-  var body: some View {
-    Image(systemName: systemName)
-      .font(.tidexAmountMedium)
-      .fontWeight(.light)
-      .foregroundStyle(Color.tidexTextMuted)
-      .opacity(isShown ? 0.45 : 0)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-      .allowsHitTesting(false)
-      .accessibilityHidden(true)
-  }
-}
-
 struct StatsHairline: View {
   var body: some View {
     Rectangle()

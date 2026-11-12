@@ -142,8 +142,6 @@ struct StatsPaceHatchShape: Shape {
 
 struct StatsPaceGrid: View {
   let geometry: StatsPaceGeometry
-  /// The dashed scale lines. An empty plot keeps only its baseline.
-  let showsScale: Bool
 
   var body: some View {
     ZStack {
@@ -154,7 +152,6 @@ struct StatsPaceGrid: View {
         }
       }
       .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
-      .opacity(showsScale ? 1 : 0)
       Path { path in
         path.move(to: CGPoint(x: 0, y: geometry.height - 0.5))
         path.addLine(to: CGPoint(x: geometry.width, y: geometry.height - 0.5))

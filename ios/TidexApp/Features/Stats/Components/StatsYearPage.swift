@@ -10,16 +10,11 @@ struct StatsMonthsSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      StatsSectionHeader(title: .statsMonthsTitle, sentence: headline) {
-        legend
-          .opacity(hasMarks ? 1 : 0)
-          .accessibilityHidden(!hasMarks)
-      }
+      StatsSectionHeader(title: .statsMonthsTitle, sentence: headline) { legend }
       VStack(spacing: 0) {
         ForEach(months.rows) { row in
           StatsMonthRow(
-            row: row, year: months.year, yMax: months.yMax, isYearEmpty: isEmpty,
-            onSelect: onSelectMonth)
+            row: row, year: months.year, yMax: months.yMax, onSelect: onSelectMonth)
         }
       }
       .padding(.top, StatsRhythm.headerToBody)
@@ -28,16 +23,6 @@ struct StatsMonthsSection: View {
       .accessibilityChartDescriptor(chartDescriptor)
       .accessibilityIdentifier("stats.yearpage.months")
     }
-  }
-
-  /// A year with no pay shows an empty ledger, with no dashes in the pay column.
-  private var isEmpty: Bool {
-    if case .noPay = months.headline { true } else { false }
-  }
-
-  /// Whether any row draws a bar or a tick for the legend to explain.
-  private var hasMarks: Bool {
-    months.rows.contains { $0.earnings > 0 || $0.previousEarnings > 0 }
   }
 
   private var legend: some View {
@@ -101,7 +86,6 @@ private struct StatsMonthRow: View {
   let row: StatsYearLattice.MonthRow
   let year: Int
   let yMax: Double
-  let isYearEmpty: Bool
   let onSelect: (Int) -> Void
 
   @Environment(\.userCurrency) private var currency
@@ -124,14 +108,6 @@ private struct StatsMonthRow: View {
           .frame(width: Self.totalColumnWidth, alignment: .trailing)
       }
       .frame(height: StatsRhythm.row)
-      .background {
-        // An empty year rules each row from the month name to the trailing edge.
-        Rectangle()
-          .fill(Color.tidexSeparator)
-          .frame(height: 1)
-          .padding(.leading, Self.monthColumnWidth + Spacing.sm)
-          .opacity(isYearEmpty ? 1 : 0)
-      }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -164,7 +140,7 @@ private struct StatsMonthRow: View {
       Circle()
         .fill(Color.tidexTextMuted)
         .frame(width: 4, height: 4)
-        .opacity(row.earnings > 0 || isYearEmpty ? 0 : 0.82)
+        .opacity(row.earnings > 0 ? 0 : 0.82)
       shape
         .fill(Color.tidexBlue)
         .frame(width: barWidth, height: Self.barHeight)
@@ -193,7 +169,7 @@ private struct StatsMonthRow: View {
         .font(.tidexMicro)
         .opacity(row.isBest ? 1 : 0)
         .accessibilityHidden(true)
-      Text(totalText)
+      Text(row.earnings > 0 ? StatsFormat.money(row.earnings, currency: currency) : "–")
         .fontWeight(row.isBest ? .semibold : .regular)
         .monospacedDigit()
         .lineLimit(1)
@@ -202,11 +178,6 @@ private struct StatsMonthRow: View {
     .font(.tidexFootnote)
     .foregroundStyle(totalColor)
     .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-  }
-
-  private var totalText: String {
-    if row.earnings > 0 { return StatsFormat.money(row.earnings, currency: currency) }
-    return isYearEmpty ? "" : "–"
   }
 
   private var totalColor: Color {
@@ -240,7 +211,10 @@ struct StatsYearEmploymentSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      StatsSectionHeader(title: .statsEmploymentTitle, sentence: sentence) {
+      StatsSectionHeader(
+        title: .statsEmploymentTitle,
+        sentence: employment.average.text(sentenceCased: true)
+      ) {
         StatsEmploymentInfoButton(fullTimeHoursPerWeek: employment.fullTimeHoursPerWeek)
       }
       VStack(spacing: Spacing.sm) {
@@ -251,11 +225,5 @@ struct StatsYearEmploymentSection: View {
     }
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("stats.yearpage.employment")
-  }
-
-  private var sentence: AttributedString {
-    let text = employment.average.text(sentenceCased: true)
-    guard case .noCompletedMonths = employment.average else { return text }
-    return StatsFormat.plain(String(text.characters), color: .tidexTextMuted)
   }
 }

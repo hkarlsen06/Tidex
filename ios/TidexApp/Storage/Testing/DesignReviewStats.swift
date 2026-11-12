@@ -19,7 +19,8 @@
           StatsContent(
             page: page,
             onSelectMonth: { _ in },
-            onExport: {}
+            onExport: {},
+            onAddShift: {}
           )
           .statsContentFrame()
         }

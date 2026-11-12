@@ -247,6 +247,19 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     }
   }
 
+  /// The first day of the month on screen, or nil for today when Stats shows the current month
+  /// or a year.
+  private var addShiftDate: String? {
+    let today: DateComponents = Calendar.gregorianCurrent.dateComponents(
+      [.year, .month], from: Date())
+    let isCurrentMonth: Bool =
+      today.year == viewModel.displayYear && today.month == viewModel.displayMonth
+    guard period == .month, !isCurrentMonth else { return nil }
+    return DataSettingsViewModel.dateRange(
+      year: viewModel.displayYear, month: viewModel.displayMonth
+    ).from
+  }
+
   private func exportDisplayedPeriod() {
     let range: (from: String, to: String) = DataSettingsViewModel.dateRange(
       year: viewModel.displayYear, month: period == .month ? viewModel.displayMonth : nil)
@@ -266,6 +279,7 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         },
         isExporting: exporter.isExportingPdf,
         onExport: exportDisplayedPeriod,
+        onAddShift: { coordinator.pendingDeepLink = .addShift(mode: nil, date: addShiftDate) },
         onScrubbingChange: { isScrubbing = $0 }
       )
       .statsContentFrame()

@@ -14,11 +14,6 @@ struct StatsPaceSection: View {
     case day(Int)
   }
 
-  /// Neither month has pay, so there is no line to draw.
-  private var isEmpty: Bool {
-    if case .nothing = pace.headline { true } else { false }
-  }
-
   private static let plotHeight: CGFloat = 220
   private static let tickDays: [Int] = [1, 7, 14, 21, 28]
 
@@ -26,7 +21,6 @@ struct StatsPaceSection: View {
     VStack(alignment: .leading, spacing: 0) {
       StatsSectionHeader(title: .statsPaceTitle, sentence: headline)
       readout
-        .opacity(isEmpty ? 0 : 1)
         .padding(.top, StatsRhythm.headerToBody)
         .padding(.bottom, Spacing.md)
       GeometryReader { proxy in
@@ -35,7 +29,7 @@ struct StatsPaceSection: View {
       .frame(height: Self.plotHeight)
       .accessibilityElement(children: .ignore)
       .accessibilityLabel(Text(.statsPaceTitle))
-      .accessibilityValue(Text(isEmpty ? String(headline.characters) : readoutAccessibilityText))
+      .accessibilityValue(Text(readoutAccessibilityText))
       .accessibilityAdjustableAction(adjustVoiceOverDay)
       .accessibilityChartDescriptor(chartDescriptor)
       .accessibilityIdentifier("stats.pace.plot")
@@ -57,15 +51,13 @@ struct StatsPaceSection: View {
 
   private func plot(_ geometry: StatsPaceGeometry) -> some View {
     ZStack(alignment: .topLeading) {
-      StatsPaceGrid(geometry: geometry, showsScale: !isEmpty)
+      StatsPaceGrid(geometry: geometry)
       StatsPaceHatchShape(startSlot: Double(pace.dayCount))
         .stroke(Color.tidexTextMuted.opacity(0.45), lineWidth: 1)
         .accessibilityHidden(true)
       scaleLabel
-        .opacity(isEmpty ? 0 : 1)
       ForEach([pace.previous, pace.focus]) { series in
         StatsPaceLine(series: series, yMax: pace.yMax)
-          .opacity(isEmpty ? 0 : 1)
           .transition(
             .asymmetric(
               insertion: .modifier(
@@ -75,12 +67,8 @@ struct StatsPaceSection: View {
       }
       todayMarker(geometry)
       scrubLine(geometry)
-      // The hidden readout leaves a gap above the plot, so the glyph sits a little higher.
-      StatsEmptyGlyph(systemName: "chart.line.uptrend.xyaxis", isShown: isEmpty)
-        .offset(y: -Spacing.lg)
     }
     .contentShape(Rectangle())
-    .allowsHitTesting(!isEmpty)
     .gesture(
       StatsPaceScrubGesture { locationX in
         scrub = locationX.map { .day(geometry.day(at: $0, dayCount: pace.dayCount)) } ?? .idle
@@ -112,7 +100,7 @@ struct StatsPaceSection: View {
         .frame(width: 11, height: 11)
         .offset(x: markerX - 5.5, y: markerY - 5.5)
     }
-    .opacity(isTodayReference && !isEmpty ? 1 : 0)
+    .opacity(isTodayReference ? 1 : 0)
     .allowsHitTesting(false)
     .accessibilityHidden(true)
   }

@@ -9,18 +9,9 @@ struct StatsWeeksSection: View {
 
   private var isStacked: Bool { dynamicTypeSize.isAccessibilitySize }
 
-  /// A month with no shifts shows the bare calendar, with no legend, sums or hint.
-  private var isEmpty: Bool {
-    if case .noShifts = weeks.headline { true } else { false }
-  }
-
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      StatsSectionHeader(title: .statsWeeksTitle, sentence: headline) {
-        legend
-          .opacity(isEmpty ? 0 : 1)
-          .accessibilityHidden(isEmpty)
-      }
+      StatsSectionHeader(title: .statsWeeksTitle, sentence: headline) { legend }
       weekdayHeader
         .padding(.top, StatsRhythm.headerToBody)
         .padding(.bottom, Spacing.xs)
@@ -66,7 +57,7 @@ struct StatsWeeksSection: View {
       }
       Text(.statsWeeksTotalColumn)
         .frame(width: isStacked ? 0 : StatsWeekRow.totalColumnWidth, alignment: .trailing)
-        .opacity(isStacked || isEmpty ? 0 : 1)
+        .opacity(isStacked ? 0 : 1)
     }
     .statsSlot()
     .font(.tidexMicro.weight(.medium))
@@ -78,9 +69,7 @@ struct StatsWeeksSection: View {
   private var grid: some View {
     VStack(spacing: 0) {
       ForEach(weeks.rows) { row in
-        StatsWeekRow(
-          row: row, pinnedDay: pinnedDay, isStacked: isStacked, showsEmptyTotal: !isEmpty,
-          onTapDay: togglePin)
+        StatsWeekRow(row: row, pinnedDay: pinnedDay, isStacked: isStacked, onTapDay: togglePin)
       }
     }
     .accessibilityElement(children: .contain)
@@ -127,7 +116,7 @@ struct StatsWeeksSection: View {
     case .day(let day): return dayLine(day)
     case .bestDay(let day): return String(localized: .statsWeeksBestDay(payLine(day)))
     case .biggestDay(let day): return String(localized: .statsWeeksBiggestDay(payLine(day)))
-    case .hint: return isEmpty ? "" : String(localized: .statsWeeksHint)
+    case .hint: return String(localized: .statsWeeksHint)
     }
   }
 
@@ -185,8 +174,6 @@ private struct StatsWeekRow: View {
   let row: StatsLattice.WeekRow
   let pinnedDay: Int?
   let isStacked: Bool
-  /// Whether a week without pay shows a dash. An empty month leaves the column blank.
-  let showsEmptyTotal: Bool
   let onTapDay: (Int) -> Void
 
   @Environment(\.userCurrency) private var currency
@@ -255,8 +242,7 @@ private struct StatsWeekRow: View {
 
   private var totalText: String {
     guard hasDays else { return "" }
-    if row.total > 0 { return StatsFormat.money(row.total, currency: currency) }
-    return showsEmptyTotal ? "–" : ""
+    return row.total > 0 ? StatsFormat.money(row.total, currency: currency) : "–"
   }
 
   private var totalColor: Color {
