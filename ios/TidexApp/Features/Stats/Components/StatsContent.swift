@@ -4,11 +4,20 @@ import SwiftUI
 /// screens render it from fixtures. A new page swaps values in place in one animation. The hero
 /// stays the same view in both periods, so switching period rolls its numbers without moving it.
 /// On a month page the month's standing in its year comes right under the hero, because every
-/// month has one.
+/// month has one. A period with no shifts ends after the way to add one.
 struct StatsContent: View {
   enum Page: Equatable {
     case month(StatsLattice)
     case year(StatsYearLattice)
+
+    var hasShifts: Bool { metrics.shifts > 0 }
+
+    fileprivate var metrics: StatsLattice.Metrics {
+      switch self {
+      case .month(let lattice): lattice.metrics
+      case .year(let lattice): lattice.metrics
+      }
+    }
   }
 
   let page: Page
@@ -22,7 +31,7 @@ struct StatsContent: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      StatsHero(hero: hero, metrics: metrics)
+      StatsHero(hero: hero, metrics: page.metrics)
       switch page {
       case .month(let lattice):
         yearSection(lattice.year)
@@ -49,13 +58,12 @@ struct StatsContent: View {
       MotionTokens.optionalAnimation(.emphasis, reduceMotion: reduceMotion), value: page)
   }
 
-  private var isEmpty: Bool { metrics.shifts == 0 }
-
-  /// The sections that need shifts, and the export row. A period with no shifts keeps their
-  /// space and shows the way to add a shift at the top of it, so nothing above or below moves
-  /// when a swipe crosses between a full and an empty period.
+  /// The sections that need shifts, and the export row. A period with no shifts shows the way
+  /// to add a shift in their place. The screen keeps the scroll position when the page gets
+  /// shorter.
+  @ViewBuilder
   private func details(@ViewBuilder _ sections: () -> some View) -> some View {
-    VStack(alignment: .leading, spacing: 0) {
+    if page.hasShifts {
       sections()
       StatsActionRow(
         title: .dataExportPdfButton, detail: exportPeriod, systemImage: "square.and.arrow.up",
@@ -63,17 +71,10 @@ struct StatsContent: View {
       )
       .accessibilityIdentifier("stats.export")
       .padding(.top, StatsRhythm.section)
-    }
-    .opacity(isEmpty ? 0 : 1)
-    .allowsHitTesting(!isEmpty)
-    .accessibilityHidden(isEmpty)
-    .overlay(alignment: .top) {
+    } else {
       StatsActionRow(title: .shiftsEmptyAddShift, systemImage: "plus", action: onAddShift)
         .accessibilityIdentifier("stats.add-shift")
         .padding(.top, StatsRhythm.section)
-        .opacity(isEmpty ? 1 : 0)
-        .allowsHitTesting(isEmpty)
-        .accessibilityHidden(!isEmpty)
     }
   }
 
@@ -98,13 +99,6 @@ struct StatsContent: View {
     case .year(let year): String(year)
     }
   }
-
-  private var metrics: StatsLattice.Metrics {
-    switch page {
-    case .month(let lattice): lattice.metrics
-    case .year(let lattice): lattice.metrics
-    }
-  }
 }
 
 extension View {
@@ -115,7 +109,7 @@ extension View {
       .padding(.horizontal, Spacing.mlg)
       // Clears the sync status pill that floats under the navigation bar.
       .padding(.top, Spacing.xxxl)
-      // The screen adds the period and month pickers below this through a safe area inset.
+      // The screen keeps the floating month picker row clear below this with a content margin.
       .padding(.bottom, Spacing.xl)
       .frame(maxWidth: .infinity)
   }
