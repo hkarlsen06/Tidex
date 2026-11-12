@@ -35,7 +35,7 @@ struct StatsYearSection: View {
     HStack(spacing: Spacing.xxs) {
       HStack(alignment: .bottom, spacing: 2) {
         RoundedRectangle(cornerRadius: 1, style: .continuous)
-          .fill(Color.tidexBorder)
+          .fill(StatsIncomeBar.restColor)
           .frame(width: 4, height: 7)
         RoundedRectangle(cornerRadius: 1, style: .continuous)
           .fill(Color.tidexBlue)
@@ -261,17 +261,24 @@ private struct StatsIncomeBar: View {
   let height: CGFloat
   let isFocus: Bool
 
+  /// Pay is blue on this screen, so the months around the shown one are a quieter blue. Grey
+  /// read as the dull series beside the coloured employment line.
+  static let restColor: Color = Color.tidexBlue.opacity(0.5)
+
   private var isOutline: Bool { month.isAhead && month.earnings > 0 }
+
+  /// A month with no pay keeps a grey stub.
+  private var restColor: Color { month.earnings > 0 ? Self.restColor : .tidexBorder }
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: min(3, height / 2), style: .continuous)
     ZStack {
       shape
-        .fill(isFocus ? Color.tidexBlue : Color.tidexBorder)
+        .fill(isFocus ? Color.tidexBlue : restColor)
         .opacity(isOutline ? 0 : 1)
       shape
         .stroke(
-          isFocus ? Color.tidexBlueText : Color.tidexBorder,
+          isFocus ? Color.tidexBlueText : restColor,
           style: StrokeStyle(lineWidth: 1.5, dash: [3, 2.5])
         )
         .opacity(isOutline ? 1 : 0)
