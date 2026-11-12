@@ -193,7 +193,7 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
         result, commands = run(wrapper, "--json", **bare)
         summary = json.loads(result.stdout.splitlines()[-1])
         assert summary["status"] == "SUCCESS" and summary["queued"] <= 1, summary
-        assert len(builds(commands)) == phases and all(build[build.index("-jobs") + 1] == "2" for build in builds(commands)), commands
+        assert len(builds(commands)) == phases and all(build[build.index("-jobs") + 1] == "6" for build in builds(commands)), commands
     for wrapper in ("xcode-test-agent.sh", "xcode-build-agent.sh"):
         result, commands = run(wrapper, "--devices")
         assert json.loads(result.stdout)["devices"][0]["allowed"] is True

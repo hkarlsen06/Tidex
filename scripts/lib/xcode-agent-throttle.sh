@@ -3,7 +3,7 @@
 #
 # Xcode work on this Mac goes through ios-agent, the host controller. It
 # queues compiles from every repo first come, first served, and runs them with
-# two jobs at a lower CPU priority. `ios-agent status` shows the queue. A
+# six jobs at a lower CPU priority. `ios-agent status` shows the queue. A
 # machine without ios-agent, such as CI, runs xcodebuild directly.
 #
 # Tests run without parallel simulator clones, and UI test targets are skipped
@@ -13,12 +13,12 @@
 #
 # Environment overrides, the first two read by ios-agent too:
 #   XCODE_AGENT_NICE=N                 nice level, 0 disables (default 10)
-#   XCODE_AGENT_JOBS=N                 xcodebuild -jobs (default 2)
+#   XCODE_AGENT_JOBS=N                 xcodebuild -jobs (default 6)
 #   XCODE_TEST_AGENT_PARALLEL=1        allow Xcode parallel testing (clones simulators)
 #   XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1  run *UITests targets in an unfiltered run
 
 XA_NICE="${XCODE_AGENT_NICE:-10}"
-XA_JOBS="${XCODE_AGENT_JOBS:-2}"
+XA_JOBS="${XCODE_AGENT_JOBS:-6}"
 XA_ARGS=()
 
 # Turn INT/TERM/HUP into a normal exit so the caller's EXIT trap runs,

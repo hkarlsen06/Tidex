@@ -15,7 +15,7 @@ In a thread that runs helpers (subagents or delegates), one agent builds and run
 - UI journeys using the `app-store-screenshots` fixture require a shared simulator because the fixture is disabled on physical devices. Run them separately from device unit tests with `XCODE_TEST_AGENT_DESTINATION` unset.
 - Let the wrapper select the approved spare for audited device-safe test selections, with a shared simulator as fallback. [Devices and simulators](#devices-and-simulators) below says how. Do not open Simulator.app.
 - The lock does not see the Xcode app. If a run fails with `build.db: database is locked`, Hjalmar is probably building in Xcode. Wait a minute and retry.
-- Compiles queue machine-wide with two jobs and lower CPU priority by default. `XCODE_AGENT_NICE`, `XCODE_AGENT_JOBS` and `IOS_AGENT_SIMULATORS` are for the user to set.
+- Compiles queue machine-wide with six jobs and lower CPU priority by default. `XCODE_AGENT_NICE`, `XCODE_AGENT_JOBS` and `IOS_AGENT_SIMULATORS` are for the user to set.
 - Write a test only when [Tests](#tests) calls for one, and run it.
 - **Handoff.** Name the builds and tests you ran and their results. List only the checks you could not run, such as a feature the simulator lacks, and say why.
 
