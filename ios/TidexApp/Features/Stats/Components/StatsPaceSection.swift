@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Cumulative pay through the month against the previous month, on 31 fixed day slots.
-/// Touch and hold the plot, then drag, to read another day.
 struct StatsPaceSection: View {
   let pace: StatsLattice.Pace
   var onScrubbingChange: (Bool) -> Void = { _ in }

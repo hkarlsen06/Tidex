@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Twelve month columns: pay as bars, the month letters, and employment as dots. A band marks
-/// the focus month, and tapping a column opens that month.
 struct StatsYearSection: View {
   let year: StatsLattice.Year
   let onSelectMonth: (Int) -> Void
@@ -216,7 +214,6 @@ struct StatsYearSection: View {
   }
 }
 
-/// Filled for pay that has happened, a dashed outline for months still ahead.
 private struct StatsIncomeBar: View {
   let month: StatsLattice.MonthSlot
   let height: CGFloat
@@ -240,8 +237,6 @@ private struct StatsIncomeBar: View {
   }
 }
 
-/// Employment per month on a 0 to 100% scale. A filled dot counts toward the average, a ring
-/// is the running or a later month, and a month without shifts sits on the baseline.
 private struct StatsEmploymentRow: View {
   let year: StatsLattice.Year
 
@@ -335,7 +330,6 @@ extension StatsLattice.MonthSlot {
   }
 }
 
-/// Joins the dots of neighbouring months that both have shifts.
 private struct StatsEmploymentLine: Shape {
   var values: StatsVector
   let present: [Bool]
@@ -359,7 +353,6 @@ private struct StatsEmploymentLine: Shape {
   }
 }
 
-/// The employment row's 0 to 100% scale, in points from the top of its 56-point frame.
 private enum StatsEmploymentScale {
   static let height: CGFloat = 56
   static let top: CGFloat = 8
@@ -369,7 +362,6 @@ private enum StatsEmploymentScale {
   }
 }
 
-/// A horizontal line across the drawing at `lineY`.
 private struct StatsRule: Shape {
   var lineY: CGFloat
 
@@ -386,8 +378,6 @@ private struct StatsRule: Shape {
   }
 }
 
-/// Explains the full-time week behind the employment percentage: a popover on regular width,
-/// an alert on compact width.
 private struct StatsEmploymentInfoButton: View {
   let message: String
 

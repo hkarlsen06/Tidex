@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Maps day slots and pay to points in the plot. The top band holds the scale label.
 struct StatsPaceGeometry {
+  /// Room above the scale's top line for its label.
   static let top: CGFloat = 14
 
   let width: CGFloat
@@ -60,7 +60,6 @@ struct StatsPaceLine: View {
   }
 }
 
-/// Draws a new month's line in from the left.
 struct StatsPaceReveal: ViewModifier {
   let progress: CGFloat
 
@@ -136,7 +135,6 @@ struct StatsPaceHatchShape: Shape {
   }
 }
 
-/// Dashed lines at the top and middle of the scale, and a solid baseline.
 struct StatsPaceGrid: View {
   let geometry: StatsPaceGeometry
 

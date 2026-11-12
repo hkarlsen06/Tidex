@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The month's days as six Monday-to-Sunday rows with week numbers and week totals.
-/// Tap a day to read it below the grid.
 struct StatsWeeksSection: View {
   let weeks: StatsLattice.Weeks
 
@@ -122,7 +120,6 @@ struct StatsWeeksSection: View {
     }
   }
 
-  /// "Thu 12 Nov · 1 shift · 7,5 h · 1 480 kr".
   private func dayLine(_ day: DayStats) -> String {
     let date = StatsFormat.weekdayAndDate(weeks.month, day: day.day)
     let details: [String]
@@ -140,7 +137,6 @@ struct StatsWeeksSection: View {
     return ([date] + details).joined(separator: " · ")
   }
 
-  /// "Sat 7 Feb · 2 240 kr".
   private func payLine(_ day: DayStats) -> String {
     [StatsFormat.weekdayAndDate(weeks.month, day: day.day), money(day.earnings)]
       .joined(separator: " · ")
@@ -166,8 +162,6 @@ struct StatsWeeksSection: View {
   }
 }
 
-/// One week: its number, seven day marks and its total. In the stacked layout for
-/// accessibility text sizes, the total moves to its own line under the days.
 private struct StatsWeekRow: View {
   static let rowHeight: CGFloat = 36
   static let weekColumnWidth: CGFloat = 34

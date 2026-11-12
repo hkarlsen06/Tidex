@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The month's pay: caption, amount, what the amount means, and the change from the previous
-/// month, followed by the hours, shifts and pay per hour.
 struct StatsHero: View {
   let hero: StatsLattice.Hero
   let metrics: StatsLattice.Metrics
@@ -201,7 +199,6 @@ struct StatsHero: View {
   }
 }
 
-/// Hours, shifts and pay per hour between two hairlines.
 private struct StatsMetricStrip: View {
   let metrics: StatsLattice.Metrics
 

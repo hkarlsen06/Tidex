@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Numbers, dates and styled copy shared by the Stats sections.
 enum StatsFormat {
   private typealias ForegroundColor = AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute
   private typealias TextFont = AttributeScopes.SwiftUIAttributes.FontAttribute
@@ -22,7 +21,6 @@ enum StatsFormat {
     value.formatted(.number.precision(.fractionLength(0...1)).locale(Locale.appLocale)) + "%"
   }
 
-  /// Scale labels inside the plots, for example "30k".
   static func compact(_ value: Double) -> String {
     value.formatted(
       .number.notation(.compactName).precision(.fractionLength(0...1)).locale(Locale.appLocale))
@@ -33,32 +31,27 @@ enum StatsFormat {
       from: DateComponents(year: month.year, month: month.month, day: day)) ?? .now
   }
 
-  /// "November", or "March 2025" when the year differs from the current one.
   static func monthName(_ month: FocusMonth, withYear: Bool = false) -> String {
     let style: Date.FormatStyle = withYear ? .dateTime.month(.wide).year() : .dateTime.month(.wide)
     return date(month, day: 1).formatted(style.locale(Locale.appLocale).calendar(.gregorian))
   }
 
-  /// "Nov".
   static func shortMonthName(_ month: FocusMonth) -> String {
     date(month, day: 1).formatted(
       .dateTime.month(.abbreviated).locale(Locale.appLocale).calendar(.gregorian))
   }
 
-  /// "12 Nov".
   static func dayAndMonth(_ month: FocusMonth, day: Int) -> String {
     date(month, day: day).formatted(
       .dateTime.day().month(.abbreviated).locale(Locale.appLocale).calendar(.gregorian))
   }
 
-  /// "Thu 12 Nov".
   static func weekdayAndDate(_ month: FocusMonth, day: Int) -> String {
     date(month, day: day).formatted(
       .dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(Locale.appLocale)
         .calendar(.gregorian))
   }
 
-  /// One letter per month, January first.
   static var monthLetters: [String] {
     localeCalendar.veryShortStandaloneMonthSymbols
   }
@@ -94,7 +87,6 @@ enum StatsFormat {
     return text
   }
 
-  /// Plain copy in one color, for sentences that say a month has nothing to show.
   static func plain(_ string: String, color: Color? = nil) -> AttributedString {
     var text = AttributedString(string)
     if let color {
@@ -141,7 +133,6 @@ private struct StatsSlot<Content: View>: View {
   }
 }
 
-/// A section's small capitals title with an optional trailing note, then its one sentence.
 struct StatsSectionHeader<Trailing: View>: View {
   let title: LocalizedStringResource
   let sentence: AttributedString
@@ -191,7 +182,6 @@ extension StatsSectionHeader where Trailing == EmptyView {
   }
 }
 
-/// A thin rule between parts of the Stats drawing.
 struct StatsHairline: View {
   var body: some View {
     Rectangle()

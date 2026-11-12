@@ -1,8 +1,6 @@
 import AppIntents
 import SwiftUI
 
-/// Stats for the month the shared month picker shows: its pay, its pace against the previous
-/// month, its weeks and the year around it.
 struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
   @Environment(AppCoordinator.self) private var coordinator
   @ScaledMetric(relativeTo: .largeTitle) private var errorIconSize: CGFloat = 48

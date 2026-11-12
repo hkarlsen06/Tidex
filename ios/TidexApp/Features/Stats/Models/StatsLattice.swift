@@ -8,7 +8,6 @@ struct StatsLattice: Equatable {
   static let weekRows: Int = 6
   static let monthSlots: Int = 12
 
-  /// Where the focus month sits relative to today.
   enum Phase: Equatable {
     case past
     case current(today: Int)
