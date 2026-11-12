@@ -1163,6 +1163,7 @@ private struct SharedShiftsDetailView: View {
         isLoading: viewModel.isLoadingShifts,
         isContentReady: viewModel.hasResolvedSelectedSharerShifts,
         ownerTimeZone: viewModel.sharedOwnerTimeZone,
+        nextShift: viewModel.shiftPreviews[sharer.id]?.shift,
         highlightDates: highlightDates,
         highlightShiftIds: highlightShiftIds,
         isSuperimposing: viewModel.isSuperimposing,

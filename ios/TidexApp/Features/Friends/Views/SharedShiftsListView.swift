@@ -18,6 +18,8 @@ struct SharedShiftsListView: View {
   let isLoading: Bool
   let isContentReady: Bool
   var ownerTimeZone: String?
+  /// The friend's current or next shift, from the friends list preview.
+  var nextShift: SharedShiftData?
 
   /// Dates to highlight from notification deeplink
   var highlightDates: Set<String> = []
@@ -78,6 +80,17 @@ struct SharedShiftsListView: View {
   /// calendar, so it uses the viewer's clock.
   private var effectiveTimeDisplay: SharedScheduleTimeDisplay {
     isSuperimposing && !showListView ? .viewer : timeDisplay
+  }
+
+  private var shiftCard: FriendShiftDayCard? {
+    guard let nextShift,
+      let interval = SharedShiftInterval(
+        date: nextShift.shift_date, startTime: nextShift.start_time,
+        endTime: nextShift.end_time, timeZoneIdentifier: nextShift.ownerTimeZone)
+    else { return nil }
+    let showsTheirClock = timeControl == .choice && effectiveTimeDisplay == .schedule
+    return FriendShiftDayCard(
+      interval: interval, zone: showsTheirClock ? interval.timeZone : .current)
   }
 
   /// The shifts as the schedule shows them, dated in the viewer's zone when that is the choice.
@@ -204,6 +217,7 @@ extension SharedShiftsListView {
       timeControl: timeControl,
       timeDisplay: $timeDisplay,
       pinsActionBarToBottom: pinsControls,
+      shiftCard: shiftCard,
       highlightDates: highlightDates,
       highlightShiftIds: highlightShiftIds,
       isSuperimposing: isSuperimposing,
@@ -291,10 +305,11 @@ extension SharedShiftsListView {
       List {
         if timeControl != .none {
           SharedScheduleTimeControlView(
-            control: timeControl, friendName: sharer.firstNameOnly, display: $timeDisplay)
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+            control: timeControl, friendName: sharer.firstNameOnly, display: $timeDisplay
+          )
+          .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+          .listRowBackground(Color.clear)
+          .listRowSeparator(.hidden)
         }
         ForEach(weekGroups, id: \.weekKey) { weekGroup in
           Section {

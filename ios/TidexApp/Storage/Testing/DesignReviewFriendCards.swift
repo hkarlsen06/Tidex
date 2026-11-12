@@ -62,6 +62,7 @@
           month: SharedMonthContext.shared.displayMonth,
           phase: nil, isLoading: false, isContentReady: true,
           ownerTimeZone: Self.scheduleZone?.identifier,
+          nextShift: Self.preview(for: "ella", startOffset: -120, duration: 480).shift,
           isSuperimposing: isSuperimposing,
           userHoursByDate: Dictionary(
             uniqueKeysWithValues: ownShifts.map { row in
@@ -196,14 +197,17 @@
         guard ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_WIDGETS"] == "1" else {
           return
         }
-        let names = ["Henrik", "Ella", "Jonas", "Nora", "Maja"]
+        // The first five have shifts. The rest fill the widget's row of overlapping avatars.
+        let names = ["Henrik", "Ella", "Jonas", "Nora", "Maja", "Ingrid", "Oskar", "Sofie"]
         let sharers = names.map { name in
           SharedUser(
             id: name, email: "friend@example.com", phone: nil, firstName: name,
             profilePictureUrl: nil, oauthAvatarUrl: nil, sharedAt: "2026-01-01",
             showEarnings: true, hidden: false)
         }
-        let previews = names.map { Self.preview(for: $0, startOffset: 0, duration: 480) }
+        let previews = zip(names, [-120.0, 300, 1_500, 3_000, 4_500]).map { name, offset in
+          Self.preview(for: name, startOffset: offset, duration: 480)
+        }
         NativeWidgetStorage.updateFriendWidgetStorage(sharers: sharers, previews: previews)
       }
     }

@@ -30,6 +30,9 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   var timeDisplay: Binding<SharedScheduleTimeDisplay> = .constant(.viewer)
   var pinsActionBarToBottom = false
 
+  /// The friend's current or next shift, under the month.
+  var shiftCard: FriendShiftDayCard?
+
   /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
   var highlightDates: Set<String> = []
 
@@ -180,6 +183,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
         .padding(.bottom, Spacing.xs)
 
       calendarGrid(metrics: metrics)
+
+      shiftCard
 
       if showEarnings || (!isSuperimposing && timeControl != .none) {
         CalendarControlStack(isPinned: pinsActionBarToBottom) {
