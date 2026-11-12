@@ -117,7 +117,7 @@ gitignored `backend/.env.production`.
 
 For hosted Convex runtime upgrades, allocator changes, or rollback, read
 [the runtime upgrade procedure](backend/ops/convex-runtime/README.md). Production
-uses the pinned November 6, 2026 release with packaged jemalloc. Keep its build
+uses the pinned November 12, 2026 release with packaged jemalloc. Keep its build
 source and image manifest in recovery config archives.
 
 The dev deployment runs on the Mac under colima, from `backend/dev/compose.yml`

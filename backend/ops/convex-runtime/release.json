@@ -1,23 +1,23 @@
 {
-  "release": "precompiled-2026-11-06-a7376b7",
-  "revision": "a7376b736164c8366c601ec97a02dec27d3370ec",
-  "base_image": "ghcr.io/convex/convex-backend@sha256:e9c084e8bd6c1f249012c672193f0988c748824f55a24cdad45f6185a8462f9a",
+  "release": "precompiled-2026-11-12-cc07c9e",
+  "revision": "cc07c9e1588d7a24c717c0b72fd9c15c9e3ac41e",
+  "base_image": "ghcr.io/convex/convex-backend@sha256:121bbb866f26f769894eb1ad557d11febd9ffa65caebbaa7a3e285ab94a1b02b",
   "assets": {
     "convex-local-backend-aarch64-unknown-linux-gnu.zip": {
-      "url": "https://github.com/convex/convex-backend/releases/download/precompiled-2026-11-06-a7376b7/convex-local-backend-aarch64-unknown-linux-gnu.zip",
-      "sha256": "6e74e4c7541490d0a637090ed3b24de9e33072118f78a55bb0c4995f5876f27c"
+      "url": "https://github.com/convex/convex-backend/releases/download/precompiled-2026-11-12-cc07c9e/convex-local-backend-aarch64-unknown-linux-gnu.zip",
+      "sha256": "e4012b84b9e6f5a0ce448fcbdd5ebcefbf9ffafb3dce9e08d9697eeeb48604e7"
     },
     "convex-local-backend-x86_64-unknown-linux-gnu.zip": {
-      "url": "https://github.com/convex/convex-backend/releases/download/precompiled-2026-11-06-a7376b7/convex-local-backend-x86_64-unknown-linux-gnu.zip",
-      "sha256": "0afe3f53d0d95d5e02b76fd46cdd0cabc97ffce4e5678fd57495b12b1d265bd3"
+      "url": "https://github.com/convex/convex-backend/releases/download/precompiled-2026-11-12-cc07c9e/convex-local-backend-x86_64-unknown-linux-gnu.zip",
+      "sha256": "1c30ac719f9640f786efdc8aef0c65f34b3874cd8799b829f5468a3e9df01e4b"
     },
     "dashboard.zip": {
-      "url": "https://github.com/convex/convex-backend/releases/download/precompiled-2026-11-06-a7376b7/dashboard.zip",
-      "sha256": "44a46d2d88323f1cc180314befe1377fb1b7da0902e0bf41a3cb7b095f9c12c3"
+      "url": "https://github.com/convex/convex-backend/releases/download/precompiled-2026-11-12-cc07c9e/dashboard.zip",
+      "sha256": "a281e62b1df8485a6dd49a013aa286d4b735ea4f44a4ceff72d3e996c2250743"
     },
     "LICENSE.md": {
-      "url": "https://github.com/convex/convex-backend/releases/download/precompiled-2026-11-06-a7376b7/LICENSE.md",
-      "sha256": "563cea54ba1ad9d2a1b36f4a62b1ebdc3e1dcfb8776a7afee06c99aad5294588"
+      "url": "https://github.com/convex/convex-backend/releases/download/precompiled-2026-11-12-cc07c9e/LICENSE.md",
+      "sha256": "cee614f23a461cb4aba2910e7127ae0969bcf42a0a91a38d3e3449d843383086"
     }
   },
   "jemalloc": {
@@ -32,18 +32,18 @@
   },
   "scripts": {
     "run_backend.sh": {
-      "url": "https://raw.githubusercontent.com/convex/convex-backend/a7376b736164c8366c601ec97a02dec27d3370ec/self-hosted/docker-build/run_backend.sh",
+      "url": "https://raw.githubusercontent.com/convex/convex-backend/cc07c9e1588d7a24c717c0b72fd9c15c9e3ac41e/self-hosted/docker-build/run_backend.sh",
       "sha256": "6ba784b5dc31641b938fba4c336d08c542a09ce6f7921e980846a5f9f440ef3a"
     },
     "read_credentials.sh": {
-      "url": "https://raw.githubusercontent.com/convex/convex-backend/a7376b736164c8366c601ec97a02dec27d3370ec/self-hosted/docker-build/read_credentials.sh",
+      "url": "https://raw.githubusercontent.com/convex/convex-backend/cc07c9e1588d7a24c717c0b72fd9c15c9e3ac41e/self-hosted/docker-build/read_credentials.sh",
       "sha256": "27c6e916f2eaf2916d8f78db74113698bdbda33fe0670530efb186092ee89e92"
     },
     "generate_admin_key.sh": {
-      "url": "https://raw.githubusercontent.com/convex/convex-backend/a7376b736164c8366c601ec97a02dec27d3370ec/self-hosted/docker-build/generate_admin_key.sh",
+      "url": "https://raw.githubusercontent.com/convex/convex-backend/cc07c9e1588d7a24c717c0b72fd9c15c9e3ac41e/self-hosted/docker-build/generate_admin_key.sh",
       "sha256": "961d3357e60c917a4e1a6dff7e0af3cd7d94f7b0e998b05ff28fdd1c22bff46e"
     }
   },
   "prerelease": true,
-  "published_at": "2026-11-06T00:03:40Z"
+  "published_at": "2026-11-12T17:56:35Z"
 }

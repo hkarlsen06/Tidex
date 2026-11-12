@@ -8,7 +8,7 @@ Read [runtime packaging](runtime.md) before changing the release lock.
 2. Build the pinned official assets and packaged allocator:
 
    ```sh
-   sudo python3 /srv/convex-runtime/source/build.py --directory /srv/convex-runtime/build/a7376b7-amd64
+   sudo python3 /srv/convex-runtime/source/build.py --directory /srv/convex-runtime/build/cc07c9e-amd64
    ```
 
    Keep its `images.json`. It records the locally built immutable image references.
@@ -25,8 +25,8 @@ Read [runtime packaging](runtime.md) before changing the release lock.
 4. Run each upgrade and rollback rehearsal in sequence:
 
    ```sh
-   sudo python3 /srv/convex-runtime/source/rehearse.py paeonia --images /srv/convex-runtime/build/a7376b7-amd64/images.json
-   sudo python3 /srv/convex-runtime/source/rehearse.py tidex --images /srv/convex-runtime/build/a7376b7-amd64/images.json
+   sudo python3 /srv/convex-runtime/source/rehearse.py paeonia --images /srv/convex-runtime/build/cc07c9e-amd64/images.json
+   sudo python3 /srv/convex-runtime/source/rehearse.py tidex --images /srv/convex-runtime/build/cc07c9e-amd64/images.json
    ```
 
    Both `result.json` files must say `complete: true`. The internal Docker network
@@ -37,7 +37,7 @@ Read [runtime packaging](runtime.md) before changing the release lock.
 5. Get approval for existing user-facing production services, then upgrade one app:
 
    ```sh
-   sudo python3 /srv/convex-runtime/source/upgrade.py paeonia --images /srv/convex-runtime/build/a7376b7-amd64/images.json
+   sudo python3 /srv/convex-runtime/source/upgrade.py paeonia --images /srv/convex-runtime/build/cc07c9e-amd64/images.json
    ```
 
    The command takes a full logical export and recovery config, then verifies their

@@ -6,8 +6,8 @@
 
 ## Convex runtime follow-up, November 7, 2026
 
-The hosted backend and dashboard now use `precompiled-2026-11-06-a7376b7`
-with packaged jemalloc. Authentication, live writes and subscriptions, file
+The hosted backend and dashboard now use `precompiled-2026-11-12-cc07c9e`
+with packaged jemalloc (upgraded from `a7376b7` on November 12, 2026). Authentication, live writes and subscriptions, file
 backups, rollback rehearsals and restarts passed. Upstream marks this build as
 a prerelease. See [the runtime procedure](backend/ops/convex-runtime/README.md).
 
@@ -31,7 +31,7 @@ a prerelease. See [the runtime procedure](backend/ops/convex-runtime/README.md).
   upstream fix. It appeared around successful exports and exists in the old
   source too. Its lack of application impact is inferred from source and the
   passing checks, rather than a dedicated telemetry test.
-- [ ] Review a stable successor to `a7376b7` when available. Rehearse the candidate
+- [ ] Review a stable successor to `cc07c9e` when available. Rehearse the candidate
   and recovery with the pinned image procedure before replacing the prerelease.
   Restore a matching data/object checkpoint for rollback; do not downgrade an
   upgraded database in place.

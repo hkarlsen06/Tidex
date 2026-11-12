@@ -1,12 +1,13 @@
 # Convex runtime packaging
 
-The November 7, 2026 deployment uses official release
-[`precompiled-2026-11-06-a7376b7`](https://github.com/convex/convex-backend/releases/tag/precompiled-2026-11-06-a7376b7),
-revision `a7376b736164c8366c601ec97a02dec27d3370ec`.
-Upstream marks this newest published precompiled build as a prerelease. GitHub’s
+The November 12, 2026 deployment uses official release
+[`precompiled-2026-11-12-cc07c9e`](https://github.com/convex/convex-backend/releases/tag/precompiled-2026-11-12-cc07c9e),
+revision `cc07c9e1588d7a24c717c0b72fd9c15c9e3ac41e`, on top of the official image
+built from the same revision. It replaced `precompiled-2026-11-06-a7376b7`.
+Upstream marks every recent precompiled build as a prerelease. GitHub's
 `releases/latest` endpoint selects the older October 22 stable build, so it is not
 the selector for the user-requested newest precompiled runtime.
-The Docker `latest` tag lagged this release when checked. `release.json` pins the
+The Docker `latest` tag lagged both releases when checked. `release.json` pins the
 release assets, startup scripts, license, official base image, and Ubuntu jemalloc
 package by SHA-256. `build.py` verifies downloads before using them.
 
@@ -41,8 +42,8 @@ assets for a future Mac build; that build and the Mac development database were 
 changed or tested in this deployment. Tidex's dev Compose images are separately
 pinned. Paeonia's native local development backend remains managed by its CLI.
 
-The newest backend upgrades Tidex's internal database from 133 to 134; Paeonia was
-already on 134. Downgrading an upgraded database in place is not a recovery strategy.
+The a7376b7 backend upgraded Tidex's internal database from 133 to 134; Paeonia was
+already on 134. cc07c9e kept both at 134. Downgrading an upgraded database in place is not a recovery strategy.
 Rehearsals restore the pristine old data before starting the old engine.
 
 The production Paeonia storage mode remains S3/R2, including
