@@ -2,7 +2,7 @@ import Foundation
 
 /// The Stats screen for one year, padded to exactly 12 month slots. Like `StatsLattice`, views
 /// fill the slots and never branch on whether data exists, so a year change swaps values in
-/// place.
+/// place. Every amount is in the hero's basis, each month with its own deduction.
 struct StatsYearLattice: Equatable {
   struct MonthRow: Equatable, Identifiable {
     /// The month, 1...12.
@@ -10,7 +10,7 @@ struct StatsYearLattice: Equatable {
     let earnings: Double
     let hours: Double
     let shifts: Int
-    /// The same month a year earlier, in the same currency.
+    /// The same month a year earlier, in the same currency and basis.
     let previousEarnings: Double
     /// After the real current month, so its pay is only scheduled.
     let isAhead: Bool
@@ -31,6 +31,8 @@ struct StatsYearLattice: Equatable {
     /// The scale of the bars and ticks, shared by both years.
     let yMax: Double
     let headline: MonthsHeadline
+    /// False when the year before has no pay, so there are no ticks and nothing to name.
+    let hasPreviousYear: Bool
   }
 
   let year: Int
@@ -47,15 +49,18 @@ extension StatsYearLattice {
     let today = StatsLattice.Today(now, calendar: calendar)
     let months = Self.padded(stats.months)
     let previousMonths = Self.padded(stats.previousMonths)
+    let afterTax = stats.tax.enabled
     year = stats.year
     hero = Self.makeHero(stats: stats, months: months, previousMonths: previousMonths, today: today)
     metrics = StatsLattice.Metrics(
       hours: months.reduce(0) { $0 + $1.hours },
       shifts: months.reduce(0) { $0 + $1.shifts },
-      perHour: Self.perHour(months)
+      perHour: Self.perHour(months, afterTax: afterTax)
     )
     self.months = Self.makeMonths(
-      year: stats.year, months: months, previousMonths: previousMonths, today: today)
+      year: stats.year, pay: months.map { $0.pay(afterTax: afterTax) },
+      previousPay: previousMonths.map { $0.pay(afterTax: afterTax) }, months: months,
+      today: today)
     employment = StatsLattice.makeEmploymentYear(
       year: stats.year, data: stats.employment, now: now, calendar: calendar)
     currentMonth = stats.year == today.year ? today.month : nil
@@ -67,8 +72,8 @@ extension StatsYearLattice {
   }
 
   /// Pay per paid hour in the primary currency, the rule the month page uses.
-  private static func perHour(_ months: [YearMonthStats]) -> Double? {
-    let pay = months.reduce(0) { $0 + $1.earnings }
+  private static func perHour(_ months: [YearMonthStats], afterTax: Bool) -> Double? {
+    let pay = months.reduce(0) { $0 + $1.pay(afterTax: afterTax) }
     let paidHours = months.reduce(0) { $0 + $1.earningsHours }
     return pay > 0 && paidHours > 0 ? pay / paidHours : nil
   }
@@ -84,9 +89,9 @@ extension StatsYearLattice {
     let net = months.reduce(0) { $0 + $1.earningsNet }
     let qualifier: StatsLattice.Qualifier
     if months.allSatisfy({ $0.shifts == 0 }) {
-      qualifier = .noShifts
+      qualifier = .noShifts(isAhead: stats.year > today.year)
     } else if isAfterTax {
-      qualifier = .taxed(gross: gross, taxPercent: nil)
+      qualifier = .taxed(gross: gross)
     } else {
       qualifier = .untaxed
     }
@@ -95,6 +100,7 @@ extension StatsYearLattice {
       period: .year(stats.year),
       isAfterTax: isAfterTax,
       amount: isAfterTax ? net : gross,
+      earnedSoFar: nil,
       qualifier: qualifier,
       change: change(
         year: stats.year, total: gross,
@@ -119,33 +125,35 @@ extension StatsYearLattice {
     return .percent((total - previousTotal) / previousTotal * 100)
   }
 
+  /// `pay` and `previousPay` hold one amount per month slot in the hero's basis.
   private static func makeMonths(
     year: Int,
+    pay: [Double],
+    previousPay: [Double],
     months: [YearMonthStats],
-    previousMonths: [YearMonthStats],
     today: StatsLattice.Today
   ) -> Months {
-    let best = StatsLattice.bestIndex(months.map(\.earnings))
+    let best = StatsLattice.bestIndex(pay)
     let rows = months.indices.map { index in
       let month = months[index]
       let monthIndex = FocusMonth(year: year, month: month.month).monthIndex
       return MonthRow(
         id: month.month,
-        earnings: month.earnings,
+        earnings: pay[index],
         hours: month.hours,
         shifts: month.shifts,
-        previousEarnings: previousMonths[index].earnings,
+        previousEarnings: previousPay[index],
         isAhead: monthIndex > today.monthIndex,
         isCurrent: monthIndex == today.monthIndex,
         isBest: index == best
       )
     }
-    let peak = (months + previousMonths).map(\.earnings).max() ?? 0
     return Months(
       year: year,
       rows: rows,
-      yMax: StatsLattice.niceCeiling(peak),
-      headline: headline(year: year, rows: rows)
+      yMax: StatsLattice.niceCeiling((pay + previousPay).max() ?? 0),
+      headline: headline(year: year, rows: rows),
+      hasPreviousYear: previousPay.contains { $0 > 0 }
     )
   }
 
@@ -157,5 +165,11 @@ extension StatsYearLattice {
     }
     let paidMonths = rows.filter { $0.earnings > 0 }.count
     return .tied(perPaidMonth: total / Double(paidMonths))
+  }
+}
+
+extension YearMonthStats {
+  func pay(afterTax: Bool) -> Double {
+    afterTax ? earningsNet : earnings
   }
 }

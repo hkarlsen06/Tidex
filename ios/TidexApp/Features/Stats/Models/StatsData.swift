@@ -2,12 +2,15 @@ import Foundation
 
 // MARK: - Stats API Response
 
-/// Stats data from the /api/stats endpoint
-/// Matches the web app's StatsData type from lib/services/stats.ts
+/// One month of Stats. When `tax.enabled` is true, the day amounts, both pace lines and the
+/// year's monthly income are after tax, each month with its own deduction. Otherwise they are
+/// before tax. `currentMonth` and `lastMonth` carry both.
 struct StatsData: Codable, Equatable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order
   let focusMonth: FocusMonth  // swiftlint:disable:this explicit_acl
   let tax: TaxSettings  // swiftlint:disable:this explicit_acl
   let currentMonth: MonthStats  // swiftlint:disable:this explicit_acl
+  /// Pay for the shifts already worked, by Home's rule for "hittil", in the basis `tax` names.
+  let earnedSoFar: Double?  // swiftlint:disable:this explicit_acl
   let currentMonthCurrencyAggregate: JobCurrencyAggregateResolution?  // swiftlint:disable:this explicit_acl
   let lastMonth: MonthStats  // swiftlint:disable:this explicit_acl
   let percentageChange: Double?  // swiftlint:disable:this explicit_acl
@@ -167,7 +170,7 @@ struct MonthlyIncomeData: Codable, Equatable, Identifiable {  // swiftlint:disab
   let fullMonth: String  // Full month name (e.g., "Januar", "Februar") // swiftlint:disable:this explicit_acl
   let year: Int  // Year (e.g., 2026) // swiftlint:disable:this explicit_acl
   let monthNumber: Int  // Month number (1-12) // swiftlint:disable:this explicit_acl
-  let earnings: Double  // Gross earnings for the month // swiftlint:disable:this explicit_acl
+  let earnings: Double  // swiftlint:disable:this explicit_acl
   let hours: Double  // Total hours worked // swiftlint:disable:this explicit_acl
   let shifts: Int  // Number of shifts // swiftlint:disable:this explicit_acl
 
@@ -246,6 +249,7 @@ extension StatsData {  // swiftlint:disable:this no_grouping_extension
         totalHours: 0,
         shiftCount: 0
       ),
+      earnedSoFar: nil,
       currentMonthCurrencyAggregate: nil,
       lastMonth: MonthStats(
         totalEarnings: 0,

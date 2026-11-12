@@ -32,15 +32,18 @@ final class StatsServiceCalendarMathTests: XCTestCase {
 
   func testBestWeekUsesISOWeekNumbers() throws {
     // 1 Jan 2027 is a Friday, so ISO week 1 starts on 4 Jan and 11 Jan is in week 2.
-    let worked = shift(date: "2027-01-11", hours: 8)
+    let worked = [
+      shift(date: "2027-01-05", hours: 8, gross: 400), shift(date: "2027-01-11", hours: 8),
+    ]
     let days = StatsService.buildDayStats(
-      primaryShifts: [worked], includedShifts: [worked], year: 2_027, month: 1)
+      primaryShifts: worked, includedShifts: worked, year: 2_027, month: 1, pay: \.grossPay)
     let empty = StatsData.empty(year: 2_027, month: 1)
     let stats = StatsData(
       focusMonth: empty.focusMonth,
       tax: empty.tax,
       currentMonth: MonthStats(
-        totalEarnings: 1_000, totalEarningsNet: 1_000, totalHours: 8, shiftCount: 1),
+        totalEarnings: 1_400, totalEarningsNet: 1_400, totalHours: 16, shiftCount: 2),
+      earnedSoFar: nil,
       currentMonthCurrencyAggregate: nil,
       lastMonth: empty.lastMonth,
       percentageChange: nil,
@@ -72,7 +75,8 @@ final class StatsServiceCalendarMathTests: XCTestCase {
       targetMonth: 2,
       previousYear: 2_026,
       previousMonth: 1,
-      now: now
+      now: now,
+      pay: \.grossPay
     )
 
     XCTAssertEqual(data.count, 28)
@@ -91,7 +95,8 @@ final class StatsServiceCalendarMathTests: XCTestCase {
       targetMonth: 2,
       previousYear: 2_026,
       previousMonth: 1,
-      now: now
+      now: now,
+      pay: \.grossPay
     )
 
     XCTAssertEqual(try XCTUnwrap(data.last).lastMonth, 300, accuracy: 0.001)

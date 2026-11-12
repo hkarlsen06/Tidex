@@ -46,18 +46,33 @@ final class StatsLatticeTests: XCTestCase {
     XCTAssertEqual(lattice.weeks.rows[5].total, 1_480, accuracy: 0.001)
   }
 
-  func testBestWeekNeedsOneWeekAboveTheRest() throws {
+  func testBestWeekNeedsTwoPaidWeeksAndOneAboveTheRest() throws {
     let now = try date(2_026, 11, 12)
     let clear = try lattice(year: 2_026, month: 9, pay: [1: 500, 9: 900], now: now)
     let tied = try lattice(year: 2_026, month: 9, pay: [1: 900, 9: 900], now: now)
+    let single = try lattice(year: 2_026, month: 9, pay: [9: 900, 10: 400], now: now)
     let unpaid = try lattice(year: 2_026, month: 9, pay: [:], shiftCount: 2, now: now)
 
     XCTAssertEqual(clear.weeks.rows.map(\.isBest), [false, true, false, false, false, false])
     XCTAssertEqual(clear.weeks.headline, .best(week: 37, amount: 900))
     XCTAssertFalse(tied.weeks.rows.contains(where: \.isBest))
-    XCTAssertEqual(tied.weeks.headline, .tied(amount: 900))
+    XCTAssertEqual(tied.weeks.headline, .total(amount: 1_800))
+    // One week with work is not praised as the best week.
+    XCTAssertFalse(single.weeks.rows.contains(where: \.isBest))
+    XCTAssertEqual(single.weeks.headline, .total(amount: 1_300))
     XCTAssertFalse(unpaid.weeks.rows.contains(where: \.isBest))
     XCTAssertEqual(unpaid.weeks.headline, .noPay(FocusMonth(year: 2_026, month: 9)))
+  }
+
+  func testBestDayNeedsOneDayAboveTheRest() throws {
+    let now = try date(2_026, 11, 12)
+    let clear = try lattice(year: 2_026, month: 9, pay: [1: 500, 9: 900], now: now)
+    let tied = try lattice(year: 2_026, month: 9, pay: [1: 900, 9: 900], now: now)
+    let ahead = try lattice(year: 2_026, month: 12, pay: [5: 900, 19: 900], now: now)
+
+    XCTAssertEqual(clear.weeks.readout.bestDay?.day, 9)
+    XCTAssertEqual(tied.weeks.readout, .hint)
+    XCTAssertEqual(ahead.weeks.readout, .hint)
   }
 
   func testFutureMonthIsAllScheduled() throws {
@@ -72,9 +87,31 @@ final class StatsLatticeTests: XCTestCase {
     XCTAssertEqual(marks, [.scheduled(1_000 / 1_500), .scheduled(1)])
     XCTAssertEqual(lattice.pace.focus.solidThrough, 0)
     XCTAssertEqual(lattice.pace.reference, .monthEnd(31))
-    XCTAssertEqual(lattice.pace.headline, .scheduled(2_500))
+    XCTAssertEqual(lattice.pace.headline, .alone)
     XCTAssertEqual(lattice.weeks.headline, .busiestAhead(week: 51))
     XCTAssertFalse(lattice.weeks.rows.contains(where: \.isCurrent))
+    XCTAssertEqual(
+      lattice.weeks.rows.map(\.isPlannedOnly), [true, false, true, false, false, false])
+  }
+
+  func testEmptyMonthSaysWhetherItHasStarted() throws {
+    let now = try date(2_026, 11, 12)
+    let ahead = try lattice(year: 2_027, month: 1, pay: [:], now: now)
+    let past = try lattice(year: 2_026, month: 3, pay: [:], now: now)
+
+    XCTAssertEqual(ahead.hero.qualifier, .noShifts(isAhead: true))
+    XCTAssertEqual(ahead.year.standing, .nothingPlanned)
+    XCTAssertEqual(past.hero.qualifier, .noShifts(isAhead: false))
+    XCTAssertEqual(past.year.standing, .noPayInYear)
+  }
+
+  func testPaceComparesOnlyWhenThePreviousMonthHasPay() throws {
+    let now = try date(2_026, 11, 12)
+    let versus = try lattice(year: 2_026, month: 11, pay: [3: 1_480], previousPay: 900, now: now)
+    let alone = try lattice(year: 2_026, month: 11, pay: [3: 1_480], now: now)
+
+    XCTAssertEqual(versus.pace.headline, .versus(previous: FocusMonth(year: 2_026, month: 10)))
+    XCTAssertEqual(alone.pace.headline, .alone)
   }
 
   func testCurrentWeekCountsItsWorkedDaysSoFar() throws {
@@ -95,6 +132,7 @@ final class StatsLatticeTests: XCTestCase {
       return XCTFail("Saturday 14 November is in the current week")
     }
     XCTAssertEqual(saturday, .scheduled(1))
+    XCTAssertFalse(current.isPlannedOnly)
   }
 
   func testMonthStandsAgainstTheYearsAveragePaidMonth() throws {
@@ -110,6 +148,7 @@ final class StatsLatticeTests: XCTestCase {
     XCTAssertEqual(try standing(11), .againstAverage(0))
     XCTAssertEqual(try standing(5), .noPayInMonth)
     XCTAssertEqual(try standing(5, income: [:]), .noPayInYear)
+    XCTAssertEqual(try standing(12, income: [3: 10_000]), .nothingPlanned)
     // A scheduled month with the year's highest pay is compared, not called the best.
     XCTAssertEqual(
       try standing(12, income: [3: 10_000, 12: 30_000]), .againstAverage(10_000))
@@ -130,7 +169,7 @@ final class StatsLatticeTests: XCTestCase {
   }
 
   private func lattice(
-    year: Int, month: Int, pay: [Int: Double], shiftCount: Int? = nil,
+    year: Int, month: Int, pay: [Int: Double], shiftCount: Int? = nil, previousPay: Double = 0,
     yearlyIncome: [Int: Double]? = nil, now: Date
   ) throws -> StatsLattice {
     let days = (1...Date.daysInMonth(year: year, month: month)).map { day in
@@ -151,8 +190,11 @@ final class StatsLatticeTests: XCTestCase {
       currentMonth: MonthStats(
         totalEarnings: gross, totalEarningsNet: gross, totalHours: Double(pay.count) * 7.5,
         shiftCount: shiftCount ?? pay.count),
+      earnedSoFar: nil,
       currentMonthCurrencyAggregate: nil,
-      lastMonth: MonthStats(totalEarnings: 0, totalEarningsNet: 0, totalHours: 0, shiftCount: 0),
+      lastMonth: MonthStats(
+        totalEarnings: previousPay, totalEarningsNet: previousPay, totalHours: 0,
+        shiftCount: previousPay > 0 ? 1 : 0),
       percentageChange: nil,
       thisMonthCumulative: cumulative,
       days: days,
@@ -164,5 +206,11 @@ final class StatsLatticeTests: XCTestCase {
       }
     )
     return StatsLattice(stats: stats, now: now, calendar: calendar)
+  }
+}
+
+extension StatsLattice.DayReadout {
+  fileprivate var bestDay: DayStats? {
+    if case .bestDay(let day) = self { day } else { nil }
   }
 }

@@ -9,7 +9,7 @@ extension StatsLattice {
     let days = Self.paddedDays(stats.days, dayCount: dayCount)
     self.month = month
     self.phase = phase
-    hero = Self.makeHero(stats: stats, today: today)
+    hero = Self.makeHero(stats: stats, phase: phase, today: today)
     metrics = Self.makeMetrics(stats: stats, days: days)
     pace = Self.makePace(stats: stats, phase: phase, dayCount: dayCount, today: today)
     weeks = Self.makeWeeks(
@@ -47,16 +47,13 @@ extension StatsLattice {
     }
   }
 
-  private static func makeHero(stats: StatsData, today: Today) -> Hero {
+  private static func makeHero(stats: StatsData, phase: Phase, today: Today) -> Hero {
     let gross = stats.currentMonth.totalEarnings
-    let net = stats.currentMonth.totalEarningsNet
     let qualifier: Qualifier
     if stats.currentMonth.shiftCount == 0 {
-      qualifier = .noShifts
+      qualifier = .noShifts(isAhead: phase == .future)
     } else if stats.tax.enabled {
-      // The month's own deduction, which also covers a half-tax month.
-      let percent = gross > 0 ? (1 - net / gross) * 100 : stats.tax.percentage
-      qualifier = .taxed(gross: gross, taxPercent: percent)
+      qualifier = .taxed(gross: gross)
     } else {
       qualifier = .untaxed
     }
@@ -64,7 +61,8 @@ extension StatsLattice {
     return Hero(
       period: .month(stats.focusMonth, showsYear: stats.focusMonth.year != today.year),
       isAfterTax: stats.tax.enabled,
-      amount: stats.tax.enabled ? net : gross,
+      amount: stats.tax.enabled ? stats.currentMonth.totalEarningsNet : gross,
+      earnedSoFar: stats.earnedSoFar,
       qualifier: qualifier,
       change: stats.percentageChange.map(Change.percent) ?? .noPreviousPay,
       otherCurrencies: otherCurrencies(secondary),
@@ -108,7 +106,6 @@ extension StatsLattice {
     case .current(let day): reference = .today(min(day, dayCount))
     case .past, .future: reference = .monthEnd(dayCount)
     }
-    let difference = focusValues[reference.day - 1] - previousValues[reference.day - 1]
     let peak = max(focusValues.max() ?? 0, previousValues.max() ?? 0)
     return Pace(
       month: month,
@@ -120,7 +117,7 @@ extension StatsLattice {
       yMax: niceCeiling(max(peak, 1_000)),
       dayCount: dayCount,
       reference: reference,
-      headline: paceHeadline(stats: stats, phase: phase, difference: difference)
+      headline: stats.lastMonth.totalEarnings > 0 ? .versus(previous: month.previous) : .alone
     )
   }
 
@@ -143,18 +140,6 @@ extension StatsLattice {
     return PaceSeries(
       id: month.monthIndex, role: role, values: values, dayCount: dayCount,
       solidThrough: solidThrough)
-  }
-
-  private static func paceHeadline(stats: StatsData, phase: Phase, difference: Double)
-    -> PaceHeadline
-  {
-    let month = stats.focusMonth
-    let previousPay = stats.lastMonth.totalEarnings
-    if stats.currentMonth.shiftCount == 0, previousPay <= 0 { return .nothing(month) }
-    if phase == .future { return .scheduled(stats.currentMonth.totalEarnings) }
-    if previousPay <= 0 { return .noPreviousPay(month.previous) }
-    if phase == .past { return .ended(difference: difference, previous: month.previous) }
-    return .running(difference: difference, previous: month.previous)
   }
 
   // MARK: Weeks
@@ -192,7 +177,8 @@ extension StatsLattice {
       }
     }
     let totals = cellRows.map { cells in cells.reduce(0) { $0 + ($1.dayStats?.earnings ?? 0) } }
-    let best = bestIndex(totals)
+    // One paid week is not a best week, so the headline does not praise a month with little work.
+    let best = totals.filter { $0 > 0 }.count >= 2 ? bestIndex(totals) : nil
     return cellRows.indices.map { index in
       let monday = calendar.date(byAdding: .day, value: index * 7 - lead, to: firstDay) ?? firstDay
       let cells = cellRows[index]
@@ -205,9 +191,18 @@ extension StatsLattice {
           total + (cell.dayStats.map { $0.shifts + $0.otherCurrencyShifts } ?? 0)
         },
         isCurrent: cells.contains(where: \.isToday),
-        isBest: index == best
+        isBest: index == best,
+        isPlannedOnly: isPlannedOnly(cells)
       )
     }
+  }
+
+  private static func isPlannedOnly(_ cells: [DayCell]) -> Bool {
+    let marks = cells.compactMap { cell -> DayMark? in
+      guard case .day(_, let mark, _) = cell, mark != .empty else { return nil }
+      return mark
+    }
+    return !marks.isEmpty && marks.allSatisfy { if case .scheduled = $0 { true } else { false } }
   }
 
   private static func cell(day: Int, days: [DayStats], biggest: Double, phase: Phase) -> DayCell {
@@ -253,18 +248,16 @@ extension StatsLattice {
       return phase == .future
         ? .busiestAhead(week: best.isoWeek) : .best(week: best.isoWeek, amount: best.total)
     }
-    let top = rows.map(\.total).max() ?? 0
-    return top > 0 ? .tied(amount: top) : .noPay(month)
+    let total = rows.reduce(0) { $0 + $1.total }
+    return total > 0 ? .total(amount: total) : .noPay(month)
   }
 
   private static func readout(days: [DayStats], phase: Phase) -> DayReadout {
     if case .current(let today) = phase, days.indices.contains(today - 1) {
       return .day(days[today - 1])
     }
-    guard let biggest = days.max(by: { $0.earnings < $1.earnings }), biggest.earnings > 0 else {
-      return .hint
-    }
-    return phase == .future ? .biggestDay(biggest) : .bestDay(biggest)
+    guard let biggest = bestIndex(days.map(\.earnings)) else { return .hint }
+    return phase == .future ? .biggestDay(days[biggest]) : .bestDay(days[biggest])
   }
 
   // MARK: Year
@@ -303,6 +296,7 @@ extension StatsLattice {
   /// A month that is only scheduled is never the best, because nothing in it is earned yet.
   private static func standing(_ month: MonthSlot, peak: Double, perPaidMonth: Double?) -> Standing
   {
+    if month.isAhead, month.earnings <= 0 { return .nothingPlanned }
     guard let perPaidMonth else { return .noPayInYear }
     if month.earnings <= 0 { return .noPayInMonth }
     if month.earnings >= peak, !month.isAhead { return .best }

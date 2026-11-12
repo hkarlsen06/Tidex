@@ -47,6 +47,30 @@ final class StatsYearLatticeTests: XCTestCase {
     XCTAssertEqual(lattice.hero.change, .percent(25))
   }
 
+  func testRowsAndPayPerHourUseTheHerosBasis() throws {
+    let lattice = lattice(
+      year: 2_025, pay: [3: 12_500], previousPay: [5: 10_000], netShare: 0.6,
+      previousNetShare: 0.9, now: try date(2_026, 11, 12))
+
+    XCTAssertEqual(lattice.hero.qualifier, .taxed(gross: 12_500))
+    XCTAssertEqual(lattice.months.rows[2].earnings, lattice.hero.amount, accuracy: 0.001)
+    XCTAssertEqual(lattice.months.rows[4].previousEarnings, 9_000, accuracy: 0.001)
+    XCTAssertEqual(lattice.months.headline, .best(month: 3, amount: 7_500))
+    XCTAssertEqual(lattice.metrics.perHour ?? 0, 7_500 / 62.5, accuracy: 0.001)
+    XCTAssertTrue(lattice.months.hasPreviousYear)
+  }
+
+  func testEmptyYearSaysWhetherItHasStarted() throws {
+    let now = try date(2_026, 11, 12)
+    let ahead = lattice(year: 2_027, pay: [:], now: now)
+    let past = lattice(year: 2_024, pay: [:], now: now)
+
+    XCTAssertEqual(ahead.hero.qualifier, .noShifts(isAhead: true))
+    XCTAssertNil(ahead.hero.earnedSoFar)
+    XCTAssertEqual(past.hero.qualifier, .noShifts(isAhead: false))
+    XCTAssertFalse(past.months.hasPreviousYear)
+  }
+
   func testRunningYearComparesTheSameDateLastYear() throws {
     let lattice = lattice(
       year: 2_026, pay: [3: 20_000], previousPay: [3: 10_000],

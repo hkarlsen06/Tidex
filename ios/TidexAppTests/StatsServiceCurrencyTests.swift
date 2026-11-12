@@ -156,8 +156,102 @@ final class StatsServiceCurrencyTests: XCTestCase {
       XCTAssertEqual(year.previousMonths[5].earnings, 1_600, accuracy: 0.01)
     }
   }
+}
 
-  private struct ShiftInput {
+/// Day, week, pace and year amounts against the hero, with tax on.
+@MainActor
+final class StatsServicePayBasisTests: XCTestCase {
+  func testEveryAmountUsesTheHerosBasisWithItsOwnMonthsDeduction() async throws {
+    // The default schedule pays October in November, the half-tax month, so the two months
+    // deduct differently.
+    let shifts = [
+      ShiftInput(job: 0, date: "2025-10-06"),
+      ShiftInput(job: 0, date: "2025-10-14", start: "08:00", end: "12:00"),
+      ShiftInput(job: 0, date: "2025-11-03"),
+      ShiftInput(job: 0, date: "2025-11-17", start: "08:00", end: "12:00"),
+    ]
+    try await withFixture(shifts: shifts, taxPercent: 30, halfTaxMonth: 11) { service, _, _ in
+      let now = Date()
+      let octoberStats = try await service.computeStats(year: 2_025, month: 10)
+      let novemberStats = try await service.computeStats(year: 2_025, month: 11)
+      let yearStats = try await service.computeYearStats(year: 2_025)
+      let october = StatsLattice(stats: octoberStats, now: now, calendar: .gregorianCurrent)
+      let november = StatsLattice(stats: novemberStats, now: now, calendar: .gregorianCurrent)
+      let year = StatsYearLattice(stats: yearStats, now: now, calendar: .gregorianCurrent)
+
+      XCTAssertNotEqual(share(october.hero), share(november.hero), accuracy: 0.001)
+      assertOneBasis(october, other: november, year: year)
+      assertOneBasis(november, other: october, year: year)
+      XCTAssertEqual(
+        november.pace.previous.values[november.pace.dayCount - 1], october.hero.amount,
+        accuracy: 0.01)
+      XCTAssertEqual(year.hero.amount, october.hero.amount + november.hero.amount, accuracy: 0.01)
+    }
+  }
+
+  func testRunningMonthSaysWhatIsEarnedSoFar() async throws {
+    try await withFixture(
+      shifts: [ShiftInput(job: 0, date: "2026-11-03"), ShiftInput(job: 0, date: "2026-11-20")],
+      taxPercent: 30
+    ) { service, _, _ in
+      let now = try XCTUnwrap(
+        Calendar.gregorianCurrent.date(
+          from: DateComponents(year: 2_026, month: 11, day: 12, hour: 12)))
+      let stats = try await service.computeStats(year: 2_026, month: 11, now: now)
+      let hero = StatsLattice(stats: stats, now: now, calendar: .gregorianCurrent).hero
+
+      XCTAssertEqual(hero.amount, 2_240, accuracy: 0.01)
+      XCTAssertEqual(try XCTUnwrap(hero.earnedSoFar), 1_120, accuracy: 0.01)
+    }
+  }
+
+  func testEmptyPeriodsKeepPayAfterTax() async throws {
+    try await withFixture(shifts: [ShiftInput(job: 0, date: "2025-10-06")], taxPercent: 30) {
+      service, _, _ in
+      let now = Date()
+      let month = try await service.computeStats(year: 2_025, month: 12)
+      let year = try await service.computeYearStats(year: 2_024)
+      let monthHero = StatsLattice(stats: month, now: now, calendar: .gregorianCurrent).hero
+      let yearHero = StatsYearLattice(stats: year, now: now, calendar: .gregorianCurrent).hero
+
+      XCTAssertTrue(monthHero.isAfterTax)
+      XCTAssertEqual(monthHero.qualifier, .noShifts(isAhead: false))
+      XCTAssertTrue(yearHero.isAfterTax)
+      XCTAssertEqual(yearHero.qualifier, .noShifts(isAhead: false))
+    }
+  }
+
+  private func share(_ hero: StatsLattice.Hero) -> Double {
+    guard case .taxed(let gross) = hero.qualifier, gross > 0 else { return 1 }
+    return hero.amount / gross
+  }
+
+  /// Days, weeks, the pace line and both year charts add up to the hero's amount after tax.
+  private func assertOneBasis(
+    _ page: StatsLattice, other: StatsLattice, year: StatsYearLattice,
+    line: UInt = #line
+  ) {
+    let amount = page.hero.amount
+    let days = page.weeks.rows.flatMap(\.cells).reduce(0) { $0 + ($1.dayStats?.earnings ?? 0) }
+    XCTAssertTrue(page.hero.isAfterTax, line: line)
+    XCTAssertLessThan(share(page.hero), 1, line: line)
+    XCTAssertEqual(days, amount, accuracy: 0.01, line: line)
+    XCTAssertEqual(page.weeks.rows.reduce(0) { $0 + $1.total }, amount, accuracy: 0.01, line: line)
+    XCTAssertEqual(
+      page.pace.focus.values[page.pace.dayCount - 1], amount, accuracy: 0.01, line: line)
+    XCTAssertEqual(
+      page.year.months[page.month.month - 1].earnings, amount, accuracy: 0.01, line: line)
+    XCTAssertEqual(
+      page.year.months[other.month.month - 1].earnings, other.hero.amount, accuracy: 0.01,
+      line: line)
+    XCTAssertEqual(
+      year.months.rows[page.month.month - 1].earnings, amount, accuracy: 0.01, line: line)
+  }
+}
+
+@MainActor
+extension XCTestCase {
+  fileprivate struct ShiftInput {
     let job: Int
     let date: String
     var start = "08:00"
@@ -165,8 +259,10 @@ final class StatsServiceCurrencyTests: XCTestCase {
   }
 
   // swiftlint:disable:next function_body_length
-  private func withFixture(
+  fileprivate func withFixture(
     shifts: [ShiftInput],
+    taxPercent: Double? = nil,
+    halfTaxMonth: Int? = nil,
     assertions: (StatsService, String, [String]) async throws -> Void
   ) async throws {
     let userId = UUID().uuidString.lowercased()
@@ -174,8 +270,8 @@ final class StatsServiceCurrencyTests: XCTestCase {
     let now = Date()
     var records: [any PersistentModel] = []
     let settings = LocalUserSettings(
-      userId: userId, currency: "kr", serverUpdatedAt: now, serverRevision: 1,
-      lastSyncedSnapshot: Data(), localUpdatedAt: now
+      userId: userId, halfTaxMonth: halfTaxMonth, currency: "kr", serverUpdatedAt: now,
+      serverRevision: 1, lastSyncedSnapshot: Data(), localUpdatedAt: now
     )
     records.append(settings)
     var jobIds: [String] = []
@@ -186,11 +282,13 @@ final class StatsServiceCurrencyTests: XCTestCase {
       records.append(
         LocalJob(
           id: jobId, userId: userId, name: "Job \(index)", currency: currency,
-          isDefault: index == 0, sortOrder: index,
+          isDefault: index == 0, sortOrder: index, halfTaxMonth: halfTaxMonth,
           serverUpdatedAt: now, serverRevision: 1, lastSyncedSnapshot: Data(), localUpdatedAt: now
         ))
       let snapshot = LocalWageSnapshot.from(
-        serverRow: TestFixtures.wageSnapshot(hourlyWage: 200, breakEnabled: false, jobId: jobId),
+        serverRow: TestFixtures.wageSnapshot(
+          hourlyWage: 200, taxEnabled: taxPercent != nil, taxPercentage: taxPercent,
+          breakEnabled: false, jobId: jobId),
         serverUpdatedAt: now, serverRevision: 1, serverDeletedAt: nil, context: context
       )
       snapshot.userId = userId

@@ -102,14 +102,15 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
   ///   - year: Year to compute stats for (defaults to current year)
   ///   - month: Month to compute stats for (defaults to current month)
   ///   - jobId: Optional job filter. Nil aggregates all jobs.
+  ///   - now: The real date, which decides what is earned and what is still scheduled.
   /// - Returns: Computed stats data
   func computeStats(  // swiftlint:disable:this explicit_acl function_body_length type_contents_order
     year: Int? = nil,
     month: Int? = nil,
-    jobId: String? = nil
+    jobId: String? = nil,
+    now: Date = Date()
   ) async throws -> StatsData {
     let calendar = Calendar.gregorianCurrent  // swiftlint:disable:this explicit_type_interface
-    let now = Date()  // swiftlint:disable:this explicit_type_interface
     let targetYear = year ?? calendar.component(.year, from: now)  // swiftlint:disable:this explicit_type_interface
     let targetMonth = month ?? calendar.component(.month, from: now)  // swiftlint:disable:this explicit_type_interface
 
@@ -263,12 +264,25 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
         let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }  // swiftlint:disable:this explicit_type_interface line_length
         let previousHours = previousMonthIncluded.reduce(0) { $0 + $1.paidHours }  // swiftlint:disable:this explicit_type_interface line_length
 
-        // Get tax settings from the primary aggregate bucket.
-        let taxEnabled = currentMonthAggregate.primary.hasTaxEnabled  // swiftlint:disable:this explicit_type_interface
-        let taxPercentage =  // swiftlint:disable:this explicit_type_interface
-          primaryCurrentMonthShifts.first?.taxPercentage
-          ?? currentMonthShifts.first?.taxPercentage
-          ?? 0
+        let primaryYearShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface line_length
+          in: fullYearData.includedShifts,
+          currency: currentMonthAggregate.primary.currency,
+          jobs: jobs,
+          fallbackCurrency: fallbackCurrency
+        )
+        let tax =  // swiftlint:disable:this explicit_type_interface
+          currentMonthIncluded.isEmpty
+          ? Self.emptyPeriodTax(
+            firstDay: Date.firstDayOfMonthDate(year: targetYear, month: targetMonth),
+            yearShifts: primaryYearShifts, snapshots: snapshots, jobs: jobs,
+            jobId: jobId ?? currentMonthAggregate.primary.jobId)
+          : TaxSettings(
+            enabled: currentMonthAggregate.primary.hasTaxEnabled,
+            percentage: primaryCurrentMonthShifts.first?.taxPercentage
+              ?? currentMonthShifts.first?.taxPercentage ?? 0)
+        let pay = { (shift: ShiftWithComputations) in  // swiftlint:disable:this explicit_type_interface
+          Self.pay(of: shift, afterTax: tax.enabled, halfTaxMonth: halfTaxMonth)
+        }
 
         // Same computation as Home, so both screens show the same percentage.
         let percentageChange = MonthlyEarningsChange.percent(  // swiftlint:disable:this explicit_type_interface
@@ -288,14 +302,16 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
           targetMonth: targetMonth,
           previousYear: previousYM.year,
           previousMonth: previousYM.month,
-          now: now
+          now: now,
+          pay: pay
         )
 
         let dayStats = Self.buildDayStats(  // swiftlint:disable:this explicit_type_interface
           primaryShifts: primaryCurrentMonthShifts,
           includedShifts: currentMonthIncluded,
           year: targetYear,
-          month: targetMonth
+          month: targetMonth,
+          pay: pay
         )
 
         // Build employment data for the focus year from shifts that count toward totals
@@ -307,23 +323,22 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
 
         let yearlyIncomeData = Self.buildYearlyIncomeData(  // swiftlint:disable:this explicit_type_interface
           focusYear: targetYear,
-          shifts: JobCurrencyAggregateResolver.shifts(
-            in: fullYearData.includedShifts,
-            currency: currentMonthAggregate.primary.currency,
-            jobs: jobs,
-            fallbackCurrency: fallbackCurrency
-          )
+          shifts: primaryYearShifts,
+          pay: pay
         )
 
         let statsData = StatsData(  // swiftlint:disable:this explicit_type_interface
           focusMonth: FocusMonth(year: targetYear, month: targetMonth),
-          tax: TaxSettings(enabled: taxEnabled, percentage: taxPercentage),
+          tax: tax,
           currentMonth: MonthStats(
             totalEarnings: currentTotals.gross,
             totalEarningsNet: currentTotals.net,
             totalHours: currentHours,
             shiftCount: currentMonthIncluded.count
           ),
+          earnedSoFar: Self.earnedSoFar(
+            currentTotals, afterTax: tax.enabled,
+            plannedShiftCount: currentMonthAggregate.primary.plannedShiftCount),
           currentMonthCurrencyAggregate: currentMonthAggregate,
           lastMonth: MonthStats(
             totalEarnings: previousTotals.gross,
@@ -693,6 +708,45 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
 
   // MARK: - Private Helpers
 
+  /// A shift's pay in the screen's basis. After tax it takes the deduction of the month the shift
+  /// is worked in, as `summarizeShiftTotals` does for a whole month, so the days of a month add
+  /// up to its total and a half-tax month keeps its own deduction.
+  nonisolated static func pay(  // swiftlint:disable:this explicit_acl
+    of shift: ShiftWithComputations, afterTax: Bool, halfTaxMonth: Int?
+  ) -> Double {
+    let parts = shift.shiftDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
+    guard afterTax, parts.count >= 2, let month = Int(parts[1]) else { return shift.grossPay }
+    return PayrollEngine.summarizeShiftTotals(
+      shifts: [shift], excludedShiftIds: [], halfTaxMonth: halfTaxMonth, earningsMonth: month
+    ).net
+  }
+
+  /// Home's rule for "hittil": the pay of the shifts that have ended, while the month also has
+  /// shifts on later days and some pay is already earned.
+  nonisolated static func earnedSoFar(  // swiftlint:disable:this explicit_acl
+    _ totals: ShiftTotals, afterTax: Bool, plannedShiftCount: Int
+  ) -> Double? {
+    let amount = afterTax ? totals.net : totals.gross  // swiftlint:disable:this explicit_type_interface
+    let earned = afterTax ? totals.completedNet : totals.completedGross  // swiftlint:disable:this explicit_type_interface line_length
+    guard plannedShiftCount > 0, earned > 0, earned != amount else { return nil }
+    return earned
+  }
+
+  /// A period without shifts takes the basis of the year's other shifts, or else of the wage
+  /// settings on its first day, so it does not switch to pay before tax for lack of shifts.
+  nonisolated private static func emptyPeriodTax(
+    firstDay: Date,
+    yearShifts: [ShiftWithComputations],
+    snapshots: [WageSnapshot],
+    jobs: [Job],
+    jobId: String?
+  ) -> TaxSettings {
+    let settings = DashboardViewModel.payrollTaxSettings(  // swiftlint:disable:this explicit_type_interface
+      from: yearShifts, fallbackDate: firstDay.toISODateString(), snapshots: snapshots, jobs: jobs,
+      jobId: jobId)
+    return TaxSettings(enabled: settings.enabled, percentage: settings.percentage)
+  }
+
   /// Build cumulative earnings data for the progress chart
   /// - Parameters:
   ///   - currentMonthShifts: Computed shifts for the target month
@@ -702,6 +756,7 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
   ///   - previousYear: Year of previous month
   ///   - previousMonth: Month number (1-12) of previous month
   ///   - now: Current date for determining today/future
+  ///   - pay: A shift's pay in the screen's basis
   /// - Returns: Array of cumulative data for each day of the month
   nonisolated static func buildCumulativeData(  // swiftlint:disable:this cyclomatic_complexity explicit_acl function_body_length function_parameter_count line_length
     currentMonthShifts: [ShiftWithComputations],
@@ -710,7 +765,8 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
     targetMonth: Int,
     previousYear: Int,
     previousMonth: Int,
-    now: Date
+    now: Date,
+    pay: (ShiftWithComputations) -> Double
   ) -> [DailyCumulativeData] {
     let calendar = Calendar.gregorianCurrent  // swiftlint:disable:this explicit_type_interface
 
@@ -751,7 +807,7 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
       // Parse day from shift_date string (YYYY-MM-DD)
       let components = shift.shiftDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
       if components.count >= 3, let day = Int(components[2]) {  // swiftlint:disable:this no_magic_numbers
-        currentMonthEarningsPerDay[day, default: 0] += shift.grossPay
+        currentMonthEarningsPerDay[day, default: 0] += pay(shift)
       }
     }
 
@@ -759,7 +815,7 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
       // Parse day from shift_date string (YYYY-MM-DD)
       let components = shift.shiftDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
       if components.count >= 3, let day = Int(components[2]) {  // swiftlint:disable:this no_magic_numbers
-        previousMonthEarningsPerDay[day, default: 0] += shift.grossPay
+        previousMonthEarningsPerDay[day, default: 0] += pay(shift)
       }
     }
 
@@ -804,7 +860,8 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
     primaryShifts: [ShiftWithComputations],
     includedShifts: [ShiftWithComputations],
     year: Int,
-    month: Int
+    month: Int,
+    pay: (ShiftWithComputations) -> Double
   ) -> [DayStats] {
     let dayCount = Date.daysInMonth(year: year, month: month)  // swiftlint:disable:this explicit_type_interface
     var earnings = [Double](repeating: 0, count: dayCount)  // swiftlint:disable:this explicit_type_interface
@@ -820,7 +877,7 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
 
     for shift in primaryShifts {
       guard let index = dayIndex(of: shift) else { continue }
-      earnings[index] += shift.grossPay
+      earnings[index] += pay(shift)
       hours[index] += shift.paidHours
       primaryCounts[index] += 1
     }
@@ -991,15 +1048,18 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
     }
     let primaryFocus = primary(focus.includedShifts)  // swiftlint:disable:this explicit_type_interface
     let primaryPrevious = primary(previous.includedShifts)  // swiftlint:disable:this explicit_type_interface
-    let taxEnabled = aggregate.primary.hasTaxEnabled  // swiftlint:disable:this explicit_type_interface
 
     return YearStatsData(
       year: focus.year,
-      tax: TaxSettings(
-        enabled: taxEnabled,
-        percentage: primaryFocus.first?.taxPercentage ?? focus.includedShifts.first?.taxPercentage
-          ?? 0
-      ),
+      tax: focus.includedShifts.isEmpty
+        ? emptyPeriodTax(
+          firstDay: Date.firstDayOfMonthDate(year: focus.year, month: 1), yearShifts: [],
+          snapshots: snapshots, jobs: jobs, jobId: aggregate.primary.jobId)
+        : TaxSettings(
+          enabled: aggregate.primary.hasTaxEnabled,
+          percentage: primaryFocus.first?.taxPercentage
+            ?? focus.includedShifts.first?.taxPercentage ?? 0
+        ),
       months: yearMonthStats(
         primary: primaryFocus, included: focus.includedShifts, halfTaxMonth: halfTaxMonth,
         now: now),
@@ -1083,10 +1143,12 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
   /// - Parameters:
   ///   - focusYear: The year to calculate income data for
   ///   - shifts: All computed shifts for the year
+  ///   - pay: A shift's pay in the screen's basis
   /// - Returns: Array of monthly income data for all 12 months
   nonisolated private static func buildYearlyIncomeData(
     focusYear: Int,
-    shifts: [ShiftWithComputations]
+    shifts: [ShiftWithComputations],
+    pay: (ShiftWithComputations) -> Double
   ) -> [MonthlyIncomeData] {
     let (shortMonthNames, fullMonthNames) = Self.monthNames()
 
@@ -1105,7 +1167,7 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
         continue
       }
 
-      monthlyEarnings[month, default: 0] += shift.grossPay
+      monthlyEarnings[month, default: 0] += pay(shift)
       monthlyHours[month, default: 0] += shift.paidHours
       monthlyShiftCounts[month, default: 0] += 1
     }

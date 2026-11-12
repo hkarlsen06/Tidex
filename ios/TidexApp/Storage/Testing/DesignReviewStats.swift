@@ -5,7 +5,8 @@
   /// any day. TIDEX_DESIGN_SCREEN=stats shows a busy current month, stats-empty a past month
   /// without shifts, and stats-february a short month with pay in a second currency.
   /// stats-year shows the running year with tax and scheduled December pay, stats-year-empty a
-  /// year without shifts, and stats-year-past a finished year with a second currency.
+  /// year without shifts for the same taxed user, and stats-year-past a finished year with a
+  /// second currency. Amounts follow the service: after tax wherever tax is on.
   internal struct DesignReviewStats: View {
     let screen: String
 
@@ -73,7 +74,7 @@
         year: 2_026, month: 10, worked: [2, 3, 4, 6, 8, 10, 13, 16, 17, 20, 24, 27])
       return stats(
         FocusMonth(year: 2_026, month: 11), days: november, previous: october,
-        taxPercent: 15, year: year2026)
+        taxPercent: 15, year: year2026, earnedBefore: 12)
     }
 
     private static var emptyMarch: StatsData {
@@ -131,36 +132,45 @@
       }
     }
 
+    /// `days` and `previous` hold pay before tax. `earnedBefore` makes the shifts before that
+    /// day the ones already worked, with later shifts still scheduled.
     private static func stats(
       _ month: FocusMonth,
-      days: [DayStats],
-      previous: [DayStats],
+      days grossDays: [DayStats],
+      previous grossPrevious: [DayStats],
       taxPercent: Double?,
       year: YearFixture,
-      aggregate: JobCurrencyAggregateResolution? = nil
+      aggregate: JobCurrencyAggregateResolution? = nil,
+      earnedBefore: Int? = nil
     ) -> StatsData {
-      let gross = days.reduce(0) { $0 + $1.earnings }
-      let previousGross = previous.reduce(0) { $0 + $1.earnings }
-      let net = taxPercent.map { gross * (1 - $0 / 100) } ?? gross
+      let share = 1 - (taxPercent ?? 0) / 100
+      let days = grossDays.map { $0.scaled(by: share) }
+      let previous = grossPrevious.map { $0.scaled(by: share) }
+      let gross = grossDays.reduce(0) { $0 + $1.earnings }
+      let previousGross = grossPrevious.reduce(0) { $0 + $1.earnings }
       var pay = year.pay
       pay[month.month - 1] = gross
+      let earned = earnedBefore.map { day in
+        days.filter { $0.day < day }.reduce(0) { $0 + $1.earnings }
+      }
       return StatsData(
         focusMonth: month,
         tax: TaxSettings(enabled: taxPercent != nil, percentage: taxPercent ?? 0),
         currentMonth: MonthStats(
-          totalEarnings: gross, totalEarningsNet: net,
+          totalEarnings: gross, totalEarningsNet: gross * share,
           totalHours: days.reduce(0) { $0 + $1.hours },
           shiftCount: days.reduce(0) { $0 + $1.shifts + $1.otherCurrencyShifts }),
+        earnedSoFar: earned,
         currentMonthCurrencyAggregate: aggregate,
         lastMonth: MonthStats(
-          totalEarnings: previousGross, totalEarningsNet: previousGross,
+          totalEarnings: previousGross, totalEarningsNet: previousGross * share,
           totalHours: previous.reduce(0) { $0 + $1.hours },
           shiftCount: previous.reduce(0) { $0 + $1.shifts }),
         percentageChange: previousGross > 0 ? (gross - previousGross) / previousGross * 100 : nil,
         thisMonthCumulative: cumulative(month, days: days, previous: previous),
         days: days,
         employment: employmentData(year: month.year, percentages: year.employment),
-        yearlyIncome: yearlyIncome(year: month.year, pay: pay)
+        yearlyIncome: yearlyIncome(year: month.year, pay: pay.map { $0 * share })
       )
     }
 
@@ -235,7 +245,7 @@
     private static var emptyYear: YearStatsData {
       YearStatsData(
         year: 2_024,
-        tax: TaxSettings(enabled: false, percentage: 0),
+        tax: TaxSettings(enabled: true, percentage: 15),
         months: yearMonths(Array(repeating: 0, count: 12)),
         previousMonths: yearMonths(Array(repeating: 0, count: 12)),
         currencyAggregate: nil,
@@ -283,6 +293,14 @@
         key: "design-review|\(currency)", jobId: "design-review", jobName: "Weekend job",
         currency: currency, grossAmount: amount, netAmount: amount, displayAmount: amount,
         shiftCount: 1, completedShiftCount: 1, plannedShiftCount: 0, hasTaxEnabled: false)
+    }
+  }
+
+  extension DayStats {
+    fileprivate func scaled(by share: Double) -> DayStats {
+      DayStats(
+        day: day, earnings: earnings * share, hours: hours, shifts: shifts,
+        otherCurrencyShifts: otherCurrencyShifts)
     }
   }
 #endif

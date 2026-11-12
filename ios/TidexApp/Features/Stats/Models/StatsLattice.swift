@@ -3,6 +3,9 @@ import Foundation
 /// The Stats screen for one month, padded to slots that never change in number: 31 days,
 /// 6 week rows of 7 days and 12 months. Views fill the slots and never branch on whether data
 /// exists, so a month change swaps values in place and moves nothing.
+///
+/// Every amount is in the hero's basis: after tax when `hero.isAfterTax` is true, before tax
+/// otherwise. Views never convert.
 struct StatsLattice: Equatable {
   static let daySlots: Int = 31
   static let weekRows: Int = 6
@@ -15,9 +18,11 @@ struct StatsLattice: Equatable {
   }
 
   enum Qualifier: Equatable {
-    case noShifts
-    /// A year leaves out the percent, because the deduction can differ between its months.
-    case taxed(gross: Double, taxPercent: Double?)
+    /// No shifts in the period. `isAhead` is true when the period has not started yet, so
+    /// shifts are only not planned yet.
+    case noShifts(isAhead: Bool)
+    /// Pay before tax, shown beside an amount after tax.
+    case taxed(gross: Double)
     case untaxed
   }
 
@@ -47,6 +52,9 @@ struct StatsLattice: Equatable {
     let period: Period
     let isAfterTax: Bool
     let amount: Double
+    /// Pay for the shifts already worked, in the hero's basis. Set only for the running month
+    /// when it also has shifts that are still scheduled, so `amount` is more than what is earned.
+    let earnedSoFar: Double?
     let qualifier: Qualifier
     let change: Change
     let otherCurrencies: OtherCurrencies
@@ -56,7 +64,7 @@ struct StatsLattice: Equatable {
   struct Metrics: Equatable {
     let hours: Double
     let shifts: Int
-    /// Pay per paid hour in the primary currency, nil without paid hours.
+    /// Pay per paid hour in the primary currency and the hero's basis, nil without paid hours.
     let perHour: Double?
   }
 
@@ -90,13 +98,10 @@ struct StatsLattice: Equatable {
   }
 
   enum PaceHeadline: Equatable {
-    case nothing(FocusMonth)
-    case scheduled(Double)
-    case noPreviousPay(FocusMonth)
-    /// The current month against the previous month on the same day. Positive is ahead.
-    case running(difference: Double, previous: FocusMonth)
-    /// A finished month against the previous month. Positive is above.
-    case ended(difference: Double, previous: FocusMonth)
+    /// The month is drawn beside the month before.
+    case versus(previous: FocusMonth)
+    /// The month before has no pay, so the month is drawn alone.
+    case alone
   }
 
   struct Pace: Equatable {
@@ -132,17 +137,23 @@ struct StatsLattice: Equatable {
     let shiftCount: Int
     let isCurrent: Bool
     let isBest: Bool
+    /// The row has shifts and all of them are still scheduled.
+    let isPlannedOnly: Bool
   }
 
   enum WeeksHeadline: Equatable {
     case noShifts(FocusMonth)
     case noPay(FocusMonth)
     case soFar(amount: Double, week: Int)
+    /// Only when at least two weeks have pay and one is strictly highest.
     case best(week: Int, amount: Double)
+    /// Same rule as `best`, for a month that has not started.
     case busiestAhead(week: Int)
-    case tied(amount: Double)
+    /// No single week stands out, so the sentence gives the month's pay.
+    case total(amount: Double)
   }
 
+  /// `bestDay` and `biggestDay` only when one day is strictly highest. Otherwise `hint`.
   enum DayReadout: Equatable {
     case day(DayStats)
     case bestDay(DayStats)
@@ -194,6 +205,8 @@ struct StatsLattice: Equatable {
   enum Standing: Equatable {
     case noPayInYear
     case noPayInMonth
+    /// The month has not started and has no pay planned.
+    case nothingPlanned
     /// The highest pay of the year so far, alone or tied.
     case best
     /// Pay minus the year's average paid month. Positive is above.
