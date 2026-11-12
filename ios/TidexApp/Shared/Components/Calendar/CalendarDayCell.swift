@@ -136,7 +136,6 @@ struct CalendarDayCell<Content: View>: View {
   private let todayBadgeOverlayColor: Color = .tidexBlue.opacity(0.18)
   private let stackedMetricSpacing: CGFloat = -3
   private let eventIndicatorHorizontalInset: CGFloat = Spacing.sm
-  private let eventIndicatorBottomInset: CGFloat = 3
   private let eventIndicatorHeight: CGFloat = 2
   private let eventIndicatorSegmentSpacing: CGFloat = 3
   private let beforeTaxFontScale: CGFloat = 0.8
@@ -244,7 +243,6 @@ struct CalendarDayCell<Content: View>: View {
         }
         .frame(height: eventIndicatorHeight)
         .padding(.horizontal, eventIndicatorHorizontalInset)
-        .padding(.bottom, eventIndicatorBottomInset)
       }
     }
     .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
