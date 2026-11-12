@@ -144,6 +144,12 @@ struct StatsPaceSection: View {
     if case .today = pace.reference { true } else { false }
   }
 
+  /// At rest in a finished or future month the values are the month's totals, and the last day's
+  /// date beside them explains nothing. The date shows for today and for a day being read.
+  private var showsReadoutDate: Bool {
+    isTodayReference || scrubbedDay != nil || voiceOverDay != nil
+  }
+
   private var readoutDate: String {
     let date = StatsFormat.dayAndMonth(pace.month, day: readoutDay)
     guard case .today(let today) = pace.reference, today == readoutDay else { return date }
@@ -159,6 +165,7 @@ struct StatsPaceSection: View {
       Text(readoutDate)
         .monospacedDigit()
         .frame(maxWidth: .infinity, alignment: .leading)
+        .opacity(showsReadoutDate ? 1 : 0)
       HStack(spacing: Spacing.xs) {
         StatsPaceSwatch(isFocus: true)
         Text(swatchText(pace.month, value: pace.focus.values[readoutDay - 1]))
