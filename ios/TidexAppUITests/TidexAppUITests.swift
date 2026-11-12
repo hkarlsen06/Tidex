@@ -534,7 +534,12 @@ final class TidexAppUITests: XCTestCase {
     app.buttons["Stats"].tap()
     XCTAssertTrue(app.buttons["BackButton"].waitForExistence(timeout: defaultTimeout))
     XCTAssertTrue(earnings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    XCTAssertTrue(text(containingLabel: "+17% vs previous month", in: app).exists)
+    // Stats names the previous month where Home says "previous month".
+    let previousMonth = Calendar(identifier: .gregorian).date(byAdding: .month, value: -1, to: .now)
+    let previousMonthName = (previousMonth ?? .now).formatted(
+      .dateTime.month(.wide).locale(Locale(identifier: "en_US")))
+    XCTAssertTrue(
+      text(containingLabel: "+17% vs \(previousMonthName)", in: app).exists, app.debugDescription)
     attachAppStoreScreenshot(app, name: "money-02-stats")
 
     app.buttons["BackButton"].tap()
