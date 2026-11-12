@@ -543,10 +543,6 @@ internal final class AddShiftViewModel {
 
   /// Handle the add action triggered from tab bar
   private func handleTabBarAddTrigger() {
-    // Haptic feedback
-    let generator = UIImpactFeedbackGenerator(style: .medium)
-    generator.impactOccurred()
-
     switch mode {
     case .single:
       Task {
