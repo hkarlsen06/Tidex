@@ -241,6 +241,10 @@ if [ "$EXIT_CODE" -eq 0 ]; then
     -resultBundlePath "$RESULT_BUNDLE"
     -project "$PROJECT_PATH"
     -scheme "$SCHEME_NAME"
+    # A hung test fails after five minutes instead of holding the simulator lock.
+    # The slowest UI test takes about 110 seconds.
+    -test-timeouts-enabled YES
+    -default-test-execution-time-allowance 300
     test-without-building
     ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
   )

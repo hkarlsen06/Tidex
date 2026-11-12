@@ -349,6 +349,8 @@ final class TidexAppUITests: XCTestCase {
   /// With several simulators listed in TIDEX_SCREENSHOT_SHARDS, each takes every nth locale.
   @MainActor
   func testAppStoreScreenshots() {
+    // All 32 locales run in this one test, about 50 seconds each, so the test wrapper's five-minute limit is too short.
+    executionTimeAllowance = 3_600
     let environment = ProcessInfo.processInfo.environment
     let selected = environment["TIDEX_SCREENSHOT_LOCALES"]?.split(separator: ",").map(String.init)
     let shards =
