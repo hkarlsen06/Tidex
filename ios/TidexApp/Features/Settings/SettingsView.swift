@@ -119,6 +119,7 @@ struct SettingsView: View {
     case security
     case notifications
     case appearance
+    case siriAndWidgets
     case pay(jobId: String?)
     case recurringShifts
     case calendarSync(calendarSetupIntent: CalendarSubscriptionSetupIntent? = nil)
@@ -296,6 +297,9 @@ extension SettingsView {
     case .appearance:
       AppearanceSettingsView()
 
+    case .siriAndWidgets:
+      SiriAndWidgetsSettingsView()
+
     case .pay(let jobId):
       PaySettingsView(initialJobId: jobId)
 
@@ -379,6 +383,11 @@ extension SettingsView {
       NavigationLink(value: SettingsDestination.appearance) {
         Label(String(localized: .settingsMenuAppearanceLabel), systemImage: "paintpalette")
       }
+
+      NavigationLink(value: SettingsDestination.siriAndWidgets) {
+        Label(String(localized: .settingsMenuSiriWidgetsLabel), systemImage: "apps.iphone")
+      }
+      .accessibilityIdentifier("settings.siri-widgets")
     }
   }
 
