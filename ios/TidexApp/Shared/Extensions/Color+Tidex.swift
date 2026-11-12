@@ -39,9 +39,20 @@ extension Color {
 
   // tidexPurple comes from the TidexPurple color asset (light #6239BF, dark #A58CDD).
 
-  /// Employment analytics accent - green with stronger contrast on dark chart surfaces.
+  /// Employment analytics accent - a muted violet, apart from the pay blue and from the green
+  /// and red that read as good and bad. Text AA on the background in both modes.
+  /// Light: #5B3FA0. Dark: #B9A6EC.
   static var tidexEmploymentAccent: Color {
-    tidexSuccess
+    Color(
+      UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+          return UIColor(red: 0.725, green: 0.651, blue: 0.925, alpha: 1)
+
+        default:
+          return UIColor(red: 0.357, green: 0.247, blue: 0.627, alpha: 1)
+        }
+      })
   }
 
   /// Decorative dividers; use tidexBorder for input and control boundaries.
