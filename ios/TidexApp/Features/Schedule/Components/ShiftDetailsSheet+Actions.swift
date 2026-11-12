@@ -49,33 +49,15 @@ extension ShiftDetailsSheet {
     .buttonStyle(.plain)
   }
 
-  /// Action buttons for view mode
-  var viewModeActionButtons: some View {
-    VStack(spacing: Spacing.sm) {
-      // Edit button (only show if onUpdate callback is provided)
-      if onUpdate != nil {
-        DetailSheetActionButton(
-          title: String(localized: .shiftsEditButton),
-          systemImage: "pencil",
-          style: .primary
-        ) {
-          withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
-            isEditing = true
-          }
-        }
-      }
-
-      if canStopRecurring {
-        DetailSheetActionButton(
-          title: String(localized: .shiftsRecurringStopAfterDateButton),
-          systemImage: "calendar.badge.minus",
-          style: .secondary
-        ) {
-          showingStopRecurringConfirmation = true
-        }
-        .disabled(isStoppingRecurringAfterDate)
-      }
+  var stopRecurringButton: some View {
+    DetailSheetActionButton(
+      title: String(localized: .shiftsRecurringStopAfterDateButton),
+      systemImage: "calendar.badge.minus",
+      style: .secondary
+    ) {
+      showingStopRecurringConfirmation = true
     }
+    .disabled(isStoppingRecurringAfterDate)
   }
 
   /// The parts that add up to the headline pay. The total itself lives in the header.

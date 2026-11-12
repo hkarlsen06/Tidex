@@ -444,10 +444,6 @@ extension ShiftDetailsSheet {
     showsEarningsDetails && (showsPayBreakdownCard || shift.calculationContext != nil)
   }
 
-  private var shouldShowViewModeActionButtons: Bool {
-    onUpdate != nil || canStopRecurring
-  }
-
   @ViewBuilder
   var viewModeSections: some View {
     if shouldShowNoteSection {
@@ -462,8 +458,8 @@ extension ShiftDetailsSheet {
       detailRowsSection
     }
 
-    if shouldShowViewModeActionButtons {
-      viewModeActionButtons
+    if canStopRecurring {
+      stopRecurringButton
     }
 
     // Added/edited timestamps (only for non-virtual shifts)

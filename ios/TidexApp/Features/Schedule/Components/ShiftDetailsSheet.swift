@@ -705,23 +705,26 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   }
 
   @ViewBuilder
-  private var shareAndDeleteButtons: some View {
-    Button {
-      impactHaptic.impactOccurred()
-      if canSendShiftSnapshots {
-        showingShareDestinationPicker = true
-      } else {
-        showingImageShareOptions = true
+  private var viewModeToolbarButtons: some View {
+    if onUpdate != nil {
+      Button {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
+          isEditing = true
+        }
+      } label: {
+        Image(systemName: "pencil")
+          .font(.tidexBodyMedium)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
-    } label: {
-      Image(systemName: "square.and.arrow.up")
-        .font(.tidexBodyMedium)
-        .foregroundStyle(Color.tidexTextPrimary)
-        .accessibilityLabel(Text(.shiftsShareTitle))
+      .accessibilityLabel(Text(.shiftsEditButton))
+      .accessibilityIdentifier("shift-details.edit")
     }
 
     if let onStartShiftOperation {
       Menu {
+        Button(action: share) {
+          Label(String(localized: .shiftsShareTitle), systemImage: "square.and.arrow.up")
+        }
         Button {
           onStartShiftOperation(.copy)
         } label: {
@@ -744,6 +747,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       }
       .accessibilityLabel(Text(.shiftsDetailsMore))
       .accessibilityIdentifier("shift-details.more")
+    } else {
+      Button(action: share) {
+        Image(systemName: "square.and.arrow.up")
+          .font(.tidexBodyMedium)
+          .foregroundStyle(Color.tidexTextPrimary)
+          .accessibilityLabel(Text(.shiftsShareTitle))
+      }
     }
 
     if let onDelete {
@@ -764,6 +774,15 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     }
   }
 
+  private func share() {
+    impactHaptic.impactOccurred()
+    if canSendShiftSnapshots {
+      showingShareDestinationPicker = true
+    } else {
+      showingImageShareOptions = true
+    }
+  }
+
   @ToolbarContentBuilder
   private var toolbarContent: some ToolbarContent {
     ToolbarItemGroup(placement: .topBarLeading) {
@@ -774,7 +793,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         .font(.tidexBodyMedium)
         .foregroundStyle(Color.tidexTextSecondary)
       } else {
-        shareAndDeleteButtons
+        viewModeToolbarButtons
       }
     }
     ToolbarItem(placement: .topBarTrailing) {
