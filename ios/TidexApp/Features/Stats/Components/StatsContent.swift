@@ -11,6 +11,7 @@ struct StatsContent: View {
 
   let page: Page
   let onSelectMonth: (FocusMonth) -> Void
+  var isExporting: Bool = false
   let onExport: () -> Void
   var onScrubbingChange: (Bool) -> Void = { _ in }
 
@@ -39,7 +40,7 @@ struct StatsContent: View {
         )
         .padding(.top, StatsRhythm.section)
       }
-      StatsExportRow(action: onExport)
+      StatsExportRow(period: exportPeriod, isExporting: isExporting, action: onExport)
         .padding(.top, StatsRhythm.section)
     }
     .animation(
@@ -50,6 +51,14 @@ struct StatsContent: View {
     switch page {
     case .month(let lattice): lattice.hero
     case .year(let lattice): lattice.hero
+    }
+  }
+
+  /// What the export row downloads: the month or the year on screen.
+  private var exportPeriod: String {
+    switch hero.period {
+    case .month(let month, _): StatsFormat.monthName(month, withYear: true)
+    case .year(let year): String(year)
     }
   }
 
@@ -76,17 +85,24 @@ extension View {
 }
 
 private struct StatsExportRow: View {
+  let period: String
+  let isExporting: Bool
   let action: () -> Void
+
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     Button(action: action) {
       HStack(spacing: Spacing.sm) {
-        Text(.dataExportPdfButton)
-          .font(.tidexBodyMedium)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        Image(systemName: "square.and.arrow.up")
-          .font(.tidexBody)
-          .accessibilityHidden(true)
+        labels
+        ZStack {
+          ProgressView()
+            .opacity(isExporting ? 1 : 0)
+          Image(systemName: "square.and.arrow.up")
+            .font(.tidexBody)
+            .opacity(isExporting ? 0 : 1)
+        }
+        .accessibilityHidden(true)
       }
       .foregroundStyle(Color.tidexBlueText)
       .padding(.vertical, Spacing.mlg)
@@ -94,6 +110,39 @@ private struct StatsExportRow: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .disabled(isExporting)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(.dataExportPdfButton))
+    .accessibilityValue(Text(period))
+    .accessibilityAddTraits(.isButton)
     .accessibilityIdentifier("stats.export")
   }
+
+  /// Side by side, or stacked at accessibility sizes where both don't fit on a line.
+  private var labels: some View {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.micro))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+    return layout {
+      Text(.dataExportPdfButton)
+        .font(.tidexBodyMedium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      Text(period)
+        .font(.tidexSubheadline)
+        .foregroundStyle(Color.tidexTextSecondary)
+        .lineLimit(1)
+    }
+  }
+}
+
+/// The system share sheet for a file made on demand, which `ShareLink` can't present.
+struct StatsShareSheet: UIViewControllerRepresentable {
+  let url: URL
+
+  func makeUIViewController(context: Context) -> UIActivityViewController {
+    UIActivityViewController(activityItems: [url], applicationActivities: nil)
+  }
+
+  func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }

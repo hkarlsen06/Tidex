@@ -13,6 +13,18 @@ internal final class DataExportTests: XCTestCase {
     XCTAssertEqual(DataSettingsViewModel.shiftType(dateISO: "2026-05-13"), 0)
   }
 
+  @MainActor
+  internal func testStatsExportCoversTheWholeMonthOrYear() {
+    let leapFebruary: (from: String, to: String) = DataSettingsViewModel.dateRange(
+      year: 2_028, month: 2)
+    let year: (from: String, to: String) = DataSettingsViewModel.dateRange(year: 2_026, month: nil)
+
+    XCTAssertEqual(leapFebruary.from, "2028-02-01")
+    XCTAssertEqual(leapFebruary.to, "2028-02-29")
+    XCTAssertEqual(year.from, "2026-01-01")
+    XCTAssertEqual(year.to, "2026-12-31")
+  }
+
   internal func testCSVIncludesJobColumn() throws {
     let shift: ExportedShift = ExportedShift(
       id: "shift-1",
@@ -78,7 +90,8 @@ internal final class DataExportTests: XCTestCase {
         )
       }
     }
-    let data: ExportResponse = ExportResponse(generatedAt: Date(), currencySymbol: "kr", shifts: shifts)
+    let data: ExportResponse = ExportResponse(
+      generatedAt: Date(), currencySymbol: "kr", shifts: shifts)
 
     let url: URL = try DataSettingsViewModel.generatePDF(
       from: data,

@@ -190,7 +190,31 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
 
   /// Export shifts in the specified format
   func exportShifts(format: ExportFormat, locale: Locale) async {
-    guard let range = resolvedDateRange, let userId else {
+    guard let range = resolvedDateRange else {
+      return
+    }
+    await exportShifts(format: format, range: range, locale: locale)
+  }
+
+  /// The whole month, or the whole year when `month` is nil.
+  static func dateRange(year: Int, month: Int?) -> (from: String, to: String) {
+    let lastMonth = month ?? 12  // swiftlint:disable:this no_magic_numbers
+    return (
+      String(format: "%04d-%02d-01", year, month ?? 1),
+      String(
+        format: "%04d-%02d-%02d", year, lastMonth, Date.daysInMonth(year: year, month: lastMonth))
+    )
+  }
+
+  /// Exports one range, whatever preset is selected. Stats exports the month or year on screen
+  /// this way, without opening this screen first.
+  func exportShifts(
+    format: ExportFormat, range: (from: String, to: String), locale: Locale
+  ) async {
+    if userId == nil {
+      userId = await resolveUserIdForLocalData()
+    }
+    guard let userId else {
       return
     }
 
@@ -1008,6 +1032,10 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
       return "\(range.from) – \(range.to)"
     }
 
+    if let year = wholeYear(from: fromDate, to: toDate) {
+      return String(year)
+    }
+
     let calendar = Calendar.gregorianCurrent
     let startsOnFirst = calendar.component(.day, from: fromDate) == 1
     let endsOnLast =
@@ -1023,6 +1051,18 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     let dateFormat = Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale)
       .calendar(.gregorian)
     return "\(fromDate.formatted(dateFormat)) – \(toDate.formatted(dateFormat))"
+  }
+
+  /// The year when the range runs from 1 January to 31 December of one year.
+  private nonisolated static func wholeYear(from fromDate: Date, to toDate: Date) -> Int? {
+    let calendar = Calendar.gregorianCurrent
+    let from = calendar.dateComponents([.year, .month, .day], from: fromDate)
+    let to = calendar.dateComponents([.year, .month, .day], from: toDate)
+    // swiftlint:disable:next no_magic_numbers
+    guard from.year == to.year, from.month == 1, from.day == 1, to.month == 12, to.day == 31 else {
+      return nil
+    }
+    return from.year
   }
 
   /// Existing summary labels end with a colon. Headings and card labels read better without it.
@@ -1144,6 +1184,11 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
       let toDate = Date.fromISODateString(range.to)
     else {
       return "\(prefix)_export.\(ext)"
+    }
+
+    if let year = wholeYear(from: fromDate, to: toDate) {
+      // Full year: ola-nordmann_2026.pdf
+      return "\(prefix)_\(year).\(ext)"
     }
 
     let calendar = Calendar.gregorianCurrent

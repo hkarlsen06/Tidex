@@ -15,7 +15,9 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 
   @State private var viewModel = StatsViewModel()  // swiftlint:disable:this explicit_type_interface
   @State private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()  // swiftlint:disable:this explicit_type_interface line_length
-  @State private var showExportSettings = false  // swiftlint:disable:this explicit_type_interface
+  /// Makes the PDF for the month or year on screen.
+  @State private var exporter = DataSettingsViewModel()  // swiftlint:disable:this explicit_type_interface
+  @State private var exportedFile: ExportedFile?
   /// True while a finger scrubs the pace chart, so the drag cannot also change month.
   @State private var isScrubbing = false  // swiftlint:disable:this explicit_type_interface
   /// False only for a user with no shifts at all, who sees one add-shift action instead of empty charts.
@@ -93,10 +95,19 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         .addShiftRoute(on: .stats, path: $addShiftPath)
         .adaptiveToolbarTransaction()
     }
-    .sheet(isPresented: $showExportSettings) {
-      SettingsView(initialDestination: .data)
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+    .sheet(item: $exportedFile) { file in
+      StatsShareSheet(url: file.url)
+        .presentationDetents([.medium, .large])
+    }
+    .alert(
+      Text(.commonError),
+      isPresented: Binding(
+        get: { exporter.errorMessage != nil },
+        set: { if !$0 { exporter.clearError() } })
+    ) {
+      Button(String(localized: .commonOk), role: .cancel) {}
+    } message: {
+      Text(exporter.errorMessage ?? "")
     }
     .onChange(of: isSelected, initial: true) { _, selected in
       viewModel.setOnScreen(selected)
@@ -236,6 +247,15 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     }
   }
 
+  private func exportDisplayedPeriod() {
+    let range: (from: String, to: String) = DataSettingsViewModel.dateRange(
+      year: viewModel.displayYear, month: period == .month ? viewModel.displayMonth : nil)
+    Task {
+      await exporter.exportShifts(format: .pdf, range: range, locale: Locale.current)
+      exportedFile = exporter.shareURL.map(ExportedFile.init)
+    }
+  }
+
   private var statsContent: some View {
     ScrollView {
       StatsContent(
@@ -244,7 +264,8 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
           viewModel.goToMonth(year: month.year, month: month.month)
           period = .month
         },
-        onExport: { showExportSettings = true },
+        isExporting: exporter.isExportingPdf,
+        onExport: exportDisplayedPeriod,
         onScrubbingChange: { isScrubbing = $0 }
       )
       .statsContentFrame()
@@ -399,4 +420,10 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 #Preview {
   StatsView(isSelected: true, period: .constant(.month))
     .environment(AppCoordinator.shared)
+}
+
+private struct ExportedFile: Identifiable {
+  let url: URL
+
+  var id: URL { url }
 }
