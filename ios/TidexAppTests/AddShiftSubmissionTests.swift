@@ -42,6 +42,7 @@ final class AddShiftSubmissionTests: XCTestCase {
     do {
       try await model.saveSelectedSingleShifts { date in
         let iso = date.toISODateString()
+        XCTAssertEqual(model.selectedDates, Set(dates), "No day clears before the save ends")
         if iso == dates[1] {
           throw SaveFailure.unavailable
         }
