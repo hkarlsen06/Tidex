@@ -174,6 +174,64 @@ struct MonthlyIncomeData: Codable, Equatable, Identifiable {  // swiftlint:disab
   var id: String { "\(year)-\(monthNumber)" }  // swiftlint:disable:this explicit_acl
 }
 
+// MARK: - Year
+
+/// One year of Stats. Pay counts the currency that earns the most in the focus year, and the
+/// previous year uses that currency too.
+struct YearStatsData: Codable, Equatable {
+  let year: Int
+  /// `enabled` comes from the year's primary currency.
+  let tax: TaxSettings
+  /// Exactly 12, January first.
+  let months: [YearMonthStats]
+  /// The 12 months of the year before.
+  let previousMonths: [YearMonthStats]
+  /// Resolved over the focus year.
+  let currencyAggregate: JobCurrencyAggregateResolution?
+  /// Shown-basis pay through today for the running year, and through the same date a year
+  /// earlier. Nil for any other year.
+  let toDate: YearToDate?
+  let employment: EmploymentData?
+
+  static func empty(year: Int) -> YearStatsData {
+    let months = (1...12).map(YearMonthStats.empty)
+    return YearStatsData(
+      year: year,
+      tax: TaxSettings(enabled: false, percentage: 0),
+      months: months,
+      previousMonths: months,
+      currencyAggregate: nil,
+      toDate: nil,
+      employment: nil
+    )
+  }
+}
+
+/// Earnings count the primary currency. Hours and shifts count every currency, like the month
+/// page's metrics.
+struct YearMonthStats: Codable, Equatable, Identifiable {
+  /// 1...12.
+  let month: Int
+  let earnings: Double
+  let earningsNet: Double
+  /// The paid hours behind `earnings`, which per-hour pay divides by.
+  let earningsHours: Double
+  let hours: Double
+  let shifts: Int
+
+  var id: Int { month }
+
+  static func empty(month: Int) -> YearMonthStats {
+    YearMonthStats(month: month, earnings: 0, earningsNet: 0, earningsHours: 0, hours: 0, shifts: 0)
+  }
+}
+
+/// Net pay when tax is on, else gross.
+struct YearToDate: Codable, Equatable {
+  let focus: Double
+  let previous: Double
+}
+
 // MARK: - Preview Data
 
 extension StatsData {  // swiftlint:disable:this no_grouping_extension

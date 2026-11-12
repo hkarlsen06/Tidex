@@ -97,6 +97,69 @@ final class StatsServiceCalendarMathTests: XCTestCase {
     XCTAssertEqual(try XCTUnwrap(data.last).lastMonth, 300, accuracy: 0.001)
   }
 
+  func testYearToDateStopsAtTheSameDateLastYear() throws {
+    let data = try yearStats(
+      focus: [("2026-01-10", 1_000), ("2026-03-15", 500), ("2026-03-16", 700)],
+      previous: [("2025-02-01", 400), ("2025-03-15", 300), ("2025-03-16", 900)],
+      now: noon(2_026, 3, 15)
+    )
+    let toDate = try XCTUnwrap(data.toDate)
+
+    XCTAssertEqual(toDate.focus, 1_500, accuracy: 0.001)
+    XCTAssertEqual(toDate.previous, 700, accuracy: 0.001)
+    // The scheduled shift on 16 March still counts in its month.
+    XCTAssertEqual(data.months[2].earnings, 1_200, accuracy: 0.001)
+    XCTAssertEqual(data.previousMonths[2].earnings, 1_200, accuracy: 0.001)
+  }
+
+  func testLeapDayComparesWithTheLastDayOfFebruaryLastYear() throws {
+    let data = try yearStats(
+      focus: [("2028-02-29", 500)],
+      previous: [("2027-02-28", 300), ("2027-03-01", 900)],
+      now: noon(2_028, 2, 29)
+    )
+
+    XCTAssertEqual(try XCTUnwrap(data.toDate).previous, 300, accuracy: 0.001)
+  }
+
+  func testOnlyTheRunningYearHasPayToDate() throws {
+    let past = try yearStats(
+      focus: [("2025-03-01", 500)], previous: [], now: noon(2_026, 3, 15))
+
+    XCTAssertNil(past.toDate)
+    XCTAssertEqual(past.months.count, 12)
+    XCTAssertEqual(past.previousMonths.count, 12)
+  }
+
+  private func yearStats(
+    focus: [(date: String, gross: Double)],
+    previous: [(date: String, gross: Double)],
+    now: Date
+  ) throws -> YearStatsData {
+    func fullYear(_ shifts: [(date: String, gross: Double)], year: Int) -> FullYearComputedData {
+      let computed = shifts.map { shift(date: $0.date, hours: 8, gross: $0.gross) }
+      return FullYearComputedData(
+        year: year, shiftsByMonth: [:], shifts: computed, includedShifts: computed)
+    }
+    let focusYear = try XCTUnwrap(Int(try XCTUnwrap(focus.first?.date.prefix(4))))
+    return StatsService.buildYearStats(
+      focus: fullYear(focus, year: focusYear),
+      previous: fullYear(previous, year: focusYear - 1),
+      jobs: [],
+      aggregateJobs: [],
+      fallbackCurrency: "kr",
+      halfTaxMonth: nil,
+      snapshots: [],
+      now: now
+    )
+  }
+
+  private func noon(_ year: Int, _ month: Int, _ day: Int) throws -> Date {
+    try XCTUnwrap(
+      Calendar.gregorianCurrent.date(
+        from: DateComponents(year: year, month: month, day: day, hour: 12)))
+  }
+
   private func weekdays(year: Int, month: Int) throws -> [String] {
     let calendar = Calendar(identifier: .gregorian)
     return try (1...Date.daysInMonth(year: year, month: month)).compactMap { day in

@@ -105,6 +105,58 @@ final class StatsServiceCurrencyTests: XCTestCase {
     }
   }
 
+  func testYearMonthsMatchWhatTheMonthPageShows() async throws {
+    try await withFixture(shifts: [
+      ShiftInput(job: 0, date: "2025-03-02"),
+      ShiftInput(job: 0, date: "2026-03-02"),
+      ShiftInput(job: 0, date: "2026-03-03", start: "08:00", end: "12:00"),
+      ShiftInput(job: 1, date: "2026-05-04"),
+      ShiftInput(job: 1, date: "2026-05-06"),
+      ShiftInput(job: 2, date: "2026-05-05"),
+    ]) { service, _, _ in
+      let year = try await service.computeYearStats(year: 2_026)
+
+      XCTAssertEqual(year.months.map(\.month), Array(1...12))
+      for month in [1, 3, 5] {
+        let stats = try await service.computeStats(year: 2_026, month: month)
+        let row = year.months[month - 1]
+        XCTAssertEqual(row.earnings, stats.currentMonth.totalEarnings, accuracy: 0.01, "\(month)")
+        XCTAssertEqual(
+          row.earningsNet, stats.currentMonth.totalEarningsNet, accuracy: 0.01, "\(month)")
+        XCTAssertEqual(row.hours, stats.currentMonth.totalHours, accuracy: 0.01, "\(month)")
+        XCTAssertEqual(row.shifts, stats.currentMonth.shiftCount, "\(month)")
+      }
+      XCTAssertEqual(year.months[2].earnings, 2_400, accuracy: 0.01)
+      XCTAssertEqual(year.previousMonths[2].earnings, 1_600, accuracy: 0.01)
+    }
+  }
+
+  func testYearCountsPayInTheYearsPrimaryCurrencyOnly() async throws {
+    try await withFixture(shifts: [
+      ShiftInput(job: 0, date: "2026-04-01"),
+      ShiftInput(job: 2, date: "2026-04-02"),
+      ShiftInput(job: 2, date: "2026-06-03"),
+      ShiftInput(job: 2, date: "2025-04-02"),
+      ShiftInput(job: 0, date: "2025-06-01"),
+    ]) { service, _, _ in
+      let year = try await service.computeYearStats(year: 2_026)
+      let aggregate = try XCTUnwrap(year.currencyAggregate)
+
+      XCTAssertEqual(aggregate.primary.currency, "kr")
+      XCTAssertEqual(aggregate.secondary.map(\.currency), ["$"])
+      XCTAssertEqual(aggregate.secondary.first?.grossAmount ?? 0, 3_200, accuracy: 0.01)
+      XCTAssertEqual(year.months[3].earnings, 1_600, accuracy: 0.01)
+      XCTAssertEqual(year.months[3].earningsHours, 8, accuracy: 0.01)
+      XCTAssertEqual(year.months[3].hours, 16, accuracy: 0.01)
+      XCTAssertEqual(year.months[3].shifts, 2)
+      XCTAssertEqual(year.months[5].earnings, 0, accuracy: 0.01)
+      XCTAssertEqual(year.months[5].shifts, 1)
+      // The year before uses the focus year's currency, even where it earned more in dollars.
+      XCTAssertEqual(year.previousMonths[3].earnings, 0, accuracy: 0.01)
+      XCTAssertEqual(year.previousMonths[5].earnings, 1_600, accuracy: 0.01)
+    }
+  }
+
   private struct ShiftInput {
     let job: Int
     let date: String
