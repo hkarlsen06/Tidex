@@ -58,8 +58,7 @@ struct UserMenuButton: View {
       AvatarView(
         url: avatarUrl,
         initials: avatarInitial,
-        size: AvatarView.Size.small,
-        cornerRadius: CornerRadius.md
+        size: AvatarView.Size.small
       )
       .accessibilityHidden(true)
     }

@@ -22,7 +22,8 @@ struct ProfileValueRow: View {
   let action: (() -> Void)?
 
   var body: some View {
-    let content = rowContent
+    let content =
+      rowContent
       .contentShape(Rectangle())
 
     return Group {
@@ -142,7 +143,7 @@ struct ProfileAvatarImage: View {
             )
         }
       )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+      .clipShape(Circle())
     } else {
       initialAvatar
     }
@@ -150,7 +151,7 @@ struct ProfileAvatarImage: View {
 
   private var initialAvatar: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: CornerRadius.xxl)
+      Circle()
         .fill(Color.tidexBlue.opacity(0.2))
 
       Text(initials)

@@ -182,8 +182,7 @@ struct FriendCard: View {
     return AvatarView(
       url: sharer.avatarUrl,
       initials: sharer.initials,
-      size: photoSize,
-      cornerRadius: photoSize / 2
+      size: photoSize
     )
     .padding(inset)
     .overlay {

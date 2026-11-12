@@ -80,8 +80,7 @@ struct ChatShiftSnapshotCard: View {
     AvatarView(
       url: snapshot.ownerAvatarUrl,
       initials: snapshot.ownerInitials,
-      size: AvatarView.Size.small,
-      cornerRadius: CornerRadius.sm
+      size: AvatarView.Size.small
     )
   }
 

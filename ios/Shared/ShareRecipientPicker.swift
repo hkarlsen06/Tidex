@@ -115,7 +115,7 @@ import SwiftUI
           }
         }
         .frame(width: 48, height: 48)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(Circle())
       } else {
         initialsAvatar
           .frame(width: 48, height: 48)
@@ -124,7 +124,7 @@ import SwiftUI
 
     private var initialsAvatar: some View {
       ZStack {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        Circle()
           .fill(Color.accentColor.opacity(0.16))
 
         Text(initials(from: recipient.displayName))

@@ -867,9 +867,10 @@ struct FriendsThreadView: View {
         openCounterpartShiftPreview(preview: counterpartShiftPreview)
       } label: {
         CompactFriendShiftPreviewHeader(
-          preview: counterpartShiftPreview, friendName: counterpartProfileUser.firstNameOnly)
-          .frame(maxWidth: .infinity)
-          .contentShape(Rectangle())
+          preview: counterpartShiftPreview, friendName: counterpartProfileUser.firstNameOnly
+        )
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .padding(.horizontal, Spacing.md)
@@ -1623,8 +1624,7 @@ private struct FriendsChatTypingRow: View {
           AvatarView(
             url: counterpartAvatarUrl,
             initials: counterpartInitials,
-            size: Self.avatarSize,
-            cornerRadius: CornerRadius.md
+            size: Self.avatarSize
           )
           .padding(.top, 2)
         } else {

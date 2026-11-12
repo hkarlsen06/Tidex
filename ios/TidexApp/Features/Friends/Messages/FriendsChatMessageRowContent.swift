@@ -972,8 +972,7 @@ struct FriendsChatMessageRowContent: View {
       AvatarView(
         url: counterpartAvatarUrl,
         initials: counterpartAvatarInitials,
-        size: Self.avatarSize,
-        cornerRadius: CornerRadius.md
+        size: Self.avatarSize
       )
       .padding(.top, 2)
       .accessibilityHidden(true)

@@ -5,6 +5,8 @@ private enum ProfileAvatarLayout {
   static let size: CGFloat = 96
   static let cameraBadgeSize: CGFloat = 32
   static let cameraIconSize: CGFloat = 13
+  /// Puts the badge center on the avatar circle's edge at 45 degrees.
+  static let cameraBadgeOffset: CGFloat = 2
 }
 
 /// Tappable profile picture with the dialogs for changing or removing it.
@@ -40,7 +42,7 @@ struct ProfileAvatarButton: View {
         .frame(width: ProfileAvatarLayout.size, height: ProfileAvatarLayout.size)
         .overlay {
           if viewModel.isUploadingAvatar {
-            RoundedRectangle(cornerRadius: CornerRadius.xxl)
+            Circle()
               .fill(Color.black.opacity(0.45))
 
             ProgressView()
@@ -59,10 +61,11 @@ struct ProfileAvatarButton: View {
             )
             .background(Color.tidexBlue, in: Circle())
             .overlay(Circle().stroke(Color.tidexBackground, lineWidth: 3))
-            .offset(x: 6, y: 6)
+            .offset(
+              x: ProfileAvatarLayout.cameraBadgeOffset, y: ProfileAvatarLayout.cameraBadgeOffset)
         }
       }
-      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+      .contentShape(Circle())
     }
     .buttonStyle(.plain)
     .disabled(isDisabled)

@@ -8,7 +8,7 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
   let onCancel: () -> Void
 
   func makeUIViewController(context: Context) -> UINavigationController {
-    // Use default (square) cropping style - squircle clipping is applied at display time
+    // Square crop. The avatar views clip it to a circle.
     let cropViewController = CropViewController(croppingStyle: .default, image: image)
     cropViewController.delegate = context.coordinator
 
@@ -28,8 +28,10 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
     // The crop screen is always dark, so resolve the text blue for the dark appearance.
     cropViewController.doneButtonColor = UIColor(Color.tidexBlueText)
       .resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
-    cropViewController.toolbar.doneIconButton.accessibilityLabel = String(localized: .profileImageCropConfirm)
-    cropViewController.toolbar.cancelIconButton.accessibilityLabel = String(localized: .commonCancel)
+    cropViewController.toolbar.doneIconButton.accessibilityLabel = String(
+      localized: .profileImageCropConfirm)
+    cropViewController.toolbar.cancelIconButton.accessibilityLabel = String(
+      localized: .commonCancel)
 
     // Wrap in navigation controller for proper presentation
     let navigationController = UINavigationController(rootViewController: cropViewController)

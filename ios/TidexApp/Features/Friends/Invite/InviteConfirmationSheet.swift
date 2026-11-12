@@ -244,7 +244,7 @@ internal struct InviteConfirmationSheet: View {
     VStack(spacing: Spacing.xs) {
       AvatarView(
         url: preview.person.avatarUrl, initials: preview.hasName ? preview.person.initials : "?",
-        size: 72, cornerRadius: 36)
+        size: 72)
       Text(preview.displayName)
         .font(.tidexHeadline)
         .foregroundStyle(Color.tidexTextPrimary)
