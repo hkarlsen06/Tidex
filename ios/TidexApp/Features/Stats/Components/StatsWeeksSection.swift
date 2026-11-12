@@ -168,7 +168,6 @@ struct StatsWeeksSection: View {
 }
 
 private struct StatsWeekRow: View {
-  static let rowHeight: CGFloat = 48
   static let weekColumnWidth: CGFloat = 34
   static let totalColumnWidth: CGFloat = 75
 
@@ -196,7 +195,7 @@ private struct StatsWeekRow: View {
           .frame(width: isStacked ? 0 : Self.totalColumnWidth, alignment: .trailing)
           .opacity(isStacked ? 0 : 1)
       }
-      .frame(height: Self.rowHeight)
+      .frame(height: StatsRhythm.row)
       if isStacked {
         total.statsSlot(alignment: .trailing)
       }

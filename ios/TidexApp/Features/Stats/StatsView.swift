@@ -195,9 +195,9 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     let lattice = StatsLattice(stats: stats, now: viewModel.computedAt, calendar: .gregorianCurrent)  // swiftlint:disable:this explicit_type_interface line_length
     return ScrollView {
       StatsContent(
-        lattice: lattice,
+        page: .month(lattice),
         onSelectMonth: { month in
-          viewModel.goToMonth(year: lattice.month.year, month: month)
+          viewModel.goToMonth(year: month.year, month: month.month)
         },
         onExport: { showExportSettings = true },
         onScrubbingChange: { isScrubbing = $0 }

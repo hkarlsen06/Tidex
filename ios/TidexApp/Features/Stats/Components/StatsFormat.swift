@@ -156,6 +156,8 @@ enum StatsRhythm {
   static let section: CGFloat = 72
   /// From a section's sentence to the drawing it describes.
   static let headerToBody: CGFloat = 28
+  /// A row of the weeks grid or the months ledger.
+  static let row: CGFloat = 48
 }
 
 struct StatsSectionHeader<Trailing: View>: View {

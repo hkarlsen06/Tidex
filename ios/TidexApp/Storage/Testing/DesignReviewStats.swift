@@ -15,7 +15,7 @@
       NavigationStack {
         ScrollView {
           StatsContent(
-            lattice: StatsLattice(stats: stats, now: Self.now, calendar: .gregorianCurrent),
+            page: .month(StatsLattice(stats: stats, now: Self.now, calendar: .gregorianCurrent)),
             onSelectMonth: { _ in },
             onExport: {}
           )
@@ -45,7 +45,9 @@
     }
 
     private static let year2026 = YearFixture(
-      pay: [16_200, 2_240, 17_100, 15_900, 18_800, 23_400, 31_200, 27_100, 17_300, 19_640, 0, 6_900],
+      pay: [
+        16_200, 2_240, 17_100, 15_900, 18_800, 23_400, 31_200, 27_100, 17_300, 19_640, 0, 6_900,
+      ],
       employment: [48, 6, 50, 46, 55, 68, 90, 79, 51, 57, 74, 20]
     )
 

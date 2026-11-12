@@ -1,11 +1,16 @@
 import SwiftUI
 
-/// The Stats drawing for one month. It holds no view model, so the design-review screens render
-/// it from fixtures. A new lattice swaps values in place in one animation, and nothing changes
-/// position or size.
+/// The Stats drawing for one month or one year. It holds no view model, so the design-review
+/// screens render it from fixtures. A new page swaps values in place in one animation. The hero
+/// stays the same view in both periods, so switching period rolls its numbers without moving it.
 struct StatsContent: View {
-  let lattice: StatsLattice
-  let onSelectMonth: (Int) -> Void
+  enum Page: Equatable {
+    case month(StatsLattice)
+    case year(StatsYearLattice)
+  }
+
+  let page: Page
+  let onSelectMonth: (FocusMonth) -> Void
   let onExport: () -> Void
   var onScrubbingChange: (Bool) -> Void = { _ in }
 
@@ -13,18 +18,46 @@ struct StatsContent: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      StatsHero(hero: lattice.hero, metrics: lattice.metrics)
-      StatsPaceSection(pace: lattice.pace, onScrubbingChange: onScrubbingChange)
+      StatsHero(hero: hero, metrics: metrics)
+      switch page {
+      case .month(let lattice):
+        StatsPaceSection(pace: lattice.pace, onScrubbingChange: onScrubbingChange)
+          .padding(.top, StatsRhythm.section)
+        StatsWeeksSection(weeks: lattice.weeks)
+          .padding(.top, StatsRhythm.section)
+        StatsYearSection(year: lattice.year) { month in
+          onSelectMonth(FocusMonth(year: lattice.year.year, month: month))
+        }
         .padding(.top, StatsRhythm.section)
-      StatsWeeksSection(weeks: lattice.weeks)
+      case .year(let lattice):
+        StatsMonthsSection(months: lattice.months) { month in
+          onSelectMonth(FocusMonth(year: lattice.year, month: month))
+        }
         .padding(.top, StatsRhythm.section)
-      StatsYearSection(year: lattice.year, onSelectMonth: onSelectMonth)
+        StatsYearEmploymentSection(
+          employment: lattice.employment, currentMonth: lattice.currentMonth
+        )
         .padding(.top, StatsRhythm.section)
+      }
       StatsExportRow(action: onExport)
         .padding(.top, StatsRhythm.section)
     }
     .animation(
-      MotionTokens.optionalAnimation(.emphasis, reduceMotion: reduceMotion), value: lattice)
+      MotionTokens.optionalAnimation(.emphasis, reduceMotion: reduceMotion), value: page)
+  }
+
+  private var hero: StatsLattice.Hero {
+    switch page {
+    case .month(let lattice): lattice.hero
+    case .year(let lattice): lattice.hero
+    }
+  }
+
+  private var metrics: StatsLattice.Metrics {
+    switch page {
+    case .month(let lattice): lattice.metrics
+    case .year(let lattice): lattice.metrics
+    }
   }
 }
 
