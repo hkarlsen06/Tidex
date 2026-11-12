@@ -23,6 +23,9 @@ struct StatsContent: View {
   let page: Page
   let onSelectMonth: (FocusMonth) -> Void
   var isExporting: Bool = false
+  /// Whether a period with no shifts keeps the space of the sections it hides. The screen asks
+  /// for it when the page is scrolled down, so the scroll position holds.
+  var keepsDetailSpace: Bool = false
   let onExport: () -> Void
   let onAddShift: () -> Void
   var onScrubbingChange: (Bool) -> Void = { _ in }
@@ -59,23 +62,38 @@ struct StatsContent: View {
   }
 
   /// The sections that need shifts, and the export row. A period with no shifts shows the way
-  /// to add a shift in their place. The screen keeps the scroll position when the page gets
-  /// shorter.
+  /// to add a shift in their place, and ends there unless the screen asks it to keep the
+  /// sections' space.
   @ViewBuilder
   private func details(@ViewBuilder _ sections: () -> some View) -> some View {
-    if page.hasShifts {
-      sections()
-      StatsActionRow(
-        title: .dataExportPdfButton, detail: exportPeriod, systemImage: "square.and.arrow.up",
-        isBusy: isExporting, action: onExport
-      )
-      .accessibilityIdentifier("stats.export")
-      .padding(.top, StatsRhythm.section)
-    } else {
-      StatsActionRow(title: .shiftsEmptyAddShift, systemImage: "plus", action: onAddShift)
-        .accessibilityIdentifier("stats.add-shift")
+    if page.hasShifts || keepsDetailSpace {
+      VStack(alignment: .leading, spacing: 0) {
+        sections()
+        StatsActionRow(
+          title: .dataExportPdfButton, detail: exportPeriod, systemImage: "square.and.arrow.up",
+          isBusy: isExporting, action: onExport
+        )
+        .accessibilityIdentifier("stats.export")
         .padding(.top, StatsRhythm.section)
+      }
+      .opacity(page.hasShifts ? 1 : 0)
+      .allowsHitTesting(page.hasShifts)
+      .accessibilityHidden(!page.hasShifts)
+      .overlay(alignment: .top) {
+        addShiftRow
+          .opacity(page.hasShifts ? 0 : 1)
+          .allowsHitTesting(!page.hasShifts)
+          .accessibilityHidden(page.hasShifts)
+      }
+    } else {
+      addShiftRow
     }
+  }
+
+  private var addShiftRow: some View {
+    StatsActionRow(title: .shiftsEmptyAddShift, systemImage: "plus", action: onAddShift)
+      .accessibilityIdentifier("stats.add-shift")
+      .padding(.top, StatsRhythm.section)
   }
 
   private func yearSection(_ year: StatsLattice.Year) -> some View {

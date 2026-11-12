@@ -24,8 +24,8 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   @State private var addShiftPath: [AddShiftRoute] = []  // swiftlint:disable:this explicit_type_interface
   @State private var scrollPosition = ScrollPosition(edge: .top)  // swiftlint:disable:this explicit_type_interface
   @State private var isScrolledDown = false  // swiftlint:disable:this explicit_type_interface
-  /// Written on every scroll tick without drawing the page again.
-  @State private var scrollDepth = ScrollDepth()  // swiftlint:disable:this explicit_type_interface
+  /// Remembers how the page landed on a period with no shifts, without drawing it again.
+  @State private var emptyLanding = EmptyLanding()  // swiftlint:disable:this explicit_type_interface
   private let syncStatusManager = SyncStatusManager.shared  // swiftlint:disable:this explicit_type_interface
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
@@ -270,12 +270,20 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     }
   }
 
-  /// A period with no shifts is only as tall as what it shows. Landing on one while scrolled
-  /// down keeps the content as tall as what was on screen, so the page does not jump. Read
-  /// when the page is drawn, so it is the height at that moment.
-  private func emptyPageMinHeight(for page: StatsContent.Page) -> CGFloat? {
-    guard isScrolledDown, !page.hasShifts else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
-    return scrollDepth.heightOnScreen
+  /// A period with no shifts ends where its content ends. Landing on one while scrolled down
+  /// keeps the space of its hidden sections instead, so the page does not jump, until the page
+  /// is back at the top. Scrolling down inside a short page never brings the space back.
+  private func keepsDetailSpace(for page: StatsContent.Page) -> Bool {
+    if page.hasShifts {
+      emptyLanding.keepsSpace = nil
+      return false
+    }
+    if !isScrolledDown {
+      emptyLanding.keepsSpace = false
+    } else if emptyLanding.keepsSpace == nil {
+      emptyLanding.keepsSpace = true
+    }
+    return emptyLanding.keepsSpace ?? false
   }
 
   private var statsContent: some View {
@@ -288,12 +296,12 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
           period = .month
         },
         isExporting: exporter.isExportingPdf,
+        keepsDetailSpace: keepsDetailSpace(for: page),
         onExport: exportDisplayedPeriod,
         onAddShift: { coordinator.pendingDeepLink = .addShift(mode: nil, date: addShiftDate) },
         onScrubbingChange: { isScrubbing = $0 }
       )
       .statsContentFrame()
-      .frame(minHeight: emptyPageMinHeight(for: page), alignment: .top)
       .contentShape(Rectangle())
       .monthSwipeGesture(
         onSwipeLeft: {
@@ -313,15 +321,6 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       geometry.contentOffset.y + geometry.contentInsets.top > 1
     } action: { _, isScrolled in
       isScrolledDown = isScrolled
-    }
-    .onScrollGeometryChange(for: CGFloat.self) { geometry in
-      // The content height that keeps this offset in range. Clamped so a bounce past the
-      // bottom does not count.
-      min(
-        geometry.contentOffset.y + geometry.containerSize.height - geometry.contentInsets.bottom,
-        geometry.contentSize.height)
-    } action: { _, height in
-      scrollDepth.heightOnScreen = height
     }
     .userCurrency(displayedCurrency)
     .refreshable {
@@ -436,7 +435,8 @@ private struct ExportedFile: Identifiable {
   var id: URL { url }
 }
 
-/// The scroll view's latest depth. A class without observation, so writing it draws nothing.
-private final class ScrollDepth {
-  var heightOnScreen: CGFloat = 0
+/// Nil while the page shows a period with shifts. A class without observation, so writing it
+/// draws nothing.
+private final class EmptyLanding {
+  var keepsSpace: Bool?
 }
