@@ -118,15 +118,3 @@ struct StatsLineChartDescriptor: AXChartDescriptorRepresentable {  // swiftlint:
     descriptor.series = updated.series
   }
 }
-
-/// A small marker above the bar for today or the current month.
-/// It shows the highlight without color when Differentiate Without Color is on.
-struct StatsBarHighlightMarker: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
-  var body: some View {  // swiftlint:disable:this explicit_acl
-    Image(systemName: "triangle.fill")
-      .font(.tidexMicro)
-      .rotationEffect(.degrees(180))  // swiftlint:disable:this no_magic_numbers
-      .foregroundStyle(Color.tidexBlueText)
-      .accessibilityHidden(true)
-  }
-}

@@ -205,6 +205,11 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     monthContext.goToCurrentMonth()
   }
 
+  /// Navigate to a month picked in the Stats year rows
+  func goToMonth(year: Int, month: Int) {  // swiftlint:disable:this explicit_acl type_contents_order
+    monthContext.navigateTo(year: year, month: month)
+  }
+
   var shouldShowJobFilter: Bool {  // swiftlint:disable:this explicit_acl
     activeJobs.count > 1
   }

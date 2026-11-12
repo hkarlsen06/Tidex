@@ -149,7 +149,6 @@
                 switch screen {
                 case "calendar": calendar.frame(maxWidth: AdaptiveMaxWidth.tabContent)
                 case "shared-calendar": sharedCalendar.frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                case "stats": charts
                 case "controls": controls
                 default: dashboard
                 }
@@ -305,19 +304,6 @@
         selectedCurrencyAggregate: nil, selectedHasTaxEnabled: true,
         isCopyMode: false, isMoveMode: false, isCopying: false, isMoving: false
       )
-    }
-
-    private var charts: some View {
-      VStack(spacing: Spacing.lg) {
-        MonthlyProgressChart(
-          data: (1...30).map { day in
-            DailyCumulativeData(
-              day: day, currentMonth: Double(day / 2) * 1_600,
-              lastMonth: Double(day / 3) * 2_000, isToday: day == 12, isFuture: day > 12
-            )
-          })
-        YearlyIncomeChart(data: MonthlyIncomeData.previewData, focusYear: 2_026)
-      }
     }
 
     private var controls: some View {

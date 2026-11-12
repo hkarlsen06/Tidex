@@ -1,0 +1,446 @@
+import SwiftUI
+
+/// Twelve month columns: pay as bars, the month letters, and employment as dots. A band marks
+/// the focus month, and tapping a column opens that month.
+struct StatsYearSection: View {
+  let year: StatsLattice.Year
+  let onSelectMonth: (Int) -> Void
+
+  @Environment(\.userCurrency) private var currency
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  private static let incomeHeight: CGFloat = 96
+  private static let incomeTop: CGFloat = 14
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      StatsSectionHeader(title: .commonYear, sentence: headline) {
+        Text(perMonthText)
+          .fontWeight(.regular)
+          .monospacedDigit()
+          .fixedSize()
+      }
+      chart
+        .padding(.top, Spacing.sm)
+      employmentCaption
+        .padding(.top, Spacing.xs)
+    }
+  }
+
+  private var chart: some View {
+    VStack(spacing: Spacing.xxs) {
+      incomeRow
+      monthLetters
+      StatsEmploymentRow(year: year)
+    }
+    .background { playhead }
+    .overlay { monthButtons }
+  }
+
+  /// Moves one column on a month change. On a year change it fades out and back in at the new
+  /// column instead of sweeping across the year.
+  private var playhead: some View {
+    GeometryReader { proxy in
+      let column = proxy.size.width / CGFloat(StatsLattice.monthSlots)
+      let bandX = CGFloat(year.focus - 1) * column + 1
+      RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
+        .fill(Color.tidexSeparator)
+        .frame(width: max(column - 2, 0), height: proxy.size.height + Spacing.md)
+        .offset(x: bandX, y: -Spacing.xs)
+        .motionProbe("stats-playhead", bandX)
+        .id(year.year)
+        .transition(.opacity)
+    }
+    .accessibilityHidden(true)
+  }
+
+  private var incomeRow: some View {
+    ZStack(alignment: .topLeading) {
+      StatsRule(lineY: Self.incomeTop)
+        .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
+      StatsRule(lineY: Self.incomeHeight - 0.5)
+        .stroke(Color.tidexSeparator, lineWidth: 1)
+      Text(StatsFormat.compact(year.yMax))
+        .font(.tidexMicro)
+        .monospacedDigit()
+        .foregroundStyle(Color.tidexTextMuted)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .offset(y: Self.incomeTop - 15)
+      HStack(alignment: .bottom, spacing: 0) {
+        ForEach(year.months) { month in
+          StatsIncomeBar(month: month, height: barHeight(month), isFocus: month.id == year.focus)
+            .frame(maxWidth: .infinity)
+        }
+      }
+      .frame(maxHeight: .infinity, alignment: .bottom)
+    }
+    .frame(height: Self.incomeHeight)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(.statsChartsYearlyIncomeTitle(String(year.year))))
+    .accessibilityChartDescriptor(incomeDescriptor)
+    .accessibilityIdentifier("stats.year.income")
+  }
+
+  private func barHeight(_ month: StatsLattice.MonthSlot) -> CGFloat {
+    let share = year.yMax > 0 ? month.earnings / year.yMax : 0
+    return max(CGFloat(share) * (Self.incomeHeight - Self.incomeTop), 2)
+  }
+
+  private var monthLetters: some View {
+    HStack(spacing: 0) {
+      ForEach(Array(StatsFormat.monthLetters.enumerated()), id: \.offset) { index, letter in
+        Text(letter)
+          .fontWeight(index + 1 == year.focus ? .bold : .medium)
+          .foregroundStyle(index + 1 == year.focus ? Color.tidexTextPrimary : Color.tidexTextMuted)
+          .frame(maxWidth: .infinity)
+          .overlay(alignment: .bottom) {
+            Capsule()
+              .fill(Color.tidexBlueText)
+              .frame(width: 10, height: 2)
+              .offset(y: 2)
+              .opacity(index + 1 == year.currentMonth ? 1 : 0)
+          }
+      }
+    }
+    .statsSlot()
+    .font(.tidexMicro)
+    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    .accessibilityHidden(true)
+  }
+
+  private var monthButtons: some View {
+    HStack(spacing: 0) {
+      ForEach(year.months) { month in
+        Button {
+          guard month.id != year.focus else { return }
+          Haptics.play(.selection)
+          onSelectMonth(month.id)
+        } label: {
+          Color.clear
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+          Text(StatsFormat.monthName(FocusMonth(year: year.year, month: month.id))))
+        .accessibilityValue(Text(accessibilityValue(month)))
+        .accessibilityAddTraits(month.id == year.focus ? .isSelected : [])
+      }
+    }
+  }
+
+  private var employmentCaption: some View {
+    HStack(spacing: Spacing.xs) {
+      Text(employmentText)
+        .monospacedDigit()
+        .frame(maxWidth: .infinity, alignment: .leading)
+      StatsEmploymentInfoButton(
+        message: String(
+          localized: .statsChartsEmploymentInfo(
+            year.fullTimeHoursPerWeek.formatted(
+              .number.precision(.fractionLength(2)).locale(Locale.appLocale))))
+      )
+    }
+    .statsSlot(
+      lines: dynamicTypeSize.isAccessibilitySize ? 2 : 1,
+      alignment: dynamicTypeSize.isAccessibilitySize ? .topLeading : .leading
+    )
+    .font(.tidexFootnote)
+    .foregroundStyle(Color.tidexTextSecondary)
+  }
+
+  // MARK: Copy
+
+  private func money(_ amount: Double) -> String {
+    StatsFormat.money(amount, currency: currency)
+  }
+
+  private var headline: AttributedString {
+    let yearText = String(year.year)
+    guard year.total > 0 else {
+      return StatsFormat.plain(String(localized: .statsNoPayIn(yearText)), color: .tidexTextMuted)
+    }
+    return StatsFormat.plain(String(localized: .statsYearTotal(money(year.total), yearText)))
+  }
+
+  private var perMonthText: String {
+    year.perPaidMonth.map { String(localized: .statsYearPerMonth(money($0))) } ?? ""
+  }
+
+  private var employmentText: AttributedString {
+    let focus = year.months.first { $0.id == year.focus }
+    let value = focus.flatMap { percent($0.employment) }.map { StatsFormat.percent($0.rounded()) }
+    let month = StatsFormat.shortMonthName(FocusMonth(year: year.year, month: year.focus))
+    let focusPart = StatsFormat.emphasized(
+      .statsYearEmployment(value ?? "–", month), color: .tidexTextPrimary)
+    let averagePart: AttributedString
+    switch year.average {
+    case .noCompletedMonths:
+      averagePart = StatsFormat.plain(String(localized: .statsYearNoCompletedMonths))
+    case .average(let average, let range?):
+      averagePart = StatsFormat.emphasized(
+        .statsYearAverage(StatsFormat.percent(average), range), color: .tidexEmploymentAccent)
+    case .average(let average, nil):
+      averagePart = StatsFormat.emphasized(
+        .statsYearAverageAll(StatsFormat.percent(average)), color: .tidexEmploymentAccent)
+    }
+    return focusPart + AttributedString(" · ") + averagePart
+  }
+
+  private func percent(_ employment: StatsLattice.Employment) -> Double? {
+    switch employment {
+    case .noShifts: nil
+    case .counted(let value), .running(let value): value
+    }
+  }
+
+  private func accessibilityValue(_ month: StatsLattice.MonthSlot) -> String {
+    let pay = money(month.earnings)
+    guard let employment = percent(month.employment) else { return pay }
+    let share = StatsFormat.percent(employment)
+    return "\(pay), \(share) \(String(localized: .statsChartsEmploymentEmployment))"
+  }
+
+  private var incomeDescriptor: StatsCategoryChartDescriptor {
+    StatsCategoryChartDescriptor(
+      title: String(localized: .statsChartsYearlyIncomeTitle(String(year.year))),
+      summary: String(localized: .statsAccessibilityChartTotal(money(year.total))),
+      categoryAxisTitle: String(localized: .commonMonth),
+      valueAxisTitle: String(localized: .shiftsEarningsSection),
+      points: year.months.map { month in
+        let name = StatsFormat.monthName(FocusMonth(year: year.year, month: month.id))
+        return StatsCategoryChartDescriptor.Point(
+          category: name, value: month.earnings, label: "\(name), \(money(month.earnings))")
+      },
+      formatValue: { [currency] in StatsFormat.money($0, currency: currency) }
+    )
+  }
+}
+
+/// Filled for pay that has happened, a dashed outline for months still ahead.
+private struct StatsIncomeBar: View {
+  let month: StatsLattice.MonthSlot
+  let height: CGFloat
+  let isFocus: Bool
+
+  private var isOutline: Bool { month.isAhead && month.earnings > 0 }
+
+  var body: some View {
+    let shape = RoundedRectangle(cornerRadius: min(3, height / 2), style: .continuous)
+    ZStack {
+      shape
+        .fill(isFocus ? Color.tidexBlue : Color.tidexBorder)
+        .opacity(isOutline ? 0 : 1)
+      shape
+        .stroke(
+          isFocus ? Color.tidexBlueText : Color.tidexBorder,
+          style: StrokeStyle(lineWidth: 1.5, dash: [3, 2.5]))
+        .opacity(isOutline ? 1 : 0)
+    }
+    .frame(width: 16, height: height)
+  }
+}
+
+/// Employment per month on a 0 to 100% scale. A filled dot counts toward the average, a ring
+/// is the running or a later month, and a month without shifts sits on the baseline.
+private struct StatsEmploymentRow: View {
+  let year: StatsLattice.Year
+
+  private var averageValue: Double? {
+    if case .average(let value, _) = year.average { value } else { nil }
+  }
+
+  var body: some View {
+    ZStack(alignment: .topLeading) {
+      StatsRule(lineY: StatsEmploymentScale.top)
+        .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
+      StatsRule(lineY: StatsEmploymentScale.y(0))
+        .stroke(Color.tidexSeparator, lineWidth: 1)
+      Text(StatsFormat.percent(100))
+        .font(.tidexMicro)
+        .foregroundStyle(Color.tidexTextMuted)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .offset(y: StatsEmploymentScale.top - 14)
+      StatsRule(lineY: StatsEmploymentScale.y(averageValue ?? 0))
+        .stroke(
+          Color.tidexEmploymentAccent,
+          style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [1, 4]))
+        .opacity(averageValue == nil ? 0 : 1)
+      StatsEmploymentLine(
+        values: StatsVector(year.months.map { $0.employmentValue }),
+        present: year.months.map { $0.employment != .noShifts }
+      )
+      .stroke(Color.tidexTextMuted.opacity(0.8), lineWidth: 1.5)
+      HStack(spacing: 0) {
+        ForEach(year.months) { month in
+          dot(month.employment)
+        }
+      }
+    }
+    .frame(height: StatsEmploymentScale.height)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(.statsChartsEmploymentTitle))
+    .accessibilityChartDescriptor(descriptor)
+    .accessibilityIdentifier("stats.year.employment")
+  }
+
+  private func dot(_ employment: StatsLattice.Employment) -> some View {
+    let isCounted: Bool = if case .counted = employment { true } else { false }
+    let hasShifts = employment != .noShifts
+    let value = StatsLattice.MonthSlot.value(of: employment)
+    return ZStack(alignment: .top) {
+      Circle()
+        .fill(Color.tidexTextMuted)
+        .frame(width: 3, height: 3)
+        .offset(y: StatsEmploymentScale.y(0) - 1.5)
+        .opacity(hasShifts ? 0 : 0.5)
+      Circle()
+        .fill(isCounted ? Color.tidexEmploymentAccent : Color.tidexBackground)
+        .overlay(
+          Circle().stroke(
+            isCounted ? Color.tidexBackground : Color.tidexEmploymentAccent, lineWidth: 2))
+        .frame(width: 8, height: 8)
+        .offset(y: StatsEmploymentScale.y(value) - 4)
+        .opacity(hasShifts ? 1 : 0)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+  }
+
+  private var descriptor: StatsCategoryChartDescriptor {
+    StatsCategoryChartDescriptor(
+      title: String(localized: .statsChartsEmploymentTitle),
+      summary: averageValue.map {
+        String(localized: .statsAccessibilityChartTotal(StatsFormat.percent($0)))
+      },
+      categoryAxisTitle: String(localized: .commonMonth),
+      valueAxisTitle: String(localized: .statsChartsEmploymentTitle),
+      points: year.months.map { month in
+        let name = StatsFormat.monthName(FocusMonth(year: year.year, month: month.id))
+        return StatsCategoryChartDescriptor.Point(
+          category: name, value: month.employmentValue,
+          label: "\(name), \(StatsFormat.percent(month.employmentValue))")
+      },
+      formatValue: { StatsFormat.percent($0) }
+    )
+  }
+}
+
+extension StatsLattice.MonthSlot {
+  fileprivate var employmentValue: Double { Self.value(of: employment) }
+
+  fileprivate static func value(of employment: StatsLattice.Employment) -> Double {
+    switch employment {
+    case .noShifts: 0
+    case .counted(let value), .running(let value): value
+    }
+  }
+}
+
+/// Joins the dots of neighbouring months that both have shifts.
+private struct StatsEmploymentLine: Shape {
+  var values: StatsVector
+  let present: [Bool]
+
+  nonisolated var animatableData: StatsVector {
+    get { values }
+    set { values = newValue }
+  }
+
+  func path(in rect: CGRect) -> Path {
+    let column = rect.width / CGFloat(StatsLattice.monthSlots)
+    var path = Path()
+    for index in present.indices.dropLast() where present[index] && present[index + 1] {
+      path.move(
+        to: CGPoint(x: (CGFloat(index) + 0.5) * column, y: StatsEmploymentScale.y(values[index])))
+      path.addLine(
+        to: CGPoint(
+          x: (CGFloat(index) + 1.5) * column, y: StatsEmploymentScale.y(values[index + 1])))
+    }
+    return path
+  }
+}
+
+/// The employment row's 0 to 100% scale, in points from the top of its 56-point frame.
+private enum StatsEmploymentScale {
+  static let height: CGFloat = 56
+  static let top: CGFloat = 8
+
+  static func y(_ percent: Double) -> CGFloat {
+    top + (1 - CGFloat(min(max(percent, 0), 100) / 100)) * (height - top - 6)
+  }
+}
+
+/// A horizontal line across the drawing at `lineY`.
+private struct StatsRule: Shape {
+  var lineY: CGFloat
+
+  nonisolated var animatableData: CGFloat {
+    get { lineY }
+    set { lineY = newValue }
+  }
+
+  func path(in rect: CGRect) -> Path {
+    var path = Path()
+    path.move(to: CGPoint(x: rect.minX, y: lineY))
+    path.addLine(to: CGPoint(x: rect.maxX, y: lineY))
+    return path
+  }
+}
+
+/// Explains the full-time week behind the employment percentage: a popover on regular width,
+/// an alert on compact width.
+private struct StatsEmploymentInfoButton: View {
+  let message: String
+
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+  @State private var showPopover: Bool = false
+
+  private var usesCompactPresentation: Bool {
+    horizontalSizeClass == .compact
+  }
+
+  private var popoverBinding: Binding<Bool> {
+    Binding(
+      get: { showPopover && !usesCompactPresentation },
+      set: { if !$0 { showPopover = false } }
+    )
+  }
+
+  private var alertBinding: Binding<Bool> {
+    Binding(
+      get: { showPopover && usesCompactPresentation },
+      set: { if !$0 { showPopover = false } }
+    )
+  }
+
+  var body: some View {
+    Button {
+      showPopover.toggle()
+    } label: {
+      Image(systemName: "info.circle")
+        .font(.tidexBody)
+        .foregroundStyle(Color.tidexTextMuted)
+        // 44pt hit area that doesn't add height to the caption.
+        .padding(Spacing.md)
+        .contentShape(Rectangle())
+        .padding(-Spacing.md)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(.statsAccessibilityEmploymentInfo))
+    .popover(isPresented: popoverBinding) {
+      Text(message)
+        .font(.tidexSubheadline)
+        .foregroundStyle(Color.tidexTextSecondary)
+        .multilineTextAlignment(.leading)
+        .lineLimit(nil)
+        .minimumScaleFactor(1)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding()
+        .frame(maxWidth: 280)
+    }
+    .alert(Text(.statsChartsEmploymentTitle), isPresented: alertBinding) {
+      Button(String(localized: .commonDone), role: .cancel) {}
+    } message: {
+      Text(message)
+    }
+  }
+}

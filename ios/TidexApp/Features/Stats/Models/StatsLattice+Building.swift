@@ -12,7 +12,9 @@ extension StatsLattice {
     hero = Self.makeHero(stats: stats, today: today)
     metrics = Self.makeMetrics(stats: stats, days: days)
     pace = Self.makePace(stats: stats, phase: phase, dayCount: dayCount, today: today)
-    weeks = Self.makeWeeks(stats: stats, days: days, phase: phase, calendar: calendar)
+    weeks = Self.makeWeeks(
+      stats: stats, days: days, phase: phase, calendar: calendar,
+      showsYear: month.year != today.year)
     year = Self.makeYear(stats: stats, now: now, calendar: calendar, today: today)
   }
 
@@ -106,6 +108,7 @@ extension StatsLattice {
     return Pace(
       month: month,
       previousMonth: month.previous,
+      showsYear: month.year != today.year,
       focus: makeSeries(month, role: .focus, values: focusValues, dayCount: dayCount, today: today),
       previous: makeSeries(
         month.previous, role: .previous, values: previousValues, dayCount: dayCount, today: today),
@@ -151,13 +154,14 @@ extension StatsLattice {
 
   // MARK: Weeks
 
-  private static func makeWeeks(stats: StatsData, days: [DayStats], phase: Phase, calendar: Calendar)
-    -> Weeks
-  {
+  private static func makeWeeks(
+    stats: StatsData, days: [DayStats], phase: Phase, calendar: Calendar, showsYear: Bool
+  ) -> Weeks {
     let month = stats.focusMonth
     let rows = makeWeekRows(month: month, days: days, phase: phase, calendar: calendar)
     return Weeks(
       month: month,
+      showsYear: showsYear,
       rows: rows,
       headline: weeksHeadline(stats: stats, rows: rows, phase: phase),
       readout: readout(days: days, phase: phase)

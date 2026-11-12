@@ -97,16 +97,6 @@ enum FormatterCache {
     }
   }
 
-  static func shortWeekdayFormatter(locale: Locale = .appLocale) -> DateFormatter {
-    cached("tidex.shortWeekdayFormatter.\(locale.identifier)") {
-      let formatter = DateFormatter()
-      formatter.locale = locale
-      formatter.calendar = .gregorianCurrent
-      formatter.setLocalizedDateFormatFromTemplate("EEE")
-      return formatter
-    }
-  }
-
   static func hourMinuteFormatter(timeZone: TimeZone = Date.localTimeZone) -> DateFormatter {
     cached("tidex.hourMinuteFormatter.\(timeZone.identifier)") {
       let formatter = DateFormatter()

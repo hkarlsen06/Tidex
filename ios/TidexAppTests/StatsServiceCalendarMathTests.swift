@@ -45,8 +45,6 @@ final class StatsServiceCalendarMathTests: XCTestCase {
       percentageChange: nil,
       thisMonthCumulative: [],
       days: days,
-      thisWeek: nil,
-      bestWeek: nil,
       employment: nil,
       yearlyIncome: nil
     )

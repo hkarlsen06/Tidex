@@ -36,6 +36,7 @@ struct StatsLattice: Equatable {
   struct Hero: Equatable {
     let month: FocusMonth
     let previousMonth: FocusMonth
+    /// The focus month is outside the current year, so its name carries the year.
     let showsYear: Bool
     let isAfterTax: Bool
     let amount: Double
@@ -94,6 +95,7 @@ struct StatsLattice: Equatable {
   struct Pace: Equatable {
     let month: FocusMonth
     let previousMonth: FocusMonth
+    let showsYear: Bool
     let focus: PaceSeries
     let previous: PaceSeries
     let yMax: Double
@@ -143,6 +145,7 @@ struct StatsLattice: Equatable {
 
   struct Weeks: Equatable {
     let month: FocusMonth
+    let showsYear: Bool
     let rows: [WeekRow]
     let headline: WeeksHeadline
     let readout: DayReadout

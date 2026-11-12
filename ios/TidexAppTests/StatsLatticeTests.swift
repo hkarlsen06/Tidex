@@ -137,8 +137,6 @@ final class StatsLatticeTests: XCTestCase {
       percentageChange: nil,
       thisMonthCumulative: cumulative,
       days: days,
-      thisWeek: nil,
-      bestWeek: nil,
       employment: nil,
       yearlyIncome: nil
     )
