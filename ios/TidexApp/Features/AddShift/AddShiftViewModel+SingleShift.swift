@@ -302,6 +302,7 @@ extension AddShiftViewModel {
       if isFirstShift {
         await FirstShiftConfetti.waitUntilFinished()
       }
+      await CelebrationManager.shared.waitUntilHighlightEnds()
       await NotificationService.shared.requestPermissionAndRegister(for: userId)
     }
   }

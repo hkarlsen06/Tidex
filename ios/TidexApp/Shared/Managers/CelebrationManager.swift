@@ -61,6 +61,12 @@ final class CelebrationManager {
     }
   }
 
+  /// Returns once the new shifts stop being highlighted, so a system prompt doesn't dim them.
+  func waitUntilHighlightEnds() async {
+    guard let remaining = clearTimer?.fireDate.timeIntervalSinceNow, remaining > 0 else { return }
+    try? await Task.sleep(for: .seconds(remaining))
+  }
+
   /// Whether a save for this user would add their first shift. Call it before the first write.
   /// Until the first sync finishes this is false, so a returning user on a new device is not new.
   func isFirstShiftSave(for userId: String) -> Bool {
