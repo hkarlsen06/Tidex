@@ -56,6 +56,7 @@
 		6203D73C76B6C0769010928A /* RecurringAnchorSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C3AEC90755C61373FD2D6F4 /* RecurringAnchorSelectionTests.swift */; };
 		67E4A33E30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */; };
 		1BD4E6170502F1F6DF47C62B /* StatsLatticeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569EC053E02EFBFF285C8C22 /* StatsLatticeTests.swift */; };
+		4B341BF3B6603B5261A8FFD5 /* StatsYearLatticeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E96BD7AAF0751E8F5D87185 /* StatsYearLatticeTests.swift */; };
 		6F4297BFD94E7970B1B1D546 /* StatsServiceCalendarMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */; };
 		75AA67D2CB2D125981E14DFD /* ShiftJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B96F1B0D9CA37188C777E437 /* ShiftJourneyUITests.swift */; };
 		75D3AD7184F6294BEF65BF09 /* FriendsBootstrapDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0101D84EA694A80B323B9F0 /* FriendsBootstrapDecodingTests.swift */; };
@@ -211,6 +212,7 @@
 		52D4CFDBD680B38184CA9073 /* OnboardingFunnelRecorderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingFunnelRecorderTests.swift; sourceTree = "<group>"; };
 		56E691E0BB69F35FADF53F22 /* MonthlyEarningsChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyEarningsChangeTests.swift; sourceTree = "<group>"; };
 		569EC053E02EFBFF285C8C22 /* StatsLatticeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsLatticeTests.swift; sourceTree = "<group>"; };
+		5E96BD7AAF0751E8F5D87185 /* StatsYearLatticeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsYearLatticeTests.swift; sourceTree = "<group>"; };
 		5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsServiceCalendarMathTests.swift; sourceTree = "<group>"; };
 		627E06C3772CE6997C9D1649 /* OfflineErrorHandlingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OfflineErrorHandlingTests.swift; sourceTree = "<group>"; };
 		67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineOvertimeTests.swift; sourceTree = "<group>"; };
@@ -559,6 +561,7 @@
 				7EB27D3B4BDC6919F1A4C4DD /* ShiftSnapshotBuilderTests.swift */,
 				A3462439DA1D8205E2375A5D /* SignupViewModelTests.swift */,
 				569EC053E02EFBFF285C8C22 /* StatsLatticeTests.swift */,
+				5E96BD7AAF0751E8F5D87185 /* StatsYearLatticeTests.swift */,
 				5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */,
 				F3711A751DD492A879351F57 /* SyncPushMergeTests.swift */,
 				D446AA96D91655E1CD3FCFA3 /* TariffVersionServiceTests.swift */,
@@ -1106,6 +1109,7 @@
 				3011C0E8ABBE7045378E86A5 /* ShiftSnapshotBuilderTests.swift in Sources */,
 				A5273AA3A4591450FD0F92D0 /* SignupViewModelTests.swift in Sources */,
 				1BD4E6170502F1F6DF47C62B /* StatsLatticeTests.swift in Sources */,
+				4B341BF3B6603B5261A8FFD5 /* StatsYearLatticeTests.swift in Sources */,
 				6F4297BFD94E7970B1B1D546 /* StatsServiceCalendarMathTests.swift in Sources */,
 				4B15848ACE7F18869FF4DF32 /* SyncPushMergeTests.swift in Sources */,
 				DA35ADCB2BA4CC654F5D621E /* TariffVersionServiceTests.swift in Sources */,
