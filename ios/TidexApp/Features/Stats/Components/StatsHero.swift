@@ -279,7 +279,7 @@ private struct StatsMetricStrip: View {
       .foregroundStyle(Color.tidexTextMuted)
   }
 
-  private func value(_ item: Item, alignment: Alignment = .leading) -> some View {
+  private func value(_ item: Item, alignment: HorizontalAlignment = .leading) -> some View {
     Text(item.value)
       .contentTransition(reduceMotion ? .identity : .numericText(value: item.number))
       .monospacedDigit()

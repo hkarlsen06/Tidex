@@ -23,7 +23,8 @@ struct StatsContent: View {
       StatsExportRow(action: onExport)
         .padding(.top, Spacing.lg)
     }
-    .animation(MotionTokens.optionalAnimation(.emphasis, reduceMotion: reduceMotion), value: lattice)
+    .animation(
+      MotionTokens.optionalAnimation(.emphasis, reduceMotion: reduceMotion), value: lattice)
   }
 }
 
@@ -33,7 +34,8 @@ extension View {
   func statsContentFrame() -> some View {
     frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .padding(.horizontal, Spacing.md)
-      .padding(.top, Spacing.sm)
+      // Clears the sync status pill that floats under the navigation bar.
+      .padding(.top, Spacing.xxxl)
       .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md)
       .frame(maxWidth: .infinity)
   }

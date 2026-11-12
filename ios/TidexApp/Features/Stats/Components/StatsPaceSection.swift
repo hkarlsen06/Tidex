@@ -125,7 +125,8 @@ struct StatsPaceSection: View {
       .sequenced(before: DragGesture(minimumDistance: 0))
       .updating($scrub) { value, state, _ in
         guard case .second(true, let drag) = value else { return }
-        state = drag.map { Scrub.day(geometry.day(at: $0.location.x, dayCount: dayCount)) } ?? .holding
+        state =
+          drag.map { Scrub.day(geometry.day(at: $0.location.x, dayCount: dayCount)) } ?? .holding
       }
   }
 
@@ -187,10 +188,7 @@ struct StatsPaceSection: View {
       }
       .monospacedDigit()
     }
-    .statsSlot(
-      lines: dynamicTypeSize.isAccessibilitySize ? 2 : 1,
-      alignment: dynamicTypeSize.isAccessibilitySize ? .topLeading : .leading
-    )
+    .statsSlot(lines: dynamicTypeSize.isAccessibilitySize ? 2 : 1)
     .font(.tidexFootnote)
     .foregroundStyle(Color.tidexTextSecondary)
     .accessibilityHidden(true)
@@ -242,7 +240,8 @@ struct StatsPaceSection: View {
     case .ended(let difference, let previous):
       let name = StatsFormat.monthName(previous)
       return difference >= 0
-        ? StatsFormat.emphasized(.statsPaceEndedAbove(money(difference), name), color: .tidexSuccess)
+        ? StatsFormat.emphasized(
+          .statsPaceEndedAbove(money(difference), name), color: .tidexSuccess)
         : StatsFormat.emphasized(.statsPaceEndedBelow(money(-difference), name), color: .tidexError)
     }
   }

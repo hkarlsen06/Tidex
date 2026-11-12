@@ -119,7 +119,8 @@ struct StatsYearSection: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-          Text(StatsFormat.monthName(FocusMonth(year: year.year, month: month.id))))
+          Text(StatsFormat.monthName(FocusMonth(year: year.year, month: month.id)))
+        )
         .accessibilityValue(Text(accessibilityValue(month)))
         .accessibilityAddTraits(month.id == year.focus ? .isSelected : [])
       }
@@ -138,10 +139,7 @@ struct StatsYearSection: View {
               .number.precision(.fractionLength(2)).locale(Locale.appLocale))))
       )
     }
-    .statsSlot(
-      lines: dynamicTypeSize.isAccessibilitySize ? 2 : 1,
-      alignment: dynamicTypeSize.isAccessibilitySize ? .topLeading : .leading
-    )
+    .statsSlot(lines: dynamicTypeSize.isAccessibilitySize ? 2 : 1)
     .font(.tidexFootnote)
     .foregroundStyle(Color.tidexTextSecondary)
   }
@@ -230,7 +228,8 @@ private struct StatsIncomeBar: View {
       shape
         .stroke(
           isFocus ? Color.tidexBlueText : Color.tidexBorder,
-          style: StrokeStyle(lineWidth: 1.5, dash: [3, 2.5]))
+          style: StrokeStyle(lineWidth: 1.5, dash: [3, 2.5])
+        )
         .opacity(isOutline ? 1 : 0)
     }
     .frame(width: 16, height: height)
@@ -258,7 +257,8 @@ private struct StatsEmploymentRow: View {
       StatsRule(lineY: StatsEmploymentScale.y(averageValue ?? 0))
         .stroke(
           Color.tidexEmploymentAccent,
-          style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [1, 4]))
+          style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [1, 4])
+        )
         .opacity(averageValue == nil ? 0 : 1)
       StatsEmploymentLine(
         values: StatsVector(year.months.map { $0.employmentValue }),
@@ -292,7 +292,8 @@ private struct StatsEmploymentRow: View {
         .fill(isCounted ? Color.tidexEmploymentAccent : Color.tidexBackground)
         .overlay(
           Circle().stroke(
-            isCounted ? Color.tidexBackground : Color.tidexEmploymentAccent, lineWidth: 2))
+            isCounted ? Color.tidexBackground : Color.tidexEmploymentAccent, lineWidth: 2)
+        )
         .frame(width: 8, height: 8)
         .offset(y: StatsEmploymentScale.y(value) - 4)
         .opacity(hasShifts ? 1 : 0)
@@ -354,8 +355,9 @@ private struct StatsEmploymentLine: Shape {
 }
 
 private enum StatsEmploymentScale {
-  static let height: CGFloat = 56
-  static let top: CGFloat = 8
+  static let height: CGFloat = 64
+  /// Leaves room for the "100%" label under the month letters.
+  static let top: CGFloat = 16
 
   static func y(_ percent: Double) -> CGFloat {
     top + (1 - CGFloat(min(max(percent, 0), 100) / 100)) * (height - top - 6)

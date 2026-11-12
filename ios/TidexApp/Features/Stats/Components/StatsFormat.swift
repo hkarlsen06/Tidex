@@ -106,8 +106,14 @@ enum StatsFormat {
 extension View {
   /// Gives text a fixed number of lines of its font, so new copy after a month change cannot
   /// move anything around it. Set the font after this modifier so it sizes the slot too.
-  func statsSlot(lines: Int = 1, alignment: Alignment = .leading) -> some View {
-    StatsSlot(lines: lines, alignment: alignment, content: self)
+  /// A slot of several lines pins its text to the top, so a short string stays where a long
+  /// one starts.
+  func statsSlot(lines: Int = 1, alignment: HorizontalAlignment = .leading) -> some View {
+    StatsSlot(
+      lines: lines,
+      alignment: Alignment(horizontal: alignment, vertical: lines > 1 ? .top : .center),
+      content: self
+    )
   }
 }
 
@@ -166,10 +172,7 @@ struct StatsSectionHeader<Trailing: View>: View {
       .foregroundStyle(Color.tidexTextMuted)
 
       Text(sentence)
-        .statsSlot(
-          lines: dynamicTypeSize.isAccessibilitySize ? 2 : 1,
-          alignment: dynamicTypeSize.isAccessibilitySize ? .topLeading : .leading
-        )
+        .statsSlot(lines: dynamicTypeSize.isAccessibilitySize ? 2 : 1)
         .font(.tidexTitle)
         .foregroundStyle(Color.tidexTextPrimary)
     }

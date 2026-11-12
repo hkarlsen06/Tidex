@@ -18,7 +18,7 @@ struct StatsWeeksSection: View {
       grid
       Text(readout)
         .monospacedDigit()
-        .statsSlot(lines: isStacked ? 2 : 1, alignment: isStacked ? .topLeading : .leading)
+        .statsSlot(lines: isStacked ? 2 : 1)
         .font(.tidexFootnote)
         .foregroundStyle(Color.tidexTextSecondary)
         .padding(.top, Spacing.xs)
