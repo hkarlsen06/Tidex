@@ -364,10 +364,10 @@ struct SignupForm: View {
     }
     .background(Color.tidexSurfacePrimary)
     .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous))
   }
 
   private func nameField(
@@ -387,10 +387,10 @@ struct SignupForm: View {
     }
     .background(Color.tidexSurfacePrimary)
     .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+      RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous))
   }
 
   @ViewBuilder

@@ -437,11 +437,11 @@ struct EventDetailsSheet: View {
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: CornerRadius.lg)
+        RoundedRectangle(cornerRadius: CornerRadius.field)
           .fill(Color.tidexSurfaceSecondary)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg)
+        RoundedRectangle(cornerRadius: CornerRadius.field)
           .stroke(
             isTitleFieldFocused ? Color.tidexBlue : Color.tidexBorder, lineWidth: 1)
       )

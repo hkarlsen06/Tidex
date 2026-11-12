@@ -185,10 +185,10 @@ struct JobBasicsOnboardingScreen: View {
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.md)
+        RoundedRectangle(cornerRadius: CornerRadius.field)
           .stroke(Color.tidexBorder, lineWidth: 1)
       )
-      .clipShape(.rect(cornerRadius: CornerRadius.md))
+      .clipShape(.rect(cornerRadius: CornerRadius.field))
       .contentShape(Rectangle())
       .onSubmit {
         isJobNameFocused = false

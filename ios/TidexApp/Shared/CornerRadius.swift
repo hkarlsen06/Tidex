@@ -28,6 +28,9 @@ enum CornerRadius {
   /// 12pt - Cards, sections
   static let lg: CGFloat = 12
 
+  /// 12pt - Text fields and code boxes
+  static let field: CGFloat = 12
+
   /// 14pt - Medium cards
   static let xl: CGFloat = 14
 

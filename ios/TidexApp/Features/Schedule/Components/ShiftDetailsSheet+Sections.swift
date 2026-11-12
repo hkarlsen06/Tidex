@@ -390,11 +390,11 @@ extension ShiftDetailsSheet {
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.md)
       .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
+        RoundedRectangle(cornerRadius: CornerRadius.field)
           .fill(Color.tidexSurfacePrimary)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
+        RoundedRectangle(cornerRadius: CornerRadius.field)
           .stroke(Color.tidexBorder, lineWidth: 1)
       )
     }

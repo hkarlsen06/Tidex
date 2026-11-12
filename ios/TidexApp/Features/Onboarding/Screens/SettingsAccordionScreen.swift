@@ -54,8 +54,12 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
           .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
       }
-      .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: currentSection)
-      .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: completedSections)
+      .animation(
+        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: currentSection
+      )
+      .animation(
+        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85),
+        value: completedSections)
     }
   }
 
@@ -340,7 +344,10 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     }
     .buttonStyle(.plain)
     .accessibilityLabel(
-      Text(verbatim: "\(String(localized: .onboardingSettingsTaxPercentage)), \(formatTaxValue(data.taxPercentage))%")
+      Text(
+        verbatim:
+          "\(String(localized: .onboardingSettingsTaxPercentage)), \(formatTaxValue(data.taxPercentage))%"
+      )
     )
     .accessibilityInputLabels([formatTaxValue(data.taxPercentage)])
   }
@@ -461,9 +468,9 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         .frame(width: paydayInputWidth)
         .frame(minHeight: 44)
         .background(Color.tidexBlue.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous))
         .overlay(
-          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+          RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous)
             .stroke(Color.tidexBlue, lineWidth: 2)
         )
         .onChange(of: isPaydayInputFocused) { _, focused in

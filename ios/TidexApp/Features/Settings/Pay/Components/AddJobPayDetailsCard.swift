@@ -72,9 +72,9 @@ struct AddJobPayDetailsCard: View {
       .onAppear { isPaydayInputFocused.wrappedValue = true }
       .frame(maxWidth: .infinity, minHeight: 44)
       .background(Color.tidexBlue.opacity(0.15))
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous)
           .stroke(Color.tidexBlueText, lineWidth: 1)
       )
       .onChange(of: isPaydayInputFocused.wrappedValue) { _, focused in

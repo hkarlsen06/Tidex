@@ -30,11 +30,11 @@ internal struct DigitBox: View {
   internal var body: some View {
     ZStack {
       // Background
-      RoundedRectangle(cornerRadius: CornerRadius.sm)
+      RoundedRectangle(cornerRadius: CornerRadius.field)
         .fill(Color.tidexSurfaceSecondary)
 
       // Border
-      RoundedRectangle(cornerRadius: CornerRadius.sm)
+      RoundedRectangle(cornerRadius: CornerRadius.field)
         .stroke(borderColor, lineWidth: isCurrentPosition ? activeBorderWidth : inactiveBorderWidth)
 
       // Digit or cursor
@@ -44,7 +44,7 @@ internal struct DigitBox: View {
           .foregroundStyle(Color.tidexTextPrimary)
       } else if isCurrentPosition, cursorVisible {
         // Blinking cursor
-        RoundedRectangle(cornerRadius: inactiveBorderWidth)
+        Capsule()
           .fill(Color.tidexBrandPrimary)
           .frame(width: cursorWidth, height: cursorHeight)
       }

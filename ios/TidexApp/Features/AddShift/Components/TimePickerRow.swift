@@ -127,10 +127,10 @@ struct NumericTimeInput: View {
     .padding(.vertical, Spacing.sm)
     .frame(maxWidth: .infinity)
     .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous))
     .overlay {
       if isFocused || hasInvalidInput {
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous)
           .strokeBorder(hasInvalidInput ? Color.tidexError : Color.tidexBlue, lineWidth: 1)
       }
     }

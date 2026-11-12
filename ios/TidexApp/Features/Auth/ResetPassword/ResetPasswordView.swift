@@ -134,7 +134,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
           )
         }
         .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous))
 
         // Error message
         if let emailError = viewModel.fieldErrors.email {
@@ -260,7 +260,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
           )
         }
         .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.field, style: .continuous))
 
         // Error messages
         if let newPasswordError = viewModel.fieldErrors.newPassword {
