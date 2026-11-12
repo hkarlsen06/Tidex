@@ -11,13 +11,18 @@ struct StatsHero: View {
 
   private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
 
+  /// A period with no shifts shows its zeros muted and no comparison.
+  private var isEmpty: Bool {
+    if case .noShifts = hero.qualifier { true } else { false }
+  }
+
   var body: some View {
     VStack(spacing: Spacing.xxxl) {
       VStack(spacing: 0) {
         summary
         changeRow
       }
-      StatsMetricStrip(metrics: metrics)
+      StatsMetricStrip(metrics: metrics, isEmpty: isEmpty)
     }
     .padding(.top, Spacing.lg)
     .onChange(of: hero.period) {
@@ -36,7 +41,7 @@ struct StatsHero: View {
         .contentTransition(reduceMotion ? .identity : .numericText(value: hero.amount))
         .statsSlot(lines: isAccessibilitySize ? 2 : 1, alignment: .center)
         .font(isAccessibilitySize ? .tidexAmountLarge : .tidexHeroAmount)
-        .foregroundStyle(Color.tidexTextPrimary)
+        .foregroundStyle(isEmpty ? Color.tidexTextMuted : Color.tidexTextPrimary)
       HStack(spacing: hasOtherCurrencies ? Spacing.xs : 0) {
         Text(qualifier)
           .monospacedDigit()
@@ -73,8 +78,10 @@ struct StatsHero: View {
     .font(.tidexSubheadline)
     .foregroundStyle(Color.tidexTextSecondary)
     .padding(.top, Spacing.xs)
+    .opacity(isEmpty ? 0 : 1)
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isStaticText)
+    .accessibilityHidden(isEmpty)
     .accessibilityIdentifier("stats.hero.change")
   }
 
@@ -221,6 +228,7 @@ struct StatsHero: View {
 
 private struct StatsMetricStrip: View {
   let metrics: StatsLattice.Metrics
+  let isEmpty: Bool
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -294,6 +302,6 @@ private struct StatsMetricStrip: View {
       .monospacedDigit()
       .statsSlot(alignment: alignment)
       .font(.tidexLargeTitle)
-      .foregroundStyle(Color.tidexTextPrimary)
+      .foregroundStyle(isEmpty ? Color.tidexTextMuted : Color.tidexTextPrimary)
   }
 }

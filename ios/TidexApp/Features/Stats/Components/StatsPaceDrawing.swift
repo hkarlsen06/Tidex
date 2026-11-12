@@ -36,20 +36,25 @@ struct StatsPaceLine: View {
 
   var body: some View {
     ZStack {
-      StatsPaceLineShape(values: values, yMax: yMax, days: 0...series.solidThrough, closesArea: true)
-        .fill(
-          LinearGradient(
-            colors: [Color.tidexBlue.opacity(0.34), Color.tidexBlue.opacity(0)],
-            startPoint: .top, endPoint: .bottom)
-        )
-        .opacity(isFocus ? 1 : 0)
+      StatsPaceLineShape(
+        values: values, yMax: yMax, days: 0...series.solidThrough, closesArea: true
+      )
+      .fill(
+        LinearGradient(
+          colors: [Color.tidexBlue.opacity(0.34), Color.tidexBlue.opacity(0)],
+          startPoint: .top, endPoint: .bottom)
+      )
+      .opacity(isFocus ? 1 : 0)
       StatsPaceLineShape(values: values, yMax: yMax, days: 0...series.solidThrough)
-        .stroke(Color.tidexBlue, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+        .stroke(
+          Color.tidexBlue, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
+        )
         .opacity(isFocus ? 1 : 0)
       StatsPaceLineShape(values: values, yMax: yMax, days: series.solidThrough...series.dayCount)
         .stroke(
           Color.tidexBlue,
-          style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round, dash: [0.5, 7]))
+          style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round, dash: [0.5, 7])
+        )
         .opacity(isFocus ? 1 : 0)
       StatsPaceLineShape(values: values, yMax: yMax, days: 0...series.dayCount)
         .stroke(Color.tidexTextMuted, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
@@ -137,6 +142,8 @@ struct StatsPaceHatchShape: Shape {
 
 struct StatsPaceGrid: View {
   let geometry: StatsPaceGeometry
+  /// The dashed scale lines. An empty plot keeps only its baseline.
+  let showsScale: Bool
 
   var body: some View {
     ZStack {
@@ -147,6 +154,7 @@ struct StatsPaceGrid: View {
         }
       }
       .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
+      .opacity(showsScale ? 1 : 0)
       Path { path in
         path.move(to: CGPoint(x: 0, y: geometry.height - 0.5))
         path.addLine(to: CGPoint(x: geometry.width, y: geometry.height - 0.5))
@@ -167,7 +175,8 @@ struct StatsPaceSwatch: View {
     }
     .stroke(
       isFocus ? Color.tidexBlue : Color.tidexTextMuted,
-      style: StrokeStyle(lineWidth: 2, dash: isFocus ? [] : [3, 2]))
+      style: StrokeStyle(lineWidth: 2, dash: isFocus ? [] : [3, 2])
+    )
     .frame(width: 12, height: 2)
     .accessibilityHidden(true)
   }

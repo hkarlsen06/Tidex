@@ -185,6 +185,9 @@ struct StatsLattice: Equatable {
     let months: [Employment]
     let average: EmploymentAverage
     let fullTimeHoursPerWeek: Double
+
+    /// False for a year with no shifts, which draws only its baseline.
+    var hasShifts: Bool { months.contains { $0 != .noShifts } }
   }
 
   struct Year: Equatable {

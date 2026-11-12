@@ -10,6 +10,8 @@ struct StatsYearSection: View {
   private static let incomeHeight: CGFloat = 148
   private static let incomeTop: CGFloat = 14
 
+  private var isEmpty: Bool { year.total <= 0 }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       StatsSectionHeader(title: .commonYear, sentence: headline) {
@@ -56,6 +58,7 @@ struct StatsYearSection: View {
     ZStack(alignment: .topLeading) {
       StatsRule(lineY: Self.incomeTop)
         .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
+        .opacity(isEmpty ? 0 : 1)
       StatsRule(lineY: Self.incomeHeight - 0.5)
         .stroke(Color.tidexSeparator, lineWidth: 1)
       Text(StatsFormat.compact(year.yMax))
@@ -64,6 +67,8 @@ struct StatsYearSection: View {
         .foregroundStyle(Color.tidexTextMuted)
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .offset(y: Self.incomeTop - 15)
+        .opacity(isEmpty ? 0 : 1)
+      StatsEmptyGlyph(systemName: "chart.bar.xaxis", isShown: isEmpty)
       HStack(alignment: .bottom, spacing: 0) {
         ForEach(year.months) { month in
           StatsIncomeBar(month: month, height: barHeight(month), isFocus: month.id == year.focus)
@@ -71,6 +76,7 @@ struct StatsYearSection: View {
         }
       }
       .frame(maxHeight: .infinity, alignment: .bottom)
+      .opacity(isEmpty ? 0 : 1)
     }
     .frame(height: Self.incomeHeight)
     .accessibilityElement(children: .ignore)
@@ -136,6 +142,10 @@ struct StatsYearSection: View {
   }
 
   private var employmentText: AttributedString {
+    guard year.employment.hasShifts else {
+      return StatsFormat.plain(String(localized: .statsEmploymentTitle)) + AttributedString(" · ")
+        + year.employment.average.text()
+    }
     let value = employment(month: year.focus)?.percent.map { StatsFormat.percent($0.rounded()) }
     let month = StatsFormat.shortMonthName(FocusMonth(year: year.year, month: year.focus))
     let focusPart = StatsFormat.emphasized(
@@ -254,6 +264,7 @@ struct StatsEmploymentRow: View {
     ZStack(alignment: .topLeading) {
       StatsRule(lineY: StatsEmploymentScale.top)
         .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
+        .opacity(employment.hasShifts ? 1 : 0)
       StatsRule(lineY: StatsEmploymentScale.y(0))
         .stroke(Color.tidexSeparator, lineWidth: 1)
       Text(StatsFormat.percent(100))
@@ -261,6 +272,7 @@ struct StatsEmploymentRow: View {
         .foregroundStyle(Color.tidexTextMuted)
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .offset(y: StatsEmploymentScale.top - 14)
+        .opacity(employment.hasShifts ? 1 : 0)
       StatsRule(lineY: StatsEmploymentScale.y(averageValue ?? 0))
         .stroke(
           Color.tidexEmploymentAccent,
