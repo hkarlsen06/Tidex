@@ -31,12 +31,34 @@ final class StatsServiceCalendarMathTests: XCTestCase {
 
   func testBestWeekUsesISOWeekNumbers() throws {
     // 1 Jan 2027 is a Friday, so ISO week 1 starts on 4 Jan and 11 Jan is in week 2.
-    let bestWeek = try XCTUnwrap(
-      StatsService.buildBestWeekData(
-        shifts: [shift(date: "2027-01-11", hours: 8)], focusYear: 2_027, focusMonth: 1))
+    let worked = shift(date: "2027-01-11", hours: 8)
+    let days = StatsService.buildDayStats(
+      primaryShifts: [worked], includedShifts: [worked], year: 2_027, month: 1)
+    let empty = StatsData.empty(year: 2_027, month: 1)
+    let stats = StatsData(
+      focusMonth: empty.focusMonth,
+      tax: empty.tax,
+      currentMonth: MonthStats(
+        totalEarnings: 1_000, totalEarningsNet: 1_000, totalHours: 8, shiftCount: 1),
+      currentMonthCurrencyAggregate: nil,
+      lastMonth: empty.lastMonth,
+      percentageChange: nil,
+      thisMonthCumulative: [],
+      days: days,
+      thisWeek: nil,
+      bestWeek: nil,
+      employment: nil,
+      yearlyIncome: nil
+    )
+    let now = try XCTUnwrap(Date.fromISODateString("2027-03-15"))
+    let lattice = StatsLattice(stats: stats, now: now, calendar: .gregorianCurrent)
+    let best = try XCTUnwrap(lattice.weeks.rows.first(where: \.isBest))
 
-    XCTAssertEqual(bestWeek.weekNumber, 2)
-    XCTAssertEqual(bestWeek.weekData.first?.fullDate, "2027-01-11")
+    XCTAssertEqual(days.count, 31)
+    XCTAssertEqual(days[10].earnings, 1_000, accuracy: 0.001)
+    XCTAssertEqual(best.isoWeek, 2)
+    XCTAssertEqual(best.cells.first?.dayStats?.day, 11)
+    XCTAssertEqual(lattice.weeks.headline, .best(week: 2, amount: 1_000))
   }
 
   func testCumulativeChartKeepsLastDaysOfLongerPreviousMonth() throws {
