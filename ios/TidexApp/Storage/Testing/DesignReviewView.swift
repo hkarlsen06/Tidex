@@ -297,6 +297,7 @@
     private var calendar: some View {
       ShiftsCalendarView(
         shifts: Self.shifts,
+        eventCoverageByDate: Self.calendarEvents,
         presentation: .build(
           shifts: Self.shifts, year: 2_026, month: 9, jobs: [], currency: "kr",
           excludedFromTotalIds: []
@@ -307,6 +308,23 @@
         selectedCurrencyAggregate: nil, selectedHasTaxEnabled: true,
         isCopyMode: false, isMoveMode: false, isCopying: false, isMoving: false
       )
+    }
+
+    /// One event on a shift day, two on another and one on a day without shifts.
+    private static var calendarEvents: [String: [EventPresentation]] {
+      [(10, 1), (15, 2), (16, 1)].reduce(into: [:]) { coverage, entry in
+        let (day, count) = entry
+        let dateISO = String(format: "2026-09-%02d", day)
+        coverage[dateISO] = (0..<count).map { index in
+          EventPresentation(
+            event: EventRow(
+              id: "design-event-\(day)-\(index)", user_id: nil, start_date: dateISO,
+              end_date: dateISO, is_all_day: true, start_time: nil, end_time: nil, note: "Event"
+            ),
+            coveredDateISO: dateISO
+          )
+        }
+      }
     }
 
     private var controls: some View {
