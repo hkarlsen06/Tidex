@@ -7,7 +7,7 @@ struct StatsYearSection: View {
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-  private static let incomeHeight: CGFloat = 96
+  private static let incomeHeight: CGFloat = 148
   private static let incomeTop: CGFloat = 14
 
   var body: some View {
@@ -19,14 +19,14 @@ struct StatsYearSection: View {
           .fixedSize()
       }
       chart
-        .padding(.top, Spacing.sm)
+        .padding(.top, StatsRhythm.headerToBody + Spacing.xs)
       employmentCaption
-        .padding(.top, Spacing.xs)
+        .padding(.top, Spacing.lg + Spacing.xs)
     }
   }
 
   private var chart: some View {
-    VStack(spacing: Spacing.xxs) {
+    VStack(spacing: Spacing.sm) {
       incomeRow
       monthLetters
       StatsEmploymentRow(year: year)
@@ -355,9 +355,9 @@ private struct StatsEmploymentLine: Shape {
 }
 
 private enum StatsEmploymentScale {
-  static let height: CGFloat = 64
+  static let height: CGFloat = 92
   /// Leaves room for the "100%" label under the month letters.
-  static let top: CGFloat = 16
+  static let top: CGFloat = 24
 
   static func y(_ percent: Double) -> CGFloat {
     top + (1 - CGFloat(min(max(percent, 0), 100) / 100)) * (height - top - 6)

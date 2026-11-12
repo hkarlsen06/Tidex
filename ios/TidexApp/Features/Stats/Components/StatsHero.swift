@@ -12,7 +12,7 @@ struct StatsHero: View {
   private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
+    VStack(alignment: .leading, spacing: Spacing.xxl) {
       VStack(alignment: .leading, spacing: 0) {
         summary
         changeRow
@@ -30,7 +30,7 @@ struct StatsHero: View {
         .statsSlot()
         .font(.tidexLabel)
         .foregroundStyle(Color.tidexTextSecondary)
-        .padding(.bottom, Spacing.xxxs)
+        .padding(.bottom, Spacing.xs)
       Text(amount)
         .contentTransition(reduceMotion ? .identity : .numericText(value: hero.amount))
         .monospacedDigit()
@@ -46,6 +46,7 @@ struct StatsHero: View {
       .statsSlot(lines: isAccessibilitySize ? 2 : 1)
       .font(.tidexSubheadline)
       .foregroundStyle(Color.tidexTextSecondary)
+      .padding(.top, Spacing.xs)
     }
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(Text(accessibilityText))
@@ -73,7 +74,7 @@ struct StatsHero: View {
     .statsSlot(lines: isAccessibilitySize ? 2 : 1)
     .font(.tidexSubheadline)
     .foregroundStyle(Color.tidexTextSecondary)
-    .padding(.top, Spacing.xxs)
+    .padding(.top, Spacing.xs)
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isStaticText)
     .accessibilityIdentifier("stats.hero.change")
@@ -231,7 +232,7 @@ private struct StatsMetricStrip: View {
   var body: some View {
     Group {
       if dynamicTypeSize.isAccessibilitySize {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
           ForEach(items) { item in
             HStack(alignment: .firstTextBaseline) {
               label(item)
@@ -241,41 +242,30 @@ private struct StatsMetricStrip: View {
           }
         }
       } else {
-        HStack(spacing: 0) {
+        HStack(spacing: Spacing.md) {
           ForEach(items) { item in
             column(item)
           }
         }
       }
     }
-    .padding(.vertical, Spacing.xs)
-    .overlay(alignment: .top) { StatsHairline() }
-    .overlay(alignment: .bottom) { StatsHairline() }
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("stats.metrics")
   }
 
   private func column(_ item: Item) -> some View {
-    VStack(alignment: .leading, spacing: 1) {
-      label(item)
+    VStack(alignment: .leading, spacing: Spacing.xxxs) {
       value(item)
+      label(item)
     }
-    .padding(.leading, item.id == 0 ? 0 : Spacing.msm)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .overlay(alignment: .leading) {
-      Rectangle()
-        .fill(Color.tidexSeparator)
-        .frame(width: 1)
-        .opacity(item.id == 0 ? 0 : 1)
-        .accessibilityHidden(true)
-    }
     .accessibilityElement(children: .combine)
   }
 
   private func label(_ item: Item) -> some View {
     Text(item.label)
       .statsSlot()
-      .font(.tidexCaption)
+      .font(.tidexFootnote)
       .foregroundStyle(Color.tidexTextMuted)
   }
 
@@ -284,7 +274,7 @@ private struct StatsMetricStrip: View {
       .contentTransition(reduceMotion ? .identity : .numericText(value: item.number))
       .monospacedDigit()
       .statsSlot(alignment: alignment)
-      .font(.tidexTitle)
+      .font(.tidexLargeTitle)
       .foregroundStyle(Color.tidexTextPrimary)
   }
 }

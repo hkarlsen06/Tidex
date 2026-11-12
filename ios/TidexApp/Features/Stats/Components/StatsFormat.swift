@@ -139,6 +139,14 @@ private struct StatsSlot<Content: View>: View {
   }
 }
 
+/// The vertical rhythm of the Stats page. Whitespace separates the sections, so the gap
+/// between two sections is several times the gaps inside one.
+enum StatsRhythm {
+  static let section: CGFloat = 72
+  /// From a section's sentence to the drawing it describes.
+  static let headerToBody: CGFloat = 28
+}
+
 struct StatsSectionHeader<Trailing: View>: View {
   let title: LocalizedStringResource
   let sentence: AttributedString
@@ -157,10 +165,10 @@ struct StatsSectionHeader<Trailing: View>: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.xxxs) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
         Text(title)
-          .tracking(0.8)
+          .tracking(1.4)
           .textCase(.uppercase)
           .fontWeight(.semibold)
           .frame(maxWidth: .infinity, alignment: .leading)

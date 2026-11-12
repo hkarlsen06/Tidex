@@ -14,15 +14,15 @@ struct StatsPaceSection: View {
     case day(Int)
   }
 
-  private static let plotHeight: CGFloat = 160
+  private static let plotHeight: CGFloat = 220
   private static let tickDays: [Int] = [1, 7, 14, 21, 28]
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       StatsSectionHeader(title: .statsPaceTitle, sentence: headline)
       readout
-        .padding(.top, Spacing.xsm)
-        .padding(.bottom, Spacing.xs)
+        .padding(.top, StatsRhythm.headerToBody)
+        .padding(.bottom, Spacing.md)
       GeometryReader { proxy in
         plot(StatsPaceGeometry(width: proxy.size.width, height: Self.plotHeight, yMax: pace.yMax))
       }
@@ -34,7 +34,7 @@ struct StatsPaceSection: View {
       .accessibilityChartDescriptor(chartDescriptor)
       .accessibilityIdentifier("stats.pace.plot")
       ticks
-        .padding(.top, Spacing.xxs)
+        .padding(.top, Spacing.sm)
     }
     .onChange(of: pace.month) {
       voiceOverDay = nil
@@ -55,7 +55,7 @@ struct StatsPaceSection: View {
       StatsPaceHatchShape(startSlot: Double(pace.dayCount))
         .stroke(Color.tidexTextMuted.opacity(0.45), lineWidth: 1)
         .accessibilityHidden(true)
-      scaleLabels(geometry)
+      scaleLabel
       ForEach([pace.previous, pace.focus]) { series in
         StatsPaceLine(series: series, yMax: pace.yMax)
           .transition(
@@ -75,18 +75,14 @@ struct StatsPaceSection: View {
       })
   }
 
-  private func scaleLabels(_ geometry: StatsPaceGeometry) -> some View {
-    ZStack(alignment: .topLeading) {
-      Text(StatsFormat.compact(pace.yMax))
-        .offset(y: StatsPaceGeometry.top - 15)
-      Text(StatsFormat.compact(pace.yMax / 2))
-        .offset(y: geometry.y(pace.yMax / 2) - 15)
-    }
-    .font(.tidexMicro)
-    .monospacedDigit()
-    .foregroundStyle(Color.tidexTextMuted)
-    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-    .accessibilityHidden(true)
+  private var scaleLabel: some View {
+    Text(StatsFormat.compact(pace.yMax))
+      .offset(y: StatsPaceGeometry.top - 15)
+      .font(.tidexMicro)
+      .monospacedDigit()
+      .foregroundStyle(Color.tidexTextMuted)
+      .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+      .accessibilityHidden(true)
   }
 
   private func todayMarker(_ geometry: StatsPaceGeometry) -> some View {

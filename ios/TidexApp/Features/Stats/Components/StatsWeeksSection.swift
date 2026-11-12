@@ -13,15 +13,15 @@ struct StatsWeeksSection: View {
     VStack(alignment: .leading, spacing: 0) {
       StatsSectionHeader(title: .statsWeeksTitle, sentence: headline) { legend }
       weekdayHeader
-        .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.xxs)
+        .padding(.top, StatsRhythm.headerToBody)
+        .padding(.bottom, Spacing.xs)
       grid
       Text(readout)
         .monospacedDigit()
         .statsSlot(lines: isStacked ? 2 : 1)
         .font(.tidexFootnote)
         .foregroundStyle(Color.tidexTextSecondary)
-        .padding(.top, Spacing.xs)
+        .padding(.top, Spacing.mlg)
     }
     .onChange(of: weeks.month) {
       pinnedDay = nil
@@ -168,7 +168,7 @@ struct StatsWeeksSection: View {
 }
 
 private struct StatsWeekRow: View {
-  static let rowHeight: CGFloat = 36
+  static let rowHeight: CGFloat = 48
   static let weekColumnWidth: CGFloat = 34
   static let totalColumnWidth: CGFloat = 75
 
@@ -197,11 +197,6 @@ private struct StatsWeekRow: View {
           .opacity(isStacked ? 0 : 1)
       }
       .frame(height: Self.rowHeight)
-      .overlay(alignment: .top) {
-        StatsHairline()
-          .padding(.leading, Self.weekColumnWidth)
-          .opacity(row.id == 0 ? 0 : 0.5)
-      }
       if isStacked {
         total.statsSlot(alignment: .trailing)
       }

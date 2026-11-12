@@ -15,13 +15,13 @@ struct StatsContent: View {
     VStack(alignment: .leading, spacing: 0) {
       StatsHero(hero: lattice.hero, metrics: lattice.metrics)
       StatsPaceSection(pace: lattice.pace, onScrubbingChange: onScrubbingChange)
-        .padding(.top, Spacing.xl)
+        .padding(.top, StatsRhythm.section)
       StatsWeeksSection(weeks: lattice.weeks)
-        .padding(.top, Spacing.xl)
+        .padding(.top, StatsRhythm.section)
       StatsYearSection(year: lattice.year, onSelectMonth: onSelectMonth)
-        .padding(.top, Spacing.xl)
+        .padding(.top, StatsRhythm.section)
       StatsExportRow(action: onExport)
-        .padding(.top, Spacing.lg)
+        .padding(.top, StatsRhythm.section)
     }
     .animation(
       MotionTokens.optionalAnimation(.emphasis, reduceMotion: reduceMotion), value: lattice)
@@ -33,7 +33,7 @@ extension View {
   /// design-review fixtures.
   func statsContentFrame() -> some View {
     frame(maxWidth: AdaptiveMaxWidth.tabContent)
-      .padding(.horizontal, Spacing.md)
+      .padding(.horizontal, Spacing.mlg)
       // Clears the sync status pill that floats under the navigation bar.
       .padding(.top, Spacing.xxxl)
       .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md)
@@ -55,9 +55,8 @@ private struct StatsExportRow: View {
           .accessibilityHidden(true)
       }
       .foregroundStyle(Color.tidexBlueText)
-      .padding(.vertical, Spacing.md)
+      .padding(.vertical, Spacing.mlg)
       .overlay(alignment: .top) { StatsHairline() }
-      .overlay(alignment: .bottom) { StatsHairline() }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
