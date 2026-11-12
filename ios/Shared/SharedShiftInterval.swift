@@ -135,6 +135,28 @@ struct SharedShiftInterval: Equatable, Sendable {
     return formatter.string(from: start)
   }
 
+  /// The shift on a 24-hour bar in `zone`. The bar shows today when the shift touches today,
+  /// so an overnight shift that started yesterday shows its morning part. Otherwise it shows the
+  /// day the shift starts. Positions follow the wall clock, so they line up with hour labels.
+  func dayBar(in zone: TimeZone, now: Date) -> ShiftDayBar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = zone
+    let today = calendar.startOfDay(for: now)
+    let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
+    let touchesToday = start < tomorrow && end > today
+    let day = touchesToday ? today : calendar.startOfDay(for: start)
+    let nextDay = calendar.date(byAdding: .day, value: 1, to: day) ?? day
+
+    func fraction(_ instant: Date) -> Double {
+      let clock = calendar.dateComponents([.hour, .minute, .second], from: instant)
+      let seconds = (clock.hour ?? 0) * 3_600 + (clock.minute ?? 0) * 60 + (clock.second ?? 0)
+      return Double(seconds) / 86_400
+    }
+    let lower = start <= day ? 0 : fraction(start)
+    let upper = end >= nextDay ? 1 : fraction(end)
+    return ShiftDayBar(span: lower...max(lower, upper), now: touchesToday ? fraction(now) : nil)
+  }
+
   private static func clock(_ value: String) -> Int? {
     let parts = value.split(separator: ":", omittingEmptySubsequences: false)
     guard (2...3).contains(parts.count), parts[0].count == 2, parts[1].count == 2,
@@ -153,4 +175,12 @@ struct SharedShiftInterval: Equatable, Sendable {
     guard hour < 24 || minute == 0 && second == 0 else { return nil }
     return hour * 3_600 + minute * 60 + second
   }
+}
+
+/// The part of a shift that falls on one day, as fractions of that day from midnight (0) to the
+/// next midnight (1).
+struct ShiftDayBar: Equatable, Sendable {
+  let span: ClosedRange<Double>
+  /// Where the current time falls, or nil when the bar shows another day than today.
+  let now: Double?
 }

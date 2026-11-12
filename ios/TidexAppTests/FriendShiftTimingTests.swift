@@ -181,6 +181,49 @@ final class FriendShiftTimingTests: XCTestCase {
         endTime: old.endTime, timeZoneIdentifier: old.ownerTimeZone))
   }
 
+  func testDayBarShowsTodaysPartOfTheShiftWithTheCurrentTime() throws {
+    let oslo = try XCTUnwrap(TimeZone(identifier: "Europe/Oslo"))
+    let overnight = try XCTUnwrap(
+      SharedShiftInterval(
+        date: "2026-11-10", startTime: "22:00", endTime: "06:00",
+        timeZoneIdentifier: "Europe/Oslo"))
+    let cases: [(now: String, span: ClosedRange<Double>, line: Double?)] = [
+      // Afternoon before: the shift starts tonight, so today's bar runs to midnight.
+      ("2026-11-10T11:00:00Z", 22.0 / 24...1, 12.0 / 24),
+      // 03:00 the next morning: today's bar holds the morning part.
+      ("2026-11-11T02:00:00Z", 0...6.0 / 24, 3.0 / 24),
+      // A week earlier: the bar shows the shift's own day and no line.
+      ("2026-11-03T11:00:00Z", 22.0 / 24...1, nil),
+    ]
+    for (now, span, line) in cases {
+      let bar = overnight.dayBar(
+        in: oslo, now: try XCTUnwrap(ISO8601DateFormatter().date(from: now)))
+      XCTAssertEqual(bar.span.lowerBound, span.lowerBound, accuracy: 0.0001, now)
+      XCTAssertEqual(bar.span.upperBound, span.upperBound, accuracy: 0.0001, now)
+      XCTAssertEqual(bar.now == nil, line == nil, now)
+      if let line { XCTAssertEqual(try XCTUnwrap(bar.now), line, accuracy: 0.0001, now) }
+    }
+  }
+
+  func testDayBarFollowsTheChosenClock() throws {
+    let newYorkShift = try XCTUnwrap(
+      SharedShiftInterval(
+        date: "2026-11-10", startTime: "09:00", endTime: "17:00",
+        timeZoneIdentifier: "America/New_York"))
+    let oslo = try XCTUnwrap(TimeZone(identifier: "Europe/Oslo"))
+    let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-11-10T18:00:00Z"))
+
+    let theirs = newYorkShift.dayBar(in: newYorkShift.timeZone, now: now)
+    XCTAssertEqual(theirs.span.lowerBound, 9.0 / 24, accuracy: 0.0001)
+    XCTAssertEqual(theirs.span.upperBound, 17.0 / 24, accuracy: 0.0001)
+    XCTAssertEqual(try XCTUnwrap(theirs.now), 13.0 / 24, accuracy: 0.0001)
+
+    let mine = newYorkShift.dayBar(in: oslo, now: now)
+    XCTAssertEqual(mine.span.lowerBound, 15.0 / 24, accuracy: 0.0001)
+    XCTAssertEqual(mine.span.upperBound, 23.0 / 24, accuracy: 0.0001)
+    XCTAssertEqual(try XCTUnwrap(mine.now), 19.0 / 24, accuracy: 0.0001)
+  }
+
   private func clockComponents(_ date: Date, in zone: TimeZone) -> DateComponents {
     var calendar = self.calendar
     calendar.timeZone = zone
