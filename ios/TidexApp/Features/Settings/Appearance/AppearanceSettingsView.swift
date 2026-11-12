@@ -286,6 +286,9 @@ struct AppearanceSettingsView: View {  // swiftlint:disable:this type_body_lengt
     case .shifts:
       return String(localized: .tabsShifts)
 
+    case .stats:
+      return String(localized: .tabsStats)
+
     case .sharing:
       return String(localized: .tabsSharing)
     }
@@ -298,6 +301,9 @@ struct AppearanceSettingsView: View {  // swiftlint:disable:this type_body_lengt
 
     case .shifts:
       return "calendar"
+
+    case .stats:
+      return "chart.bar.xaxis"
 
     case .sharing:
       return "person.2.fill"

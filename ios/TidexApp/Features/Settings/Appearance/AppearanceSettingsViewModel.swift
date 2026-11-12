@@ -12,8 +12,9 @@ internal enum StartupTabOption: String, CaseIterable {
   case home
   case sharing
   case shifts
+  case stats
 
-  internal static let allCases: [Self] = [.home, .shifts, .sharing]
+  internal static let allCases: [Self] = [.home, .shifts, .stats, .sharing]
 }
 
 /// ViewModel for appearance settings
@@ -124,10 +125,7 @@ internal final class AppearanceSettingsViewModel {
       resolvedStartupTabRawValue =
         UserDefaults.standard.string(forKey: Self.startupTabCacheKey) ?? "home"
     }
-    let normalizedStartupTabRawValue: String =
-      resolvedStartupTabRawValue == "stats"
-      ? StartupTabOption.home.rawValue : resolvedStartupTabRawValue
-    selectedStartupTab = StartupTabOption(rawValue: normalizedStartupTabRawValue) ?? .home
+    selectedStartupTab = StartupTabOption(rawValue: resolvedStartupTabRawValue) ?? .home
     UserDefaults.standard.set(selectedStartupTab.rawValue, forKey: Self.startupTabCacheKey)
 
     isInitialLoad = false
@@ -212,7 +210,8 @@ internal final class AppearanceSettingsViewModel {
         AppearanceSettingsConstants.logger.error(
           "Failed to save calendar content color style: \(error.localizedDescription)"
         )
-        errorMessage = ErrorTranslations.translate(error, fallback: .appearanceCalendarContentColorSaveError)
+        errorMessage = ErrorTranslations.translate(
+          error, fallback: .appearanceCalendarContentColorSaveError)
       }
     }
   }

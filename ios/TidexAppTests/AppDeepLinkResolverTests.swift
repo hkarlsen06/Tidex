@@ -197,6 +197,7 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
     XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: "add"), .home)
     XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: nil), .home)
     XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: "shifts"), .shifts)
+    XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: "stats"), .stats)
     // Friends keeps the stored "sharing" value that settings sync and onboarding write.
     XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: "sharing"), .friends)
     XCTAssertNil(StartupTabOption(rawValue: "add"))
