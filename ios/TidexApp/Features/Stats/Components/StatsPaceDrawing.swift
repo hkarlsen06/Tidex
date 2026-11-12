@@ -25,8 +25,9 @@ struct StatsPaceGeometry {
   }
 }
 
-/// One month's line. A role change crossfades the solid and dotted blue layers with the dashed
-/// grey one, because SwiftUI cannot interpolate between dash patterns.
+/// One month's line. A role change crossfades the blue layers with the dashed grey one, because
+/// SwiftUI cannot interpolate between dash patterns. The scheduled part of the month is the same
+/// solid blue at a lower opacity, so it never reads as the dashed line of the month before.
 struct StatsPaceLine: View {
   let series: StatsLattice.PaceSeries
   let yMax: Double
@@ -52,10 +53,9 @@ struct StatsPaceLine: View {
         .opacity(isFocus ? 1 : 0)
       StatsPaceLineShape(values: values, yMax: yMax, days: series.solidThrough...series.dayCount)
         .stroke(
-          Color.tidexBlue,
-          style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round, dash: [0.5, 7])
+          Color.tidexBlue, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
         )
-        .opacity(isFocus ? 1 : 0)
+        .opacity(isFocus ? 0.35 : 0)
       StatsPaceLineShape(values: values, yMax: yMax, days: 0...series.dayCount)
         .stroke(Color.tidexTextMuted, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
         .opacity(isFocus ? 0 : 1)
@@ -110,36 +110,6 @@ struct StatsPaceLineShape: Shape {
   }
 }
 
-/// Diagonal hatching over the slots after the month's last day, so a short month ends early.
-struct StatsPaceHatchShape: Shape {
-  var startSlot: Double
-
-  nonisolated var animatableData: Double {
-    get { startSlot }
-    set { startSlot = newValue }
-  }
-
-  func path(in rect: CGRect) -> Path {
-    let spacing: CGFloat = 6
-    let minX = CGFloat(startSlot) * rect.width / CGFloat(StatsLattice.daySlots)
-    let minY = StatsPaceGeometry.top
-    var path = Path()
-    guard rect.maxX - minX > 0.5 else { return path }
-    // Each line is x + y = intercept, so the pattern stays put while the edge moves.
-    var intercept = ((minX + minY) / spacing).rounded(.up) * spacing
-    while intercept <= rect.maxX + rect.maxY {
-      let start = max(minX, intercept - rect.maxY)
-      let end = min(rect.maxX, intercept - minY)
-      if start < end {
-        path.move(to: CGPoint(x: start, y: intercept - start))
-        path.addLine(to: CGPoint(x: end, y: intercept - end))
-      }
-      intercept += spacing
-    }
-    return path
-  }
-}
-
 struct StatsPaceGrid: View {
   let geometry: StatsPaceGeometry
 
@@ -149,9 +119,6 @@ struct StatsPaceGrid: View {
         // The top line starts after its scale label.
         path.move(to: CGPoint(x: StatsScaleLabel.gutter, y: StatsPaceGeometry.top))
         path.addLine(to: CGPoint(x: geometry.width, y: StatsPaceGeometry.top))
-        let middle = geometry.y(geometry.yMax / 2)
-        path.move(to: CGPoint(x: 0, y: middle))
-        path.addLine(to: CGPoint(x: geometry.width, y: middle))
       }
       .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
       Path { path in

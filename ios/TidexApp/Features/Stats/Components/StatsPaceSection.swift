@@ -52,11 +52,9 @@ struct StatsPaceSection: View {
   private func plot(_ geometry: StatsPaceGeometry) -> some View {
     ZStack(alignment: .topLeading) {
       StatsPaceGrid(geometry: geometry)
-      StatsPaceHatchShape(startSlot: Double(pace.dayCount))
-        .stroke(Color.tidexTextMuted.opacity(0.45), lineWidth: 1)
-        .accessibilityHidden(true)
       ForEach([pace.previous, pace.focus]) { series in
         StatsPaceLine(series: series, yMax: pace.yMax)
+          .opacity(isAlone && series.role == .previous ? 0 : 1)
           .transition(
             .asymmetric(
               insertion: .modifier(
@@ -140,6 +138,11 @@ struct StatsPaceSection: View {
     scrubbedDay ?? voiceOverDay ?? pace.reference.day
   }
 
+  /// The month before has no pay, so its line and its legend entry are left out.
+  private var isAlone: Bool {
+    pace.headline == .alone
+  }
+
   private var isTodayReference: Bool {
     if case .today = pace.reference { true } else { false }
   }
@@ -169,8 +172,10 @@ struct StatsPaceSection: View {
       HStack(spacing: Spacing.xs) {
         StatsPaceSwatch(isFocus: true)
         Text(swatchText(pace.month, value: pace.focus.values[readoutDay - 1]))
-        StatsPaceSwatch(isFocus: false)
-        Text(swatchText(pace.previousMonth, value: pace.previous.values[readoutDay - 1]))
+        if !isAlone {
+          StatsPaceSwatch(isFocus: false)
+          Text(swatchText(pace.previousMonth, value: pace.previous.values[readoutDay - 1]))
+        }
       }
       .monospacedDigit()
     }
@@ -188,13 +193,17 @@ struct StatsPaceSection: View {
   }
 
   private var readoutAccessibilityText: String {
-    [
-      readoutDate,
-      "\(StatsFormat.monthName(pace.month)) "
-        + StatsFormat.money(pace.focus.values[readoutDay - 1], currency: currency),
-      "\(StatsFormat.monthName(pace.previousMonth)) "
-        + StatsFormat.money(pace.previous.values[readoutDay - 1], currency: currency),
-    ].joined(separator: ", ")
+    ([readoutDate]
+      + shownSeries.map { name, values in
+        "\(name) " + StatsFormat.money(values[readoutDay - 1], currency: currency)
+      }).joined(separator: ", ")
+  }
+
+  /// Each drawn line with its month's name.
+  private var shownSeries: [(name: String, values: [Double])] {
+    let focus = (name: StatsFormat.monthName(pace.month), values: pace.focus.values)
+    let previous = (name: StatsFormat.monthName(pace.previousMonth), values: pace.previous.values)
+    return isAlone ? [focus] : [focus, previous]
   }
 
   private func adjustVoiceOverDay(_ direction: AccessibilityAdjustmentDirection) {
@@ -210,30 +219,12 @@ struct StatsPaceSection: View {
 
   private var headline: AttributedString {
     let month = StatsFormat.monthName(pace.month, withYear: pace.showsYear)
-    switch pace.headline {
-    case .nothing:
-      return StatsFormat.plain(String(localized: .statsPaceNothing(month)), color: .tidexTextMuted)
-    case .scheduled(let amount):
-      return StatsFormat.plain(String(localized: .statsPaceScheduled(money(amount))))
-    case .noPreviousPay(let previous):
-      let text = String(localized: .statsPaceNoPreviousPay(StatsFormat.monthName(previous)))
-      return StatsFormat.plain(text.sentenceCased(), color: .tidexTextMuted)
-    case .running(let difference, let previous):
-      let name = StatsFormat.monthName(previous)
-      return difference >= 0
-        ? StatsFormat.emphasized(.statsPaceAhead(money(difference), name), color: .tidexSuccess)
-        : StatsFormat.emphasized(.statsPaceBehind(money(-difference), name), color: .tidexError)
-    case .ended(let difference, let previous):
-      let name = StatsFormat.monthName(previous)
-      return difference >= 0
-        ? StatsFormat.emphasized(
-          .statsPaceEndedAbove(money(difference), name), color: .tidexSuccess)
-        : StatsFormat.emphasized(.statsPaceEndedBelow(money(-difference), name), color: .tidexError)
-    }
-  }
-
-  private func money(_ amount: Double) -> String {
-    StatsFormat.money(amount, currency: currency)
+    let resource: LocalizedStringResource =
+      switch pace.headline {
+      case .versus(let previous): .statsPaceVersus(month, StatsFormat.monthName(previous))
+      case .alone: .statsPaceAlone(month)
+      }
+    return StatsFormat.plain(String(localized: resource).sentenceCased())
   }
 
   private var chartDescriptor: StatsLineChartDescriptor {
@@ -244,14 +235,10 @@ struct StatsPaceSection: View {
       xAxisTitle: String(localized: .statsAccessibilityAxisDay),
       yAxisTitle: String(localized: .shiftsEarningsSection),
       xRange: 1...Double(pace.dayCount),
-      series: [
+      series: shownSeries.map { name, values in
         StatsLineChartDescriptor.Series(
-          name: StatsFormat.monthName(pace.month),
-          points: days.map { (x: Double($0), y: pace.focus.values[$0 - 1]) }),
-        StatsLineChartDescriptor.Series(
-          name: StatsFormat.monthName(pace.previousMonth),
-          points: days.map { (x: Double($0), y: pace.previous.values[$0 - 1]) }),
-      ],
+          name: name, points: days.map { (x: Double($0), y: values[$0 - 1]) })
+      },
       formatValue: { [currency] in StatsFormat.money($0, currency: currency) }
     )
   }
