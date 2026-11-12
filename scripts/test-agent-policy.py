@@ -216,23 +216,23 @@ elif args[:2] == ["simctl", "io"] and "screenshot" in args:
     result, commands = run("lock", "acquire", "simulator")
     assert result.stdout.strip() == "Shared iPhone 2", result.stdout
     assert ["ios-agent", "simulator-lease", "Shared iPhone 2", "600"] in commands, commands
+    # A release leaves the simulator booted. ios-agent shuts it down once nobody has taken it for five minutes.
     _, commands = run("lock", "release", "simulator")
-    assert ["xcrun", "simctl", "shutdown", "Shared iPhone 2"] in commands, commands
+    assert not any(command[:3] == ["xcrun", "simctl", "shutdown"] for command in commands), commands
+    assert not (root / "sim-locks/simulator-2").exists()
     run("lock", "release", "simulator", **busy)
     result, _ = run("lock", "acquire", "simulator")
     assert result.stdout.strip() == "Shared iPhone", result.stdout
     run("lock", "release", "simulator")
     _, commands = run("lock", "run", "Shared iPhone 2", "--", "true", IOS_AGENT_SIMULATORS="2")
-    assert ["xcrun", "simctl", "shutdown", "Shared iPhone 2"] in commands
+    assert not any(command[:3] == ["xcrun", "simctl", "shutdown"] for command in commands), commands
     assert not (root / "sim-locks/simulator-2").exists()
     _, commands = run("lock", "run", "simulator", "--", "true")
-    assert not any(command[:3] == ["xcrun", "simctl", "shutdown"] for command in commands)
     assert not (root / "sim-locks/simulator").exists()
     run("lock", "acquire", "Shared iPhone 2", IOS_AGENT_SIMULATORS="2")
     _, commands = run("lock", "run", "Shared iPhone 2", "--", "true", IOS_AGENT_SIMULATORS="2")
     assert ["ios-agent", "simulator-lease", "Shared iPhone 2", "600"] in commands, commands
-    _, commands = run("lock", "release", "simulator")
-    assert ["xcrun", "simctl", "shutdown", "Shared iPhone 2"] in commands
+    run("lock", "release", "simulator")
     assert not (root / "sim-locks/simulator-2").exists()
 
     # The line is easiest to watch on a pool of one.

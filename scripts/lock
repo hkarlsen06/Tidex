@@ -14,8 +14,8 @@
 # renews the slot this worktree's session holds, or else takes the first free
 # slot, boots its simulator if needed, and waits while every slot is busy.
 # Shared iPhone stays booted. Shared iPhone 2 and 3 boot only while the slots
-# before them are busy, and shut down when their locks release.
-# IOS_AGENT_SIMULATORS=1 or 2 makes the pool smaller.
+# before them are busy. ios-agent shuts each down once no lock has held it for
+# five minutes. IOS_AGENT_SIMULATORS=1 or 2 makes the pool smaller.
 # `acquire simulator` prints the simulator's name on stdout, as in
 # SIM="$(scripts/lock acquire simulator)" && xcrun simctl install "$SIM" ...
 # `run simulator` passes AGENT_SIMULATOR_NAME and AGENT_SIMULATOR_UDID to its
@@ -344,15 +344,6 @@ for devices in runtimes.values():
   fi
 }
 
-shutdown_extra_simulator() {
-  local simulator
-  case "$1" in
-    simulator-2|simulator-3)
-      simulator="$(slot_simulator "$1")"
-      xcrun simctl shutdown "$simulator" >/dev/null 2>&1 || true ;;
-  esac
-}
-
 # Marks this worktree's session as used now, so it stays ahead of the TTL.
 renew() {
   echo "$OWNER||$(date +%s)" >"$(lock_dir "$1")/owner"
@@ -373,7 +364,6 @@ release_run() {
   local pid
   IFS='|' read -r _ pid _ <<<"$(read_lock "$1")"
   if [ "$pid" = "$$" ]; then
-    shutdown_extra_simulator "$1"
     rm -rf "$(lock_dir "$1")"
   fi
 }
@@ -387,7 +377,6 @@ release() {
     # agent's in this worktree, so only sessions are released.
     for lock in $locks; do
       if session_held_by_me "$lock"; then
-        shutdown_extra_simulator "$lock"
         rm -rf "$(lock_dir "$lock")"
       fi
     done
