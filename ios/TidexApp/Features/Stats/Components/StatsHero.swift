@@ -34,7 +34,6 @@ struct StatsHero: View {
         .padding(.bottom, Spacing.xs)
       Text(amount)
         .contentTransition(reduceMotion ? .identity : .numericText(value: hero.amount))
-        .monospacedDigit()
         .statsSlot(lines: isAccessibilitySize ? 2 : 1, alignment: .center)
         .font(isAccessibilitySize ? .tidexAmountLarge : .tidexHeroAmount)
         .foregroundStyle(Color.tidexTextPrimary)

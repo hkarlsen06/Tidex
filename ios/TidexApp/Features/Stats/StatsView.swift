@@ -286,8 +286,6 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
           CalendarPickerOption(value: StatsPeriod.year, title: .commonYear),
         ]
       )
-      .padding(Spacing.xxs)
-      .tidexGlass(shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
       .accessibilityIdentifier("stats.period")
       .frame(maxWidth: AdaptiveMaxWidth.tabContent)
       .frame(maxWidth: .infinity)
