@@ -3,7 +3,8 @@ import SwiftUI
 /// The Stats drawing for one month or one year. It holds no view model, so the design-review
 /// screens render it from fixtures. A new page swaps values in place in one animation. The hero
 /// stays the same view in both periods, so switching period rolls its numbers without moving it.
-/// A period with no shifts keeps the hero and replaces its sections with the way to add a shift.
+/// On a month page the month's standing in its year comes right under the hero, because every
+/// month has one.
 struct StatsContent: View {
   enum Page: Equatable {
     case month(StatsLattice)
@@ -22,10 +23,26 @@ struct StatsContent: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       StatsHero(hero: hero, metrics: metrics)
-      if isEmpty {
-        emptySections
-      } else {
-        sections
+      switch page {
+      case .month(let lattice):
+        yearSection(lattice.year)
+        details {
+          StatsPaceSection(pace: lattice.pace, onScrubbingChange: onScrubbingChange)
+            .padding(.top, StatsRhythm.section)
+          StatsWeeksSection(weeks: lattice.weeks)
+            .padding(.top, StatsRhythm.section)
+        }
+      case .year(let lattice):
+        details {
+          StatsMonthsSection(months: lattice.months) { month in
+            onSelectMonth(FocusMonth(year: lattice.year, month: month))
+          }
+          .padding(.top, StatsRhythm.section)
+          StatsYearEmploymentSection(
+            employment: lattice.employment, currentMonth: lattice.currentMonth
+          )
+          .padding(.top, StatsRhythm.section)
+        }
       }
     }
     .animation(
@@ -34,40 +51,29 @@ struct StatsContent: View {
 
   private var isEmpty: Bool { metrics.shifts == 0 }
 
-  @ViewBuilder private var sections: some View {
-    switch page {
-    case .month(let lattice):
-      StatsPaceSection(pace: lattice.pace, onScrubbingChange: onScrubbingChange)
-        .padding(.top, StatsRhythm.section)
-      StatsWeeksSection(weeks: lattice.weeks)
-        .padding(.top, StatsRhythm.section)
-      yearSection(lattice.year)
-    case .year(let lattice):
-      StatsMonthsSection(months: lattice.months) { month in
-        onSelectMonth(FocusMonth(year: lattice.year, month: month))
-      }
-      .padding(.top, StatsRhythm.section)
-      StatsYearEmploymentSection(
-        employment: lattice.employment, currentMonth: lattice.currentMonth
+  /// The sections that need shifts, and the export row. A period with no shifts keeps their
+  /// space and shows the way to add a shift at the top of it, so nothing above or below moves
+  /// when a swipe crosses between a full and an empty period.
+  private func details(@ViewBuilder _ sections: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      sections()
+      StatsActionRow(
+        title: .dataExportPdfButton, detail: exportPeriod, systemImage: "square.and.arrow.up",
+        isBusy: isExporting, action: onExport
       )
+      .accessibilityIdentifier("stats.export")
       .padding(.top, StatsRhythm.section)
     }
-    StatsActionRow(
-      title: .dataExportPdfButton, detail: exportPeriod, systemImage: "square.and.arrow.up",
-      isBusy: isExporting, action: onExport
-    )
-    .accessibilityIdentifier("stats.export")
-    .padding(.top, StatsRhythm.section)
-  }
-
-  /// An empty month still shows its year when the year has something in it.
-  @ViewBuilder private var emptySections: some View {
-    StatsActionRow(title: .shiftsEmptyAddShift, systemImage: "plus", action: onAddShift)
-      .accessibilityIdentifier("stats.add-shift")
-      .padding(.top, StatsRhythm.section)
-    if case .month(let lattice) = page, lattice.year.total > 0 || lattice.year.employment.hasShifts
-    {
-      yearSection(lattice.year)
+    .opacity(isEmpty ? 0 : 1)
+    .allowsHitTesting(!isEmpty)
+    .accessibilityHidden(isEmpty)
+    .overlay(alignment: .top) {
+      StatsActionRow(title: .shiftsEmptyAddShift, systemImage: "plus", action: onAddShift)
+        .accessibilityIdentifier("stats.add-shift")
+        .padding(.top, StatsRhythm.section)
+        .opacity(isEmpty ? 1 : 0)
+        .allowsHitTesting(isEmpty)
+        .accessibilityHidden(!isEmpty)
     }
   }
 

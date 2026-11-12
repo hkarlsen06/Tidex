@@ -285,17 +285,28 @@ extension StatsLattice {
     let total = months.reduce(0) { $0 + $1.earnings }
     let paidMonths = months.filter { $0.earnings > 0 }.count
     let peak = months.map(\.earnings).max() ?? 0
+    let perPaidMonth: Double? = paidMonths > 0 ? total / Double(paidMonths) : nil
     return Year(
       year: focus.year,
       months: months,
       yMax: niceCeiling(max(peak, 1_000)),
       total: total,
-      perPaidMonth: paidMonths > 0 ? total / Double(paidMonths) : nil,
+      perPaidMonth: perPaidMonth,
+      standing: standing(months[focus.month - 1], peak: peak, perPaidMonth: perPaidMonth),
       focus: focus.month,
       currentMonth: focus.year == today.year ? today.month : nil,
       employment: makeEmploymentYear(
         year: focus.year, data: stats.employment, now: now, calendar: calendar)
     )
+  }
+
+  /// A month that is only scheduled is never the best, because nothing in it is earned yet.
+  private static func standing(_ month: MonthSlot, peak: Double, perPaidMonth: Double?) -> Standing
+  {
+    guard let perPaidMonth else { return .noPayInYear }
+    if month.earnings <= 0 { return .noPayInMonth }
+    if month.earnings >= peak, !month.isAhead { return .best }
+    return .againstAverage(month.earnings - perPaidMonth)
   }
 
   static func makeEmploymentYear(year: Int, data: EmploymentData?, now: Date, calendar: Calendar)

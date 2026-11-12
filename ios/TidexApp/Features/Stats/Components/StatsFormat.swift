@@ -161,7 +161,7 @@ enum StatsRhythm {
 }
 
 struct StatsSectionHeader<Trailing: View>: View {
-  let title: LocalizedStringResource
+  let title: Text
   let sentence: AttributedString
   let trailing: Trailing
 
@@ -172,7 +172,14 @@ struct StatsSectionHeader<Trailing: View>: View {
     sentence: AttributedString,
     @ViewBuilder trailing: () -> Trailing
   ) {
-    self.title = title
+    self.title = Text(title)
+    self.sentence = sentence
+    self.trailing = trailing()
+  }
+
+  /// A title that needs no translation, such as a year.
+  init(verbatimTitle: String, sentence: AttributedString, @ViewBuilder trailing: () -> Trailing) {
+    self.title = Text(verbatim: verbatimTitle)
     self.sentence = sentence
     self.trailing = trailing()
   }
@@ -180,7 +187,7 @@ struct StatsSectionHeader<Trailing: View>: View {
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
-        Text(title)
+        title
           .tracking(1.4)
           .textCase(.uppercase)
           .fontWeight(.semibold)

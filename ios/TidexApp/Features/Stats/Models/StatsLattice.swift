@@ -190,12 +190,23 @@ struct StatsLattice: Equatable {
     var hasShifts: Bool { months.contains { $0 != .noShifts } }
   }
 
+  /// Where the focus month's pay sits among the months of its year.
+  enum Standing: Equatable {
+    case noPayInYear
+    case noPayInMonth
+    /// The highest pay of the year so far, alone or tied.
+    case best
+    /// Pay minus the year's average paid month. Positive is above.
+    case againstAverage(Double)
+  }
+
   struct Year: Equatable {
     let year: Int
     let months: [MonthSlot]
     let yMax: Double
     let total: Double
     let perPaidMonth: Double?
+    let standing: Standing
     let focus: Int
     /// The real current month when the focus year is this year.
     let currentMonth: Int?

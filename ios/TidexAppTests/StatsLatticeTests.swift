@@ -97,6 +97,24 @@ final class StatsLatticeTests: XCTestCase {
     XCTAssertEqual(saturday, .scheduled(1))
   }
 
+  func testMonthStandsAgainstTheYearsAveragePaidMonth() throws {
+    // Three paid months average 20 000. December is only scheduled.
+    let income: [Int: Double] = [3: 10_000, 9: 30_000, 11: 20_000, 12: 0]
+    let now = try date(2_026, 11, 12)
+    func standing(_ month: Int, income: [Int: Double] = income) throws -> StatsLattice.Standing {
+      try lattice(year: 2_026, month: month, pay: [:], yearlyIncome: income, now: now).year.standing
+    }
+
+    XCTAssertEqual(try standing(9), .best)
+    XCTAssertEqual(try standing(3), .againstAverage(-10_000))
+    XCTAssertEqual(try standing(11), .againstAverage(0))
+    XCTAssertEqual(try standing(5), .noPayInMonth)
+    XCTAssertEqual(try standing(5, income: [:]), .noPayInYear)
+    // A scheduled month with the year's highest pay is compared, not called the best.
+    XCTAssertEqual(
+      try standing(12, income: [3: 10_000, 12: 30_000]), .againstAverage(10_000))
+  }
+
   private func hasDays(_ row: StatsLattice.WeekRow) -> Bool {
     row.cells.contains { $0.dayStats != nil }
   }
@@ -112,7 +130,8 @@ final class StatsLatticeTests: XCTestCase {
   }
 
   private func lattice(
-    year: Int, month: Int, pay: [Int: Double], shiftCount: Int? = nil, now: Date
+    year: Int, month: Int, pay: [Int: Double], shiftCount: Int? = nil,
+    yearlyIncome: [Int: Double]? = nil, now: Date
   ) throws -> StatsLattice {
     let days = (1...Date.daysInMonth(year: year, month: month)).map { day in
       DayStats(
@@ -138,7 +157,11 @@ final class StatsLatticeTests: XCTestCase {
       thisMonthCumulative: cumulative,
       days: days,
       employment: nil,
-      yearlyIncome: nil
+      yearlyIncome: yearlyIncome?.map { month, earnings in
+        MonthlyIncomeData(
+          month: "", fullMonth: "", year: year, monthNumber: month, earnings: earnings, hours: 0,
+          shifts: earnings > 0 ? 1 : 0)
+      }
     )
     return StatsLattice(stats: stats, now: now, calendar: calendar)
   }

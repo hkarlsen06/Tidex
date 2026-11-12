@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// Places the month on screen in its year: how its pay stands against the other months and the
+/// year's average, with the year as the backdrop.
 struct StatsYearSection: View {
   let year: StatsLattice.Year
   let onSelectMonth: (Int) -> Void
@@ -12,17 +14,42 @@ struct StatsYearSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      StatsSectionHeader(title: .commonYear, sentence: headline) {
-        Text(perMonthText)
-          .fontWeight(.regular)
-          .monospacedDigit()
-          .fixedSize()
+      StatsSectionHeader(verbatimTitle: String(year.year), sentence: headline) {
+        averageLegend
       }
       chart
         .padding(.top, StatsRhythm.headerToBody + Spacing.xs)
       employmentCaption
         .padding(.top, Spacing.lg + Spacing.xs)
     }
+  }
+
+  private var hasPay: Bool { year.total > 0 }
+
+  private var averageLegend: some View {
+    HStack(spacing: Spacing.xxs) {
+      StatsRule(lineY: 1)
+        .stroke(Color.tidexTextSecondary, style: Self.averageStroke)
+        .frame(width: 14, height: 2)
+        .accessibilityHidden(true)
+      Text(
+        StatsFormat.emphasized(
+          .statsYearAverageAll(money(year.perPaidMonth ?? 0)), color: .tidexTextSecondary)
+      )
+      .fontWeight(.regular)
+      .monospacedDigit()
+    }
+    .fixedSize()
+    .opacity(year.perPaidMonth == nil ? 0 : 1)
+    .accessibilityHidden(year.perPaidMonth == nil)
+  }
+
+  private static let averageStroke: StrokeStyle = StrokeStyle(
+    lineWidth: 1.5, lineCap: .round, dash: [1, 4])
+
+  private func incomeY(_ amount: Double) -> CGFloat {
+    let share = year.yMax > 0 ? min(amount / year.yMax, 1) : 0
+    return Self.incomeHeight - CGFloat(share) * (Self.incomeHeight - Self.incomeTop)
   }
 
   private var chart: some View {
@@ -54,23 +81,29 @@ struct StatsYearSection: View {
 
   private var incomeRow: some View {
     ZStack(alignment: .topLeading) {
-      StatsRule(lineY: Self.incomeTop)
-        .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
+      // A year with no pay has no scale, so it keeps only the baseline and the month letters.
+      Group {
+        StatsRule(lineY: Self.incomeTop)
+          .stroke(Color.tidexSeparator, style: StrokeStyle(lineWidth: 1, dash: [2, 4]))
+        Text(StatsFormat.compact(year.yMax))
+          .font(.tidexMicro)
+          .monospacedDigit()
+          .foregroundStyle(Color.tidexTextMuted)
+          .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+          .offset(y: Self.incomeTop - 15)
+        HStack(alignment: .bottom, spacing: 0) {
+          ForEach(year.months) { month in
+            StatsIncomeBar(month: month, height: barHeight(month), isFocus: month.id == year.focus)
+              .frame(maxWidth: .infinity)
+          }
+        }
+        .frame(maxHeight: .infinity, alignment: .bottom)
+        StatsRule(lineY: incomeY(year.perPaidMonth ?? 0))
+          .stroke(Color.tidexTextSecondary, style: Self.averageStroke)
+      }
+      .opacity(hasPay ? 1 : 0)
       StatsRule(lineY: Self.incomeHeight - 0.5)
         .stroke(Color.tidexSeparator, lineWidth: 1)
-      Text(StatsFormat.compact(year.yMax))
-        .font(.tidexMicro)
-        .monospacedDigit()
-        .foregroundStyle(Color.tidexTextMuted)
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        .offset(y: Self.incomeTop - 15)
-      HStack(alignment: .bottom, spacing: 0) {
-        ForEach(year.months) { month in
-          StatsIncomeBar(month: month, height: barHeight(month), isFocus: month.id == year.focus)
-            .frame(maxWidth: .infinity)
-        }
-      }
-      .frame(maxHeight: .infinity, alignment: .bottom)
     }
     .frame(height: Self.incomeHeight)
     .accessibilityElement(children: .ignore)
@@ -124,15 +157,20 @@ struct StatsYearSection: View {
   }
 
   private var headline: AttributedString {
-    let yearText = String(year.year)
-    guard year.total > 0 else {
-      return StatsFormat.plain(String(localized: .statsNoPayIn(yearText)), color: .tidexTextMuted)
+    switch year.standing {
+    case .noPayInYear:
+      return StatsFormat.plain(
+        String(localized: .statsNoPayIn(String(year.year))), color: .tidexTextMuted)
+    case .noPayInMonth:
+      let month = StatsFormat.monthName(FocusMonth(year: year.year, month: year.focus))
+      return StatsFormat.plain(String(localized: .statsNoPayIn(month)), color: .tidexTextMuted)
+    case .best:
+      return StatsFormat.plain(String(localized: .statsStandingBest))
+    case .againstAverage(let difference):
+      return difference >= 0
+        ? StatsFormat.emphasized(.statsStandingAbove(money(difference)), color: .tidexSuccess)
+        : StatsFormat.emphasized(.statsStandingBelow(money(-difference)), color: .tidexError)
     }
-    return StatsFormat.plain(String(localized: .statsYearTotal(money(year.total), yearText)))
-  }
-
-  private var perMonthText: String {
-    year.perPaidMonth.map { String(localized: .statsYearPerMonth(money($0))) } ?? ""
   }
 
   private var employmentText: AttributedString {
@@ -158,7 +196,7 @@ struct StatsYearSection: View {
   private var incomeDescriptor: StatsCategoryChartDescriptor {
     StatsCategoryChartDescriptor(
       title: String(localized: .statsChartsYearlyIncomeTitle(String(year.year))),
-      summary: String(localized: .statsAccessibilityChartTotal(money(year.total))),
+      summary: String(headline.characters),
       categoryAxisTitle: String(localized: .commonMonth),
       valueAxisTitle: String(localized: .shiftsEarningsSection),
       points: year.months.map { month in
@@ -373,69 +411,5 @@ private struct StatsRule: Shape {
     path.move(to: CGPoint(x: rect.minX, y: lineY))
     path.addLine(to: CGPoint(x: rect.maxX, y: lineY))
     return path
-  }
-}
-
-struct StatsEmploymentInfoButton: View {
-  let fullTimeHoursPerWeek: Double
-
-  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-  @State private var showPopover: Bool = false
-
-  private var usesCompactPresentation: Bool {
-    horizontalSizeClass == .compact
-  }
-
-  private var popoverBinding: Binding<Bool> {
-    Binding(
-      get: { showPopover && !usesCompactPresentation },
-      set: { if !$0 { showPopover = false } }
-    )
-  }
-
-  private var alertBinding: Binding<Bool> {
-    Binding(
-      get: { showPopover && usesCompactPresentation },
-      set: { if !$0 { showPopover = false } }
-    )
-  }
-
-  private var message: String {
-    String(
-      localized: .statsChartsEmploymentInfo(
-        fullTimeHoursPerWeek.formatted(
-          .number.precision(.fractionLength(2)).locale(Locale.appLocale))))
-  }
-
-  var body: some View {
-    Button {
-      showPopover.toggle()
-    } label: {
-      Image(systemName: "info.circle")
-        .font(.tidexBody)
-        .foregroundStyle(Color.tidexTextMuted)
-        // 44pt hit area that doesn't add height to the caption.
-        .padding(Spacing.md)
-        .contentShape(Rectangle())
-        .padding(-Spacing.md)
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel(Text(.statsAccessibilityEmploymentInfo))
-    .popover(isPresented: popoverBinding) {
-      Text(message)
-        .font(.tidexSubheadline)
-        .foregroundStyle(Color.tidexTextSecondary)
-        .multilineTextAlignment(.leading)
-        .lineLimit(nil)
-        .minimumScaleFactor(1)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding()
-        .frame(maxWidth: 280)
-    }
-    .alert(Text(.statsChartsEmploymentTitle), isPresented: alertBinding) {
-      Button(String(localized: .commonDone), role: .cancel) {}
-    } message: {
-      Text(message)
-    }
   }
 }
