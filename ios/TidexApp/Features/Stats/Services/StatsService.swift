@@ -651,8 +651,9 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
       if day <= daysInPreviousMonth {
         previousCumulative += previousMonthEarningsPerDay[day] ?? 0
       }
-      // A longer previous month folds its remaining days into the last point.
-      if day == daysInCurrentMonth, daysInPreviousMonth > daysInCurrentMonth {
+      // A finished month ends on the previous month's whole total, so a longer previous month
+      // folds its remaining days into the last point. The running month compares the same day.
+      if day == daysInCurrentMonth, daysInPreviousMonth > daysInCurrentMonth, !isCurrentSelection {
         for extraDay in (day + 1)...daysInPreviousMonth {
           previousCumulative += previousMonthEarningsPerDay[extraDay] ?? 0
         }

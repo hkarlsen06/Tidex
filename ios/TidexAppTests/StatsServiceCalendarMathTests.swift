@@ -26,7 +26,8 @@ final class StatsServiceCalendarMathTests: XCTestCase {
       focusYear: 2_026, shifts: shifts, snapshots: [])
     let september = try XCTUnwrap(employment.monthlyData.first { $0.monthNumber == 9 })
 
-    XCTAssertEqual(september.averagePercentage, (20.0 / 165 * 1_000).rounded() / 10, accuracy: 0.001)
+    XCTAssertEqual(
+      september.averagePercentage, (20.0 / 165 * 1_000).rounded() / 10, accuracy: 0.001)
   }
 
   func testBestWeekUsesISOWeekNumbers() throws {
@@ -76,6 +77,24 @@ final class StatsServiceCalendarMathTests: XCTestCase {
 
     XCTAssertEqual(data.count, 28)
     XCTAssertEqual(try XCTUnwrap(data.last).lastMonth, 800, accuracy: 0.001)
+  }
+
+  func testRunningMonthComparesTheSameDayOnItsLastDay() throws {
+    let now = try XCTUnwrap(Date.fromISODateString("2026-02-28"))
+    let data = StatsService.buildCumulativeData(
+      currentMonthShifts: [],
+      previousMonthShifts: [
+        shift(date: "2026-01-10", hours: 8, gross: 300),
+        shift(date: "2026-01-31", hours: 8, gross: 500),
+      ],
+      targetYear: 2_026,
+      targetMonth: 2,
+      previousYear: 2_026,
+      previousMonth: 1,
+      now: now
+    )
+
+    XCTAssertEqual(try XCTUnwrap(data.last).lastMonth, 300, accuracy: 0.001)
   }
 
   private func weekdays(year: Int, month: Int) throws -> [String] {

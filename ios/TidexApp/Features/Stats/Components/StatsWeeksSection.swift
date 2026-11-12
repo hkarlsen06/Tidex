@@ -121,20 +121,23 @@ struct StatsWeeksSection: View {
   }
 
   private func dayLine(_ day: DayStats) -> String {
+    dayParts(day).joined(separator: " · ")
+  }
+
+  private func dayParts(_ day: DayStats) -> [String] {
     let date = StatsFormat.weekdayAndDate(weeks.month, day: day.day)
-    let details: [String]
     if day.shifts > 0 {
-      details = [
+      return [
+        date,
         String(localized: .commonShiftCount(day.shifts + day.otherCurrencyShifts)),
         String(localized: .statsWeeksHours(StatsFormat.hours(day.hours))),
         money(day.earnings),
       ]
-    } else if day.otherCurrencyShifts > 0 {
-      details = [String(localized: .statsWeeksOtherCurrencyShift)]
-    } else {
-      details = [String(localized: .statsWeeksNoShift)]
     }
-    return ([date] + details).joined(separator: " · ")
+    if day.otherCurrencyShifts > 0 {
+      return [date, String(localized: .statsWeeksOtherCurrencyShift)]
+    }
+    return [date, String(localized: .statsWeeksNoShift)]
   }
 
   private func payLine(_ day: DayStats) -> String {
@@ -152,10 +155,12 @@ struct StatsWeeksSection: View {
       summary: String(headline.characters),
       categoryAxisTitle: String(localized: .statsAccessibilityAxisDay),
       valueAxisTitle: String(localized: .shiftsEarningsSection),
+      // A row is one VoiceOver element, so the chart carries what a tap on a day shows.
       points: days.map { day in
-        let date = StatsFormat.weekdayAndDate(weeks.month, day: day.day)
-        return StatsCategoryChartDescriptor.Point(
-          category: date, value: day.earnings, label: "\(date), \(money(day.earnings))")
+        StatsCategoryChartDescriptor.Point(
+          category: StatsFormat.weekdayAndDate(weeks.month, day: day.day),
+          value: day.earnings,
+          label: dayParts(day).joined(separator: ", "))
       },
       formatValue: { [currency] in StatsFormat.money($0, currency: currency) }
     )
