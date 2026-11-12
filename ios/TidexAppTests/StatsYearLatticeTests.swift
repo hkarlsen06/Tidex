@@ -46,17 +46,22 @@ final class StatsYearLatticeTests: XCTestCase {
     XCTAssertEqual(lattice.hero.change, .percentSameTime(50))
   }
 
-  func testNoComparisonWithoutPreviousPayOrForAFutureYear() throws {
+  func testNoComparisonWithoutPreviousPay() throws {
     let now = try date(2_026, 11, 12)
     let noPrevious = lattice(year: 2_025, pay: [3: 9_000], now: now)
     let runningWithoutPrevious = lattice(
       year: 2_026, pay: [3: 9_000], previousPay: [12: 4_000],
       toDate: YearToDate(focus: 9_000, previous: 0), now: now)
-    let future = lattice(year: 2_027, pay: [1: 3_000], previousPay: [1: 3_000], now: now)
 
     XCTAssertEqual(noPrevious.hero.change, .noPreviousPay)
     XCTAssertEqual(runningWithoutPrevious.hero.change, .noPreviousPay)
-    XCTAssertEqual(future.hero.change, .noPreviousPay)
+  }
+
+  func testFutureYearComparesScheduledPayWithThePreviousYear() throws {
+    let future = lattice(
+      year: 2_027, pay: [1: 3_000], previousPay: [1: 4_000], now: try date(2_026, 11, 12))
+
+    XCTAssertEqual(future.hero.change, .percent(-25))
   }
 
   func testAlwaysTwelveMonthRows() throws {

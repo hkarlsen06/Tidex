@@ -106,11 +106,11 @@ extension StatsYearLattice {
     )
   }
 
-  /// A finished year compares whole years, and the running year compares the same date in both.
+  /// The running year compares the same date in both years. Any other year compares whole
+  /// years, which for a future year is its scheduled pay.
   private static func change(
     year: Int, total: Double, previousTotal: Double, toDate: YearToDate?, today: StatsLattice.Today
   ) -> StatsLattice.Change {
-    if year > today.year { return .noPreviousPay }
     if year == today.year {
       guard let toDate, toDate.previous > 0 else { return .noPreviousPay }
       return .percentSameTime((toDate.focus - toDate.previous) / toDate.previous * 100)
