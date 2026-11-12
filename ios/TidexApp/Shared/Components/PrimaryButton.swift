@@ -40,7 +40,7 @@ struct PrimaryButton: View {
             : Color.tidexBrandPrimary
         )
         .foregroundStyle(Color.tidexTextOnBrand)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+        .clipShape(Capsule())
     }
     .buttonStyle(SnappyPrimaryButtonStyle(reduceMotion: reduceMotion))
     .accessibilityLabel(title)

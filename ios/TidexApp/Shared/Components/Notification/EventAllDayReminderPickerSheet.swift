@@ -123,7 +123,7 @@ struct EventAllDayReminderPickerSheet: View {
       .frame(maxWidth: .infinity)
       .frame(minHeight: Spacing.buttonHeight)
       .background(Color.tidexError)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .clipShape(Capsule())
     }
     .padding(.horizontal, Spacing.lg)
     .padding(.bottom, Spacing.md)

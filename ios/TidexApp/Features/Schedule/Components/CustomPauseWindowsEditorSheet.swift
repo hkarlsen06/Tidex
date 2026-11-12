@@ -187,7 +187,8 @@ struct CustomPauseWindowsEditorSheet: View {
       return String(localized: .settingsPayEditorBreakTitle)
     }
     return String(
-      localized: .calendarAccessibilityTimeRange(start.toHourMinuteString(), end.toHourMinuteString()))
+      localized: .calendarAccessibilityTimeRange(
+        start.toHourMinuteString(), end.toHourMinuteString()))
   }
 
   private var draftsList: some View {
@@ -254,7 +255,7 @@ struct CustomPauseWindowsEditorSheet: View {
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.md)
       .background(Color.tidexBlue.opacity(0.08))
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .clipShape(Capsule())
     }
     .buttonStyle(.plain)
   }

@@ -63,10 +63,10 @@ private struct OAuthProviderButton<Icon: View>: View {
       .frame(minHeight: 50)
       .background(colorScheme == .dark ? Color.white : Color.black)
       .overlay {
-        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
+        Capsule()
           .stroke(colorScheme == .dark ? Color.clear : Color.black.opacity(0.16), lineWidth: 1)
       }
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+      .clipShape(Capsule())
     }
     .buttonStyle(SnappyButtonStyle())
     .disabled(isLoading)

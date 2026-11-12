@@ -132,7 +132,7 @@ struct WorkSetupRequiredPlaceholder<Header: View>: View {
           ? Color.tidexBrandPrimary.opacity(0.7)
           : Color.tidexBrandPrimary
       )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+      .clipShape(Capsule())
     }
     .buttonStyle(.plain)
     .disabled(isRefreshingBeforeSetup)

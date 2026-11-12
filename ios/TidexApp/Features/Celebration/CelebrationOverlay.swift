@@ -198,7 +198,7 @@ struct CelebrationOverlay: View {
           .frame(minHeight: Spacing.buttonHeight)
           .background(Color.tidexBrandPrimary)
           .foregroundStyle(Color.tidexTextOnBrand)
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
+          .clipShape(Capsule())
       }
       .buttonStyle(CelebrationButtonStyle())
       .frame(maxWidth: contentMaxWidth)

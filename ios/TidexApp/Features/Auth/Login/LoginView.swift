@@ -259,10 +259,10 @@ struct LoginView: View {
       .frame(minHeight: 50)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
+        Capsule()
           .stroke(Color.tidexBorderSubtle, lineWidth: 1)
       )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+      .clipShape(Capsule())
     }
     .buttonStyle(SnappyButtonStyle())
     .accessibilityIdentifier("login.reveal-email")

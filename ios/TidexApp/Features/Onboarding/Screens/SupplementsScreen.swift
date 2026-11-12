@@ -182,9 +182,9 @@ struct SupplementsScreen: View {
       .padding(.vertical, Spacing.xs)
       .frame(minHeight: 56)
       .background(Color.tidexBlue.opacity(0.08))
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .clipShape(Capsule())
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        Capsule()
           .stroke(Color.tidexBlue.opacity(0.3), lineWidth: 1)
       )
     }

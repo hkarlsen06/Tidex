@@ -329,7 +329,7 @@ struct RecurringShiftEditorSheet: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(Color.tidexError.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        .clipShape(Capsule())
     }
     .buttonStyle(.plain)
   }

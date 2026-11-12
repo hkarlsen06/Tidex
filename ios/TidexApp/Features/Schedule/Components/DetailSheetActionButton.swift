@@ -98,10 +98,10 @@ struct DetailSheetActionButton: View {
       .padding(.vertical, Spacing.sm)
       .background(style.backgroundColor)
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg)
+        Capsule()
           .stroke(style.borderColor, lineWidth: 1)
       )
-      .clipShape(.rect(cornerRadius: CornerRadius.lg))
+      .clipShape(Capsule())
     }
     .buttonStyle(.plain)
   }

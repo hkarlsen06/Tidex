@@ -116,14 +116,15 @@ struct AccordionSectionView<Content: View>: View {
             .padding(.vertical, Spacing.xs)
             .frame(minHeight: 44)
             .background(Color.tidexBrandPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+            .clipShape(Capsule())
         }
         .buttonStyle(.plain)
       }
     }
     .padding(.horizontal, Spacing.md)
     .padding(.bottom, Spacing.md)
-    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+    .transition(
+      reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
   }
 }
 

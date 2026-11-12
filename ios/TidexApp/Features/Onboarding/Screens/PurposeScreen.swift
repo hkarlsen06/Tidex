@@ -200,10 +200,10 @@ struct PurposeScreen: View {
           .frame(minHeight: 54)
           .background(Color.tidexSurfaceSecondary)
           .overlay {
-            RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous)
+            Capsule()
               .stroke(Color.tidexBorder, lineWidth: 1)
           }
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+          .clipShape(Capsule())
       }
       .buttonStyle(.plain)
     }

@@ -364,11 +364,11 @@ extension DashboardView {
           : Color.tidexTextMuted
       )
       .background(
-        RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+        Capsule()
           .fill(Color.tidexSurfacePrimary)
       )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
+      .clipShape(Capsule())
+      .contentShape(Capsule())
     }
     .buttonStyle(DashboardClockButtonStyle())
     .disabled(!isEnabled)

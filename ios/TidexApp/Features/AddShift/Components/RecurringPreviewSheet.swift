@@ -326,7 +326,7 @@ private struct ActionButtons: View {
         }
       }
       .background(Color.tidexBlue)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .clipShape(Capsule())
       .disabled(isLoading)
     }
     .padding()

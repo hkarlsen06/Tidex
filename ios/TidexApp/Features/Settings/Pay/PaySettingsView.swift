@@ -286,7 +286,7 @@ extension PaySettingsView {
           .frame(maxWidth: .infinity)
           .padding(.vertical, Spacing.sm)
           .background(Color.tidexBlue)
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+          .clipShape(Capsule())
       }
       .buttonStyle(.plain)
       .disabled(viewModel.selectedJob == nil)

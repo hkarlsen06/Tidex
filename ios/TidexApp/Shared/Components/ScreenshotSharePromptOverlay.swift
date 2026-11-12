@@ -117,7 +117,7 @@ struct ScreenshotSharePromptOverlay: View {
           .frame(minHeight: 52)
           .background(Color.tidexSurfacePrimary)
           .foregroundStyle(Color.tidexTextPrimary)
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+          .clipShape(Capsule())
       }
       .buttonStyle(PromptButtonStyle())
 
@@ -132,7 +132,7 @@ struct ScreenshotSharePromptOverlay: View {
           .frame(minHeight: 52)
           .background(Color.tidexBrandPrimary)
           .foregroundStyle(Color.tidexTextOnBrand)
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+          .clipShape(Capsule())
       }
       .buttonStyle(PromptButtonStyle())
     }
