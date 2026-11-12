@@ -69,7 +69,8 @@ extension View {
       .padding(.horizontal, Spacing.mlg)
       // Clears the sync status pill that floats under the navigation bar.
       .padding(.top, Spacing.xxxl)
-      .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.md)
+      // The screen adds the period and month pickers below this through a safe area inset.
+      .padding(.bottom, Spacing.xl)
       .frame(maxWidth: .infinity)
   }
 }

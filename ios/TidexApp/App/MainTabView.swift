@@ -45,6 +45,8 @@ struct MainTabView: View {
   @State private var pendingCurrentMonthTab: Tab?
 
   @State private var friendsHasSelectedSharer = false
+  /// Whether Stats shows a month or a year. Each launch starts on the month.
+  @State private var statsPeriod: StatsPeriod = .month
   @State private var profileRequest: SettingsView.TabRequest?
   /// The user's photo, sized and rounded for the profile tab item.
   @State private var profileTabAvatar: UIImage?
@@ -169,7 +171,7 @@ struct MainTabView: View {
               value: Tab.stats
             ) {
               tabHost(for: .stats) {
-                StatsView(isSelected: selectedTab == .stats)
+                StatsView(isSelected: selectedTab == .stats, period: $statsPeriod)
                   .id(coordinator.userId)
               }
             }
@@ -542,6 +544,7 @@ struct MainTabView: View {
         .overlay(alignment: .bottom) {
           if selectedTab == tab, shouldShowMonthPicker {
             MonthPickerControls(
+              period: tab == .stats ? statsPeriod : .month,
               showsViewModeToggle: showsViewModeToggle,
               showsAddButton: showsAddButton,
               onAddShift: { addShiftNavigator.hostTab = selectedTab }
@@ -561,7 +564,9 @@ struct MainTabView: View {
 
 /// Month picker above the tab bar, with the list toggle on its leading side
 /// and the add button on its trailing side, each as its own glass control.
+/// Stats in year mode shows a year picker in the same pill.
 struct MonthPickerControls: View {
+  var period: StatsPeriod = .month
   let showsViewModeToggle: Bool
   let showsAddButton: Bool
   let onAddShift: () -> Void
@@ -579,13 +584,18 @@ struct MonthPickerControls: View {
           viewModeToggleButton
         }
 
-        SharedMonthPicker()
-          .frame(maxWidth: .infinity)
-          .frame(height: MonthPickerLayout.height)
-          .tidexGlass(
-            shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-            interactive: true
-          )
+        Group {
+          switch period {
+          case .month: SharedMonthPicker()
+          case .year: StatsYearPicker()
+          }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: MonthPickerLayout.height)
+        .tidexGlass(
+          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+          interactive: true
+        )
 
         if showsAddButton {
           addButton

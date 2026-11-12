@@ -5,9 +5,12 @@ import SwiftUI
 struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   /// The tab stays alive behind the other tabs, so it is told when it is the one on screen.
   let isSelected: Bool  // swiftlint:disable:this explicit_acl
+  /// Owned by the tab view, which shows a year instead of a month in the floating picker.
+  @Binding var period: StatsPeriod  // swiftlint:disable:this explicit_acl
 
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface line_length
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass  // swiftlint:disable:this explicit_type_interface line_length
   @ScaledMetric(relativeTo: .largeTitle) private var errorIconSize: CGFloat = 48
 
   @State private var viewModel = StatsViewModel()  // swiftlint:disable:this explicit_type_interface
@@ -33,8 +36,24 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       ?? StatsData.empty(year: viewModel.displayYear, month: viewModel.displayMonth)
   }
 
+  private var displayedYearStats: YearStatsData {
+    viewModel.yearStats ?? YearStatsData.empty(year: viewModel.displayYear)
+  }
+
   private var displayedCurrency: String {
-    displayedStats.currentMonthCurrencyAggregate?.primary.currency ?? viewModel.currency
+    let aggregate: JobCurrencyAggregateResolution? =
+      switch period {
+      case .month: displayedStats.currentMonthCurrencyAggregate
+      case .year: displayedYearStats.currencyAggregate
+      }
+    return aggregate?.primary.currency ?? viewModel.currency
+  }
+
+  private var hasDisplayedData: Bool {
+    switch period {
+    case .month: viewModel.stats != nil
+    case .year: viewModel.yearStats != nil
+    }
   }
 
   @discardableResult
@@ -82,6 +101,16 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     .onChange(of: isSelected, initial: true) { _, selected in
       viewModel.setOnScreen(selected)
     }
+    .onChange(of: period, initial: true) { oldPeriod, newPeriod in
+      viewModel.setPeriod(newPeriod)
+      guard oldPeriod != newPeriod else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      // Also the haptic for a tapped month row, which always switches to the month.
+      Haptics.play(.selection)
+      isScrolledDown = false
+      withAnimation(reduceMotion ? nil : .default) {
+        scrollPosition.scrollTo(edge: .top)
+      }
+    }
     .onAppear {
       // Also the first load. A load in `.task` would be cancelled when the tab is covered.
       reloadAfterDataChange()
@@ -117,6 +146,10 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       guard oldMonth != nil else { return }  // swiftlint:disable:this conditional_returns_on_newline
       announceDisplayedMonth()
     }
+    .onChange(of: viewModel.yearStats?.year) { oldYear, _ in
+      guard oldYear != nil else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      announceDisplayedYear()
+    }
   }
 
   private var tabRootContent: some View {
@@ -127,7 +160,7 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       Group {
         if shouldShowWorkSetupRequiredPlaceholder {
           WorkSetupRequiredPlaceholder()
-        } else if let error = viewModel.error, viewModel.stats == nil,
+        } else if let error = viewModel.error, !hasDisplayedData,
           let message = ErrorTranslations.translate(error)
         {
           errorView(message: message)
@@ -137,7 +170,7 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
           }
           .padding(.bottom, MonthPickerLayout.totalBottomInset)
         } else {
-          statsContent(stats: displayedStats)
+          statsContent
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -191,13 +224,25 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 
   // MARK: - Stats Content
 
-  private func statsContent(stats: StatsData) -> some View {  // swiftlint:disable:this type_contents_order
-    let lattice = StatsLattice(stats: stats, now: viewModel.computedAt, calendar: .gregorianCurrent)  // swiftlint:disable:this explicit_type_interface line_length
-    return ScrollView {
+  private var statsPage: StatsContent.Page {
+    switch period {
+    case .month:
+      .month(
+        StatsLattice(stats: displayedStats, now: viewModel.computedAt, calendar: .gregorianCurrent))
+    case .year:
+      .year(
+        StatsYearLattice(
+          stats: displayedYearStats, now: viewModel.computedAt, calendar: .gregorianCurrent))
+    }
+  }
+
+  private var statsContent: some View {
+    ScrollView {
       StatsContent(
-        page: .month(lattice),
+        page: statsPage,
         onSelectMonth: { month in
           viewModel.goToMonth(year: month.year, month: month.month)
+          period = .month
         },
         onExport: { showExportSettings = true },
         onScrubbingChange: { isScrubbing = $0 }
@@ -205,11 +250,18 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       .statsContentFrame()
       .contentShape(Rectangle())
       .monthSwipeGesture(
-        onSwipeLeft: { viewModel.goToNextMonth() },
-        onSwipeRight: { viewModel.goToPreviousMonth() },
+        onSwipeLeft: {
+          if period == .year { viewModel.goToNextYear() } else { viewModel.goToNextMonth() }
+        },
+        onSwipeRight: {
+          if period == .year { viewModel.goToPreviousYear() } else { viewModel.goToPreviousMonth() }
+        },
         edgeExclusion: 24,  // swiftlint:disable:this no_magic_numbers
         isEnabled: !isScrubbing
       )
+    }
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      periodPicker
     }
     .scrollPosition($scrollPosition)
     .onScrollGeometryChange(for: Bool.self) { geometry in
@@ -221,6 +273,42 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     .refreshable {
       await refreshStatsContent()
     }
+  }
+
+  /// Sits right above the floating month picker. The clear space under it is the picker's, so
+  /// the scroll content clears both.
+  private var periodPicker: some View {
+    VStack(spacing: MonthPickerLayout.bottomPadding) {
+      AdaptiveCalendarPicker(
+        selection: $period,
+        options: [
+          CalendarPickerOption(value: StatsPeriod.month, title: .commonMonth),
+          CalendarPickerOption(value: StatsPeriod.year, title: .commonYear),
+        ]
+      )
+      .padding(Spacing.xxs)
+      .tidexGlass(shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+      .accessibilityIdentifier("stats.period")
+      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: .infinity)
+      .padding(
+        .horizontal,
+        horizontalSizeClass == .regular
+          ? MonthPickerLayout.horizontalPadding : MonthPickerLayout.tabBarAlignedHorizontalPadding
+      )
+      Color.clear
+        .frame(height: MonthPickerLayout.totalBottomInset)
+        .accessibilityHidden(true)
+    }
+  }
+
+  private func announceDisplayedYear() {  // swiftlint:disable:this type_contents_order
+    let hero = StatsYearLattice(  // swiftlint:disable:this explicit_type_interface
+      stats: displayedYearStats, now: viewModel.computedAt, calendar: .gregorianCurrent
+    ).hero
+    let amount = StatsFormat.money(hero.amount, currency: displayedCurrency)  // swiftlint:disable:this explicit_type_interface line_length
+    let announcement: String = [String(displayedYearStats.year), amount].joined(separator: ", ")
+    AccessibilityNotification.Announcement(announcement).post()
   }
 
   private func announceDisplayedMonth() {  // swiftlint:disable:this type_contents_order
@@ -311,6 +399,6 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 }
 
 #Preview {
-  StatsView(isSelected: true)
+  StatsView(isSelected: true, period: .constant(.month))
     .environment(AppCoordinator.shared)
 }

@@ -15,6 +15,12 @@ private struct StartupStatsCache: Codable {
   let cachedAt: Date
 }
 
+/// Whether Stats shows one month or one year. Both read the year from `SharedMonthContext`.
+enum StatsPeriod: Hashable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  case month
+  case year
+}
+
 // MARK: - Stats View Model
 
 /// View model for the stats tab
@@ -26,10 +32,13 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   // MARK: - Observed State
 
   private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
+  /// Kept while the month page shows, so switching back to the year does not flash empty.
+  private(set) var yearStats: YearStatsData?  // swiftlint:disable:this explicit_acl
+  private(set) var period: StatsPeriod = .month  // swiftlint:disable:this explicit_acl
   private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
   private(set) var error: Error?  // swiftlint:disable:this explicit_acl
-  /// When `stats` was computed. Stats measures today from it, so the reload after midnight
-  /// moves today in the charts even when the numbers are unchanged and `stats` doesn't notify.
+  /// When `stats` or `yearStats` was last computed. Stats measures today from it, so the reload
+  /// after midnight moves today in the charts even when the numbers are unchanged.
   private(set) var computedAt = Date()  // swiftlint:disable:this explicit_acl explicit_type_interface
 
   /// User's selected currency (from settings)
@@ -211,6 +220,14 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     monthContext.goToCurrentMonth()
   }
 
+  func goToPreviousYear() {  // swiftlint:disable:this explicit_acl type_contents_order
+    monthContext.navigateTo(year: monthContext.displayYear - 1, month: monthContext.displayMonth)
+  }
+
+  func goToNextYear() {  // swiftlint:disable:this explicit_acl type_contents_order
+    monthContext.navigateTo(year: monthContext.displayYear + 1, month: monthContext.displayMonth)
+  }
+
   /// Navigate to a month picked in the Stats year rows
   func goToMonth(year: Int, month: Int) {  // swiftlint:disable:this explicit_acl type_contents_order
     monthContext.navigateTo(year: year, month: month)
@@ -223,6 +240,12 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   var selectedJobName: String? {  // swiftlint:disable:this explicit_acl
     guard let selectedJobId else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
     return activeJobs.first(where: { $0.id == selectedJobId })?.name
+  }
+
+  func setPeriod(_ newPeriod: StatsPeriod) {  // swiftlint:disable:this explicit_acl
+    guard period != newPeriod else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    period = newPeriod
+    reloadWhenOnScreen()
   }
 
   func selectJobFilter(_ jobId: String?) {  // swiftlint:disable:this explicit_acl
@@ -297,23 +320,39 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
         currency = jobs.first(where: { $0.id == selectedJobId })?.currency ?? "kr"
       }
 
-      let computedStats = try await statsService.computeStats(  // swiftlint:disable:this explicit_type_interface
-        year: displayYear,
-        month: displayMonth,
-        jobId: selectedJobId
-      )
-      guard !Task.isCancelled, generation == loadGeneration else {
-        logger.info("Ignoring stale stats load (generation \(generation))")
-        return
+      switch period {
+      case .month:
+        let computedStats = try await statsService.computeStats(  // swiftlint:disable:this explicit_type_interface
+          year: displayYear,
+          month: displayMonth,
+          jobId: selectedJobId
+        )
+        guard !Task.isCancelled, generation == loadGeneration else {
+          logger.info("Ignoring stale stats load (generation \(generation))")
+          return
+        }
+        computedAt = Date()
+        stats = computedStats
+        if selectedJobId == nil {
+          persistStartupStatsCache(stats: computedStats, userId: userId)
+        }
+        let shiftCount = computedStats.currentMonth.shiftCount  // swiftlint:disable:this explicit_type_interface
+        logger.info(
+          "Loaded stats for \(self.displayYear)-\(self.displayMonth): \(shiftCount) shifts")
+
+      case .year:
+        let computedYear = try await statsService.computeYearStats(  // swiftlint:disable:this explicit_type_interface
+          year: displayYear,
+          jobId: selectedJobId
+        )
+        guard !Task.isCancelled, generation == loadGeneration else {
+          logger.info("Ignoring stale year stats load (generation \(generation))")
+          return
+        }
+        computedAt = Date()
+        yearStats = computedYear
+        logger.info("Loaded year stats for \(self.displayYear)")
       }
-      computedAt = Date()
-      stats = computedStats
-      if selectedJobId == nil {
-        persistStartupStatsCache(stats: computedStats, userId: userId)
-      }
-      logger.info(
-        "Loaded stats for \(self.displayYear)-\(self.displayMonth): \(self.stats?.currentMonth.shiftCount ?? 0) shifts"
-      )
     } catch is CancellationError {
       logger.info("Stats load cancelled")
       guard generation == loadGeneration else { return }  // swiftlint:disable:this conditional_returns_on_newline
