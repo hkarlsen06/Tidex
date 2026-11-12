@@ -117,6 +117,7 @@ App extensions can't read the app's color assets. Code in `ios/Shared` that runs
 Tidex claims the Dark Interface and Reduced Motion accessibility labels in App Store Connect, and Hjalmar reviews those claims. Keep new work inside them:
 
 - Gate movement animations on `accessibilityReduceMotion` through `MotionTokens`.
+- Check a changed animation with `scripts/motion-check report`, as [Motion](docs/AGENT_VERIFICATION.md#motion) describes.
 - `SemanticColorContrastTests` checks that text colors pass 4.5:1. Add a new text color pair there.
 - Calendar month grids cap their text at `.xxxLarge`, as the system Calendar does. At accessibility text sizes the Shifts tab defaults to list view.
 - A trailing `.accessibilityHidden(true)` does not hide a view that makes itself an element with `.accessibilityElement(children: .ignore)`. Use `.calendarDayAccessibility(isHidden:)` from `Shared/Components/Calendar/CalendarGridHelper.swift`, or skip the element setup when the view is hidden.

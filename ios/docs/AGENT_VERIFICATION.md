@@ -63,3 +63,26 @@ UI test, simulator and machine-load rules are in the root [AGENTS.md](../../AGEN
 - Set the text size with `xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large`, and reset it with `large`.
 - To dump the accessibility tree with the T3 `agent-device snapshot` command, open the app with `agent-device open no.tidex.app --relaunch --launch-args -ui-testing`. That command can't pass environment variables, so set them first with `xcrun simctl spawn <udid> launchctl setenv TIDEX_UI_TEST_SCENARIO design-review` (and the same for `TIDEX_DESIGN_SCREEN`), and unset them afterwards. In zsh, split a flags variable with `${=F}`, or the tool reports "Call device_open first".
 - The build wrapper puts the app in `~/Library/Developer/Xcode/DerivedData/Tidex-<hash>/Build/Products/Debug-iphonesimulator/Tidex.app`. Match the hash to your worktree with `plutil -extract WorkspacePath raw <dir>/info.plist`.
+
+## Motion
+
+An agent cannot watch an animation, so `scripts/motion-check` turns one into numbers and a still image. Use it after you change an animation, a transition or a gesture hand-off, such as a drag that ends in a spring.
+
+1. Add `.motionProbe("name", value)` beside the modifier that the value drives, for example next to `.offset(x: offset)`. Each moving thing needs its own name. The app already has three probes: `payroll-progress` (the payroll card's progress bar), `month-card` (the calendar's month slide) and `reply-swipe` (the chat reply swipe). The probe records only in Debug builds launched with `-motion-probe`, and Release builds compile it to nothing.
+2. Build with `./scripts/xcode-build-agent.sh`, take a simulator with `SIM="$(scripts/lock acquire simulator)"`, and install the app with `xcrun simctl install "$SIM" <path to Tidex.app>`. "Screens without signing in" above says where the build puts the app.
+3. Set the scenario with `xcrun simctl spawn "$SIM" launchctl setenv TIDEX_UI_TEST_SCENARIO <scenario>`, as "Screens without signing in" describes. `app-store-screenshots` shows the dashboard and calendar with fixture data, and `friends-chat-reply` opens a chat thread. Then call the T3 `device_open` tool and run `agent-device open no.tidex.app --relaunch --launch-args -ui-testing --launch-args -motion-probe`. The flag `--launch-args` takes one argument, so repeat it. Each launch starts a new log.
+4. Start a recording with `agent-device record start --hide-touches <file>.mp4`, trigger the animation, and stop with `agent-device record stop`. `agent-device press 'label="<label>"' --count 2 --interval-ms 150` taps twice to interrupt an animation, and `agent-device gesture pan <x> <y> <dx> <dy> <ms>` drags.
+5. Run `scripts/motion-check report`. It reads the log from the simulator your worktree holds and prints one line per animation. Add `--name <prefix>` to see one probe.
+6. Read the result. The last line is `SUMMARY: PASS` or `SUMMARY: FAIL`, and the exit code is 0, 1, or 2 for a usage or tool error.
+   - `SNAP` means the value moved far in one frame, or was set with no animation.
+   - `JUMP` means the speed changed in one frame. "When the animation took over from the finger" means a release animation ignored the finger's speed.
+   - `JITTER` means the speed went up and down on consecutive frames.
+   - `STALL` means frames with no new value, and `PACING` means uneven frames right after one. Both depend on machine load and never fail the report. A stall on a simulator does not predict a phone.
+   - `settled` is when the value came within 1% of its end, which is when the eye sees it stop. `duration` includes a spring's long tail.
+   - Spring overshoot is normal up to about 0.6% at damping 0.85, 1.5% at 0.8 and 16% at 0.5.
+7. Fix each snap, jump or jitter run, or declare it. Some are by design: the month slide sets its cards to an offset of 60 with no animation and then slides them in. Pass `--allow <name>=<count>` for the breaks each episode may have, `--end <name>=<value>` for where the value must end, and `--max-duration <name>=<seconds>` for how long it may take to settle. Name every allowed break in the handoff and say why it is intended.
+8. For motion the probe cannot see, add `--video <file>.mp4 --row 0.5` for horizontal motion or `--column 0.5` for vertical motion, and open the PNG it prints with the Read tool. The image stacks one pixel row or column per frame, so a sliding edge draws its own curve. The script picks the stretch of the recording where the screen changed.
+
+The probe logs the values SwiftUI computed for one number. It cannot see navigation pushes, sheets, tab switches, or views that a transition inserts or removes, so use the image for those. It does not judge whether a curve feels right.
+
+When you are done, close the device session with `device_close`, release the simulator with `scripts/lock release simulator`, and unset the scenario variables. `python3 scripts/test-motion-check.py` checks the script itself.
