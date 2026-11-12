@@ -1118,13 +1118,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         onCopy?()
       }
 
-      singleSelectionButton(
-        systemImage: "arrow.up.and.down.and.arrow.left.and.right",
-        label: .shiftsMove,
-        tint: .tidexWarning
-      ) {
-        onMove?()
-      }
+      singleSelectionMoveButton
 
       singleSelectionButton(
         systemImage: "info.circle",
@@ -1138,6 +1132,20 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     }
     .padding(Spacing.xxs)
     .background(actionBarShape.fill(Color.tidexSurfaceSecondary))
+  }
+
+  /// A recurring occurrence cannot be moved, so a day with only those offers no Move.
+  @ViewBuilder
+  private var singleSelectionMoveButton: some View {
+    if shifts.contains(where: { selectedDates.contains($0.shiftDate) && !$0.isVirtual }) {
+      singleSelectionButton(
+        systemImage: "arrow.up.and.down.and.arrow.left.and.right",
+        label: .shiftsMove,
+        tint: .tidexWarning
+      ) {
+        onMove?()
+      }
+    }
   }
 
   private var singleSelectionDeleteButton: some View {

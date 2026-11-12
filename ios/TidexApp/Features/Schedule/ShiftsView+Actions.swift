@@ -5,7 +5,7 @@ import os.log
 extension ShiftsView {
 
   func beginShiftOperation(_ operation: ScheduleShiftOperation) {
-    let shifts = viewModel.selectedDateShifts
+    let shifts = viewModel.selectedDateShifts.filter { operation == .copy || !$0.isVirtual }
     guard let shift = shifts.first else { return }
     if shifts.count == 1 {
       startShiftOperation(operation, shift: shift)
