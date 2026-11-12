@@ -202,6 +202,8 @@ struct AddShiftScreenContent: View {
 
         if !isKeyboardVisible {
           submitErrorBanner
+            // The banner's transition already uses a fade for Reduce Motion.
+            .animation(MotionTokens.animation(.subtle, reduceMotion: false), value: viewModel.error)
 
           AddShiftBottomControls(
             viewModel: viewModel,
