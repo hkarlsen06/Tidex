@@ -209,15 +209,16 @@ extension ShiftsView {
     highlightedShiftIds = []
     deepLinkAction = .open  // Reset to default
 
-    Haptics.play(.selection)
-
     // Only open sheets when action is .open (default behavior from notifications)
     // When action is .highlight (from widgets), show visual highlight instead
     if action == .highlight {
       scheduleViewLogger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
-      showDeepLinkHighlights(for: [dateISO], shiftIds: shiftIds)
+      // Keep every linked day lit, not just the one this month search started from.
+      showDeepLinkHighlights(for: deepLinkHighlightDates.union([dateISO]), shiftIds: shiftIds)
       return
     }
+
+    Haptics.play(.selection)
 
     if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
       // Single shift - open shift details directly

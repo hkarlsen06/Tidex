@@ -534,13 +534,17 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     let hasConflict: Bool
   }
 
-  private func dayState(for dateISO: String?, todayISO: String) -> CalendarDayState {
+  /// A highlight marks a shift, so a day shows one only once its shifts have loaded.
+  private func dayState(
+    for dateISO: String?, todayISO: String, hasShifts: Bool
+  ) -> CalendarDayState {
     CalendarDayState(
       isToday: dateISO == todayISO,
       isSelected: dateISO.map { selectedDates.contains($0) || copyTargetDates.contains($0) }
         ?? false,
-      isNewlyAdded: dateISO.map { newlyAddedDates.contains($0) } ?? false,
-      isDeepLinkHighlighted: dateISO.map { deepLinkHighlightDates.contains($0) } ?? false,
+      isNewlyAdded: hasShifts && dateISO.map { newlyAddedDates.contains($0) } ?? false,
+      isDeepLinkHighlighted: hasShifts
+        && dateISO.map { deepLinkHighlightDates.contains($0) } ?? false,
       hasConflict: dateISO.map {
         conflictDates.contains($0) || copyPreviewConflictDates.contains($0)
       } ?? false
@@ -568,7 +572,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   {
     let shiftsOnDay = dayInfo.dateISO.flatMap { lookups.shiftsByDate[$0] } ?? []
     let eventsOnDay = dayInfo.dateISO.flatMap { eventCoverageByDate[$0] } ?? []
-    let state = dayState(for: dayInfo.dateISO, todayISO: lookups.todayISO)
+    let state = dayState(
+      for: dayInfo.dateISO, todayISO: lookups.todayISO, hasShifts: !shiftsOnDay.isEmpty)
     let dayJobTimeColors = dayInfo.dateISO.flatMap { lookups.dayJobTimeColorsByDate[$0] }
     let shouldColorJobMetrics = usesJobMetricColors(
       for: dayInfo, state: state, hasShifts: !shiftsOnDay.isEmpty,
