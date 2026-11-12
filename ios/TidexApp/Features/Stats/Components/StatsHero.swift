@@ -78,10 +78,10 @@ struct StatsHero: View {
     .font(.tidexSubheadline)
     .foregroundStyle(Color.tidexTextSecondary)
     .padding(.top, Spacing.xs)
-    .opacity(isEmpty ? 0 : 1)
+    .opacity(hasChange ? 1 : 0)
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isStaticText)
-    .accessibilityHidden(isEmpty)
+    .accessibilityHidden(!hasChange)
     .accessibilityIdentifier("stats.hero.change")
   }
 
@@ -152,18 +152,23 @@ struct StatsHero: View {
   }
 
   private var qualifier: AttributedString {
+    guard let earnedSoFar = hero.earnedSoFar else { return taxQualifier }
+    let soFar = StatsFormat.emphasized(
+      .statsHeroSoFar(StatsFormat.money(earnedSoFar, currency: currency)),
+      color: .tidexTextPrimary)
+    guard case .taxed = hero.qualifier else { return soFar }
+    return soFar + AttributedString(" · ") + taxQualifier
+  }
+
+  private var taxQualifier: AttributedString {
     switch hero.qualifier {
-    case .noShifts:
-      return StatsFormat.plain(String(localized: .statsHeroNoShifts), color: .tidexTextMuted)
+    case .noShifts(let isAhead):
+      let resource: LocalizedStringResource =
+        isAhead ? .statsHeroNothingPlanned : .statsHeroNoShifts
+      return StatsFormat.plain(String(localized: resource), color: .tidexTextMuted)
     case .untaxed:
       return StatsFormat.plain(String(localized: .statsHeroUntaxed))
-    case .taxed(let gross, let taxPercent?):
-      return StatsFormat.emphasized(
-        .statsHeroTaxed(
-          StatsFormat.money(gross, currency: currency), StatsFormat.percent(taxPercent)),
-        color: .tidexTextPrimary
-      )
-    case .taxed(let gross, nil):
+    case .taxed(let gross):
       return StatsFormat.emphasized(
         .statsHeroTaxedYear(StatsFormat.money(gross, currency: currency)),
         color: .tidexTextPrimary)
@@ -190,11 +195,15 @@ struct StatsHero: View {
     }
   }
 
+  /// Hidden in place when there is nothing to compare, so the rows below keep their position.
+  private var hasChange: Bool {
+    !isEmpty && wholeChange != nil
+  }
+
+  /// Only a gain takes a colour. A drop is told in the neutral text colour, without alarm.
   private var changeColor: Color {
-    guard let wholeChange else { return .tidexTextMuted }
-    if wholeChange > 0 { return .tidexSuccess }
-    if wholeChange < 0 { return .tidexError }
-    return .tidexTextSecondary
+    guard let wholeChange, wholeChange > 0 else { return .tidexTextSecondary }
+    return .tidexSuccess
   }
 
   private var changeSymbol: String {
@@ -208,8 +217,7 @@ struct StatsHero: View {
     let previous = previousPeriodName
     switch hero.change {
     case .noPreviousPay:
-      return StatsFormat.plain(
-        String(localized: .statsHeroNoPreviousPay(previous)), color: .tidexTextMuted)
+      return AttributedString()
     case .percent(let change):
       return StatsFormat.emphasized(
         .statsHeroChange(MonthlyEarningsChange.percentText(change), previous), color: changeColor)
