@@ -204,6 +204,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
       }
     }
     .shimmer(isActive: isLoading && showsLoadingShimmer)
+    .motionProbe("payroll-progress", animatedProgress)
     .onChange(of: progress) { _, newValue in
       guard !isLoading else {
         animatedProgress = 0

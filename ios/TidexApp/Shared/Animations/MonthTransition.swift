@@ -130,6 +130,7 @@ struct CardTransitionModifier: ViewModifier {
   func body(content: Content) -> some View {
     content
       .offset(x: visibleOffsetX, y: 0)
+      .motionProbe("month-card", visibleOffsetX)
       .onAppear {
         guard !reduceMotion else {
           isAppearing = true

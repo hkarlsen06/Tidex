@@ -164,6 +164,7 @@ struct FriendsChatMessageRowContent: View {
           .fill(shouldHighlightWholeMessage ? Color.tidexBlue.opacity(0.12) : Color.clear)
       )
     }
+    .motionProbe("reply-swipe", renderedReplySwipeOffset)
   }
 
   @ViewBuilder
