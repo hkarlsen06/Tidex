@@ -114,7 +114,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
         switch route {
         case .sharer(let sharer): sharedShiftsDetailDestination(for: sharer)
         case .chat(let route): friendChatDestination(for: route)
-        case .addShift: AddShiftScreen(tab: .friends)
+        case .addShift: AddShiftScreen()
         }
       }
       .addShiftRoute(on: .friends, path: $navigationPath, hidesTabBar: isChatTabBarHidden)

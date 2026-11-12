@@ -12,8 +12,7 @@ struct AddShiftView: View {
   @State private var viewModel = AddShiftViewModel()
   @State private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
   /// Called after saving so the presenter can pop the screen.
-  /// Receives the created dates in single mode, and nil for recurring shifts and events.
-  var onShiftsCreated: (_ singleDates: Set<String>?) -> Void = { _ in }
+  var onShiftsCreated: () -> Void = {}
   @State private var isKeyboardVisible = false
   @State private var focusedTimeField: TimeInputField?
   @State private var showStartFreshConfirmation = false
@@ -41,15 +40,7 @@ struct AddShiftView: View {
 
   private func prepareVisibleAddShiftContent() {
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-    viewModel.onShiftsCreated = { completion in
-      switch completion {
-      case .single(let dates):
-        onShiftsCreated(dates)
-
-      case .payment, .recurring, .event:
-        onShiftsCreated(nil)
-      }
-    }
+    viewModel.onShiftsCreated = onShiftsCreated
 
     // Check for pre-selected date when the screen opens
     // (e.g., when user taps empty day in Shifts calendar)

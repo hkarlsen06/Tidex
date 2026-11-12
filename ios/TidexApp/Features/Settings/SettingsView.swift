@@ -252,7 +252,7 @@ extension SettingsView {
           }
         }
         .navigationDestination(for: AddShiftRoute.self) { _ in
-          AddShiftScreen(tab: isTabRoot ? .profile : nil)
+          AddShiftScreen()
         }
         .addShiftRoute(on: isTabRoot ? .profile : nil, path: $navigationPath)
         .navigationDestination(for: SettingsDestination.self) { destination in

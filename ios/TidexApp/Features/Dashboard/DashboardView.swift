@@ -203,7 +203,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   /// Home features only a shift that hasn't ended this month. When a first shift added from
-  /// Home is not one, Schedule shows it with the highlight the Add screen gives new shifts.
+  /// Home is not one, a link opens Schedule on its month and highlights it there.
   private func showFirstShiftWhereHomeCannot() {  // swiftlint:disable:this type_contents_order
     let dates = CelebrationManager.shared.newlyAddedDates.sorted()
     guard selectedTab == .home, let userId = coordinator.userId,
@@ -432,7 +432,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         }
         .sharedBackgroundVisibility(.hidden)
       }
-      .navigationDestination(for: AddShiftRoute.self) { _ in AddShiftScreen(tab: .home) }
+      .navigationDestination(for: AddShiftRoute.self) { _ in AddShiftScreen() }
       .addShiftRoute(on: .home, path: $addShiftPath)
       .adaptiveToolbarTransaction()
     }

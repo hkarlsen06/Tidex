@@ -124,17 +124,9 @@ private struct AddShiftRouteModifier<Path: AddShiftStackPath>: ViewModifier {
 
 /// The Add screen in a tab's stack. Saving pops it.
 internal struct AddShiftScreen: View {
-  let tab: MainTabView.Tab?
-  @Environment(AppCoordinator.self) private var coordinator
-
   var body: some View {
-    AddShiftView { createdSingleDates in
+    AddShiftView {
       AddShiftNavigator.shared.hostTab = nil
-      // On Schedule, highlight the new shifts once the screen pops back.
-      if tab == .shifts, let createdSingleDates {
-        coordinator.pendingDeepLink = .shifts(
-          dates: createdSingleDates.sorted(), shiftIds: nil, action: .highlight)
-      }
     }
   }
 }

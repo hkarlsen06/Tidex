@@ -5,14 +5,8 @@ import Observation
 import SwiftUI
 import os.log
 
-let addShiftViewModelLogger: Logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
-
-internal enum AddShiftCompletion {
-  case payment
-  case event
-  case recurring
-  case single(dates: Set<String>)
-}
+let addShiftViewModelLogger: Logger = Logger(
+  subsystem: "com.tidex.app", category: "AddShiftViewModel")
 
 internal struct AddShiftPaySetupRequest: Identifiable, Equatable {
   internal enum Action: String, Equatable {
@@ -467,7 +461,7 @@ internal final class AddShiftViewModel {
   // MARK: - Navigation Callback
 
   /// Called when shifts are successfully created.
-  var onShiftsCreated: ((AddShiftCompletion) -> Void)?
+  var onShiftsCreated: (() -> Void)?
 
   // MARK: - Initialization
 

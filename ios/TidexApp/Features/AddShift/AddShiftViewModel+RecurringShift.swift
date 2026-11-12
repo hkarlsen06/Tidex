@@ -160,7 +160,7 @@ extension AddShiftViewModel {
     NotificationCenter.default.postShiftsDidChange(context: .fullReload)
 
     // Notify completion
-    onShiftsCreated?(.recurring)
+    onShiftsCreated?()
     requestShiftReminderPermission(for: userId, afterFirstShift: isFirstShift)
   }
 }

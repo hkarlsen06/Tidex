@@ -178,7 +178,7 @@ extension AddShiftViewModel {
     paymentOwnerId = nil
     if paymentSaved {
       paymentSaved = false
-      onShiftsCreated?(.payment)
+      onShiftsCreated?()
     }
   }
 
@@ -288,7 +288,7 @@ extension AddShiftViewModel {
       .post()
 
     // Notify completion
-    onShiftsCreated?(.single(dates: createdDates))
+    onShiftsCreated?()
     requestShiftReminderPermission(for: userId, afterFirstShift: isFirstShift)
   }
 
@@ -385,7 +385,7 @@ extension AddShiftViewModel {
     NotificationCenter.default.postShiftsDidChange(
       context: .affecting(dateRangeStart: startDate, end: endDate)
     )
-    onShiftsCreated?(.event)
+    onShiftsCreated?()
     if hasReminders {
       await NotificationService.shared.requestPermissionAndRegister(for: userId)
     }

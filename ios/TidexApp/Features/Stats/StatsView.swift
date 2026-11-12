@@ -92,7 +92,7 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
             }
           }
         }
-        .navigationDestination(for: AddShiftRoute.self) { _ in AddShiftScreen(tab: .stats) }
+        .navigationDestination(for: AddShiftRoute.self) { _ in AddShiftScreen() }
         .addShiftRoute(on: .stats, path: $addShiftPath)
         .adaptiveToolbarTransaction()
     }
