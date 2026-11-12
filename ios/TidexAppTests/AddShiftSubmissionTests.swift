@@ -66,6 +66,27 @@ final class AddShiftSubmissionTests: XCTestCase {
     XCTAssertNil(defaults.data(forKey: ShiftDraft.userDefaultsKey))
   }
 
+  func testDraftSavedWhileSavingNeverBringsBackASavedDate() async throws {
+    let (model, defaults) = try makeModel()
+    defer { model.clearDraft() }
+    let dates = ["2026-11-02", "2026-11-04"]
+    model.selectedDates = Set(dates)
+
+    do {
+      try await model.saveSelectedSingleShifts { date in
+        guard date.toISODateString() == dates[1] else { return }
+        // A write slower than the draft debounce, then a crash before it finishes.
+        try await Task.sleep(for: .nanoseconds(Int64(AddShiftViewModel.draftSaveDebounceDelay) * 2))
+        throw SaveFailure.unavailable
+      }
+      XCTFail("Expected the second shift to fail")
+    } catch SaveFailure.unavailable {}
+
+    let data = try XCTUnwrap(defaults.data(forKey: ShiftDraft.userDefaultsKey))
+    let draft = try JSONDecoder().decode(ShiftDraft.self, from: data)
+    XCTAssertEqual(draft.selectedDates, [dates[1]], "A retry must not save November 2 again")
+  }
+
   func testOvernightEventExplainsWhyItCannotBeSaved() throws {
     let (model, _) = try makeModel()
     defer { model.clearDraft() }
