@@ -11,7 +11,7 @@ TidexApp/
 ├── App/                     # App-wide coordination & lifecycle
 │   ├── AppCoordinator       # Central auth state & navigation (singleton)
 │   ├── RootView             # Root navigation based on auth state
-│   └── MainTabView          # Tab bar
+│   └── MainTabView          # Tabs: Home, Schedule, Stats, Friends, Profile
 ├── Features/                # Feature-specific screens & view models
 │   ├── AddShift/            # Shift creation/editing, addShiftRoute
 │   ├── Auth/                # Login, signup, MFA, password reset
@@ -22,7 +22,7 @@ TidexApp/
 │   ├── Onboarding/          # Pre & post-auth onboarding
 │   ├── Schedule/            # Shifts tab (ShiftsViewModel, ShiftsCalendarView)
 │   ├── Settings/            # Settings, Pay (jobs), Admin, Profile, etc.
-│   └── Stats/               # Statistics & analytics
+│   └── Stats/               # Stats tab: month and year earnings
 ├── Services/                # Business logic & data operations
 │   ├── Auth/                # Authentication operations
 │   ├── Data/                # Supabase data fetching (ShiftsService, SnapshotsService)
