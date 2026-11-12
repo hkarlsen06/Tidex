@@ -80,7 +80,7 @@ struct StatsLattice: Equatable {
     /// Cumulative pay for each of the 31 day slots. Slots after the last day repeat its value.
     let values: [Double]
     let dayCount: Int
-    /// Solid through this day and dotted after it, where shifts are only scheduled.
+    /// Solid through this day and fainter after it, where shifts are only scheduled.
     let solidThrough: Int
   }
 

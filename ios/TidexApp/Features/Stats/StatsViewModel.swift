@@ -4,7 +4,7 @@ import Observation
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "StatsViewModel")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
-private let startupStatsCacheKey = "statsStartupCacheV1"  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
+private let startupStatsCacheKey = "statsStartupCacheV2"  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 
 private struct StartupStatsCache: Codable {
   let userId: String
