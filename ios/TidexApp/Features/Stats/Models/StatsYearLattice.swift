@@ -80,10 +80,8 @@ extension StatsYearLattice {
     today: StatsLattice.Today
   ) -> StatsLattice.Hero {
     let isAfterTax = stats.tax.enabled
-    func shown(_ months: [YearMonthStats]) -> Double {
-      months.reduce(0) { $0 + (isAfterTax ? $1.earningsNet : $1.earnings) }
-    }
     let gross = months.reduce(0) { $0 + $1.earnings }
+    let net = months.reduce(0) { $0 + $1.earningsNet }
     let qualifier: StatsLattice.Qualifier
     if months.allSatisfy({ $0.shifts == 0 }) {
       qualifier = .noShifts
@@ -96,18 +94,20 @@ extension StatsYearLattice {
     return StatsLattice.Hero(
       period: .year(stats.year),
       isAfterTax: isAfterTax,
-      amount: shown(months),
+      amount: isAfterTax ? net : gross,
       qualifier: qualifier,
       change: change(
-        year: stats.year, total: shown(months), previousTotal: shown(previousMonths),
+        year: stats.year, total: gross,
+        previousTotal: previousMonths.reduce(0) { $0 + $1.earnings },
         toDate: stats.toDate, today: today),
       otherCurrencies: StatsLattice.otherCurrencies(secondary),
       breakdown: secondary
     )
   }
 
-  /// The running year compares the same date in both years. Any other year compares whole
-  /// years, which for a future year is its scheduled pay.
+  /// Compares before-tax pay, like the month page and Home. The running year compares the same
+  /// date in both years. Any other year compares whole years, which for a future year is its
+  /// scheduled pay.
   private static func change(
     year: Int, total: Double, previousTotal: Double, toDate: YearToDate?, today: StatsLattice.Today
   ) -> StatsLattice.Change {

@@ -188,7 +188,7 @@ struct YearStatsData: Codable, Equatable {
   let previousMonths: [YearMonthStats]
   /// Resolved over the focus year.
   let currencyAggregate: JobCurrencyAggregateResolution?
-  /// Shown-basis pay through today for the running year, and through the same date a year
+  /// Before-tax pay through today for the running year, and through the same date a year
   /// earlier. Nil for any other year.
   let toDate: YearToDate?
   let employment: EmploymentData?
@@ -226,7 +226,7 @@ struct YearMonthStats: Codable, Equatable, Identifiable {
   }
 }
 
-/// Net pay when tax is on, else gross.
+/// Before-tax pay, like every Stats comparison.
 struct YearToDate: Codable, Equatable {
   let focus: Double
   let previous: Double

@@ -112,6 +112,20 @@ final class StatsServiceCalendarMathTests: XCTestCase {
     XCTAssertEqual(data.previousMonths[2].earnings, 1_200, accuracy: 0.001)
   }
 
+  func testYearToDateCountsPayBeforeTax() throws {
+    let data = try yearStats(
+      focus: [("2026-01-10", 1_000), ("2026-03-15", 500)],
+      previous: [("2025-02-01", 400)],
+      taxPercent: 30,
+      now: noon(2_026, 3, 15)
+    )
+    let toDate = try XCTUnwrap(data.toDate)
+
+    XCTAssertTrue(data.tax.enabled)
+    XCTAssertEqual(toDate.focus, 1_500, accuracy: 0.001)
+    XCTAssertEqual(toDate.previous, 400, accuracy: 0.001)
+  }
+
   func testLeapDayComparesWithTheLastDayOfFebruaryLastYear() throws {
     let data = try yearStats(
       focus: [("2028-02-29", 500)],
@@ -134,10 +148,13 @@ final class StatsServiceCalendarMathTests: XCTestCase {
   private func yearStats(
     focus: [(date: String, gross: Double)],
     previous: [(date: String, gross: Double)],
+    taxPercent: Double = 0,
     now: Date
   ) throws -> YearStatsData {
     func fullYear(_ shifts: [(date: String, gross: Double)], year: Int) -> FullYearComputedData {
-      let computed = shifts.map { shift(date: $0.date, hours: 8, gross: $0.gross) }
+      let computed = shifts.map {
+        shift(date: $0.date, hours: 8, gross: $0.gross, taxPercent: taxPercent)
+      }
       return FullYearComputedData(
         year: year, shiftsByMonth: [:], shifts: computed, includedShifts: computed)
     }
@@ -169,7 +186,9 @@ final class StatsServiceCalendarMathTests: XCTestCase {
     }
   }
 
-  private func shift(date: String, hours: Double, gross: Double = 1_000) -> ShiftWithComputations {
+  private func shift(
+    date: String, hours: Double, gross: Double = 1_000, taxPercent: Double = 0
+  ) -> ShiftWithComputations {
     let template = TestFixtures.computedShift(
       id: date, shiftDate: date, startTime: "08:00", endTime: "16:00", gross: gross)
     return ShiftWithComputations(
@@ -185,8 +204,8 @@ final class StatsServiceCalendarMathTests: XCTestCase {
         originalWagePeriods: [],
         breakAudit: template.computed.breakAudit
       ),
-      taxEnabled: false,
-      taxPercentage: 0
+      taxEnabled: taxPercent > 0,
+      taxPercentage: taxPercent
     )
   }
 }

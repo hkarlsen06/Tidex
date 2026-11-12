@@ -38,6 +38,15 @@ final class StatsYearLatticeTests: XCTestCase {
     XCTAssertEqual(lattice.hero.change, .percent(25))
   }
 
+  func testComparisonUsesPayBeforeTax() throws {
+    let lattice = lattice(
+      year: 2_025, pay: [3: 12_500], previousPay: [5: 10_000], netShare: 0.6,
+      previousNetShare: 0.9, now: try date(2_026, 11, 12))
+
+    XCTAssertEqual(lattice.hero.amount, 7_500, accuracy: 0.001)
+    XCTAssertEqual(lattice.hero.change, .percent(25))
+  }
+
   func testRunningYearComparesTheSameDateLastYear() throws {
     let lattice = lattice(
       year: 2_026, pay: [3: 20_000], previousPay: [3: 10_000],
@@ -99,23 +108,25 @@ final class StatsYearLatticeTests: XCTestCase {
     year: Int,
     pay: [Int: Double],
     previousPay: [Int: Double] = [:],
+    netShare: Double = 1,
+    previousNetShare: Double = 1,
     toDate: YearToDate? = nil,
     now: Date
   ) -> StatsYearLattice {
-    func months(_ pay: [Int: Double]) -> [YearMonthStats] {
+    func months(_ pay: [Int: Double], netShare: Double) -> [YearMonthStats] {
       (1...12).map { month in
         let earnings = pay[month] ?? 0
         let hours = earnings / 200
         return YearMonthStats(
-          month: month, earnings: earnings, earningsNet: earnings, earningsHours: hours,
-          hours: hours, shifts: earnings > 0 ? 1 : 0)
+          month: month, earnings: earnings, earningsNet: earnings * netShare,
+          earningsHours: hours, hours: hours, shifts: earnings > 0 ? 1 : 0)
       }
     }
     let stats = YearStatsData(
       year: year,
-      tax: TaxSettings(enabled: false, percentage: 0),
-      months: months(pay),
-      previousMonths: months(previousPay),
+      tax: TaxSettings(enabled: netShare < 1, percentage: (1 - netShare) * 100),
+      months: months(pay, netShare: netShare),
+      previousMonths: months(previousPay, netShare: previousNetShare),
       currencyAggregate: nil,
       toDate: toDate,
       employment: nil

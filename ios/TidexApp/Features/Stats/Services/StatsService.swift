@@ -1008,37 +1008,31 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
         now: now),
       currencyAggregate: aggregate,
       toDate: yearToDate(
-        year: focus.year, focus: primaryFocus, previous: primaryPrevious, taxEnabled: taxEnabled,
-        halfTaxMonth: halfTaxMonth, now: now),
+        year: focus.year, focus: primaryFocus, previous: primaryPrevious, now: now),
       employment: buildEmploymentData(
         focusYear: focus.year, shifts: focus.includedShifts, snapshots: snapshots)
     )
   }
 
-  /// Shown-basis pay through today in the running year and through the same date a year
+  /// Before-tax pay through today in the running year and through the same date a year
   /// earlier, or nil for any other year.
-  nonisolated private static func yearToDate(  // swiftlint:disable:this function_parameter_count
+  nonisolated private static func yearToDate(
     year: Int,
     focus: [ShiftWithComputations],
     previous: [ShiftWithComputations],
-    taxEnabled: Bool,
-    halfTaxMonth: Int?,
     now: Date
   ) -> YearToDate? {
     let today = Calendar.gregorianCurrent.dateComponents([.year, .month, .day], from: now)  // swiftlint:disable:this explicit_type_interface line_length
     guard today.year == year, let month = today.month, let day = today.day else { return nil }
-    func shownPay(_ shifts: [ShiftWithComputations], year: Int, day: Int) -> Double {
+    func pay(_ shifts: [ShiftWithComputations], year: Int, day: Int) -> Double {
       let cutoff = String(format: "%04d-%02d-%02d", year, month, day)  // swiftlint:disable:this explicit_type_interface
-      let months = Self.yearMonthStats(  // swiftlint:disable:this explicit_type_interface
-        primary: shifts.filter { $0.shiftDate <= cutoff }, included: [],
-        halfTaxMonth: halfTaxMonth, now: now)
-      return months.reduce(0) { $0 + (taxEnabled ? $1.earningsNet : $1.earnings) }
+      return shifts.filter { $0.shiftDate <= cutoff }.reduce(0) { $0 + $1.grossPay }
     }
     // 29 February has no match a year earlier, so it compares with 28 February.
     let previousDay = month == 2 && day == 29 ? 28 : day  // swiftlint:disable:this explicit_type_interface
     return YearToDate(
-      focus: shownPay(focus, year: year, day: day),
-      previous: shownPay(previous, year: year - 1, day: previousDay)
+      focus: pay(focus, year: year, day: day),
+      previous: pay(previous, year: year - 1, day: previousDay)
     )
   }
 

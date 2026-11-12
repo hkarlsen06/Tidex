@@ -224,8 +224,8 @@
         previousMonths: yearMonths(previous, net: net),
         currencyAggregate: nil,
         toDate: YearToDate(
-          focus: net(pay.prefix(10).reduce(0, +) + 7_380),
-          previous: net(previous.prefix(10).reduce(0, +) + november.reduce(0) { $0 + $1.earnings })
+          focus: pay.prefix(10).reduce(0, +) + 7_380,
+          previous: previous.prefix(10).reduce(0, +) + november.reduce(0) { $0 + $1.earnings }
         ),
         employment: employmentData(year: 2_026, percentages: year2026.employment)
       )
