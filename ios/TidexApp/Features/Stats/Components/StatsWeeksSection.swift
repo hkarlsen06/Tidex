@@ -103,8 +103,8 @@ struct StatsWeeksSection: View {
       return StatsFormat.plain(String(localized: .statsWeeksBest(week, money(amount))))
     case .busiestAhead(let week):
       return StatsFormat.plain(String(localized: .statsWeeksBusiestAhead(week)))
-    case .tied(let amount):
-      return StatsFormat.plain(String(localized: .statsWeeksTied(money(amount))))
+    case .total(let amount):
+      return StatsFormat.plain(String(localized: .statsYearTotal(money(amount), month)))
     }
   }
 
@@ -245,7 +245,9 @@ private struct StatsWeekRow: View {
     return row.total > 0 ? StatsFormat.money(row.total, currency: currency) : "–"
   }
 
+  /// A sum that is only scheduled is muted, so it does not read as money earned.
   private var totalColor: Color {
+    if row.isPlannedOnly { return .tidexTextMuted }
     if row.isBest { return .tidexTextPrimary }
     return row.total > 0 ? .tidexTextSecondary : .tidexTextMuted
   }
@@ -255,6 +257,9 @@ private struct StatsWeekRow: View {
       row.total > 0 ? StatsFormat.money(row.total, currency: currency) : "–",
       String(localized: .commonShiftCount(row.shiftCount)),
     ]
+    if row.isPlannedOnly {
+      parts.append(String(localized: .statsWeeksScheduled))
+    }
     if row.isCurrent {
       parts.append(String(localized: .statsChartsWeeklyChartThisWeek))
     }
