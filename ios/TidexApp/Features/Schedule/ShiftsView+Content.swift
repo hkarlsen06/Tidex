@@ -770,6 +770,26 @@ extension ShiftsView {
           Label(String(localized: .shiftsActionsEdit), systemImage: "pencil")
         }
         .tint(.tidexBlue)
+
+        Button {
+          Haptics.play(.selection)
+          startShiftOperation(.copy, shift: shift)
+        } label: {
+          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+        }
+        .tint(.tidexPurple)
+
+        if !shift.isVirtual {
+          Button {
+            Haptics.play(.selection)
+            startShiftOperation(.move, shift: shift)
+          } label: {
+            Label(
+              String(localized: .shiftsMove),
+              systemImage: "arrow.up.and.down.and.arrow.left.and.right")
+          }
+          .tint(.tidexBlue)
+        }
       }
       .swipeActions(edge: .trailing) {
         SwipeDeleteButton {

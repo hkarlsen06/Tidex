@@ -18,7 +18,12 @@ extension ShiftsView {
     }
   }
 
+  /// The calendar grid is where the user picks the target dates, so the list gives way to it.
   func startShiftOperation(_ operation: ScheduleShiftOperation, shift: ShiftWithComputations) {
+    if showListView {
+      returnsToListAfterShiftOperation = true
+      showListView = false
+    }
     switch operation {
     case .copy:
       viewModel.initiateCopy(of: shift)

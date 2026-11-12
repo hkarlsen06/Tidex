@@ -65,6 +65,35 @@ final class ShiftJourneyUITests: XCTestCase {
     XCTAssertFalse(savedDay.exists, "The deleted shift must leave the schedule")
   }
 
+  /// Move is reachable from a shift's details, not only by touch and hold on the calendar.
+  func testMoveFromShiftDetailsStartsMovingOnTheCalendar() {
+    let app = XCUIApplication()
+    app.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+      "-defaultStartupTab", "shifts",
+    ]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    app.launch()
+
+    let today = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label BEGINSWITH %@", Self.scheduleLabel(for: .now) + ","))
+      .firstMatch
+    XCTAssertTrue(today.waitForExistence(timeout: timeout), app.debugDescription)
+    today.tap()
+
+    let more = app.buttons["shift-details.more"]
+    XCTAssertTrue(more.waitForExistence(timeout: timeout), app.debugDescription)
+    more.tap()
+    let move = app.buttons["Move"]
+    XCTAssertTrue(move.waitForExistence(timeout: timeout), app.debugDescription)
+    move.tap()
+
+    XCTAssertTrue(
+      app.staticTexts["Tap a date to move to"].waitForExistence(timeout: timeout),
+      "Move from the details sheet must open the calendar's move bar.\n" + app.debugDescription)
+    XCTAssertTrue(app.buttons["Cancel"].exists, app.debugDescription)
+  }
+
   /// A user with a job and no shifts adds a first shift from the Home prompt.
   func testFirstShiftFromHomePromptShowsOnTheSchedule() {
     let app = XCUIApplication()

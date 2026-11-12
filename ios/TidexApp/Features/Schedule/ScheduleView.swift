@@ -86,6 +86,8 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   // View mode toggle (calendar vs list) - persisted across app launches
   @AppStorage("shiftsViewMode") var showListView: Bool = false
+  /// Set when Copy or Move switched the list to the calendar, so the list comes back after.
+  @State var returnsToListAfterShiftOperation: Bool = false
   @ScaledMetric(relativeTo: .largeTitle) var errorIconSize: CGFloat = 48
   @State var selectedListJobId: String?
   @State var filteredListShiftsCache: [ShiftWithComputations] = []
@@ -124,6 +126,8 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     case .shiftDelete(let shift):
       shiftToDelete = shift
       showDeleteConfirmation = true
+    case .shiftOperation(let operation, let shift):
+      startShiftOperation(operation, shift: shift)
     case .eventDelete(let event):
       eventToDelete = event
       showEventDeleteConfirmation = true
@@ -429,6 +433,13 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     }
   }
 
+  private func close(
+    _ selection: Binding<ShiftWithComputations?>, then action: PendingScheduleSheetAction
+  ) {
+    pendingSheetAction = action
+    selection.wrappedValue = nil
+  }
+
   private func shiftDetailsSheet(
     for shift: ShiftWithComputations,
     selection: Binding<ShiftWithComputations?>,
@@ -440,10 +451,8 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       shift: shift,
       jobName: shiftJob?.name,
       jobColorHex: shiftJob?.color,
-      onDelete: {
-        pendingSheetAction = .shiftDelete(shift)
-        selection.wrappedValue = nil
-      },
+      onDelete: { close(selection, then: .shiftDelete(shift)) },
+      onStartShiftOperation: { close(selection, then: .shiftOperation($0, shift)) },
       onUpdate: { editResult in
         try await applyShiftEdit(editResult, to: shift, selection: selection)
       },
@@ -598,6 +607,12 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           if isListView {
             viewModel.clearSelection()
             recomputeListDerivedDataIfNeeded(force: true)
+          }
+        }
+        .onChange(of: viewModel.isCopyMode || viewModel.isMoveMode) { _, isActive in
+          if !isActive, returnsToListAfterShiftOperation {
+            returnsToListAfterShiftOperation = false
+            showListView = true
           }
         }
         .onChange(of: usesWideCalendarLayout) { _, usesColumns in
@@ -787,6 +802,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     case shiftDetails(ShiftWithComputations)
     case eventDetails(EventSheetSelection)
     case shiftDelete(ShiftWithComputations)
+    case shiftOperation(ScheduleShiftOperation, ShiftWithComputations)
     case eventDelete(EventRow)
     case recurringEdit(RecurringShiftRow)
     case calendarSubscriptionSettings

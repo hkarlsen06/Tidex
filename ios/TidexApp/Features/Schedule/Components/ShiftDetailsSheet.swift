@@ -102,6 +102,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   /// Job color hex for the badge (e.g. "#3B82F6")
   let jobColorHex: String?
   let onDelete: (() -> Void)?
+  let onStartShiftOperation: ((ShiftsView.ScheduleShiftOperation) -> Void)?
   let onUpdate: ((ShiftEditResult) async throws -> Void)?
   let onUpdatePause: ((ShiftPauseEditResult) -> Void)?
   let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
@@ -232,6 +233,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     jobName: String? = nil,
     jobColorHex: String? = nil,
     onDelete: (() -> Void)? = nil,
+    onStartShiftOperation: ((ShiftsView.ScheduleShiftOperation) -> Void)? = nil,
     onUpdate: ((ShiftEditResult) async throws -> Void)? = nil,
     onUpdatePause: ((ShiftPauseEditResult) -> Void)? = nil,
     onEditRecurring: ((String) -> Void)? = nil,
@@ -248,6 +250,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     self.jobName = jobName
     self.jobColorHex = jobColorHex
     self.onDelete = onDelete
+    self.onStartShiftOperation = onStartShiftOperation
     self.onUpdate = onUpdate
     self.onUpdatePause = onUpdatePause
     self.onEditRecurring = onEditRecurring
@@ -715,6 +718,32 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         .font(.tidexBodyMedium)
         .foregroundStyle(Color.tidexTextPrimary)
         .accessibilityLabel(Text(.shiftsShareTitle))
+    }
+
+    if let onStartShiftOperation {
+      Menu {
+        Button {
+          onStartShiftOperation(.copy)
+        } label: {
+          Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+        }
+        // A recurring occurrence cannot be moved, only copied or excluded.
+        if !isVirtualShift {
+          Button {
+            onStartShiftOperation(.move)
+          } label: {
+            Label(
+              String(localized: .shiftsMove),
+              systemImage: "arrow.up.and.down.and.arrow.left.and.right")
+          }
+        }
+      } label: {
+        Image(systemName: "ellipsis.circle")
+          .font(.tidexBodyMedium)
+          .foregroundStyle(Color.tidexTextPrimary)
+      }
+      .accessibilityLabel(Text(.shiftsDetailsMore))
+      .accessibilityIdentifier("shift-details.more")
     }
 
     if let onDelete {
