@@ -25,7 +25,7 @@ extension Notification.Name {
   static let screenshotPromptUseShareButton = Notification.Name("screenshotPromptUseShareButton")
 }
 
-/// Root tab view for signed-in users: Home, Schedule, Friends and the user's profile.
+/// Root tab view for signed-in users: Home, Schedule, Stats, Friends and the user's profile.
 /// The plus button beside the month picker pushes the Add screen onto the current tab.
 struct MainTabView: View {
   @Environment(AppCoordinator.self) private var coordinator
@@ -55,9 +55,6 @@ struct MainTabView: View {
   @State private var adminSheetInitialTab: AdminTab = .feedback
   @State private var adminSheetInitialReportId: String?
 
-  // State for Home-owned stats navigation
-  @State private var homePath: [HomeRoute] = []
-
   /// The invite link waiting for the user's answer. Its sheet closes the pending invite.
   @State private var inviteConfirmation: InviteConfirmationModel?
   @State private var presentedInviterId: String?
@@ -86,6 +83,7 @@ struct MainTabView: View {
   enum Tab: String, CaseIterable, Hashable {
     case home
     case shifts
+    case stats
     // The raw value is persisted as the startup tab and synced, so it keeps the old name.
     case friends = "sharing"
     case profile
@@ -151,7 +149,7 @@ struct MainTabView: View {
               value: Tab.home
             ) {
               tabHost(for: .home) {
-                DashboardView(selectedTab: tabSelection, path: $homePath)
+                DashboardView(selectedTab: tabSelection)
               }
             }
 
@@ -162,6 +160,17 @@ struct MainTabView: View {
             ) {
               tabHost(for: .shifts) {
                 ShiftsView(selectedTab: tabSelection)
+              }
+            }
+
+            SwiftUI.Tab(
+              String(localized: .tabsStats),
+              systemImage: "chart.bar.xaxis",
+              value: Tab.stats
+            ) {
+              tabHost(for: .stats) {
+                StatsView()
+                  .id(coordinator.userId)
               }
             }
 
@@ -387,7 +396,7 @@ struct MainTabView: View {
     // The Add screen has its own month picker.
     guard addShiftNavigator.hostTab != selectedTab else { return false }
     switch selectedTab {
-    case .home, .shifts:
+    case .home, .shifts, .stats:
       return true
 
     case .friends:
@@ -403,7 +412,7 @@ struct MainTabView: View {
     switch selectedTab {
     case .shifts: return shiftsToolbarCoordinator.canShowLeadingActions
     case .friends: return friendsHasSelectedSharer
-    case .home, .profile: return false
+    case .home, .stats, .profile: return false
     }
   }
 
@@ -411,7 +420,7 @@ struct MainTabView: View {
     switch selectedTab {
     case .home: return true
     case .shifts: return shiftsToolbarCoordinator.canShowLeadingActions
-    case .friends, .profile: return false
+    case .stats, .friends, .profile: return false
     }
   }
 
@@ -421,9 +430,6 @@ struct MainTabView: View {
     if addShiftNavigator.hostTab == tab {
       // Like any pushed screen, re-tapping the tab goes back to its root.
       addShiftNavigator.hostTab = nil
-      pendingCurrentMonthTab = nil
-    } else if tab == .home, homePath.last == .stats {
-      homePath.removeLast()
       pendingCurrentMonthTab = nil
     } else if tab == .friends || tab == .profile {
       NotificationCenter.default.post(

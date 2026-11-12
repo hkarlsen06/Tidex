@@ -376,20 +376,15 @@ final class TidexAppUITests: XCTestCase {
 
       capturePayrollScreenshot(app, id: spec.id)
 
-      let statsButton = app.buttons["home.stats"]
-      XCTAssertTrue(statsButton.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-      statsButton.tap()
-      XCTAssertTrue(app.buttons["BackButton"].waitForExistence(timeout: defaultTimeout))
+      let statsTab = localizedTab(at: 2, symbol: "chart.bar.xaxis", in: app)
+      XCTAssertTrue(statsTab.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+      statsTab.tap()
+      XCTAssertTrue(
+        statsHero(in: app).waitForExistence(timeout: defaultTimeout), app.debugDescription)
       XCTAssertTrue(earnings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
       attachAppStoreScreenshot(app, name: "\(spec.id)-02-statistics")
 
-      app.buttons["BackButton"].tap()
-      // Floating and vertical tab bars may expose the symbol on the image, not the button.
-      let tabBar = app.tabBars.firstMatch
-      let scheduleTab =
-        tabBar.waitForExistence(timeout: 2)
-        ? tabBar.buttons.element(boundBy: 1)
-        : app.buttons.containing(.image, identifier: "calendar").firstMatch
+      let scheduleTab = localizedTab(at: 1, symbol: "calendar", in: app)
       XCTAssertTrue(scheduleTab.waitForExistence(timeout: defaultTimeout), app.debugDescription)
       scheduleTab.tap()
       let calendarTime = app.staticTexts.matching(NSPredicate(format: "label == %@", "09:00"))
@@ -531,8 +526,9 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(text(containingLabel: "+17% vs previous month", in: app).exists)
     attachAppStoreScreenshot(app, name: "money-01-home")
 
-    app.buttons["Stats"].tap()
-    XCTAssertTrue(app.buttons["BackButton"].waitForExistence(timeout: defaultTimeout))
+    navigationTab(named: "Stats", in: app).tap()
+    XCTAssertTrue(
+      statsHero(in: app).waitForExistence(timeout: defaultTimeout), app.debugDescription)
     XCTAssertTrue(earnings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     // Stats names the previous month where Home says "previous month".
     let previousMonth = Calendar(identifier: .gregorian).date(byAdding: .month, value: -1, to: .now)
@@ -542,7 +538,6 @@ final class TidexAppUITests: XCTestCase {
       text(containingLabel: "+17% vs \(previousMonthName)", in: app).exists, app.debugDescription)
     attachAppStoreScreenshot(app, name: "money-02-stats")
 
-    app.buttons["BackButton"].tap()
     app.buttons["Schedule"].firstMatch.tap()
     let shiftTime = app.staticTexts.matching(NSPredicate(format: "label == %@", "09:00")).firstMatch
     XCTAssertTrue(shiftTime.waitForExistence(timeout: 30), app.debugDescription)
@@ -1461,6 +1456,21 @@ final class TidexAppUITests: XCTestCase {
   private func navigationTab(named title: String, in app: XCUIApplication) -> XCUIElement {
     let bottomTab = app.tabBars.buttons[title]
     return bottomTab.exists ? bottomTab : app.buttons[title].firstMatch
+  }
+
+  /// Finds a tab by position, for screenshot locales whose tab titles differ.
+  /// Floating and vertical tab bars may expose the symbol on the image, not the button.
+  @MainActor
+  private func localizedTab(at index: Int, symbol: String, in app: XCUIApplication) -> XCUIElement {
+    let tabBar = app.tabBars.firstMatch
+    return tabBar.waitForExistence(timeout: 2)
+      ? tabBar.buttons.element(boundBy: index)
+      : app.buttons.containing(.image, identifier: symbol).firstMatch
+  }
+
+  /// The month amount at the top of Stats, which only the Stats tab shows.
+  private func statsHero(in app: XCUIApplication) -> XCUIElement {
+    app.descendants(matching: .any)["stats.hero.amount"]
   }
 
   /// Opens the Add screen from the plus button beside the month picker.

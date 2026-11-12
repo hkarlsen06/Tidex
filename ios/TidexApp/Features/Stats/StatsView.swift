@@ -12,6 +12,7 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   @State private var isScrubbing = false  // swiftlint:disable:this explicit_type_interface
   /// False only for a user with no shifts at all, who sees one add-shift action instead of empty charts.
   @State private var hasAnyShifts = true  // swiftlint:disable:this explicit_type_interface
+  @State private var addShiftPath: [AddShiftRoute] = []  // swiftlint:disable:this explicit_type_interface
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
   private func refreshStatsContent() async {  // swiftlint:disable:this type_contents_order
@@ -55,50 +56,21 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   }
 
   var body: some View {  // swiftlint:disable:this explicit_acl
-    ZStack {
-      TidexAppBackground()
-
-      // The month picker sits in the shared overlay above the tab bar.
-      Group {
-        if shouldShowWorkSetupRequiredPlaceholder {
-          WorkSetupRequiredPlaceholder()
-        } else if let error = viewModel.error, viewModel.stats == nil,
-          let message = ErrorTranslations.translate(error)
-        {
-          errorView(message: message)
-        } else if !hasAnyShifts {
-          FirstShiftEmptyState {
-            coordinator.pendingDeepLink = .addShift(mode: nil, date: nil)
-          }
-          .padding(.bottom, MonthPickerLayout.totalBottomInset)
-        } else {
-          statsContent(stats: displayedStats)
-        }
-      }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-      if !shouldShowWorkSetupRequiredPlaceholder {
-        VStack {
-          SyncStatusIndicator {
-            Task {
-              await refreshStatsContent()
+    NavigationStack(path: $addShiftPath) {
+      tabRootContent
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          TabTitleToolbarItem(title: .tabsStats)
+          if viewModel.shouldShowJobFilter, !shouldShowWorkSetupRequiredPlaceholder {
+            ToolbarItem(placement: .topBarTrailing) {
+              jobFilterMenu
             }
           }
-          .padding(.top, Spacing.xs)
-          Spacer()
         }
-      }
+        .navigationDestination(for: AddShiftRoute.self) { _ in AddShiftScreen(tab: .stats) }
+        .addShiftRoute(on: .stats, path: $addShiftPath)
+        .adaptiveToolbarTransaction()
     }
-    .navigationTitle(Text(.tabsStats))
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      if viewModel.shouldShowJobFilter, !shouldShowWorkSetupRequiredPlaceholder {
-        ToolbarItem(placement: .topBarTrailing) {
-          jobFilterMenu
-        }
-      }
-    }
-    .adaptiveToolbarTransaction()
     .sheet(isPresented: $showExportSettings) {
       SettingsView(initialDestination: .data)
         .presentationDetents([.large])
@@ -145,6 +117,43 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       // The month swaps in place, so VoiceOver gets no other cue that it changed.
       guard oldMonth != nil else { return }  // swiftlint:disable:this conditional_returns_on_newline
       announceDisplayedMonth()
+    }
+  }
+
+  private var tabRootContent: some View {
+    ZStack {
+      TidexAppBackground()
+
+      // The month picker sits in the shared overlay above the tab bar.
+      Group {
+        if shouldShowWorkSetupRequiredPlaceholder {
+          WorkSetupRequiredPlaceholder()
+        } else if let error = viewModel.error, viewModel.stats == nil,
+          let message = ErrorTranslations.translate(error)
+        {
+          errorView(message: message)
+        } else if !hasAnyShifts {
+          FirstShiftEmptyState {
+            coordinator.pendingDeepLink = .addShift(mode: nil, date: nil)
+          }
+          .padding(.bottom, MonthPickerLayout.totalBottomInset)
+        } else {
+          statsContent(stats: displayedStats)
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+      if !shouldShowWorkSetupRequiredPlaceholder {
+        VStack {
+          SyncStatusIndicator {
+            Task {
+              await refreshStatsContent()
+            }
+          }
+          .padding(.top, Spacing.xs)
+          Spacer()
+        }
+      }
     }
   }
 
