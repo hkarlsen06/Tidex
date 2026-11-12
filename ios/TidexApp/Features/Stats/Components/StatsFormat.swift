@@ -137,8 +137,16 @@ private struct StatsSlot<Content: View>: View {
         content
           .lineLimit(lines)
           .minimumScaleFactor(0.5)
-          .multilineTextAlignment(alignment.horizontal == .trailing ? .trailing : .leading)
+          .multilineTextAlignment(textAlignment)
       }
+  }
+
+  private var textAlignment: TextAlignment {
+    switch alignment.horizontal {
+    case .trailing: .trailing
+    case .center: .center
+    default: .leading
+    }
   }
 }
 

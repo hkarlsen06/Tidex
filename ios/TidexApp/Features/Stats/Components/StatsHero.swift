@@ -12,38 +12,38 @@ struct StatsHero: View {
   private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.xxl) {
-      VStack(alignment: .leading, spacing: 0) {
+    VStack(spacing: Spacing.xxxl) {
+      VStack(spacing: 0) {
         summary
         changeRow
       }
       StatsMetricStrip(metrics: metrics)
     }
+    .padding(.top, Spacing.lg)
     .onChange(of: hero.period) {
       isBreakdownShown = false
     }
   }
 
   private var summary: some View {
-    VStack(alignment: .leading, spacing: 0) {
+    VStack(spacing: 0) {
       Text(caption)
-        .statsSlot()
+        .statsSlot(alignment: .center)
         .font(.tidexLabel)
         .foregroundStyle(Color.tidexTextSecondary)
         .padding(.bottom, Spacing.xs)
       Text(amount)
         .contentTransition(reduceMotion ? .identity : .numericText(value: hero.amount))
         .monospacedDigit()
-        .statsSlot(lines: isAccessibilitySize ? 2 : 1)
+        .statsSlot(lines: isAccessibilitySize ? 2 : 1, alignment: .center)
         .font(isAccessibilitySize ? .tidexAmountLarge : .tidexHeroAmount)
         .foregroundStyle(Color.tidexTextPrimary)
-      HStack(spacing: Spacing.xs) {
+      HStack(spacing: hasOtherCurrencies ? Spacing.xs : 0) {
         Text(qualifier)
           .monospacedDigit()
-          .frame(maxWidth: .infinity, alignment: .leading)
         currencyChip
       }
-      .statsSlot(lines: isAccessibilitySize ? 2 : 1)
+      .statsSlot(lines: isAccessibilitySize ? 2 : 1, alignment: .center)
       .font(.tidexSubheadline)
       .foregroundStyle(Color.tidexTextSecondary)
       .padding(.top, Spacing.xs)
@@ -69,9 +69,8 @@ struct StatsHero: View {
         .accessibilityHidden(true)
       Text(changeText)
         .monospacedDigit()
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .statsSlot(lines: isAccessibilitySize ? 2 : 1)
+    .statsSlot(lines: isAccessibilitySize ? 2 : 1, alignment: .center)
     .font(.tidexSubheadline)
     .foregroundStyle(Color.tidexTextSecondary)
     .padding(.top, Spacing.xs)
@@ -256,7 +255,7 @@ private struct StatsMetricStrip: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
           ForEach(items) { item in
             HStack(alignment: .firstTextBaseline) {
-              label(item)
+              label(item, alignment: .leading)
               value(item, alignment: .trailing)
             }
             .accessibilityElement(children: .combine)
@@ -275,22 +274,22 @@ private struct StatsMetricStrip: View {
   }
 
   private func column(_ item: Item) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xxxs) {
-      value(item)
-      label(item)
+    VStack(spacing: Spacing.xxxs) {
+      value(item, alignment: .center)
+      label(item, alignment: .center)
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
+    .frame(maxWidth: .infinity)
     .accessibilityElement(children: .combine)
   }
 
-  private func label(_ item: Item) -> some View {
+  private func label(_ item: Item, alignment: HorizontalAlignment) -> some View {
     Text(item.label)
-      .statsSlot()
+      .statsSlot(alignment: alignment)
       .font(.tidexFootnote)
       .foregroundStyle(Color.tidexTextMuted)
   }
 
-  private func value(_ item: Item, alignment: HorizontalAlignment = .leading) -> some View {
+  private func value(_ item: Item, alignment: HorizontalAlignment) -> some View {
     Text(item.value)
       .contentTransition(reduceMotion ? .identity : .numericText(value: item.number))
       .monospacedDigit()
