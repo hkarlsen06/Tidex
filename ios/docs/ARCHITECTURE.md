@@ -22,7 +22,7 @@ TidexApp/
 │   ├── Onboarding/          # Pre & post-auth onboarding
 │   ├── Schedule/            # Shifts tab (ShiftsViewModel, ShiftsCalendarView)
 │   ├── Settings/            # Settings, Pay (jobs), Admin, Profile, etc.
-│   └── Stats/               # Stats tab: month and year earnings
+│   └── Stats/               # Stats tab: a month page and a year page under one hero
 ├── Services/                # Business logic & data operations
 │   ├── Auth/                # Authentication operations
 │   ├── Data/                # Supabase data fetching (ShiftsService, SnapshotsService)
