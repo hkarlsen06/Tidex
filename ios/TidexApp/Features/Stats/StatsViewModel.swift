@@ -267,6 +267,9 @@ final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   private func performLoadStats(generation: Int) async {  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length
+    // The service cancels its running computation when a new one starts, so a load that
+    // was superseded before it began must not reach the service.
+    guard !Task.isCancelled, generation == loadGeneration else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     isLoading = true
     error = nil
 

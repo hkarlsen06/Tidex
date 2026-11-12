@@ -58,11 +58,6 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     )
   }
 
-  private func loadStatsContent() async {  // swiftlint:disable:this type_contents_order
-    guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-    await viewModel.loadStats()
-  }
-
   var body: some View {  // swiftlint:disable:this explicit_acl
     NavigationStack(path: $addShiftPath) {
       tabRootContent
@@ -84,16 +79,12 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
-    .task {
-      refreshWorkSetupPresentationState()
-      refreshHasAnyShifts()
-      await loadStatsContent()
-    }
     .onChange(of: isSelected, initial: true) { _, selected in
       viewModel.setOnScreen(selected)
     }
     .onAppear {
-      refreshWorkSetupPresentationState()
+      // Also the first load. A load in `.task` would be cancelled when the tab is covered.
+      reloadAfterDataChange()
       // Teaches Siri that the user checks earnings, so it can suggest the shortcut.
       _ = EarningsIntent(period: .thisMonth).donate()
     }
