@@ -39,9 +39,14 @@ struct FriendShiftDayCard: View {
 
       FriendShiftDayBar(bar: bar, accent: isActive ? .tidexSuccess : .tidexBlue)
     }
-    .padding(.horizontal, Spacing.sm)
-    .padding(.top, Spacing.md)
+    .padding(Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+        .fill(Color.tidexSurfacePrimary)
+    )
+    .padding(.horizontal, Spacing.md)
+    .padding(.top, Spacing.lg)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(
       [status, interval.datedTimeRange(in: zone, locale: .appLocale)].joined(separator: ", "))
