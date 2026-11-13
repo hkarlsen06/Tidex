@@ -40,6 +40,11 @@ struct MainTabView: View {
 
   @State private var selectedTab: Tab = .home
   @State private var loadedTabs: Set<Tab> = [.home]
+  /// Each loaded tab's bottom safe-area inset, which includes the tab bar.
+  @State private var tabBottomInsets: [Tab: CGFloat] = [:]
+  /// The selected tab's inset. A tab reports only after its first layout, so on a first
+  /// visit the month picker keeps its place until the new tab reports.
+  @State private var monthPickerInset: CGFloat = 0
 
   // Tracks whether the first re-tap on a scrollable tab already triggered scroll-to-top.
   // On the next re-tap, we navigate to the current month instead.
@@ -207,6 +212,8 @@ struct MainTabView: View {
               }
             }
           }
+
+          monthPickerLayer
         }
         .onChange(of: addShiftNavigator.isClosingOnSchedule) { _, isClosing in
           if isClosing {
@@ -416,6 +423,27 @@ struct MainTabView: View {
     }
   }
 
+  /// One month picker for every tab, so switching tabs morphs its controls instead of
+  /// replacing the picker. Its bottom padding is the inset the selected tab reported.
+  private var monthPickerLayer: some View {
+    Group {
+      if shouldShowMonthPicker {
+        MonthPickerControls(
+          period: selectedTab == .stats ? $statsPeriod : nil,
+          showsViewModeToggle: showsViewModeToggle,
+          showsAddButton: showsAddButton,
+          onAddShift: { addShiftNavigator.hostTab = selectedTab }
+        )
+        .transition(MotionTokens.transition(.pageTransition, reduceMotion: shouldReduceEffects))
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+    .padding(.bottom, monthPickerInset)
+    .ignoresSafeArea(edges: .bottom)
+    .motionAnimation(
+      .pageTransition, value: shouldShowMonthPicker, reduceMotion: shouldReduceEffects)
+  }
+
   private var showsViewModeToggle: Bool {
     switch selectedTab {
     case .shifts: return shiftsToolbarCoordinator.canShowLeadingActions
@@ -536,6 +564,9 @@ struct MainTabView: View {
   private func activateTab(_ tab: Tab) {
     loadedTabs.insert(tab)
     selectedTab = tab
+    if let inset = tabBottomInsets[tab] {
+      monthPickerInset = inset
+    }
   }
 
   private func closeAddShiftOnSchedule() {
@@ -552,21 +583,14 @@ struct MainTabView: View {
   ) -> some View {
     if loadedTabs.contains(tab) {
       content()
-        // The overlay sits in the tab's safe area, so it stays just above the tab bar
-        // without hardcoding the tab bar height, and leaves the content insets alone.
-        .overlay(alignment: .bottom) {
-          if selectedTab == tab, shouldShowMonthPicker {
-            MonthPickerControls(
-              period: tab == .stats ? $statsPeriod : nil,
-              showsViewModeToggle: showsViewModeToggle,
-              showsAddButton: showsAddButton,
-              onAddShift: { addShiftNavigator.hostTab = selectedTab }
-            )
-            .transition(MotionTokens.transition(.pageTransition, reduceMotion: shouldReduceEffects))
-          }
+        // The tab's bottom safe area covers its tab bar, so the shared month picker
+        // can sit above the tab bar without hardcoding the tab bar height.
+        .onGeometryChange(for: CGFloat.self) {
+          $0.safeAreaInsets.bottom
+        } action: {
+          tabBottomInsets[tab] = $0
+          if tab == selectedTab { monthPickerInset = $0 }
         }
-        .motionAnimation(
-          .pageTransition, value: shouldShowMonthPicker, reduceMotion: shouldReduceEffects)
     } else {
       Color.clear
     }
