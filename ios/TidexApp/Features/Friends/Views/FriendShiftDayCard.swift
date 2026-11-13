@@ -47,12 +47,8 @@ struct FriendShiftDayCard: View {
       [status, interval.datedTimeRange(in: zone, locale: .appLocale)].joined(separator: ", "))
   }
 
-  /// The date, with a green "now" badge under it during the shift and a countdown otherwise.
   private func labels(status: String, date: String, isActive: Bool) -> some View {
     VStack(alignment: .leading, spacing: Spacing.xxs) {
-      Text(date)
-        .font(.tidexHeadline)
-        .foregroundStyle(Color.tidexTextPrimary)
       if isActive {
         HStack(spacing: Spacing.xxs) {
           Circle()
@@ -67,9 +63,12 @@ struct FriendShiftDayCard: View {
         .background(Capsule().fill(Color.tidexSuccess.opacity(0.15)))
       } else {
         Text(status)
-          .font(.tidexFootnoteMedium)
-          .foregroundStyle(Color.tidexTextSecondary)
+          .font(.tidexHeadline)
+          .foregroundStyle(Color.tidexTextPrimary)
       }
+      Text(date)
+        .font(.tidexFootnoteMedium)
+        .foregroundStyle(Color.tidexTextSecondary)
     }
   }
 
