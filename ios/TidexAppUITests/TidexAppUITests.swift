@@ -503,6 +503,9 @@ final class TidexAppUITests: XCTestCase {
   private func attachAppStoreScreenshot(_ app: XCUIApplication, name: String) {
     // Currency transitions can still be animating after their accessibility value updates.
     Thread.sleep(forTimeInterval: 1)
+    XCTAssertFalse(
+      app.descendants(matching: .any)["sync.status"].exists || app.buttons["sync.retry"].exists,
+      "A sync status pill must not appear in \(name)\n\(app.debugDescription)")
     let attachment = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
     attachment.name = name
     attachment.lifetime = .keepAlways

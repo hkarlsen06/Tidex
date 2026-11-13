@@ -45,6 +45,7 @@ struct SyncStatusIndicator: View {
       .clipShape(.rect(cornerRadius: CornerRadius.card))
       .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
       .accessibilityElement(children: .combine)
+      .accessibilityIdentifier("sync.status")
 
     case .failed(_, let lastSync):
       HStack(spacing: Spacing.xs) {
@@ -96,6 +97,7 @@ struct SyncStatusIndicator: View {
       .background(Color.tidexSurfacePrimary)
       .clipShape(.rect(cornerRadius: CornerRadius.card))
       .accessibilityElement(children: showsOfflineRetry ? .contain : .combine)
+      .accessibilityIdentifier("sync.status")
     }
   }
 

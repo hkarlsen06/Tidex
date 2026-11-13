@@ -202,6 +202,11 @@ final class SyncCoordinator: Sendable {
     tables: [SyncTable],
     updateWidgetStorage: Bool = true
   ) async -> SyncResult {
+    #if DEBUG
+      // The fixture's data is local and its backend URL refuses connections, so a sync would only
+      // fail and put the offline pill into the App Store screenshots.
+      if AppStoreScreenshotFixture.isActive { return SyncResult(outcome: .completed) }
+    #endif
     guard await MainActor.run(body: { !LocalStore.shared.isStorageUnavailable }) else {
       return SyncResult(outcome: .failed(message: String(localized: .storageUnavailableMessage)))
     }
