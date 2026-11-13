@@ -458,7 +458,9 @@ extension ShiftsView {
           newlyAddedDates: celebrationManager.newlyAddedDates,
           deepLinkHighlightDates: deepLinkHighlightDates,
           conflictDates: viewModel.conflictDates,
-          excludedFromTotalIds: viewModel.excludedFromTotalIds
+          excludedFromTotalIds: viewModel.excludedFromTotalIds,
+          shiftCard: viewModel.isCurrentMonth
+            ? NextShiftDayCard(shifts: viewModel.shifts, onTap: handleShiftTapped) : nil
         )
       } emptyContent: {
         if !hasAnyShifts {

@@ -98,6 +98,11 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   // Shift IDs that should be excluded from totals (conflicting shifts)
   var excludedFromTotalIds: Set<String> = []
 
+  /// Shown under the grid while no days are selected and nothing is being copied or moved.
+  var shiftCard: NextShiftDayCard?
+
+  @State private var isSelectionTipAvailable = false
+
   @State private var viewMode = CalendarViewMode.load()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @State private var showSingleSelectionDeleteConfirm = false
   @State private var showMultiSelectionDeleteConfirm = false
@@ -166,7 +171,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     newlyAddedDates: Set<String> = [],
     deepLinkHighlightDates: Set<String> = [],
     conflictDates: Set<String> = [],
-    excludedFromTotalIds: Set<String> = []
+    excludedFromTotalIds: Set<String> = [],
+    shiftCard: NextShiftDayCard? = nil
   ) {
     self.shifts = shifts
     self.eventCoverageByDate = eventCoverageByDate
@@ -214,6 +220,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     self.deepLinkHighlightDates = deepLinkHighlightDates
     self.conflictDates = conflictDates
     self.excludedFromTotalIds = excludedFromTotalIds
+    self.shiftCard = shiftCard
   }
 
   // MARK: - Computed Data
@@ -344,6 +351,15 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     }
     .onChange(of: selectedDates) { _, _ in
       showMixedCurrencyBreakdownPopover = false
+    }
+    .task {
+      for await status in selectionTip.statusUpdates {
+        if case .available = status {
+          isSelectionTipAvailable = true
+        } else {
+          isSelectionTipAvailable = false
+        }
+      }
     }
   }
 
@@ -932,6 +948,10 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       MotionTokens.optionalAnimation(.subtle, reduceMotion: reduceMotion), value: showsSelectionTip)
   }
 
+  private var showsShiftCard: Bool {
+    shiftCard != nil && selectedDates.isEmpty && !isCopyMode && !isMoveMode
+  }
+
   // MARK: - Action Bar
 
   /// Bars with text buttons stack vertically at accessibility text sizes so labels keep their width.
@@ -952,7 +972,12 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       actionBar
     } hint: { isPinned in
       if isPinned {
-        pinnedSelectionTip
+        // The card fills the gap above the bar once the user has dismissed the tip.
+        if isSelectionTipAvailable || !showsShiftCard {
+          pinnedSelectionTip
+        } else {
+          shiftCard
+        }
       } else if showsSelectionTip {
         selectionTipView.padding(.top, Spacing.sm)
       }
