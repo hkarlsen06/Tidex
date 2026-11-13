@@ -385,11 +385,6 @@ extension SettingsView {
       NavigationLink(value: SettingsDestination.appearance) {
         Label(String(localized: .settingsMenuAppearanceLabel), systemImage: "paintpalette")
       }
-
-      NavigationLink(value: SettingsDestination.siriAndWidgets) {
-        Label(String(localized: .settingsMenuSiriWidgetsLabel), systemImage: "apps.iphone")
-      }
-      .accessibilityIdentifier("settings.siri-widgets")
     }
   }
 
@@ -429,6 +424,11 @@ extension SettingsView {
 
   private var supportSection: some View {
     Section(String(localized: .settingsGroupSupportData)) {
+      NavigationLink(value: SettingsDestination.siriAndWidgets) {
+        Label(String(localized: .settingsMenuSiriWidgetsLabel), systemImage: "apps.iphone")
+      }
+      .accessibilityIdentifier("settings.siri-widgets")
+
       NavigationLink(value: SettingsDestination.feedback) {
         Label(String(localized: .settingsMenuFeedbackLabel), systemImage: "message")
       }
