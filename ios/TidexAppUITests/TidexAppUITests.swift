@@ -1468,9 +1468,11 @@ final class TidexAppUITests: XCTestCase {
   @MainActor
   private func localizedTab(at index: Int, symbol: String, in app: XCUIApplication) -> XCUIElement {
     let tabBar = app.tabBars.firstMatch
-    return tabBar.waitForExistence(timeout: 2)
-      ? tabBar.buttons.element(boundBy: index)
-      : app.buttons.containing(.image, identifier: symbol).firstMatch
+    if tabBar.waitForExistence(timeout: 2) { return tabBar.buttons.element(boundBy: index) }
+    // The iPad tab bar at the top names each button by its symbol instead of an image inside it.
+    let tagged = app.buttons[symbol].firstMatch
+    return tagged.waitForExistence(timeout: 2)
+      ? tagged : app.buttons.containing(.image, identifier: symbol).firstMatch
   }
 
   /// The month amount at the top of Stats, which only the Stats tab shows.
