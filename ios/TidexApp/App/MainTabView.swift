@@ -27,6 +27,7 @@ extension Notification.Name {
 
 /// Root tab view for signed-in users: Home, Schedule, Stats, Friends and the user's profile.
 /// The plus button beside the month picker pushes the Add screen onto the current tab.
+/// Saving there closes it on Schedule.
 struct MainTabView: View {
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -205,6 +206,11 @@ struct MainTabView: View {
                 }
               }
             }
+          }
+        }
+        .onChange(of: addShiftNavigator.isClosingOnSchedule) { _, isClosing in
+          if isClosing {
+            closeAddShiftOnSchedule()
           }
         }
         .motionAnimation(.navigationPush, value: selectedTab, reduceMotion: shouldReduceEffects)
@@ -530,6 +536,13 @@ struct MainTabView: View {
   private func activateTab(_ tab: Tab) {
     loadedTabs.insert(tab)
     selectedTab = tab
+  }
+
+  private func closeAddShiftOnSchedule() {
+    addShiftNavigator.isClosingOnSchedule = false
+    activateTab(.shifts)
+    pendingCurrentMonthTab = nil
+    addShiftNavigator.hostTab = nil
   }
 
   @ViewBuilder

@@ -202,27 +202,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     carriedDemoShift = hasAnyShifts ? nil : OnboardingFirstShiftCarryoverStore.read()
   }
 
-  /// Home features only a shift that hasn't ended this month. When a first shift added from
-  /// Home is not one, a link opens Schedule on its month and highlights it there.
-  private func showFirstShiftWhereHomeCannot() {  // swiftlint:disable:this type_contents_order
-    let dates = CelebrationManager.shared.newlyAddedDates.sorted()
-    guard selectedTab == .home, let userId = coordinator.userId,
-      let first = dates.first.flatMap({ Date.fromISODateString($0) }),
-      let last = dates.last.flatMap({ Date.fromISODateString($0) })
-    else { return }
-    let newShifts = ShiftsRepository.shared.getShifts(for: userId, startDate: first, endDate: last)
-      .filter { dates.contains($0.shift_date) }
-    // Recurring shifts have no stored rows here, and their next occurrence shows on Home.
-    guard !newShifts.isEmpty else { return }  // swiftlint:disable:this conditional_returns_on_newline
-    let homeShowsOne = newShifts.contains { shift in
-      DashboardFeaturedItemSelector.canFeature(
-        shiftDate: shift.shift_date, startTime: shift.start_time, endTime: shift.end_time)
-    }
-    if !homeShowsOne {
-      coordinator.pendingDeepLink = .shifts(dates: dates, shiftIds: nil, action: .highlight)
-    }
-  }
-
   private func handleInitialSyncCompleteChange(completed: Bool) {  // swiftlint:disable:this type_contents_order
     refreshHasAnyShifts()
     let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()  // swiftlint:disable:this explicit_type_interface line_length
@@ -464,11 +443,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         }
         .onChange(of: viewModel.dashboardData) { _, newData in
           handleDashboardDataChange(newData)
-        }
-        .onChange(of: hasAnyShifts) { hadShifts, hasShifts in
-          if !hadShifts, hasShifts {
-            showFirstShiftWhereHomeCannot()
-          }
         }
         .onChange(of: showFeaturedShiftActions) { _, isPresented in
           if !isPresented {

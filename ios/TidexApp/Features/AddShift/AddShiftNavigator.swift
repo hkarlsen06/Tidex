@@ -12,6 +12,10 @@ internal final class AddShiftNavigator {
   /// The tab whose stack has the Add screen pushed, if any.
   internal var hostTab: MainTabView.Tab?
 
+  /// Set by a save. `MainTabView` switches to Schedule, which shares Add's month and highlights
+  /// the new shifts, and closes Add in the same update, whichever tab Add was opened on.
+  internal var isClosingOnSchedule = false
+
   @ObservationIgnored private var isPushingWithoutAnimation = false
 
   private init() {
@@ -122,11 +126,11 @@ private struct AddShiftRouteModifier<Path: AddShiftStackPath>: ViewModifier {
   }
 }
 
-/// The Add screen in a tab's stack. Saving pops it.
+/// The Add screen in a tab's stack. Saving closes it on Schedule.
 internal struct AddShiftScreen: View {
   var body: some View {
     AddShiftView {
-      AddShiftNavigator.shared.hostTab = nil
+      AddShiftNavigator.shared.isClosingOnSchedule = true
     }
   }
 }

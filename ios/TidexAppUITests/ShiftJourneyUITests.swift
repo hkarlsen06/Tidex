@@ -94,7 +94,8 @@ final class ShiftJourneyUITests: XCTestCase {
     XCTAssertTrue(app.buttons["Cancel"].exists, app.debugDescription)
   }
 
-  /// A user with a job and no shifts adds a first shift from the Home prompt.
+  /// A user with a job and no shifts adds a first shift from the Home prompt, and saving it
+  /// closes Add on Schedule.
   func testFirstShiftFromHomePromptShowsOnTheSchedule() {
     let app = XCUIApplication()
     app.launchArguments = [
@@ -123,7 +124,11 @@ final class ShiftJourneyUITests: XCTestCase {
     save.tap()
     dismissNotificationPrompt(timeout: 10)
 
-    app.tabBars.buttons["Schedule"].tap()
+    let scheduleTab = app.tabBars.buttons["Schedule"]
+    let scheduleSelected = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "isSelected == true"), object: scheduleTab)
+    XCTAssertEqual(
+      XCTWaiter.wait(for: [scheduleSelected], timeout: timeout), .completed, app.debugDescription)
     let savedDay = app.descendants(matching: .any)
       .matching(NSPredicate(format: "label BEGINSWITH %@", Self.scheduleLabel(for: .now) + ","))
       .firstMatch
