@@ -118,8 +118,7 @@ enum CalendarCellContent: Equatable {
 /// Handles week number, day number, background, border, and content
 struct CalendarDayCell<Content: View>: View {
   @ScaledMetric(relativeTo: .caption) private var metricDynamicTypeScale: CGFloat = 1
-  @ScaledMetric(relativeTo: .body) private var defaultTopRowHeight: CGFloat = 17
-  @ScaledMetric(relativeTo: .body) private var todayTopRowHeight: CGFloat = 20
+  @ScaledMetric(relativeTo: .body) private var topRowHeight: CGFloat = 17
   @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
 
   let dayInfo: CalendarDayInfo
@@ -129,10 +128,8 @@ struct CalendarDayCell<Content: View>: View {
   private let leadingMarkerLeadingInset: CGFloat = 3
   private let dayNumberTrailingInset: CGFloat = 2
   private let todayBadgeCornerRadius: CGFloat = CornerRadius.sm
-  private let todayBadgeLeadingInset: CGFloat = Spacing.xxs + 1
-  private let todayBadgeTrailingInset: CGFloat = 3
-  private let todayBadgeTopInset: CGFloat = 1
-  private let todayBadgeBottomInset: CGFloat = 2
+  private let todayBadgeLeadingInset: CGFloat = 3
+  private let todayBadgeBottomInset: CGFloat = 1
   private let todayBadgeOverlayColor: Color = .tidexBlue.opacity(0.18)
   private let stackedMetricSpacing: CGFloat = -3
   private let eventIndicatorHorizontalInset: CGFloat = Spacing.sm
@@ -192,14 +189,10 @@ struct CalendarDayCell<Content: View>: View {
         // drawing it on top of them.
         Spacer(minLength: Spacing.xxs)
 
-        if !style.showsTodayBadge {
-          dayNumberView
-            .padding(.trailing, dayNumberTrailingInset)
-        }
+        dayNumberView
+          .padding(.trailing, dayNumberTrailingInset)
       }
-      .frame(
-        height: style.showsTodayBadge ? todayTopRowHeight : defaultTopRowHeight, alignment: .top
-      )
+      .frame(height: topRowHeight, alignment: .top)
       .padding(.top, topCornerInset)
 
       contentView
@@ -215,11 +208,6 @@ struct CalendarDayCell<Content: View>: View {
       RoundedRectangle(cornerRadius: CornerRadius.sm)
         .strokeBorder(style.borderColor, lineWidth: style.borderWidth)
     )
-    .overlay(alignment: .topTrailing) {
-      if style.showsTodayBadge {
-        todayBadgeView
-      }
-    }
     .overlay(alignment: .bottomTrailing) {
       if let marker = style.marker,
         marker.isVisible(differentiateWithoutColor: differentiateWithoutColor)
@@ -276,32 +264,28 @@ struct CalendarDayCell<Content: View>: View {
     return singleUserIndicatorColor == .tidexTextPrimary ? "person.fill" : "person.crop.circle.fill"
   }
 
-  @ViewBuilder
+  /// Today's number keeps the size and place of every other day number. Its badge reaches out
+  /// to the cell's top trailing corner, so it takes no room from the shift times below.
   private var dayNumberView: some View {
     Text("\(dayInfo.dayNumber)")
       .font(.tidexBodyMedium)
       .lineLimit(1)
       .minimumScaleFactor(0.5)
       .monospacedDigit()
-      .foregroundStyle(style.dayNumberColor)
-  }
-
-  private var todayBadgeView: some View {
-    Text("\(dayInfo.dayNumber)")
-      .font(.tidexBodyMedium)
-      .fixedSize(horizontal: true, vertical: false)
-      .foregroundStyle(Color.tidexTextOnBrand)
-      .padding(.leading, todayBadgeLeadingInset)
-      .padding(.trailing, todayBadgeTrailingInset)
-      .padding(.top, todayBadgeTopInset)
-      .padding(.bottom, todayBadgeBottomInset)
+      .foregroundStyle(style.showsTodayBadge ? Color.tidexTextOnBrand : style.dayNumberColor)
       .background {
-        todayBadgeShape
-          .fill(Color.tidexBrandPrimary)
-          .overlay {
-            todayBadgeShape
-              .fill(todayBadgeOverlayColor)
-          }
+        if style.showsTodayBadge {
+          todayBadgeShape
+            .fill(Color.tidexBrandPrimary)
+            .overlay {
+              todayBadgeShape
+                .fill(todayBadgeOverlayColor)
+            }
+            .padding(.leading, -todayBadgeLeadingInset)
+            .padding(.trailing, -dayNumberTrailingInset)
+            .padding(.top, -topCornerInset)
+            .padding(.bottom, -todayBadgeBottomInset)
+        }
       }
   }
 
