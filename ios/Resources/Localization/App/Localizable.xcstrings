@@ -353,18 +353,6 @@
       },
       "shouldTranslate" : false
     },
-    "88" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "88"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
     "acceptTerms.acceptButton" : {
       "comment" : "Primary button on the terms acceptance screen that accepts the terms and continues into the app.",
       "extractionState" : "manual",
