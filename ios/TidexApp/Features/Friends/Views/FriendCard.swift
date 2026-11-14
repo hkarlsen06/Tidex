@@ -370,21 +370,26 @@ extension FriendCard {
   }
 
   /// At least 80 points, and wide enough for the widest clock row, the globe beside a next-day
-  /// end time such as "06:00+1", so large text never truncates a clock. Clocks are always HH:mm.
+  /// end time, so large text never truncates a clock. Clocks are always HH:mm. The centered clocks
+  /// leave room for the superscript "+1" on both sides, since it hangs past the end time.
   private var shiftTileWidth: CGFloat {
     let clockFont = UIFont.monospacedDigitSystemFont(
       ofSize: uiFont(.subheadline).pointSize, weight: .semibold)
-    let clock = ("00:00+1" as NSString).size(withAttributes: [.font: clockFont]).width
+    let clock = ("00:00" as NSString).size(withAttributes: [.font: clockFont]).width
+    let nextDayFont = UIFont.monospacedDigitSystemFont(
+      ofSize: uiFont(.caption2).pointSize, weight: .semibold)
+    let nextDay = ("+1" as NSString).size(withAttributes: [.font: nextDayFont]).width
     let globe =
       UIImage(
         systemName: "globe",
         withConfiguration: UIImage.SymbolConfiguration(font: uiFont(.caption1), scale: .small)
       )?.size.width ?? 0
-    return max(80, (globe + Spacing.micro + clock).rounded(.up))
+    return max(80, (globe + Spacing.micro + clock + 2 * nextDay).rounded(.up))
   }
 
   /// Status over stacked start and end times, like the calendar day cell. The times fill a row
-  /// as tall as the avatar, which lines them up with it. "+1" marks an end time on the next day.
+  /// as tall as the avatar, which lines them up with it. A superscript "+1" marks an end time on
+  /// the next day.
   private func shiftTileLabel(at now: Date) -> some View {
     let isStacked = dynamicTypeSize.isAccessibilitySize
     let alignment: HorizontalAlignment = isStacked ? .leading : .center
@@ -529,7 +534,17 @@ extension FriendCard {
       let endText = interval.clock(timing.end, locale: .appLocale)
       let crossesMidnight = !Calendar.gregorianCurrent.isDate(
         timing.start, inSameDayAs: timing.end)
-      Text(verbatim: endText + (crossesMidnight ? "+1" : ""))
+      Text(verbatim: endText)
+        // A small "+1" hangs off the end time's top corner, so the two clocks stay aligned.
+        .overlay(alignment: .topTrailing) {
+          if crossesMidnight {
+            Text(verbatim: "+1")
+              .font(.tidexMicro.weight(.semibold))
+              .fixedSize()
+              .frame(width: 0, alignment: .leading)
+              .accessibilityHidden(true)
+          }
+        }
         .accessibilityLabel(
           crossesMidnight ? Text(.friendsCardEndsNextDay(endText)) : Text(verbatim: endText))
     }
