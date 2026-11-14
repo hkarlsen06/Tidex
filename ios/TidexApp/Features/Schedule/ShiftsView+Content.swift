@@ -123,8 +123,8 @@ extension ShiftsView {
                 viewModel.confirmingDelete = true
               },
               onConfirmDelete: {
-                Task {
-                  await viewModel.deleteSelectedShifts()
+                runScheduleOperation {
+                  try await viewModel.deleteSelectedShifts()
                 }
               },
               onCancelDelete: {
@@ -175,13 +175,13 @@ extension ShiftsView {
                 viewModel.toggleCopyTargetDate(targetDateISO)
               },
               onFinishCopy: {
-                Task {
-                  await viewModel.finishCopyToSelectedDates()
+                runScheduleOperation {
+                  try await viewModel.finishCopyToSelectedDates()
                 }
               },
               onMoveToDate: { targetDateISO in
-                Task {
-                  await viewModel.handleMoveToDate(targetDateISO)
+                runScheduleOperation {
+                  try await viewModel.handleMoveToDate(targetDateISO)
                 }
               },
               onCancelCopyMove: {
@@ -385,8 +385,8 @@ extension ShiftsView {
             viewModel.confirmingDelete = true
           },
           onConfirmDelete: {
-            Task {
-              await viewModel.deleteSelectedShifts()
+            runScheduleOperation {
+              try await viewModel.deleteSelectedShifts()
             }
           },
           onCancelDelete: {
@@ -443,13 +443,13 @@ extension ShiftsView {
             viewModel.toggleCopyTargetDate(targetDateISO)
           },
           onFinishCopy: {
-            Task {
-              await viewModel.finishCopyToSelectedDates()
+            runScheduleOperation {
+              try await viewModel.finishCopyToSelectedDates()
             }
           },
           onMoveToDate: { targetDateISO in
-            Task {
-              await viewModel.handleMoveToDate(targetDateISO)
+            runScheduleOperation {
+              try await viewModel.handleMoveToDate(targetDateISO)
             }
           },
           onCancelCopyMove: {

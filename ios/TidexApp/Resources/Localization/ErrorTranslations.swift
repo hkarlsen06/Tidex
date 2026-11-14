@@ -40,7 +40,8 @@ enum ErrorTranslations {
       is AuthSessionManagerError, is AuthError, is AppCoordinator.UserIdError,
       is SharingServiceError,
       is FriendsMessagingServiceError, is TariffVersionServiceError, is ShiftsError,
-      is DashboardError, is SharingError, is StatsServiceError, is ExportError:
+      is DashboardError, is SharingError, is StatsServiceError, is ExportError,
+      is JobPaySetupError:
       return (error as? LocalizedError)?.errorDescription
     default:
       return nil

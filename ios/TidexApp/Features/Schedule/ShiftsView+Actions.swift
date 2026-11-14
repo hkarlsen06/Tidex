@@ -258,6 +258,17 @@ extension ShiftsView {
     }
   }
 
+  /// Runs a calendar copy, move or delete and shows its failure in the error alert.
+  func runScheduleOperation(_ operation: @escaping () async throws -> Void) {
+    Task {
+      do {
+        try await operation()
+      } catch {
+        operationErrorMessage = ErrorTranslations.translate(error)
+      }
+    }
+  }
+
   // MARK: - Delete Shift
 
   func deleteShift(_ shift: ShiftWithComputations) async {

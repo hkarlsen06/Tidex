@@ -50,14 +50,17 @@ extension ShiftsViewModel {
     shiftForOperation = nil
   }
 
-  /// Delete all shifts for selected dates
-  func deleteSelectedShifts() async {
+  /// Delete all shifts for selected dates. Throws so the screen can show the failure.
+  func deleteSelectedShifts() async throws {
     let shiftsToDelete = shifts.filter { selectedDates.contains($0.shiftDate) }
     guard !shiftsToDelete.isEmpty else {
       return
     }
 
     isDeleting = true
+    defer {
+      isDeleting = false
+    }
 
     do {
       let virtualExclusions = shiftsToDelete.compactMap {
@@ -99,9 +102,8 @@ extension ShiftsViewModel {
         notification: .announcement, argument: String(localized: .shiftsAccessibilityShiftsDeleted))
     } catch {
       kScheduleLogger.error("Failed to delete shifts: \(error.localizedDescription)")
+      throw error
     }
-
-    isDeleting = false
   }
 
   // MARK: - Copy/Move Actions
@@ -148,8 +150,9 @@ extension ShiftsViewModel {
     }
   }
 
-  /// Finish copy mode by copying the selected shift to all chosen target dates.
-  func finishCopyToSelectedDates() async {
+  /// Finish copy mode by copying the selected shift to all chosen target dates. Throws so the
+  /// screen can show the failure, such as a shift whose job is archived.
+  func finishCopyToSelectedDates() async throws {
     // Prevent duplicate taps
     guard !isCopying else {
       return
@@ -193,6 +196,7 @@ extension ShiftsViewModel {
 
     } catch {
       kScheduleLogger.error("Failed to copy shift: \(error.localizedDescription)")
+      throw error
     }
   }
 
@@ -274,7 +278,7 @@ extension ShiftsViewModel {
 
   /// Handle date tap when in move mode - move shift to the tapped date
   /// - Parameter targetDateISO: The ISO date string to move to
-  func handleMoveToDate(_ targetDateISO: String) async {
+  func handleMoveToDate(_ targetDateISO: String) async throws {
     // Prevent duplicate taps
     guard !isMoving else {
       return
@@ -332,6 +336,8 @@ extension ShiftsViewModel {
 
     } catch {
       kScheduleLogger.error("Failed to move shift: \(error.localizedDescription)")
+      isMoving = false
+      throw error
     }
 
     isMoving = false
