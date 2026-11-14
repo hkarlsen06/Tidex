@@ -3,13 +3,14 @@ import Image from 'next/image';
 import { AppStoreButton } from '@/components/LandingPage';
 import { getMarketingDictionary } from '@/lib/i18n/dictionaries';
 import tidexWordmark from '@/public/brand/tidex-wordmark-dark.svg';
+import { OpenInAppLink } from './OpenInAppLink';
 
 // _redirects serves this page for every /invite/<user id>. The app opens those links itself
-// when it is installed, so only people without the app see it. One path cannot carry a locale,
-// so the page has Norwegian and English, like the 404 page.
+// when it is installed, except from Safari's address bar, so this page also opens the app.
+// One path cannot carry a locale, so the page has Norwegian and English, like the 404 page.
 export const metadata: Metadata = {
   title: 'Invitasjon til Tidex | Invitation to Tidex',
-  description: 'Last ned Tidex og åpne lenken på nytt for å koble til. Get Tidex and open the link again to connect.',
+  description: 'Last ned Tidex og åpne invitasjonen i appen. Get Tidex and open the invite in the app.',
   robots: { index: false },
 };
 
@@ -17,12 +18,14 @@ const copy = {
   no: {
     title: 'Du er invitert til Tidex',
     body: 'En venn vil koble seg til deg på Tidex, så dere kan se vaktene til hverandre. Ingenting deles før du bekrefter det i appen.',
-    next: 'Når du har installert Tidex, åpner du lenken du fikk på nytt.',
+    next: 'Har du Tidex allerede, trykker du Åpne i Tidex. Har du nettopp installert appen, kommer du tilbake hit og gjør det samme.',
+    open: 'Åpne i Tidex',
   },
   en: {
     title: 'You are invited to Tidex',
     body: 'A friend wants to connect with you on Tidex, so you can see each other\'s shifts. Nothing is shared until you confirm it in the app.',
-    next: 'Once you have installed Tidex, open the link you got again.',
+    next: 'If you already have Tidex, tap Open in Tidex. If you just installed it, come back here and do the same.',
+    open: 'Open in Tidex',
   },
 } as const;
 
@@ -39,7 +42,10 @@ export default function InvitePage() {
           <section key={locale} lang={locale} className="flex flex-col items-center gap-5">
             <Heading className="text-balance text-3xl font-semibold sm:text-4xl">{copy[locale].title}</Heading>
             <p className="text-pretty text-base leading-7 text-text-secondary">{copy[locale].body}</p>
-            <AppStoreButton label={getMarketingDictionary(locale).marketing.hero.appStoreCta} />
+            <div className="flex flex-col items-center gap-3">
+              <AppStoreButton label={getMarketingDictionary(locale).marketing.hero.appStoreCta} />
+              <OpenInAppLink label={copy[locale].open} />
+            </div>
             <p className="text-pretty text-sm leading-6 text-text-muted">{copy[locale].next}</p>
           </section>
           );
