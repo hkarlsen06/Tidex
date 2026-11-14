@@ -6,4 +6,4 @@ Debug and Release use the same app identity, production Clerk instance, and prod
 
 The app does not need a local backend, Tailscale, a separate development account, or another checkout. The local Convex deployment remains available for explicit backend experiments. Deploy backend changes only after approval under the production deployment rule.
 
-Clerk's fixed seven-day session lifetime is separate from the Xcode build configuration. A one-year native lifetime still needs an authenticated Clerk dashboard session and a suitable production plan. Existing sessions retain their old expiry after that setting changes.
+The production Clerk instance is on the Pro plan since 2026-11-14. Its Sessions page has no maximum lifetime, a one-year inactivity timeout, and native sessions follow the web settings, so a session's `expire_at` reads as the year 2094. On the Hobby plan every session ended 7 days after sign-in, and 26 users were signed out that way between 5 and 13 November. Sessions created before the change keep their 7-day expiry, so those users sign in once more. The Xcode build configuration does not affect session lifetime.
