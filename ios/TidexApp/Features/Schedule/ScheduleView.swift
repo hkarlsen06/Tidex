@@ -289,7 +289,9 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   }
 
   internal var body: some View {
+    // Outermost, so the sheets presented from Schedule get the currency too.
     bodyWithSecondarySheets
+      .userCurrency(viewModel.currency)
   }
 
   private var baseBody: AnyView {
@@ -411,8 +413,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         .onChange(of: viewModel.activeJobs) { _, _ in
           recomputeListDerivedDataIfNeeded()
         }
-        // Pass user's currency to all child views
-        .userCurrency(viewModel.currency)
     )
   }
 
@@ -481,6 +481,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       startInEditMode: startInEditMode,
       tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
     )
+    .userCurrency(viewModel.jobForShift(shift)?.currency ?? viewModel.currency)
     .presentationDetents([.medium, .large])
     .presentationDragIndicator(.visible)
   }

@@ -101,6 +101,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       },
       tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
     )
+    // Sheets don't get the card content's currency, so pass the shift's own.
+    .userCurrency(
+      viewModel.jobForShift(shift)?.currency ?? viewModel.dashboardData?.currency ?? "kr"
+    )
     .presentationDetents([.medium, .large])
     .presentationDragIndicator(.visible)
   }
