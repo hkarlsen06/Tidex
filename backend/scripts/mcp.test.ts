@@ -140,6 +140,18 @@ describe("MCP token verification", async () => {
     await expect(checkKeySet({ keys: [{ kty: "RSA", kid: "current" }] })).rejects.toThrow();
     await expect(checkKeySet({ keys: [{ ...jwk, n: "AQAB-not-a-modulus!" }] })).rejects.toThrow();
     await expect(checkKeySet({ keys: [jwk, jwk] })).rejects.toThrow();
+    await expect(checkKeySet({ keys: [{ ...jwk, alg: "RS512" }] })).rejects.toThrow();
+    await expect(checkKeySet({ keys: [{ ...jwk, use: "enc" }] })).rejects.toThrow();
+  });
+
+  test("a token without a kid is a bad token, even while Clerk publishes two keys", async () => {
+    const second = { ...(await exportJWK((await generateKeyPair("RS256")).publicKey)), kid: "k2", alg: "RS256", use: "sig" };
+    const token = await new SignJWT({ sub: "user_clerk", aud: RESOURCE, client_id: "c" })
+      .setProtectedHeader({ alg: "RS256", typ: "at+jwt" })
+      .setIssuer(issuer)
+      .setExpirationTime("1h")
+      .sign(privateKey);
+    expect(await verifyAccessToken(token, issuer, RESOURCE, async () => ({ keys: [jwk, second] }))).toBeNull();
   });
 
   test("Clerk's key endpoint failing is not reported as a bad token", async () => {

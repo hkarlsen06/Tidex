@@ -1,4 +1,4 @@
-import { createLocalJWKSet, errors, importJWK, type JSONWebKeySet, jwtVerify } from "jose";
+import { createLocalJWKSet, decodeProtectedHeader, errors, type JSONWebKeySet, jwtVerify } from "jose";
 
 // OAuth access tokens that Clerk issues for the MCP server. The app's Convex session
 // tokens come from the same issuer and keys but carry aud "convex", no client_id and no
@@ -13,9 +13,9 @@ export type KeySource = (refresh: boolean) => Promise<JSONWebKeySet>;
 type KeySet = ReturnType<typeof createLocalJWKSet>;
 
 /**
- * Throws unless `keys` holds RS256 public keys that import, each with its own kid. Run on
- * what Clerk returns before it replaces stored keys, because jose imports keys only when a
- * token uses them.
+ * Throws unless every key in `keys` is an RSA public key with its own kid that jose selects
+ * and imports for RS256. Run on what Clerk returns before it replaces stored keys, because
+ * jose selects and imports keys only when a token uses them.
  */
 export async function checkKeySet(keys: unknown): Promise<JSONWebKeySet> {
   const list = (keys as JSONWebKeySet | null)?.keys;
@@ -23,10 +23,10 @@ export async function checkKeySet(keys: unknown): Promise<JSONWebKeySet> {
     Array.isArray(list) &&
     list.length > 0 &&
     new Set(list.map((key) => key?.kid)).size === list.length &&
-    list.every((key) => key?.kty === "RSA" && typeof key.kid === "string" && typeof key.n === "string" &&
-      typeof key.e === "string" && key.d === undefined);
+    list.every((key) => key?.kty === "RSA" && typeof key.kid === "string" && key.d === undefined);
   if (!usable) throw new Error("Clerk JWKS has no usable keys");
-  await Promise.all(list.map((key) => importJWK(key, "RS256")));
+  const select = createLocalJWKSet(keys as JSONWebKeySet);
+  for (const key of list) await select({ alg: "RS256", kid: key.kid });
   return keys as JSONWebKeySet;
 }
 
@@ -35,7 +35,7 @@ export async function checkKeySet(keys: unknown): Promise<JSONWebKeySet> {
  * set, which is Clerk's fault and not the token's.
  */
 function invalidToken(error: unknown): null {
-  if (error instanceof errors.JWKSInvalid || error instanceof errors.JWKSMultipleMatchingKeys) throw error;
+  if (error instanceof errors.JWKSInvalid) throw error;
   if (error instanceof errors.JOSEError) return null;
   throw error;
 }
@@ -65,6 +65,12 @@ export async function verifyAccessToken(
   audience: string,
   keySource: KeySource,
 ): Promise<string | null> {
+  // Clerk always names the key. Without a kid, jose would try every key in the set.
+  try {
+    if (typeof decodeProtectedHeader(token).kid !== "string") return null;
+  } catch {
+    return null;
+  }
   // Built outside the try blocks: a broken key set is Clerk's fault, not the token's.
   const keys = createLocalJWKSet(await keySource(false));
   try {
