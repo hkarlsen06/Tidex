@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
-import { activeJobs, checked, fail, jobForShift, jobsOf, jobsWithPay, live, requireUser } from "./lib/mcp/db";
+import { checked, fail, jobForShift, jobsOf, live, requireUser } from "./lib/mcp/db";
 import { shiftEarnings } from "./lib/mcp/earnings";
 import { type McpTool, tool } from "./lib/mcp/registry";
 import { addDays, clockTime, endsNextDay, movedTimes, shiftTimes, storedEndTime } from "./lib/mcp/shiftTimes";
@@ -35,22 +35,6 @@ function oneOff(shift: ShiftFields, jobs: Doc<"jobs">[]) {
 }
 
 // ---------- Reads ----------
-
-export const listJobs = internalQuery({
-  args: { user_id: v.string() },
-  handler: async (ctx, { user_id }) => {
-    const withPay = await jobsWithPay(ctx, user_id);
-    return {
-      jobs: activeJobs(await jobsOf(ctx, user_id)).map((j) => ({
-        job_id: j.id,
-        name: j.name,
-        currency: j.currency,
-        is_default: j.is_default,
-        pay_set_up: withPay.has(j.id),
-      })),
-    };
-  },
-});
 
 export const listShifts = internalQuery({
   args: { user_id: v.string(), from: v.string(), to: v.string() },
@@ -233,7 +217,6 @@ export const deleteShift = internalMutation({
 });
 
 export const shiftTools: McpTool[] = [
-  tool(specs.listJobs, (ctx, user_id) => ctx.runQuery(internal.mcpShifts.listJobs, { user_id })),
   tool(specs.listShifts, (ctx, user_id, args) => ctx.runQuery(internal.mcpShifts.listShifts, { user_id, ...args })),
   tool(specs.getEarnings, (ctx, user_id, args) => ctx.runQuery(internal.mcpShifts.earnings, { user_id, ...args })),
   tool(specs.addShift, (ctx, user_id, args) => ctx.runMutation(internal.mcpShifts.addShift, { user_id, ...args })),

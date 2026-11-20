@@ -7,6 +7,7 @@ import { handleMcpPost, resourceMetadata, type ToolOutcome } from "./lib/mcp/pro
 import type { McpTool } from "./lib/mcp/registry";
 import { ToolError } from "./lib/mcp/shiftTimes";
 import { checkKeySet, type KeySource, verifyAccessToken } from "./lib/mcp/token";
+import { payTools } from "./mcpPay";
 import { shiftTools } from "./mcpShifts";
 
 // The MCP server: lets a user's AI agent read and change their Tidex data. See
@@ -14,7 +15,7 @@ import { shiftTools } from "./mcpShifts";
 // arguments, then runs the tool for the user the token names. Each area's tools live in
 // mcp<Area>.ts.
 
-const tools: McpTool[] = [...shiftTools];
+const tools: McpTool[] = [...shiftTools, ...payTools];
 
 const KEYS_FRESH_MS = 60 * 60_000;
 // Clerk's keys are fetched at most this often, failed attempts included, so junk tokens

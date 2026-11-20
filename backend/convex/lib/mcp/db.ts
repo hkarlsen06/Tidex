@@ -43,9 +43,9 @@ export async function jobForShift(ctx: QueryCtx, userId: string, jobId: string |
   const jobs = activeJobs(await jobsOf(ctx, userId));
   const job = jobId === undefined ? (jobs.find((j) => j.is_default) ?? jobs[0]) : jobs.find((j) => j.id === jobId);
   if (job === undefined) {
-    fail(jobId === undefined ? "The user has no jobs yet. Add one in the Tidex app first." : "No active job with that job_id. Use list_jobs.");
+    fail(jobId === undefined ? "The user has no jobs yet. Add one with add_job first." : "No active job with that job_id. Use list_jobs.");
   }
-  if (!(await jobsWithPay(ctx, userId)).has(job.id)) fail(`Set up pay for ${job.name} in the Tidex app first.`);
+  if (!(await jobsWithPay(ctx, userId)).has(job.id)) fail(`Set up pay for ${job.name} with set_pay first.`);
   return job;
 }
 

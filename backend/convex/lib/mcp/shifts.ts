@@ -43,21 +43,6 @@ function dateRange(args: Args) {
   return parseRange(args.from, args.to, MAX_RANGE_DAYS);
 }
 
-export const listJobs = {
-  definition: {
-    name: "list_jobs",
-    title: "List jobs",
-    description: "The user's active jobs, with the currency each one pays in and whether its pay is set up.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    annotations: { title: "List jobs", ...readOnly },
-  },
-  scope: "read",
-  parse: (args) => {
-    allowOnly(args, []);
-    return {};
-  },
-} satisfies ToolSpec;
-
 export const listShifts = {
   definition: {
     name: "list_shifts",

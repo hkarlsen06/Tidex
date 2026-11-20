@@ -4,7 +4,8 @@ import { shiftEarnings } from "../convex/lib/mcp/earnings";
 import { handleMcpPost, type McpDeps, MODERN_VERSION } from "../convex/lib/mcp/protocol";
 import { movedTimes, parseRange, shiftTimes } from "../convex/lib/mcp/shiftTimes";
 import { checkKeySet, verifyAccessToken } from "../convex/lib/mcp/token";
-import { addShift, deleteShift, listJobs, updateShift } from "../convex/lib/mcp/shifts";
+import { listJobs } from "../convex/lib/mcp/pay";
+import { addShift, deleteShift, updateShift } from "../convex/lib/mcp/shifts";
 import type { LiveActivityRegularShift } from "../convex/lib/shared/liveActivityScheduling";
 import type { WageSnapshot } from "../convex/lib/shared/payroll/types";
 
