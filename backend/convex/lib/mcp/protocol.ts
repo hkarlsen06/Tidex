@@ -19,10 +19,11 @@ const META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 export const SERVER_INFO = { name: "tidex", title: "Tidex", version: "1.0.0" };
 
 const INSTRUCTIONS =
-  "Tidex tracks the user's work shifts and what they earn. Dates are YYYY-MM-DD and times are HH:mm on the " +
-  "user's local clock; a shift whose end is at or before its start ends the next day. Call list_shifts before " +
-  "changing or deleting a shift, and pass the shift_id and revision it returns. Recurring shifts can only be " +
-  "changed in the Tidex app. Confirm with the user before you delete a shift.";
+  "Tidex tracks the user's work shifts, jobs and pay, and lets them share shifts and talk with friends. Dates are " +
+  "YYYY-MM-DD and times are HH:mm on the user's local clock; a shift whose end is at or before its start ends the " +
+  "next day. List before you change or delete something, and pass the id and revision the list returned. Confirm " +
+  "with the user before you delete anything, and before you send a message or start sharing, because the friend " +
+  "gets a notification.";
 
 export type ToolOutcome = { ok: true; value: unknown } | { ok: false; message: string };
 
