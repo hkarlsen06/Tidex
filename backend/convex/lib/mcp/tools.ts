@@ -1,4 +1,4 @@
-import { parseDate, parseRange, parseTime, ToolError } from "./shiftTimes";
+import { addDays, parseDate, parseRange, parseTime, ToolError } from "./shiftTimes";
 
 // The tools the MCP server offers, and the arguments each one accepts. Arguments are
 // checked here, so the Convex functions behind the tools get well-formed values.
@@ -51,6 +51,7 @@ export const TOOLS = [
     description:
       "Gross pay before tax and paid hours for the shifts dated `from` to `to`, at most 93 days, per currency. " +
       "It counts one-off and recurring shifts with supplements, breaks and weekly overtime, as the Tidex app does. " +
+      "Overlapping shifts on the same date count once, as in the app, so the total can be less than the listed shifts add up to. " +
       "Payroll adjustments such as bonuses are not included.",
     inputSchema: {
       type: "object",
@@ -64,8 +65,9 @@ export const TOOLS = [
     name: "add_shift",
     title: "Add shift",
     description:
-      "Adds a one-off shift. Without job_id it goes to the default job. " +
-      "Adding a shift that already exists with the same job, date and times returns that shift instead of a copy.",
+      "Adds a one-off shift. Without job_id it goes to the default job, or the first job when none is the default. " +
+      "Adding a shift that already exists with the same job, date and times returns that shift instead of a copy, " +
+      "without changing its note; use update_shift for that.",
     inputSchema: {
       type: "object",
       properties: { date, start: time, end: endTime, job_id: id, note },
@@ -113,8 +115,11 @@ function allowOnly(args: Args, names: string[]) {
   if (unknown.length > 0) throw new ToolError(`Unknown argument: ${unknown.join(", ")}.`);
 }
 
+// Strict clients send null for an optional argument they leave out.
+const omitted = (value: unknown) => value === undefined || value === null;
+
 function optionalString(value: unknown, field: string, max = 100): string | undefined {
-  if (value === undefined) return undefined;
+  if (omitted(value)) return undefined;
   if (typeof value !== "string" || value.length > max) throw new ToolError(`${field} must be text of at most ${max} characters.`);
   return value;
 }
@@ -130,7 +135,18 @@ function requiredRevision(value: unknown): number {
   return value;
 }
 
-const optional = <T>(value: unknown, parse: (value: unknown) => T) => (value === undefined ? undefined : parse(value));
+const optional = <T>(value: unknown, parse: (value: unknown) => T) => (omitted(value) ? undefined : parse(value));
+
+/** A shift date within five years of today, which catches a mistyped year. */
+function shiftDate(value: unknown, today: string): string {
+  const date = parseDate(value, "date");
+  if (date < addDays(today, -5 * 366) || date > addDays(today, 5 * 366)) {
+    throw new ToolError("date must be within five years of today.");
+  }
+  return date;
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
 
 /** Checked arguments for each tool. Each throws ToolError with a message for the agent. */
 export const parseArgs = {
@@ -149,7 +165,7 @@ export const parseArgs = {
   add_shift: (args: Args) => {
     allowOnly(args, ["date", "start", "end", "job_id", "note"]);
     return {
-      date: parseDate(args.date, "date"),
+      date: shiftDate(args.date, today()),
       start: parseTime(args.start, "start"),
       end: parseTime(args.end, "end", true),
       job_id: optionalString(args.job_id, "job_id"),
@@ -161,7 +177,7 @@ export const parseArgs = {
     const parsed = {
       shift_id: requiredString(args.shift_id, "shift_id"),
       revision: requiredRevision(args.revision),
-      date: optional(args.date, (v) => parseDate(v, "date")),
+      date: optional(args.date, (v) => shiftDate(v, today())),
       start: optional(args.start, (v) => parseTime(v, "start")),
       end: optional(args.end, (v) => parseTime(v, "end", true)),
       job_id: optionalString(args.job_id, "job_id"),

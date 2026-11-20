@@ -26,11 +26,13 @@ const INSTRUCTIONS =
 
 export type ToolOutcome = { ok: true; value: unknown } | { ok: false; message: string };
 
+/** A token that checks out names a Tidex user, unless that account is banned or gone. */
+export type Authentication = { userId: string } | "invalid_token" | "no_account";
+
 export type McpDeps = {
   /** The URL of the MCP endpoint, which is the audience its tokens must carry. */
   resourceUrl: string;
-  /** The Tidex user ID the bearer token is valid for, or null. */
-  authenticate: (token: string) => Promise<string | null>;
+  authenticate: (token: string) => Promise<Authentication>;
   callTool: (userId: string, name: ToolName, args: Record<string, unknown>) => Promise<ToolOutcome>;
 };
 
@@ -80,27 +82,63 @@ function unauthorized(deps: McpDeps, invalidToken: boolean) {
   return json(401, { error: invalidToken ? "invalid_token" : "unauthorized" }, { "WWW-Authenticate": `Bearer ${params}` });
 }
 
+/**
+ * The body as text, or null past MAX_BODY_BYTES. Reads the stream with a count, so a body
+ * without Content-Length can't be buffered whole first.
+ */
+async function boundedText(request: Request): Promise<string | null> {
+  if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BODY_BYTES) return null;
+  if (request.body === null) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+/**
+ * Origins whose servers may send an Origin header when they connect. A browser page on
+ * them still can't call /mcp, because the endpoint answers no CORS preflight.
+ */
+const ALLOWED_ORIGINS = new Set(["https://claude.ai", "https://chatgpt.com", "https://chat.openai.com"]);
+
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 export async function handleMcpPost(request: Request, deps: McpDeps): Promise<Response> {
-  // Agents connect from servers and apps, which send no Origin. A browser page does, and
-  // must not be able to use a token it got hold of.
-  if (request.headers.get("Origin") !== null) {
+  // Agents connect from servers and apps. A web page sends its Origin, and must not be
+  // able to use a token it got hold of.
+  const origin = request.headers.get("Origin");
+  if (origin !== null && !ALLOWED_ORIGINS.has(origin)) {
     return rpcError(403, null, -32600, "Requests from web pages are not allowed");
   }
 
   const authorization = request.headers.get("Authorization") ?? "";
   const token = /^Bearer (\S+)$/i.exec(authorization)?.[1];
   if (token === undefined) return unauthorized(deps, false);
-  const userId = await deps.authenticate(token);
-  if (userId === null) return unauthorized(deps, true);
+  const auth = await deps.authenticate(token);
+  if (auth === "invalid_token") return unauthorized(deps, true);
+  // Signing in again would give the same answer, so this is not a 401.
+  if (auth === "no_account") return json(403, { error: "This Tidex account is not available." });
+  const { userId } = auth;
 
-  if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BODY_BYTES) {
-    return rpcError(413, null, -32600, "Request body is too large");
-  }
-  const text = await request.text();
-  if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) return rpcError(413, null, -32600, "Request body is too large");
+  const text = await boundedText(request);
+  if (text === null) return rpcError(413, null, -32600, "Request body is too large");
 
   let message: unknown;
   try {
@@ -136,15 +174,18 @@ export async function handleMcpPost(request: Request, deps: McpDeps): Promise<Re
   }
 
   const version = request.headers.get("MCP-Protocol-Version");
-  const modern = version === MODERN_VERSION;
-  if (version !== null && !SUPPORTED_VERSIONS.includes(version)) {
+  const meta = isObject(params._meta) ? params._meta : {};
+  // A body that declares 2026-07-28 gets that era's header checks even without the header.
+  const modern = version === MODERN_VERSION || meta[META_VERSION] === MODERN_VERSION;
+  if (version !== null && !SUPPORTED_VERSIONS.includes(version) && !modern) {
     return rpcError(400, id, -32022, "Unsupported protocol version", { supported: SUPPORTED_VERSIONS, requested: version });
   }
   if (modern) {
     const mismatch = (header: string, value: string | null, expected: unknown) =>
       rpcError(400, id, -32020, `Header mismatch: ${header} header value '${value ?? ""}' does not match body value '${String(expected)}'`);
-    const meta = isObject(params._meta) ? params._meta : {};
-    if (meta[META_VERSION] !== MODERN_VERSION) return mismatch("MCP-Protocol-Version", version, meta[META_VERSION]);
+    if (version !== MODERN_VERSION || meta[META_VERSION] !== MODERN_VERSION) {
+      return mismatch("MCP-Protocol-Version", version, meta[META_VERSION]);
+    }
     const methodHeader = headerValue(request.headers.get("Mcp-Method"));
     if (methodHeader !== method) return mismatch("Mcp-Method", methodHeader, method);
     if (method === "tools/call") {

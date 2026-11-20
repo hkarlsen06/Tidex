@@ -1,12 +1,13 @@
 import { ConvexError, type Value, v } from "convex/values";
+import type { JSONWebKeySet } from "jose";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { type ActionCtx, httpAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { userByClerkId, userByUuid } from "./lib/auth";
 import { shiftEarnings } from "./lib/mcp/earnings";
 import { handleMcpPost, resourceMetadata, type ToolOutcome } from "./lib/mcp/protocol";
-import { addDays, clockTime, endsNextDay, movedTimes, shiftTimes, ToolError } from "./lib/mcp/shiftTimes";
-import { verifyAccessToken } from "./lib/mcp/token";
+import { addDays, clockTime, endsNextDay, movedTimes, shiftTimes, storedEndTime, ToolError } from "./lib/mcp/shiftTimes";
+import { type KeySource, verifyAccessToken } from "./lib/mcp/token";
 import { isWriteTool, parseArgs, type ToolName } from "./lib/mcp/tools";
 import { PAYROLL_REVISION } from "./lib/payrollCompatibility";
 import { scheduleTimeZone } from "./lib/scheduleTimeZone";
@@ -19,6 +20,10 @@ import { shiftWrites } from "./userShifts";
 // docs/mcp-server.md. The HTTP action checks the OAuth token and the arguments, then
 // runs these internal functions for the user the token names. None of them is public.
 
+const KEYS_FRESH_MS = 60 * 60_000;
+// A token naming an unknown key refetches at most this often, so junk tokens can't make
+// every request reach Clerk.
+const KEYS_REFRESH_COOLDOWN_MS = 60_000;
 const WINDOW_MS = 10 * 60_000;
 const MAX_CALLS = 120;
 const MAX_WRITES = 40;
@@ -90,6 +95,38 @@ async function requireUser(ctx: QueryCtx, userId: string) {
 }
 
 // ---------- Access ----------
+
+export const cachedKeys = internalQuery({
+  args: { issuer: v.string() },
+  handler: async (ctx, { issuer }) => {
+    const row = await ctx.db.query("mcp_signing_keys").withIndex("by_issuer", (q) => q.eq("issuer", issuer)).unique();
+    return row === null ? null : { keys: row.keys as JSONWebKeySet, fetched_at: row.fetched_at };
+  },
+});
+
+export const storeKeys = internalMutation({
+  args: { issuer: v.string(), keys: v.any() },
+  handler: async (ctx, { issuer, keys }) => {
+    const row = await ctx.db.query("mcp_signing_keys").withIndex("by_issuer", (q) => q.eq("issuer", issuer)).unique();
+    const fields = { issuer, keys, fetched_at: Date.now() };
+    if (row === null) await ctx.db.insert("mcp_signing_keys", fields);
+    else await ctx.db.replace(row._id, fields);
+  },
+});
+
+function clerkKeys(ctx: ActionCtx, issuer: string): KeySource {
+  return async (refresh) => {
+    const cached = await ctx.runQuery(internal.mcp.cachedKeys, { issuer });
+    const maxAge = refresh ? KEYS_REFRESH_COOLDOWN_MS : KEYS_FRESH_MS;
+    if (cached !== null && Date.now() - cached.fetched_at < maxAge) return cached.keys;
+    const response = await fetch(`${issuer}/.well-known/jwks.json`);
+    if (!response.ok) throw new Error(`Clerk JWKS answered ${response.status}`);
+    const keys = (await response.json()) as JSONWebKeySet;
+    if (!Array.isArray(keys?.keys)) throw new Error("Clerk JWKS has no keys");
+    await ctx.runMutation(internal.mcp.storeKeys, { issuer, keys });
+    return keys;
+  };
+}
 
 export const userForToken = internalQuery({
   args: { clerk_user_id: v.string() },
@@ -226,13 +263,14 @@ export const addShift = internalMutation({
         .query("user_shifts")
         .withIndex("by_user_shift_date", (q) => q.eq("user_id", user.id).eq("shift_date", args.date))
         .collect(),
-    ).find(
-      (s) =>
-        s.job_id === job.id && clockTime(s.start_time) === times.start_time && clockTime(s.end_time) === times.end_time,
-    );
+    ).find((s) => {
+      const start = clockTime(s.start_time);
+      // Older rows may store a midnight end as 00:00.
+      return s.job_id === job.id && start === times.start_time && storedEndTime(clockTime(s.end_time), start) === times.end_time;
+    });
     if (existing !== undefined) return { shift: oneOff(existing, jobs), already_existed: true };
     const note = args.note?.trim();
-    const { row } = await shiftWrites.insert(ctx, user, {
+    const { row } = await shiftWrites.insert(ctx, user.id, {
       row: {
         id: crypto.randomUUID(),
         job_id: job.id,
@@ -282,7 +320,9 @@ export const updateShift = internalMutation({
       if (note === "") clear.push("note");
       else set.note = note;
     }
-    const result = await shiftWrites.update(ctx, user, {
+    // Nothing to change keeps the revision the agent holds.
+    if (Object.keys(set).length === 0 && clear.length === 0) return { shift: oneOff(prev, await jobsOf(ctx, user.id)) };
+    const result = await shiftWrites.update(ctx, user.id, {
       id: prev.id,
       expected_revision: prev.revision,
       set,
@@ -299,19 +339,33 @@ export const deleteShift = internalMutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.user_id);
     const prev = await ownShift(ctx, user.id, args.shift_id, args.revision);
-    const result = await shiftWrites.remove(ctx, user, {
+    const result = await shiftWrites.remove(ctx, user.id, {
       id: prev.id,
       expected_revision: prev.revision,
       payroll_revision: PAYROLL_REVISION,
     });
     if (result.status !== "ok") fail(STALE);
-    return { deleted: oneOff(prev, await jobsOf(ctx, user.id)) };
+    return { deleted: oneOff(result.row as ShiftFields, await jobsOf(ctx, user.id)) };
   },
 });
 
 // ---------- HTTP ----------
 
-const issuer = () => process.env.CLERK_JWT_ISSUER_DOMAIN!;
+/** The MCP URL and Clerk issuer, or null while the server is off or misconfigured. */
+function config() {
+  const resourceUrl = process.env.MCP_RESOURCE_URL;
+  const issuer = process.env.CLERK_JWT_ISSUER_DOMAIN;
+  if (!resourceUrl || !issuer) return null;
+  try {
+    if (new URL(resourceUrl).pathname === "/mcp") return { resourceUrl, issuer };
+  } catch {
+    // Reported below.
+  }
+  console.error("MCP_RESOURCE_URL must be an absolute URL ending in /mcp", resourceUrl);
+  return null;
+}
+
+const notFound = () => new Response("Not found", { status: 404 });
 
 function errorMessage(error: ConvexError<Value>) {
   const data = error.data as { code?: string; message?: string } | string;
@@ -349,14 +403,17 @@ async function runTool(ctx: ActionCtx, userId: string, name: ToolName, rawArgs: 
 
 /** POST /mcp. Answers 404 until MCP_RESOURCE_URL is set, so a deploy alone doesn't turn it on. */
 export const endpoint = httpAction(async (ctx, request) => {
-  const resourceUrl = process.env.MCP_RESOURCE_URL;
-  if (!resourceUrl) return new Response("Not found", { status: 404 });
+  const settings = config();
+  if (settings === null) return notFound();
+  const { resourceUrl, issuer } = settings;
   try {
     return await handleMcpPost(request, {
       resourceUrl,
       authenticate: async (token) => {
-        const clerkUserId = await verifyAccessToken(token, issuer(), resourceUrl);
-        return clerkUserId === null ? null : await ctx.runQuery(internal.mcp.userForToken, { clerk_user_id: clerkUserId });
+        const clerkUserId = await verifyAccessToken(token, issuer, resourceUrl, clerkKeys(ctx, issuer));
+        if (clerkUserId === null) return "invalid_token";
+        const userId = await ctx.runQuery(internal.mcp.userForToken, { clerk_user_id: clerkUserId });
+        return userId === null ? "no_account" : { userId };
       },
       callTool: (userId, name, args) => runTool(ctx, userId, name, args),
     });
@@ -367,13 +424,15 @@ export const endpoint = httpAction(async (ctx, request) => {
 });
 
 /** GET and DELETE /mcp. There is no SSE stream and no session to end. */
-export const methodNotAllowed = httpAction(async () => new Response(null, { status: 405, headers: { Allow: "POST" } }));
+export const methodNotAllowed = httpAction(async () =>
+  config() === null ? notFound() : new Response(null, { status: 405, headers: { Allow: "POST" } }),
+);
 
 /** OAuth protected resource metadata (RFC 9728), which tells clients to get a token from Clerk. */
 export const protectedResource = httpAction(async () => {
-  const resourceUrl = process.env.MCP_RESOURCE_URL;
-  if (!resourceUrl) return new Response("Not found", { status: 404 });
-  return Response.json(resourceMetadata(resourceUrl, issuer()), {
+  const settings = config();
+  if (settings === null) return notFound();
+  return Response.json(resourceMetadata(settings.resourceUrl, settings.issuer), {
     headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=3600" },
   });
 });

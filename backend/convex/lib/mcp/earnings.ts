@@ -36,10 +36,17 @@ export function shiftEarnings(input: {
   for (const shift of [...input.regular, ...projectedRecurringShifts(input.recurring, dates)]) {
     if (shift.shift_date >= start && shift.shift_date <= input.to && !byId.has(shift.id)) byId.set(shift.id, shift);
   }
-  const computed = [...byId.values()].map((shift) => ({
-    ...shift,
-    computed: computeShift(shift, {} as UserSettings, [], input.snapshotFor(shift), null),
-  }));
+  // A shift with no wage would be priced at a preset rate and could push a paid shift out
+  // of an overlap, so it is only counted.
+  let withoutPaySetup = 0;
+  const computed = [...byId.values()].flatMap((shift) => {
+    const snapshot = input.snapshotFor(shift);
+    if (snapshot === null) {
+      if (shift.shift_date >= input.from) withoutPaySetup += 1;
+      return [];
+    }
+    return [{ ...shift, computed: computeShift(shift, {} as UserSettings, [], snapshot, null) }];
+  });
   const excluded = excludedConflictIds(computed.map((s) => ({ ...s, gross: s.computed.gross })));
   const counted = applyWeeklyOvertime(computed.filter((s) => !excluded.has(s.id)).sort(inOutputOrder), {
     snapshotForShift: (shift) => input.snapshotFor(shift as LiveActivityRegularShift),
@@ -47,14 +54,9 @@ export function shiftEarnings(input: {
   });
 
   const totals = new Map<string, EarningsTotal>();
-  let withoutPaySetup = 0;
   for (const shift of counted) {
     if (shift.shift_date < input.from) continue;
     const job = shift as LiveActivityRegularShift;
-    if (input.snapshotFor(job) === null) {
-      withoutPaySetup += 1;
-      continue;
-    }
     const currency = input.currencyFor(job.job_id);
     const total = totals.get(currency) ?? { currency, gross_pay: 0, paid_hours: 0, shifts: 0 };
     total.gross_pay += shift.computed.gross;

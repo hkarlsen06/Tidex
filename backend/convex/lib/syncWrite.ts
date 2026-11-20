@@ -98,23 +98,23 @@ export function syncedTable<T extends IdTable>(
   // the MCP server passes the user its OAuth token names.
   const insertFor = async (
     ctx: MutationCtx,
-    user: Doc<"users">,
+    userId: string,
     { row, payroll_revision }: { row: Record<string, unknown> & { id: string }; payroll_revision?: string },
   ) => {
     const existing = await byUuid(ctx, row.id);
     if (existing !== null) {
-      if (existing.user_id !== user.id) reject("id_taken");
-      await requireCompatibleJob(ctx, user.id, table, existing, payroll_revision);
+      if (existing.user_id !== userId) reject("id_taken");
+      await requireCompatibleJob(ctx, userId, table, existing, payroll_revision);
       return { status: "exists" as const, row: publicRow(existing) };
     }
-    await requireCompatibleJob(ctx, user.id, table, row, payroll_revision);
+    await requireCompatibleJob(ctx, userId, table, row, payroll_revision);
     checkColumns(table, row);
     const now = new Date().toISOString();
     const revision = await nextRevision(ctx);
     const doc = {
-      ...(await hooks.defaults?.(ctx, user.id)),
+      ...(await hooks.defaults?.(ctx, userId)),
       ...row,
-      user_id: user.id,
+      user_id: userId,
       created_at: now,
       updated_at: now,
       revision,
@@ -129,7 +129,7 @@ export function syncedTable<T extends IdTable>(
 
   const updateFor = async (
     ctx: MutationCtx,
-    user: Doc<"users">,
+    userId: string,
     args: {
       id: string;
       expected_revision: number;
@@ -139,12 +139,12 @@ export function syncedTable<T extends IdTable>(
     },
   ) => {
     const prev = await byUuid(ctx, args.id);
-    if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
-    await requireCompatibleJob(ctx, user.id, table, prev, args.payroll_revision);
+    if (prev === null || prev.user_id !== userId) return { status: "conflict" as const, row: null };
+    await requireCompatibleJob(ctx, userId, table, prev, args.payroll_revision);
     if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
       return { status: "conflict" as const, row: publicRow(prev) };
     }
-    await requireCompatibleJob(ctx, user.id, table, { ...prev, ...args.set }, args.payroll_revision);
+    await requireCompatibleJob(ctx, userId, table, { ...prev, ...args.set }, args.payroll_revision);
     checkColumns(table, args.set);
     const cleared = Object.fromEntries((args.clear ?? []).map((k) => [k, undefined]));
     const revision = await nextRevision(ctx);
@@ -162,12 +162,12 @@ export function syncedTable<T extends IdTable>(
   /** Soft delete. The purge job removes the row later. */
   const removeFor = async (
     ctx: MutationCtx,
-    user: Doc<"users">,
+    userId: string,
     args: { id: string; expected_revision: number; payroll_revision?: string },
   ) => {
     const prev = await byUuid(ctx, args.id);
-    if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
-    await requireCompatibleJob(ctx, user.id, table, prev, args.payroll_revision);
+    if (prev === null || prev.user_id !== userId) return { status: "conflict" as const, row: null };
+    await requireCompatibleJob(ctx, userId, table, prev, args.payroll_revision);
     if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
       return { status: "conflict" as const, row: publicRow(prev) };
     }
@@ -188,7 +188,7 @@ export function syncedTable<T extends IdTable>(
     ) => {
       const { user } = await requireViewer(ctx);
       requireExpectedUser(user.id, expected_user_id);
-      return await insertFor(ctx, user, { row, payroll_revision });
+      return await insertFor(ctx, user.id, { row, payroll_revision });
     },
   });
 
@@ -204,7 +204,7 @@ export function syncedTable<T extends IdTable>(
     handler: async (ctx, { expected_user_id, ...args }) => {
       const { user } = await requireViewer(ctx);
       requireExpectedUser(user.id, expected_user_id);
-      return await updateFor(ctx, user, args as Parameters<typeof updateFor>[2]);
+      return await updateFor(ctx, user.id, args as Parameters<typeof updateFor>[2]);
     },
   });
 
@@ -213,7 +213,7 @@ export function syncedTable<T extends IdTable>(
     handler: async (ctx, { expected_user_id, ...args }) => {
       const { user } = await requireViewer(ctx);
       requireExpectedUser(user.id, expected_user_id);
-      return await removeFor(ctx, user, args);
+      return await removeFor(ctx, user.id, args);
     },
   });
 

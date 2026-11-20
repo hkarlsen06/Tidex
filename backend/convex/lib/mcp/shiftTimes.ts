@@ -69,16 +69,11 @@ export const endsNextDay = (start: string, end: string) => minutes(clockTime(end
  */
 export function movedTimes(current: { start: string; end: string }, newStart?: string, newEnd?: string) {
   const start = newStart ?? clockTime(current.start);
-  let end: string;
-  if (newEnd !== undefined) {
-    end = newEnd;
-  } else if (newStart !== undefined) {
-    const from = minutes(clockTime(current.start));
-    let length = (minutes(clockTime(current.end)) - from) % MINUTES_PER_DAY;
-    if (length <= 0) length += MINUTES_PER_DAY;
-    end = clock(minutes(start) + length);
-  } else {
-    end = clockTime(current.end);
-  }
-  return shiftTimes(start, end);
+  if (newEnd !== undefined) return shiftTimes(start, newEnd);
+  if (newStart === undefined) return { start_time: start, end_time: clockTime(current.end) };
+  const from = minutes(clockTime(current.start));
+  let length = (minutes(clockTime(current.end)) - from) % MINUTES_PER_DAY;
+  if (length <= 0) length += MINUTES_PER_DAY;
+  // Not shiftTimes: a 24-hour shift keeps equal clock times, as in the app.
+  return { start_time: start, end_time: storedEndTime(clock(minutes(start) + length), start) };
 }
