@@ -19,6 +19,7 @@ import {
 import { ToolError } from "../convex/lib/mcp/shiftTimes";
 import { tariffCatalogue } from "../convex/lib/tariffCatalogue";
 import { applicableWageSnapshot, asRegularShift, asSnapshot } from "../convex/liveActivities";
+import { buildFixture, FIXTURE_PATH } from "./mcp-contract-fixture";
 
 const USER = "user-1";
 const JOB = "job-1";
@@ -239,4 +240,9 @@ describe("jobs", () => {
   test("make_default can't be combined with archiving", () => {
     expect(refused(() => updateJob.parse({ job_id: JOB, revision: 1, make_default: true, archived: true }))).toContain("archived");
   });
+});
+
+test("the committed MCP contract fixture is what the builders produce", async () => {
+  // Rewrite it with: bun backend/scripts/mcp-contract-fixture.ts
+  expect(await Bun.file(FIXTURE_PATH).json()).toEqual(buildFixture());
 });

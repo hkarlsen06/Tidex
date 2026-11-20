@@ -110,6 +110,8 @@
 		D4B0A0013050111100A1B2C3 /* ShiftReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */; };
 		D868B9E2816D88314E4D6B3D /* OfflineAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEEA59F6FFB6407AF85926A2 /* OfflineAuthTests.swift */; };
 		DA35ADCB2BA4CC654F5D621E /* TariffVersionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D446AA96D91655E1CD3FCFA3 /* TariffVersionServiceTests.swift */; };
+		4D3C9A01310A000000A1B2C3 /* MCPContractFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3C9A02310A000000A1B2C3 /* MCPContractFixtureTests.swift */; };
+		4D3C9A03310A000000A1B2C3 /* MCPContractFixture.json in Resources */ = {isa = PBXBuildFile; fileRef = 4D3C9A04310A000000A1B2C3 /* MCPContractFixture.json */; };
 		DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */; };
 		E06EDBE278ABEC07DEBF9FDA /* MonthlyEarningsChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E691E0BB69F35FADF53F22 /* MonthlyEarningsChangeTests.swift */; };
 		E29A3657DB37A9E7B0BA9A38 /* FriendsChatMessageGroupingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FACC6CA659ACE3AE2483B9 /* FriendsChatMessageGroupingTests.swift */; };
@@ -282,6 +284,8 @@
 		D0101D84EA694A80B323B9F0 /* FriendsBootstrapDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsBootstrapDecodingTests.swift; sourceTree = "<group>"; };
 		D09D6B72D63E4D8394250002 /* LocalStoreMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreMigrationTests.swift; sourceTree = "<group>"; };
 		D446AA96D91655E1CD3FCFA3 /* TariffVersionServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TariffVersionServiceTests.swift; sourceTree = "<group>"; };
+		4D3C9A02310A000000A1B2C3 /* MCPContractFixtureTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MCPContractFixtureTests.swift; sourceTree = "<group>"; };
+		4D3C9A04310A000000A1B2C3 /* MCPContractFixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MCPContractFixture.json; sourceTree = "<group>"; };
 		D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftReminderPlannerTests.swift; sourceTree = "<group>"; };
 		DA9E5FE56F8BBF2BFEFE9D51 /* ISO8601TimestampTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ISO8601TimestampTests.swift; sourceTree = "<group>"; };
 		DFFDB9FCC210711C89BECC5E /* PayrollAdjustmentCalculatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollAdjustmentCalculatorTests.swift; sourceTree = "<group>"; };
@@ -481,6 +485,14 @@
 			path = TidexAppUITests;
 			sourceTree = "<group>";
 		};
+		4D3C9A05310A000000A1B2C3 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				4D3C9A04310A000000A1B2C3 /* MCPContractFixture.json */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
 		490F8B0AF0BA025DA4C44BCF /* TidexAppTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -565,6 +577,8 @@
 				5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */,
 				F3711A751DD492A879351F57 /* SyncPushMergeTests.swift */,
 				D446AA96D91655E1CD3FCFA3 /* TariffVersionServiceTests.swift */,
+				4D3C9A02310A000000A1B2C3 /* MCPContractFixtureTests.swift */,
+				4D3C9A05310A000000A1B2C3 /* Fixtures */,
 				A151C832D17B5E5717FEA481 /* SyncOfflineBehaviorTests.swift */,
 				40A686E966CF3183347FBB87 /* CelebrationUserIsolationTests.swift */,
 				C3116E5D98E664C2165F5A1C /* SyncConflictRowTests.swift */,
@@ -915,6 +929,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D3C9A03310A000000A1B2C3 /* MCPContractFixture.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1113,6 +1128,7 @@
 				6F4297BFD94E7970B1B1D546 /* StatsServiceCalendarMathTests.swift in Sources */,
 				4B15848ACE7F18869FF4DF32 /* SyncPushMergeTests.swift in Sources */,
 				DA35ADCB2BA4CC654F5D621E /* TariffVersionServiceTests.swift in Sources */,
+				4D3C9A01310A000000A1B2C3 /* MCPContractFixtureTests.swift in Sources */,
 				149DACE8A8268840CC394A68 /* SyncOfflineBehaviorTests.swift in Sources */,
 				A18B965D6B31279583AC466E /* CelebrationUserIsolationTests.swift in Sources */,
 				1847EF026673EA7136F772C1 /* SyncConflictRowTests.swift in Sources */,

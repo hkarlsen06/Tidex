@@ -5,6 +5,7 @@ on:
     paths:
       - "backend/**"
       - "ios/TidexApp/Storage/Testing/TariffCatalogueFixture.json"
+      - "ios/TidexAppTests/Fixtures/MCPContractFixture.json"
       - ".github/workflows/tariffs.yml"
   workflow_dispatch:
   schedule:
