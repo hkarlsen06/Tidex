@@ -101,18 +101,32 @@ export const getFriendSchedule = {
   },
 } satisfies ToolSpec;
 
+/**
+ * The inbox position after a page, as one opaque string. It keeps the time the page ended at,
+ * so a conversation that changes between pages can't move the next page's start.
+ */
+export function conversationCursor(next: { before_last_message_at?: string | null; before_thread_id: string } | null) {
+  return next === null ? null : `${next.before_last_message_at ?? ""}|${next.before_thread_id}`;
+}
+
+function parseConversationCursor(value: unknown) {
+  const match = typeof value === "string" ? /^([^|]*)\|([^|]+)$/.exec(value) : null;
+  if (match === null) throw new ToolError("cursor must be next_cursor from the previous list_conversations page.");
+  return { ...(match[1] ? { before_last_message_at: match[1] } : {}), before_thread_id: match[2]! };
+}
+
 export const listConversations = {
   definition: {
     name: "list_conversations",
     title: "List conversations",
     description:
       "The user's conversations, newest first, with the last message and the unread count of each. When has_more is true, " +
-      "pass next_after_thread_id as after_thread_id for the next page.",
+      "pass next_cursor as cursor for the next page.",
     inputSchema: {
       type: "object",
       properties: {
         limit: { ...limit, description: "How many conversations, 30 when left out" },
-        after_thread_id: { type: "string", description: "next_after_thread_id from the previous page" },
+        cursor: { type: "string", description: "next_cursor from the previous page" },
       },
       additionalProperties: false,
     },
@@ -120,8 +134,8 @@ export const listConversations = {
   },
   scope: "read",
   parse: (args) => {
-    allowOnly(args, ["limit", "after_thread_id"]);
-    return { limit: optionalLimit(args.limit), after_thread_id: optionalString(args.after_thread_id, "after_thread_id") };
+    allowOnly(args, ["limit", "cursor"]);
+    return { limit: optionalLimit(args.limit), cursor: optional(args.cursor, parseConversationCursor) };
   },
 } satisfies ToolSpec;
 

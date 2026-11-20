@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { getFunctionName } from "convex/server";
-import { getFriendSchedule, sendMessage, shareShiftsWith, updateSharing } from "../convex/lib/mcp/social";
+import { conversationCursor, getFriendSchedule, listConversations, sendMessage, shareShiftsWith, updateSharing } from "../convex/lib/mcp/social";
 import { friendSchedule, listFriends } from "../convex/mcpSocial";
 import { shareTargetFor } from "../convex/sharing";
 
@@ -260,5 +260,17 @@ describe("MCP friends", () => {
     expect(await refused([share("ola", "me", { hidden: true })])).toContain("hid this friend's schedule");
     expect(await refused([share("ola", "me", { blocked: true, blocked_by_user_id: "ola" })])).toContain("doesn't share");
     expect(await refused([share("me", "ola")])).toContain("doesn't share");
+  });
+});
+
+describe("conversation pages", () => {
+  test("the next page starts where the last one ended, even when that conversation has no messages", () => {
+    const ended = { before_last_message_at: "2026-11-20T10:00:00.000Z", before_thread_id: "thread-30" };
+    expect(listConversations.parse({ cursor: conversationCursor(ended) }).cursor).toEqual(ended);
+    expect(listConversations.parse({ cursor: conversationCursor({ before_thread_id: "thread-31" }) }).cursor).toEqual({
+      before_thread_id: "thread-31",
+    });
+    expect(conversationCursor(null)).toBeNull();
+    expect(() => listConversations.parse({ cursor: "thread-30" })).toThrow("next_cursor");
   });
 });

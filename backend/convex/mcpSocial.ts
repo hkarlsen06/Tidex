@@ -24,7 +24,7 @@ import {
   updateMyShareFor,
   updateSharerFor,
 } from "./sharing";
-import { getOrCreateDirectFor, inboxFor, markReadFor, threadById } from "./threads";
+import { getOrCreateDirectFor, inboxFor, markReadFor } from "./threads";
 
 // The MCP friends and messages tools. Each runs for the user the OAuth token names; mcp.ts
 // checks the token, the scope and the arguments first. None of these functions is public.
@@ -198,14 +198,12 @@ export const friendSchedule = internalQuery({
 });
 
 export const listConversations = internalQuery({
-  args: { user_id: v.string(), limit: v.optional(v.number()), after_thread_id: v.optional(v.string()) },
-  handler: async (ctx, { user_id, limit, after_thread_id }) => {
-    let cursor = {};
-    if (after_thread_id !== undefined) {
-      const after = await threadById(ctx, after_thread_id);
-      if (after === null || !(await canAccessThread(ctx, after.id, user_id))) fail(NO_CONVERSATION);
-      cursor = { before_last_message_at: after.last_message_at, before_thread_id: after.id };
-    }
+  args: {
+    user_id: v.string(),
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.object({ before_last_message_at: v.optional(v.string()), before_thread_id: v.string() })),
+  },
+  handler: async (ctx, { user_id, limit, cursor }) => {
     const inbox = await inboxFor(ctx, user_id, { limit, ...cursor });
     const conversations = await Promise.all(
       inbox.threads.map(async (t) => ({
@@ -230,7 +228,7 @@ export const listConversations = internalQuery({
       conversations,
       unread_direct_messages: inbox.unread_direct_message_count,
       has_more: inbox.has_more,
-      next_after_thread_id: inbox.next_cursor?.before_thread_id ?? null,
+      next_cursor: specs.conversationCursor(inbox.next_cursor),
     };
   },
 });
