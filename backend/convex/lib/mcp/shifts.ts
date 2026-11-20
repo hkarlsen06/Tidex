@@ -50,7 +50,8 @@ export const listShifts = {
     description:
       "Shifts from `from` to `to`, both included, at most 93 days. Times are the user's local clock times. " +
       "One-off shifts have a shift_id and revision for update_shift and delete_shift. " +
-      "Recurring shifts come from a repeating schedule; change those in the Tidex app.",
+      "Recurring shifts come from a repeating series, with its recurring_shift_id and recurring_revision for " +
+      "change_recurring_occurrence (one date) and update_recurring_shift (the whole series).",
     inputSchema: {
       type: "object",
       properties: { from: date, to: date },

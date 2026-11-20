@@ -6,7 +6,7 @@ export class ToolError extends Error {}
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
-const MINUTES_PER_DAY = 24 * 60;
+export const MINUTES_PER_DAY = 24 * 60;
 
 /** A real calendar date in YYYY-MM-DD form. */
 export function parseDate(value: unknown, field: string): string {
@@ -39,7 +39,7 @@ export function parseRange(from: unknown, to: unknown, maxDays: number) {
   return { from: start, to: end };
 }
 
-const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+export const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 const clock = (total: number) => {
   const wrapped = ((total % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
   return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;

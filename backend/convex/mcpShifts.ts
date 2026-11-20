@@ -19,7 +19,7 @@ import { shiftWrites } from "./userShifts";
 
 type ShiftFields = Pick<Doc<"user_shifts">, "id" | "revision" | "shift_date" | "start_time" | "end_time" | "job_id" | "note">;
 
-function oneOff(shift: ShiftFields, jobs: Doc<"jobs">[]) {
+export function oneOff(shift: ShiftFields, jobs: Doc<"jobs">[]) {
   return {
     kind: "one_off" as const,
     shift_id: shift.id,
@@ -54,6 +54,7 @@ export const listShifts = internalQuery({
       projectedRecurringShifts([asRecurringShift(r)], dates).map((s) => ({
         kind: "recurring" as const,
         recurring_shift_id: r.id,
+        recurring_revision: r.revision,
         date: s.shift_date,
         start: clockTime(s.start_time),
         end: clockTime(s.end_time),
@@ -147,7 +148,8 @@ export const addShift = internalMutation({
 });
 
 const STALE = "The shift changed since you listed it. Call list_shifts again and use the new revision.";
-const NOT_FOUND = "No one-off shift with that shift_id. Use a shift_id from list_shifts; recurring shifts can only be changed in the Tidex app.";
+const NOT_FOUND =
+  "No one-off shift with that shift_id. Use a shift_id from list_shifts; change a recurring shift's date with change_recurring_occurrence.";
 
 async function ownShift(ctx: QueryCtx, userId: string, shiftId: string, revision: number) {
   const shift = await ctx.db.query("user_shifts").withIndex("by_uuid", (q) => q.eq("id", shiftId)).unique();

@@ -9,6 +9,7 @@ import type { McpTool } from "./lib/mcp/registry";
 import { ToolError } from "./lib/mcp/shiftTimes";
 import { checkKeySet, type KeySource, verifyAccessToken } from "./lib/mcp/token";
 import { payTools } from "./mcpPay";
+import { planTools } from "./mcpPlans";
 import { shiftTools } from "./mcpShifts";
 import { socialTools } from "./mcpSocial";
 
@@ -17,7 +18,7 @@ import { socialTools } from "./mcpSocial";
 // arguments, then runs the tool for the user the token names. Each area's tools live in
 // mcp<Area>.ts.
 
-const tools: McpTool[] = [...shiftTools, ...payTools, ...socialTools];
+const tools: McpTool[] = [...shiftTools, ...payTools, ...planTools, ...socialTools];
 
 const KEYS_FRESH_MS = 60 * 60_000;
 // Clerk's keys are fetched at most this often, failed attempts included, so junk tokens
