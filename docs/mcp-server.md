@@ -2,7 +2,7 @@
 
 People can connect Tidex to an AI agent (Claude, ChatGPT, Cursor and other MCP clients) and let it read their shifts and earnings and add, move and delete shifts. The server is a Convex HTTP action at `/mcp` on the HTTP actions host, `https://actions.tidex.no/mcp` in production. Clerk is the OAuth authorization server.
 
-The code is in `backend/convex/mcp.ts` and `backend/convex/lib/mcp/`. The tests are in `backend/scripts/mcp.test.ts`. Production stays off until the steps in [Production setup](#production-setup) are done: without a valid `MCP_RESOURCE_URL`, every MCP route returns 404.
+The HTTP actions, token checks and rate limits are in `backend/convex/mcp.ts`, the shift tools in `backend/convex/mcpShifts.ts`, and the parts that need no Convex runtime in `backend/convex/lib/mcp/`. The tests are in `backend/scripts/mcp.test.ts`. Production stays off until the steps in [Production setup](#production-setup) are done: without a valid `MCP_RESOURCE_URL`, every MCP route returns 404.
 
 ## Protocol
 
@@ -48,6 +48,10 @@ A `revision` that no longer matches fails with a message telling the agent to li
 Writes go through the same insert, update and remove code as the app's sync (`syncedTable` in `lib/syncWrite.ts`, through `shiftWrites` in `userShifts.ts`), for the user the token names and with the current `PAYROLL_REVISION`. They get new revisions, so the app pulls them on its next `sync.revisions` update. Adding a shift queues the same debounced friend notification as adding it in the app.
 
 Messages, friends, sharing, settings, jobs, wage setup and recurring shifts are out of scope.
+
+### Adding a tool
+
+Each tool is one `McpTool` entry (`lib/mcp/registry.ts`): its `definition` for `tools/list`, its `scope` (`read` or `write`), a `parse` that checks the arguments and throws `ToolError` with a message for the agent, and a `run` that calls the area's internal Convex function for the user. Put the definition, scope and parser in `lib/mcp/<area>.ts` so `bun test` can import them without Convex. Put the internal functions in `mcp<Area>.ts`, which also exports the area's list, as `mcpShifts.ts` exports `shiftTools`. Add that list to `tools` in `mcp.ts` with one spread. The order of that array is the order `tools/list` returns. The rate limit counts a `write` tool as a write.
 
 ## Limits
 

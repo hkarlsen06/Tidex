@@ -1,9 +1,11 @@
+import { allowOnly, type Args, optional, optionalString, requiredString, today } from "./args";
+import type { ToolSpec } from "./registry";
 import { addDays, parseDate, parseRange, parseTime, ToolError } from "./shiftTimes";
 
-// The tools the MCP server offers, and the arguments each one accepts. Arguments are
-// checked here, so the Convex functions behind the tools get well-formed values.
+// The shift tools and the arguments each one accepts. Arguments are checked here, so the
+// Convex functions in mcpShifts.ts get well-formed values.
 
-export const MAX_RANGE_DAYS = 93;
+const MAX_RANGE_DAYS = 93;
 const MAX_NOTE_LENGTH = 500;
 
 const date = { type: "string", format: "date", description: "YYYY-MM-DD" };
@@ -22,15 +24,42 @@ const revision = {
 
 const readOnly = { readOnlyHint: true, openWorldHint: false };
 
-export const TOOLS = [
-  {
+function requiredRevision(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new ToolError("revision is required. Get it from list_shifts.");
+  return value;
+}
+
+/** A shift date within five years of today, which catches a mistyped year. */
+function shiftDate(value: unknown, today: string): string {
+  const date = parseDate(value, "date");
+  if (date < addDays(today, -5 * 366) || date > addDays(today, 5 * 366)) {
+    throw new ToolError("date must be within five years of today.");
+  }
+  return date;
+}
+
+function dateRange(args: Args) {
+  allowOnly(args, ["from", "to"]);
+  return parseRange(args.from, args.to, MAX_RANGE_DAYS);
+}
+
+export const listJobs = {
+  definition: {
     name: "list_jobs",
     title: "List jobs",
     description: "The user's active jobs, with the currency each one pays in and whether its pay is set up.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { title: "List jobs", ...readOnly },
   },
-  {
+  scope: "read",
+  parse: (args) => {
+    allowOnly(args, []);
+    return {};
+  },
+} satisfies ToolSpec;
+
+export const listShifts = {
+  definition: {
     name: "list_shifts",
     title: "List shifts",
     description:
@@ -45,7 +74,12 @@ export const TOOLS = [
     },
     annotations: { title: "List shifts", ...readOnly },
   },
-  {
+  scope: "read",
+  parse: dateRange,
+} satisfies ToolSpec;
+
+export const getEarnings = {
+  definition: {
     name: "get_earnings",
     title: "Get earnings",
     description:
@@ -61,7 +95,12 @@ export const TOOLS = [
     },
     annotations: { title: "Get earnings", ...readOnly },
   },
-  {
+  scope: "read",
+  parse: dateRange,
+} satisfies ToolSpec;
+
+export const addShift = {
+  definition: {
     name: "add_shift",
     title: "Add shift",
     description:
@@ -76,7 +115,21 @@ export const TOOLS = [
     },
     annotations: { title: "Add shift", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
-  {
+  scope: "write",
+  parse: (args) => {
+    allowOnly(args, ["date", "start", "end", "job_id", "note"]);
+    return {
+      date: shiftDate(args.date, today()),
+      start: parseTime(args.start, "start"),
+      end: parseTime(args.end, "end", true),
+      job_id: optionalString(args.job_id, "job_id"),
+      note: optionalString(args.note, "note", MAX_NOTE_LENGTH),
+    };
+  },
+} satisfies ToolSpec;
+
+export const updateShift = {
+  definition: {
     name: "update_shift",
     title: "Change shift",
     description:
@@ -90,89 +143,8 @@ export const TOOLS = [
     },
     annotations: { title: "Change shift", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
   },
-  {
-    name: "delete_shift",
-    title: "Delete shift",
-    description: "Deletes a one-off shift.",
-    inputSchema: {
-      type: "object",
-      properties: { shift_id: id, revision },
-      required: ["shift_id", "revision"],
-      additionalProperties: false,
-    },
-    annotations: { title: "Delete shift", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-  },
-] as const;
-
-export type ToolName = (typeof TOOLS)[number]["name"];
-export const isToolName = (name: unknown): name is ToolName => TOOLS.some((tool) => tool.name === name);
-export const isWriteTool = (name: ToolName) => !TOOLS.find((tool) => tool.name === name)!.annotations.readOnlyHint;
-
-type Args = Record<string, unknown>;
-
-function allowOnly(args: Args, names: string[]) {
-  const unknown = Object.keys(args).filter((key) => !names.includes(key));
-  if (unknown.length > 0) throw new ToolError(`Unknown argument: ${unknown.join(", ")}.`);
-}
-
-// Strict clients send null for an optional argument they leave out.
-const omitted = (value: unknown) => value === undefined || value === null;
-
-function optionalString(value: unknown, field: string, max = 100): string | undefined {
-  if (omitted(value)) return undefined;
-  if (typeof value !== "string" || value.length > max) throw new ToolError(`${field} must be text of at most ${max} characters.`);
-  return value;
-}
-
-function requiredString(value: unknown, field: string): string {
-  const parsed = optionalString(value, field);
-  if (parsed === undefined || parsed === "") throw new ToolError(`${field} is required.`);
-  return parsed;
-}
-
-function requiredRevision(value: unknown): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) throw new ToolError("revision is required. Get it from list_shifts.");
-  return value;
-}
-
-const optional = <T>(value: unknown, parse: (value: unknown) => T) => (omitted(value) ? undefined : parse(value));
-
-/** A shift date within five years of today, which catches a mistyped year. */
-function shiftDate(value: unknown, today: string): string {
-  const date = parseDate(value, "date");
-  if (date < addDays(today, -5 * 366) || date > addDays(today, 5 * 366)) {
-    throw new ToolError("date must be within five years of today.");
-  }
-  return date;
-}
-
-const today = () => new Date().toISOString().slice(0, 10);
-
-/** Checked arguments for each tool. Each throws ToolError with a message for the agent. */
-export const parseArgs = {
-  list_jobs: (args: Args) => {
-    allowOnly(args, []);
-    return {};
-  },
-  list_shifts: (args: Args) => {
-    allowOnly(args, ["from", "to"]);
-    return parseRange(args.from, args.to, MAX_RANGE_DAYS);
-  },
-  get_earnings: (args: Args) => {
-    allowOnly(args, ["from", "to"]);
-    return parseRange(args.from, args.to, MAX_RANGE_DAYS);
-  },
-  add_shift: (args: Args) => {
-    allowOnly(args, ["date", "start", "end", "job_id", "note"]);
-    return {
-      date: shiftDate(args.date, today()),
-      start: parseTime(args.start, "start"),
-      end: parseTime(args.end, "end", true),
-      job_id: optionalString(args.job_id, "job_id"),
-      note: optionalString(args.note, "note", MAX_NOTE_LENGTH),
-    };
-  },
-  update_shift: (args: Args) => {
+  scope: "write",
+  parse: (args) => {
     allowOnly(args, ["shift_id", "revision", "date", "start", "end", "job_id", "note"]);
     const parsed = {
       shift_id: requiredString(args.shift_id, "shift_id"),
@@ -188,8 +160,24 @@ export const parseArgs = {
     }
     return parsed;
   },
-  delete_shift: (args: Args) => {
+} satisfies ToolSpec;
+
+export const deleteShift = {
+  definition: {
+    name: "delete_shift",
+    title: "Delete shift",
+    description: "Deletes a one-off shift.",
+    inputSchema: {
+      type: "object",
+      properties: { shift_id: id, revision },
+      required: ["shift_id", "revision"],
+      additionalProperties: false,
+    },
+    annotations: { title: "Delete shift", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+  },
+  scope: "write",
+  parse: (args) => {
     allowOnly(args, ["shift_id", "revision"]);
     return { shift_id: requiredString(args.shift_id, "shift_id"), revision: requiredRevision(args.revision) };
   },
-} satisfies Record<ToolName, (args: Args) => unknown>;
+} satisfies ToolSpec;

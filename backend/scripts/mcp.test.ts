@@ -4,7 +4,7 @@ import { shiftEarnings } from "../convex/lib/mcp/earnings";
 import { handleMcpPost, type McpDeps, MODERN_VERSION } from "../convex/lib/mcp/protocol";
 import { movedTimes, parseRange, shiftTimes } from "../convex/lib/mcp/shiftTimes";
 import { checkKeySet, verifyAccessToken } from "../convex/lib/mcp/token";
-import { parseArgs } from "../convex/lib/mcp/tools";
+import { addShift, deleteShift, listJobs, updateShift } from "../convex/lib/mcp/shifts";
 import type { LiveActivityRegularShift } from "../convex/lib/shared/liveActivityScheduling";
 import type { WageSnapshot } from "../convex/lib/shared/payroll/types";
 
@@ -13,7 +13,9 @@ const calls: { userId: string; name: string; args: unknown }[] = [];
 const deps: McpDeps = {
   resourceUrl: RESOURCE,
   authenticate: async (token) => (token === "good" ? { userId: "user-1" } : token === "banned" ? "no_account" : "invalid_token"),
-  callTool: async (userId, name, args) => {
+  tools: [listJobs, addShift, deleteShift],
+  callTool: async (userId, tool, args) => {
+    const name = tool.definition.name;
     calls.push({ userId, name, args });
     return { ok: true, value: { echoed: name } };
   },
@@ -281,17 +283,17 @@ describe("MCP shift times", () => {
   });
 
   test("bad dates, times and ranges are refused", () => {
-    expect(() => parseArgs.add_shift({ date: "2026-02-30", start: "08:00", end: "16:00" })).toThrow("date");
-    expect(() => parseArgs.add_shift({ date: "2026-02-03", start: "24:00", end: "08:00" })).toThrow("start");
-    expect(() => parseArgs.add_shift({ date: "2026-02-03", start: "8:00", end: "16:00" })).toThrow("start");
-    expect(() => parseArgs.update_shift({ shift_id: "s", revision: 4 })).toThrow("at least one");
+    expect(() => addShift.parse({ date: "2026-02-30", start: "08:00", end: "16:00" })).toThrow("date");
+    expect(() => addShift.parse({ date: "2026-02-03", start: "24:00", end: "08:00" })).toThrow("start");
+    expect(() => addShift.parse({ date: "2026-02-03", start: "8:00", end: "16:00" })).toThrow("start");
+    expect(() => updateShift.parse({ shift_id: "s", revision: 4 })).toThrow("at least one");
     expect(() => parseRange("2026-01-01", "2026-06-01", 93)).toThrow("93");
     expect(() => shiftTimes("08:00", "08:00")).toThrow("same time");
-    expect(() => parseArgs.add_shift({ date: "2206-02-03", start: "08:00", end: "16:00" })).toThrow("five years");
+    expect(() => addShift.parse({ date: "2206-02-03", start: "08:00", end: "16:00" })).toThrow("five years");
   });
 
   test("null stands for a left-out optional argument, as strict clients send it", () => {
-    expect(parseArgs.update_shift({ shift_id: "s", revision: 4, date: null, start: "09:00", end: null, job_id: null, note: null })).toEqual({
+    expect(updateShift.parse({ shift_id: "s", revision: 4, date: null, start: "09:00", end: null, job_id: null, note: null })).toEqual({
       shift_id: "s", revision: 4, date: undefined, start: "09:00", end: undefined, job_id: undefined, note: undefined,
     });
   });

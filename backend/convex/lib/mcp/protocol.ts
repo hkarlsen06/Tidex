@@ -1,4 +1,4 @@
-import { isToolName, TOOLS, type ToolName } from "./tools";
+import type { ToolSpec } from "./registry";
 
 // MCP over Streamable HTTP, without sessions, for both protocol eras:
 // - 2026-07-28: no initialize. Every request carries its version in the
@@ -29,11 +29,15 @@ export type ToolOutcome = { ok: true; value: unknown } | { ok: false; message: s
 /** A token that checks out names a Tidex user, unless that account is banned or gone. */
 export type Authentication = { userId: string } | "invalid_token" | "no_account";
 
-export type McpDeps = {
+/** What the protocol needs to know about a tool; mcp.ts passes its full McpTool entries. */
+type Tool = Pick<ToolSpec, "definition" | "scope">;
+
+export type McpDeps<T extends Tool = Tool> = {
   /** The URL of the MCP endpoint, which is the audience its tokens must carry. */
   resourceUrl: string;
   authenticate: (token: string) => Promise<Authentication>;
-  callTool: (userId: string, name: ToolName, args: Record<string, unknown>) => Promise<ToolOutcome>;
+  tools: readonly T[];
+  callTool: (userId: string, tool: T, args: Record<string, unknown>) => Promise<ToolOutcome>;
 };
 
 type Id = string | number | null;
@@ -74,10 +78,10 @@ function headerValue(value: string | null): string | null {
   }
 }
 
-function unauthorized(deps: McpDeps, invalidToken: boolean) {
+function unauthorized(resourceUrl: string, invalidToken: boolean) {
   const params = [
     ...(invalidToken ? ['error="invalid_token"'] : []),
-    `resource_metadata="${resourceMetadataUrl(deps.resourceUrl)}"`,
+    `resource_metadata="${resourceMetadataUrl(resourceUrl)}"`,
   ].join(", ");
   return json(401, { error: invalidToken ? "invalid_token" : "unauthorized" }, { "WWW-Authenticate": `Bearer ${params}` });
 }
@@ -120,7 +124,7 @@ const ALLOWED_ORIGINS = new Set(["https://claude.ai", "https://chatgpt.com", "ht
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-export async function handleMcpPost(request: Request, deps: McpDeps): Promise<Response> {
+export async function handleMcpPost<T extends Tool>(request: Request, deps: McpDeps<T>): Promise<Response> {
   // Agents connect from servers and apps. A web page sends its Origin, and must not be
   // able to use a token it got hold of.
   const origin = request.headers.get("Origin");
@@ -130,9 +134,9 @@ export async function handleMcpPost(request: Request, deps: McpDeps): Promise<Re
 
   const authorization = request.headers.get("Authorization") ?? "";
   const token = /^Bearer (\S+)$/i.exec(authorization)?.[1];
-  if (token === undefined) return unauthorized(deps, false);
+  if (token === undefined) return unauthorized(deps.resourceUrl, false);
   const auth = await deps.authenticate(token);
-  if (auth === "invalid_token") return unauthorized(deps, true);
+  if (auth === "invalid_token") return unauthorized(deps.resourceUrl, true);
   // Signing in again would give the same answer, so this is not a 401.
   if (auth === "no_account") return json(403, { error: "This Tidex account is not available." });
   const { userId } = auth;
@@ -215,12 +219,13 @@ export async function handleMcpPost(request: Request, deps: McpDeps): Promise<Re
         ...cacheable,
       });
     case "tools/list":
-      return reply({ tools: TOOLS, ...cacheable });
+      return reply({ tools: deps.tools.map((tool) => tool.definition), ...cacheable });
     case "tools/call": {
-      if (!isToolName(params.name)) return rpcError(200, id, -32602, `Unknown tool: ${String(params.name)}`);
+      const tool = deps.tools.find((t) => t.definition.name === params.name);
+      if (tool === undefined) return rpcError(200, id, -32602, `Unknown tool: ${String(params.name)}`);
       const args = params.arguments ?? {};
       if (!isObject(args)) return rpcError(200, id, -32602, "arguments must be an object");
-      const outcome = await deps.callTool(userId, params.name, args);
+      const outcome = await deps.callTool(userId, tool, args);
       return reply(
         outcome.ok
           ? {
