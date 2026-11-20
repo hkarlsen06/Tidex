@@ -44,7 +44,7 @@ function overlaps(a: ConflictShift, b: ConflictShift): boolean {
 
 type Ordered = { id: string; shift_date: string; start_time: string };
 
-const inOutputOrder = (a: Ordered, b: Ordered) =>
+export const inOutputOrder = (a: Ordered, b: Ordered) =>
   a.shift_date.localeCompare(b.shift_date) ||
   normalizeStoredTime(a.start_time).localeCompare(normalizeStoredTime(b.start_time)) ||
   (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);

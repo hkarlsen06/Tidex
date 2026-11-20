@@ -220,6 +220,7 @@ const steps: Step[] = [
     ),
   byUser("feedback"),
   byUser("calendar_subscription_tokens"),
+  byUser("mcp_rate_limits"),
   async (ctx, user, budget) =>
     remove(
       ctx,

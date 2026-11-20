@@ -29,7 +29,7 @@ import { allowedRecipients, apnsConfigured, mayPush, sendToApns } from "./push";
 const MAX_ATTEMPTS = 10;
 const STALE_CLAIM_MS = 15 * 60_000;
 
-type Snapshot = WageSnapshot & { user_id: string; job_id: string | null };
+export type Snapshot = WageSnapshot & { user_id: string; job_id: string | null };
 
 const isoDateOffset = (date: Date, days: number) => {
   const shifted = new Date(date);
@@ -43,7 +43,7 @@ const numberValue = (value: unknown, fallback = 0) => {
 };
 
 // The pay code compares these fields to null, as Postgres returned them.
-const asRegularShift = (s: Doc<"user_shifts">): LiveActivityRegularShift => ({
+export const asRegularShift = (s: Doc<"user_shifts">): LiveActivityRegularShift => ({
   id: s.id,
   user_id: s.user_id,
   job_id: s.job_id,
@@ -54,7 +54,7 @@ const asRegularShift = (s: Doc<"user_shifts">): LiveActivityRegularShift => ({
   custom_supplements: s.custom_supplements ?? null,
 });
 
-const asRecurringShift = (r: Doc<"recurring_shifts">): LiveActivityRecurringShift => ({
+export const asRecurringShift = (r: Doc<"recurring_shifts">): LiveActivityRecurringShift => ({
   id: r.id,
   user_id: r.user_id,
   job_id: r.job_id,
@@ -68,7 +68,7 @@ const asRecurringShift = (r: Doc<"recurring_shifts">): LiveActivityRecurringShif
   date_specific_supplements: r.date_specific_supplements ?? null,
 });
 
-const asSnapshot = (w: Doc<"wage_snapshots">): Snapshot => ({
+export const asSnapshot = (w: Doc<"wage_snapshots">): Snapshot => ({
   id: w.id,
   user_id: w.user_id,
   job_id: w.job_id ?? null,

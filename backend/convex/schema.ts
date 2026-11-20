@@ -752,4 +752,12 @@ export default defineSchema({
   })
     .index("by_uuid", ["id"])
     .index("by_type_effective_date", ["tariff_type_id", "effective_date"]),
+
+  // One row per user of the MCP server: tool calls and writes in the current 10-minute window.
+  mcp_rate_limits: defineTable({
+    user_id: uuid,
+    window_start: v.number(),
+    calls: v.number(),
+    writes: v.number(),
+  }).index("by_user", ["user_id"]),
 });

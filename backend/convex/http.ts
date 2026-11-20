@@ -6,6 +6,7 @@ import { createFeedWindow } from "./lib/calendarFeed/date";
 import { buildICalendarFeed } from "./lib/calendarFeed/ics";
 import { normalizeCalendarFeedLocale } from "./lib/calendarFeed/locale";
 import { projectRecurringShifts } from "./lib/calendarFeed/project";
+import { endpoint as mcpEndpoint, methodNotAllowed as mcpMethodNotAllowed, protectedResource as mcpProtectedResource } from "./mcp";
 
 /** False without a usable token. An expired or malformed one throws, which would be a 500. */
 async function signedIn(ctx: { auth: { getUserIdentity: () => Promise<unknown> } }) {
@@ -159,5 +160,12 @@ const calendarFeed = httpAction(async (ctx, request) => {
   }
 });
 http.route({ pathPrefix: "/calendar-feed/", method: "GET", handler: calendarFeed });
+
+// The MCP server for AI agents. See docs/mcp-server.md.
+http.route({ path: "/mcp", method: "POST", handler: mcpEndpoint });
+http.route({ path: "/mcp", method: "GET", handler: mcpMethodNotAllowed });
+http.route({ path: "/mcp", method: "DELETE", handler: mcpMethodNotAllowed });
+http.route({ path: "/.well-known/oauth-protected-resource/mcp", method: "GET", handler: mcpProtectedResource });
+http.route({ path: "/.well-known/oauth-protected-resource", method: "GET", handler: mcpProtectedResource });
 
 export default http;
