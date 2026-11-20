@@ -121,6 +121,19 @@ describe("MCP token verification", async () => {
     expect(fetches).toBe(2);
   });
 
+  test("a token with a critical header the server doesn't know is a bad token, not an outage", async () => {
+    const enc = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
+    const header = enc({ alg: "RS256", kid: "k1", typ: "at+jwt", crit: ["x-unknown"], "x-unknown": true });
+    const body = enc({ sub: "user_clerk", aud: RESOURCE, client_id: "c", iss: issuer, exp: Math.floor(Date.now() / 1000) + 3600 });
+    const signature = Buffer.from(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", privateKey, new TextEncoder().encode(`${header}.${body}`))).toString("base64url");
+    expect(await verifyAt(`${header}.${body}.${signature}`)).toBeNull();
+  });
+
+  test("a broken key set from Clerk is an outage, not a bad token", async () => {
+    const token = await sign({ aud: RESOURCE, client_id: "client" });
+    await expect(verifyAccessToken(token, issuer, RESOURCE, async () => ({ keys: "none" }) as never)).rejects.toThrow();
+  });
+
   test("Clerk's key endpoint failing is not reported as a bad token", async () => {
     const token = await sign({ aud: RESOURCE, client_id: "client" });
     await expect(verifyAccessToken(token, issuer, RESOURCE, async () => { throw new Error("Clerk JWKS answered 503"); })).rejects.toThrow("503");
@@ -199,6 +212,18 @@ describe("MCP protocol", () => {
     expect((await response.json()).error.code).toBe(-32020);
   });
 
+  test("a 2026-07-28 request can't open with initialize", async () => {
+    const response = await handleMcpPost(
+      post(
+        { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: MODERN_VERSION, _meta: modernMeta } },
+        modernHeaders("initialize"),
+      ),
+      deps,
+    );
+    expect(response.status).toBe(404);
+    expect((await response.json()).error.code).toBe(-32601);
+  });
+
   test("an unsupported version lists the supported ones", async () => {
     const response = await handleMcpPost(
       post({ jsonrpc: "2.0", id: 1, method: "tools/list" }, { "MCP-Protocol-Version": "2024-11-05" }),
@@ -231,6 +256,7 @@ describe("MCP shift times", () => {
     expect(movedTimes({ start: "16:00", end: "24:00" }, "17:00")).toEqual({ start_time: "17:00", end_time: "01:00" });
     expect(movedTimes({ start: "16:00", end: "24:00" }, undefined, "00:00")).toEqual({ start_time: "16:00", end_time: "24:00" });
     expect(movedTimes({ start: "08:00", end: "08:00" }, "09:00")).toEqual({ start_time: "09:00", end_time: "09:00" });
+    expect(movedTimes({ start: "00:00", end: "24:00" }, "00:00")).toEqual({ start_time: "00:00", end_time: "24:00" });
   });
 
   test("bad dates, times and ranges are refused", () => {

@@ -10,8 +10,10 @@ import { createLocalJWKSet, errors, type JSONWebKeySet, jwtVerify } from "jose";
  */
 export type KeySource = (refresh: boolean) => Promise<JSONWebKeySet>;
 
-async function verify(token: string, keys: JSONWebKeySet, issuer: string, audience: string) {
-  const { payload } = await jwtVerify(token, createLocalJWKSet(keys), {
+type KeySet = ReturnType<typeof createLocalJWKSet>;
+
+async function verify(token: string, keys: KeySet, issuer: string, audience: string) {
+  const { payload } = await jwtVerify(token, keys, {
     issuer,
     audience,
     algorithms: ["RS256"],
@@ -35,14 +37,16 @@ export async function verifyAccessToken(
   audience: string,
   keySource: KeySource,
 ): Promise<string | null> {
+  // Built outside the try blocks: a broken key set is Clerk's fault, not the token's.
+  const keys = createLocalJWKSet(await keySource(false));
   try {
-    return await verify(token, await keySource(false), issuer, audience);
+    return await verify(token, keys, issuer, audience);
   } catch (error) {
     if (!(error instanceof errors.JOSEError)) throw error;
     if (!(error instanceof errors.JWKSNoMatchingKey)) return null;
   }
   // Clerk may have rotated its keys since they were stored.
-  const fresh = await keySource(true);
+  const fresh = createLocalJWKSet(await keySource(true));
   try {
     return await verify(token, fresh, issuer, audience);
   } catch (error) {

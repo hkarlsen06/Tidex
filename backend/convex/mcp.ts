@@ -147,7 +147,10 @@ function clerkKeys(ctx: ActionCtx, issuer: string): KeySource {
       const response = await fetch(`${issuer}/.well-known/jwks.json`);
       if (!response.ok) throw new Error(`Clerk JWKS answered ${response.status}`);
       const keys = (await response.json()) as JSONWebKeySet;
-      if (!Array.isArray(keys?.keys)) throw new Error("Clerk JWKS has no keys");
+      // Storing an empty or malformed set would turn every valid token away for an hour.
+      const valid = Array.isArray(keys?.keys) && keys.keys.length > 0 &&
+        keys.keys.every((key) => typeof key?.kty === "string" && typeof key.kid === "string");
+      if (!valid) throw new Error("Clerk JWKS has no usable keys");
       await ctx.runMutation(internal.mcp.storeKeys, { issuer, keys });
       return keys;
     } catch (error) {

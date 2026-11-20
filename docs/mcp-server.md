@@ -87,6 +87,5 @@ Not done. Each step changes production and waits for Hjalmar:
 
 ## Open questions
 
-
 - A custom Clerk scope (for example `shifts`) would put "read and change your shifts" on the consent screen and allow a read-only connection. It needs the scope created in Clerk and added to the default scopes for dynamic clients.
 - Directory listings in ChatGPT's app directory and Claude's connector directory need their own review and submission.

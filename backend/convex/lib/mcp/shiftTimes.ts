@@ -70,7 +70,9 @@ export const endsNextDay = (start: string, end: string) => minutes(clockTime(end
 export function movedTimes(current: { start: string; end: string }, newStart?: string, newEnd?: string) {
   const start = newStart ?? clockTime(current.start);
   if (newEnd !== undefined) return shiftTimes(start, newEnd);
-  if (newStart === undefined) return { start_time: start, end_time: clockTime(current.end) };
+  if (newStart === undefined || newStart === clockTime(current.start)) {
+    return { start_time: start, end_time: storedEndTime(clockTime(current.end), start) };
+  }
   const from = minutes(clockTime(current.start));
   let length = (minutes(clockTime(current.end)) - from) % MINUTES_PER_DAY;
   if (length <= 0) length += MINUTES_PER_DAY;
