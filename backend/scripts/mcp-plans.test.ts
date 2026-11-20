@@ -6,7 +6,6 @@ import {
   adjustmentFields,
   changedEvent,
   eventFields,
-  reminderSettings,
   updateSettings,
 } from "../convex/lib/mcp/plans";
 import {
@@ -225,25 +224,16 @@ describe("payroll adjustments", () => {
 });
 
 describe("settings", () => {
-  const prev = { shift_reminders_enabled: true, shift_reminder_minutes_array: [60] };
-
-  test("removing every shift reminder time turns shift reminders off", () => {
-    const change = updateSettings.parse({ shift_reminder_minutes: [] });
-    expect(reminderSettings(prev, change.notification_preferences)).toEqual({ shift_reminders_enabled: false, shift_reminder_minutes_array: [] });
-  });
-
-  test("turning shift reminders on without a reminder time is refused", () => {
-    const change = updateSettings.parse({ shift_reminders_enabled: true });
-    expect(() => reminderSettings({ shift_reminders_enabled: false, shift_reminder_minutes_array: [] }, change.notification_preferences)).toThrow();
-  });
-
   test("settings are routed to the table that stores them, and an unknown time zone is refused", () => {
-    expect(updateSettings.parse({ theme: "dark", shared_shifts_enabled: false, schedule_time_zone: "Europe/Oslo" })).toEqual({
+    expect(updateSettings.parse({ theme: "dark", schedule_time_zone: "Europe/Oslo" })).toEqual({
       user_settings: { theme: "dark" },
-      notification_preferences: { shared_shifts_enabled: false },
       schedule_time_zone: "Europe/Oslo",
     });
     expect(() => updateSettings.parse({ schedule_time_zone: "CET+1" })).toThrow("IANA");
     expect(() => updateSettings.parse({ default_startup_tab: "add" })).toThrow();
+  });
+
+  test("notification settings can't be changed, because the phone keeps its own copy", () => {
+    expect(() => updateSettings.parse({ shift_reminder_minutes: [] })).toThrow("shift_reminder_minutes");
   });
 });

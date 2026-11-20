@@ -478,11 +478,6 @@ export type SettingsChange = {
     show_dashboard_clock_buttons: boolean;
     default_startup_tab: (typeof STARTUP_TABS)[number];
   }>;
-  notification_preferences: Partial<{
-    shift_reminders_enabled: boolean;
-    shift_reminder_minutes_array: number[];
-    shared_shifts_enabled: boolean;
-  }>;
   schedule_time_zone?: string;
 };
 
@@ -499,21 +494,15 @@ const settingsProperties = {
     type: "string",
     description: "The IANA time zone the user's shift times are in, such as Europe/Oslo",
   },
-  shift_reminders_enabled: { type: "boolean", description: "Reminders before each shift. Turning them on needs at least one reminder time." },
-  shift_reminder_minutes: {
-    type: "array",
-    items: { type: "integer", minimum: 1, maximum: MAX_REMINDER_MINUTES },
-    maxItems: MAX_REMINDERS,
-    description: "Shift reminders this many minutes before each shift. An empty list turns them off.",
-  },
-  shared_shifts_enabled: { type: "boolean", description: "Push notifications when a friend who shares with the user adds shifts" },
 };
 
 export const getSettings = {
   definition: {
     name: "get_settings",
     title: "Get settings",
-    description: "The user's app settings, schedule time zone and notification settings, named as update_settings takes them.",
+    description:
+      "The user's app settings and schedule time zone, plus their notification settings as last saved from the phone. " +
+      "Notification settings can only be changed in the Tidex app.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { title: "Get settings", ...readOnly },
   },
@@ -529,8 +518,8 @@ export const updateSettings = {
     name: "update_settings",
     title: "Change settings",
     description:
-      "Changes app settings. Give only what changes. Shift reminders are notifications on the user's phone that the app " +
-      "schedules the next time it syncs. Changing schedule_time_zone changes which instant every shift time means.",
+      "Changes app settings. Give only what changes. Changing schedule_time_zone changes which instant every shift time " +
+      "means. Notification settings live on the user's phone and can only be changed in the Tidex app.",
     inputSchema: { type: "object", properties: settingsProperties, additionalProperties: false },
     annotations: { title: "Change settings", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
@@ -545,34 +534,15 @@ export const updateSettings = {
       show_dashboard_clock_buttons: optional(args.show_dashboard_clock_buttons, (v) => boolean(v, "show_dashboard_clock_buttons")),
       default_startup_tab: optional(args.default_startup_tab, (v) => oneOf(v, "default_startup_tab", STARTUP_TABS)),
     };
-    const prefs = {
-      shift_reminders_enabled: optional(args.shift_reminders_enabled, (v) => boolean(v, "shift_reminders_enabled")),
-      shift_reminder_minutes_array: optional(args.shift_reminder_minutes, (v) => reminderMinutes(v, "shift_reminder_minutes")),
-      shared_shifts_enabled: optional(args.shared_shifts_enabled, (v) => boolean(v, "shared_shifts_enabled")),
-    };
     const zone = optional(args.schedule_time_zone, (v) => {
       if (typeof v !== "string" || !isScheduleTimeZone(v)) throw new ToolError("schedule_time_zone must be an IANA time zone such as Europe/Oslo.");
       return v;
     });
     const defined = <T extends object>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
-    const change = { user_settings: defined(settings), notification_preferences: defined(prefs), schedule_time_zone: zone };
-    if (Object.keys(change.user_settings).length + Object.keys(change.notification_preferences).length === 0 && zone === undefined) {
+    const change = { user_settings: defined(settings), schedule_time_zone: zone };
+    if (Object.keys(change.user_settings).length === 0 && zone === undefined) {
       throw new ToolError("Give at least one setting to change.");
     }
     return change;
   },
 } satisfies ToolSpec<SettingsChange>;
-
-/**
- * The shift reminder settings after `change`, as NotificationSettingsViewModel keeps them:
- * reminders are on only while there is a reminder time.
- */
-export function reminderSettings(
-  prev: { shift_reminders_enabled: boolean; shift_reminder_minutes_array: number[] },
-  change: SettingsChange["notification_preferences"],
-) {
-  const minutes = change.shift_reminder_minutes_array ?? prev.shift_reminder_minutes_array;
-  const enabled = change.shift_reminders_enabled ?? (minutes.length > 0 && prev.shift_reminders_enabled);
-  if (enabled && minutes.length === 0) throw new ToolError("Shift reminders need at least one time in shift_reminder_minutes.");
-  return { shift_reminders_enabled: enabled, shift_reminder_minutes_array: minutes };
-}

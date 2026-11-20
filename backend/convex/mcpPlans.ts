@@ -5,7 +5,7 @@ import { internalMutation, internalQuery, type QueryCtx } from "./_generated/ser
 import { adjustmentWrites } from "./payrollAdjustments";
 import { eventWrites } from "./events";
 import { checked, fail, jobForShift, jobsOf, live, requireUser } from "./lib/mcp/db";
-import { adjustmentFields, changedEvent, type EventFields, eventFields, reminderSettings } from "./lib/mcp/plans";
+import { adjustmentFields, changedEvent, type EventFields, eventFields } from "./lib/mcp/plans";
 import * as specs from "./lib/mcp/plans";
 import {
   firstDate,
@@ -29,7 +29,6 @@ import { saveScheduleTimeZone, scheduleTimeZone } from "./lib/scheduleTimeZone";
 import type { LiveActivityRegularShift } from "./lib/shared/liveActivityScheduling";
 import { applicableWageSnapshot, asSnapshot } from "./liveActivities";
 import { oneOff } from "./mcpShifts";
-import { upsertNotificationPreferencesFor } from "./notificationPreferences";
 import { recurringWrites } from "./recurringShifts";
 import { shiftWrites } from "./userShifts";
 import { updateSettingsFor } from "./userSettings";
@@ -614,11 +613,6 @@ export const updateSettings = internalMutation({
       show_dashboard_clock_buttons: v.optional(v.boolean()),
       default_startup_tab: v.optional(literals(specs.STARTUP_TABS)),
     }),
-    notification_preferences: v.object({
-      shift_reminders_enabled: v.optional(v.boolean()),
-      shift_reminder_minutes_array: v.optional(v.array(v.number())),
-      shared_shifts_enabled: v.optional(v.boolean()),
-    }),
     schedule_time_zone: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -628,14 +622,6 @@ export const updateSettings = internalMutation({
       if (prev === null) fail("The user has no settings yet. They need to open the Tidex app once first.");
       const { set } = diff(prev, args.user_settings, Object.keys(args.user_settings));
       if (Object.keys(set).length > 0) await updateSettingsFor(ctx, user.id, { expected_revision: prev.revision, set });
-    }
-    if (Object.keys(args.notification_preferences).length > 0) {
-      const prev = await preferencesOf(ctx, user.id);
-      const next = {
-        shared_shifts_enabled: args.notification_preferences.shared_shifts_enabled ?? prev.shared_shifts_enabled,
-        ...checked(() => reminderSettings(prev, args.notification_preferences)),
-      };
-      if (JSON.stringify(next) !== JSON.stringify(prev)) await upsertNotificationPreferencesFor(ctx, user.id, next);
     }
     if (args.schedule_time_zone !== undefined && args.schedule_time_zone !== (await scheduleTimeZone(ctx, user.id))) {
       await saveScheduleTimeZone(ctx, user.id, args.schedule_time_zone, false);
