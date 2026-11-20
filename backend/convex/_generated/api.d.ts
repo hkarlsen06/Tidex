@@ -31,6 +31,7 @@ import type * as lib_clerk from "../lib/clerk.js";
 import type * as lib_columns from "../lib/columns.js";
 import type * as lib_liveActivityDelivery from "../lib/liveActivityDelivery.js";
 import type * as lib_mcp_args from "../lib/mcp/args.js";
+import type * as lib_mcp_db from "../lib/mcp/db.js";
 import type * as lib_mcp_earnings from "../lib/mcp/earnings.js";
 import type * as lib_mcp_protocol from "../lib/mcp/protocol.js";
 import type * as lib_mcp_registry from "../lib/mcp/registry.js";
@@ -123,6 +124,7 @@ declare const fullApi: ApiFromModules<{
   "lib/columns": typeof lib_columns;
   "lib/liveActivityDelivery": typeof lib_liveActivityDelivery;
   "lib/mcp/args": typeof lib_mcp_args;
+  "lib/mcp/db": typeof lib_mcp_db;
   "lib/mcp/earnings": typeof lib_mcp_earnings;
   "lib/mcp/protocol": typeof lib_mcp_protocol;
   "lib/mcp/registry": typeof lib_mcp_registry;
