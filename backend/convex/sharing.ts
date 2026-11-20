@@ -1,11 +1,13 @@
 import { needsReviewedPayroll, PAYROLL_REVISION, requirePayrollRevision } from "./lib/payrollCompatibility";
-import { ConvexError, v } from "convex/values";
+import { ConvexError, type ObjectType, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import {
+  type ActionCtx,
   action,
   internalMutation,
   internalQuery,
+  type MutationCtx,
   mutation,
   type QueryCtx,
   query,
@@ -70,7 +72,7 @@ async function pictureUrl(ctx: QueryCtx, settings: Doc<"user_settings"> | null) 
  * owner turned on show_earnings for this viewer. `range` limits the shifts, and
  * `goalMonth` (YYYY-MM) picks that month's goal from monthly_goals_by_month.
  */
-async function sharedSchedule(
+export async function sharedSchedule(
   ctx: QueryCtx,
   ownerId: string,
   requestedShowEarnings: boolean,
@@ -235,7 +237,7 @@ async function liveRows<T extends "recurring_shifts" | "wage_snapshots">(
   return rows.filter((r) => r.deleted_at === undefined) as { [K in "recurring_shifts" | "wage_snapshots"]: Doc<K> }[T][];
 }
 
-async function sharesWith(ctx: QueryCtx, userId: string) {
+export async function sharesWith(ctx: QueryCtx, userId: string) {
   const incoming = await ctx.db
     .query("shift_shares")
     .withIndex("by_viewer_revision", (q) => q.eq("viewer_id", userId))
@@ -451,23 +453,24 @@ export const setLastSyncedAt = mutation({
 
 // ---- Writes ----
 
-async function shareBetween(ctx: QueryCtx, ownerId: string, viewerId: string) {
+export async function shareBetween(ctx: QueryCtx, ownerId: string, viewerId: string) {
   return await ctx.db
     .query("shift_shares")
     .withIndex("by_owner_viewer", (q) => q.eq("owner_id", ownerId).eq("viewer_id", viewerId))
     .unique();
 }
 
-/** I stop sharing with `viewer_id`. A block by the other user keeps the row. */
+/** The user stops sharing with `viewerId`. A block by the other user keeps the row. */
+export async function removeShareFor(ctx: MutationCtx, userId: string, viewerId: string) {
+  const share = await shareBetween(ctx, userId, viewerId);
+  if (share === null || (share.blocked_by_user_id ?? userId) !== userId) return false;
+  await ctx.db.delete(share._id);
+  return true;
+}
+
 export const removeShare = mutation({
   args: { viewer_id: v.string() },
-  handler: async (ctx, { viewer_id }) => {
-    const { user } = await requireViewer(ctx);
-    const share = await shareBetween(ctx, user.id, viewer_id);
-    if (share === null || (share.blocked_by_user_id ?? user.id) !== user.id) return false;
-    await ctx.db.delete(share._id);
-    return true;
-  },
+  handler: async (ctx, { viewer_id }) => await removeShareFor(ctx, (await requireViewer(ctx)).user.id, viewer_id),
 });
 
 /** I remove `owner_id` from the people who share with me. */
@@ -482,40 +485,54 @@ export const removeSharer = mutation({
   },
 });
 
+const myShareArgs = {
+  viewer_id: v.string(),
+  show_earnings: v.optional(v.boolean()),
+  owner_muted: v.optional(v.boolean()),
+};
+
 /** The owner's side of a share: show_earnings and owner_muted. */
+export async function updateMyShareFor(
+  ctx: MutationCtx,
+  userId: string,
+  { viewer_id, ...fields }: ObjectType<typeof myShareArgs>,
+) {
+  const share = await shareBetween(ctx, userId, viewer_id);
+  if (share === null) return false;
+  await ctx.db.patch(share._id, { ...fields, revision: await nextRevision(ctx) });
+  return true;
+}
+
 export const updateMyShare = mutation({
-  args: {
-    viewer_id: v.string(),
-    show_earnings: v.optional(v.boolean()),
-    owner_muted: v.optional(v.boolean()),
-  },
-  handler: async (ctx, { viewer_id, ...fields }) => {
-    const { user } = await requireViewer(ctx);
-    const share = await shareBetween(ctx, user.id, viewer_id);
-    if (share === null) return false;
-    await ctx.db.patch(share._id, { ...fields, revision: await nextRevision(ctx) });
-    return true;
-  },
+  args: myShareArgs,
+  handler: async (ctx, args) => await updateMyShareFor(ctx, (await requireViewer(ctx)).user.id, args),
 });
 
+const sharerArgs = {
+  owner_id: v.string(),
+  hidden: v.optional(v.boolean()),
+  muted: v.optional(v.boolean()),
+};
+
 /** The viewer's side of a share: hidden (and the legacy `blocked` copy) and muted. */
+export async function updateSharerFor(
+  ctx: MutationCtx,
+  userId: string,
+  { owner_id, hidden, muted }: ObjectType<typeof sharerArgs>,
+) {
+  const share = await shareBetween(ctx, owner_id, userId);
+  if (share === null) return false;
+  await ctx.db.patch(share._id, {
+    ...(hidden === undefined ? {} : { hidden, blocked: hidden }),
+    ...(muted === undefined ? {} : { muted }),
+    revision: await nextRevision(ctx),
+  });
+  return true;
+}
+
 export const updateSharer = mutation({
-  args: {
-    owner_id: v.string(),
-    hidden: v.optional(v.boolean()),
-    muted: v.optional(v.boolean()),
-  },
-  handler: async (ctx, { owner_id, hidden, muted }) => {
-    const { user } = await requireViewer(ctx);
-    const share = await shareBetween(ctx, owner_id, user.id);
-    if (share === null) return false;
-    await ctx.db.patch(share._id, {
-      ...(hidden === undefined ? {} : { hidden, blocked: hidden }),
-      ...(muted === undefined ? {} : { muted }),
-      revision: await nextRevision(ctx),
-    });
-    return true;
-  },
+  args: sharerArgs,
+  handler: async (ctx, args) => await updateSharerFor(ctx, (await requireViewer(ctx)).user.id, args),
 });
 
 /** Port of block_user_pair. Hides both directions of the pair's share. */
@@ -575,51 +592,56 @@ const shareErrors = {
   exists: "Du deler allerede vaktene dine med denne brukeren",
 };
 
-type ShareFailureCode = keyof typeof shareErrors;
-type ShareResult = { success: true } | { success: false; code: ShareFailureCode; error: string };
+export type ShareFailureCode = keyof typeof shareErrors;
+export type ShareResult = { success: true } | { success: false; code: ShareFailureCode; error: string };
 
 const shareFailure = (code: ShareFailureCode): ShareResult => ({ success: false, code, error: shareErrors[code] });
 
 /** Whether either user blocked the pair, in either direction of their shares. */
 const isBlockedPair = (shares: (Share | null)[]) => shares.some((s) => s?.blocked_by_user_id !== undefined);
 
-/** Starts sharing my shifts with `target_id`. Shared by createShare and shareBack. */
+/**
+ * Starts sharing the owner's shifts with `targetId`, and tells them. Shared by
+ * createShare, shareBack and the MCP server.
+ */
+export async function startShareFor(
+  ctx: MutationCtx,
+  ownerId: string,
+  targetId: string | null,
+  showEarnings: boolean,
+): Promise<ShareResult> {
+  if (targetId === null || (await userByUuid(ctx, targetId)) === null) return shareFailure("not_found");
+  if (targetId === ownerId) return shareFailure("self");
+  const mine = await shareBetween(ctx, ownerId, targetId);
+  const theirs = await shareBetween(ctx, targetId, ownerId);
+  if (isBlockedPair([mine, theirs])) return shareFailure("blocked");
+  if (mine !== null) return shareFailure("exists");
+  await ctx.db.insert("shift_shares", {
+    id: crypto.randomUUID(),
+    owner_id: ownerId,
+    viewer_id: targetId,
+    show_earnings: showEarnings,
+    blocked: false,
+    muted: false,
+    owner_muted: false,
+    hidden: false,
+    created_at: new Date().toISOString(),
+    revision: await nextRevision(ctx),
+  });
+  await queueShareStarted(ctx, ownerId, targetId);
+  return { success: true };
+}
+
 export const startShare = internalMutation({
   args: { owner_id: v.string(), target_id: v.union(v.string(), v.null()), show_earnings: v.boolean() },
-  handler: async (ctx, { owner_id, target_id, show_earnings }): Promise<ShareResult> => {
-    if (target_id === null || (await userByUuid(ctx, target_id)) === null) return shareFailure("not_found");
-    if (target_id === owner_id) return shareFailure("self");
-    const mine = await shareBetween(ctx, owner_id, target_id);
-    const theirs = await shareBetween(ctx, target_id, owner_id);
-    if (isBlockedPair([mine, theirs])) return shareFailure("blocked");
-    if (mine !== null) return shareFailure("exists");
-    await ctx.db.insert("shift_shares", {
-      id: crypto.randomUUID(),
-      owner_id,
-      viewer_id: target_id,
-      show_earnings,
-      blocked: false,
-      muted: false,
-      owner_muted: false,
-      hidden: false,
-      created_at: new Date().toISOString(),
-      revision: await nextRevision(ctx),
-    });
-    await queueShareStarted(ctx, owner_id, target_id);
-    return { success: true };
-  },
+  handler: async (ctx, { owner_id, target_id, show_earnings }): Promise<ShareResult> =>
+    await startShareFor(ctx, owner_id, target_id, show_earnings),
 });
 
 export const shareBack = mutation({
   args: { recipient_id: v.string(), show_earnings: v.optional(v.boolean()) },
-  handler: async (ctx, { recipient_id, show_earnings }): Promise<ShareResult> => {
-    const { user } = await requireViewer(ctx);
-    return await ctx.runMutation(internal.sharing.startShare, {
-      owner_id: user.id,
-      target_id: recipient_id,
-      show_earnings: show_earnings ?? false,
-    });
-  },
+  handler: async (ctx, { recipient_id, show_earnings }): Promise<ShareResult> =>
+    await startShareFor(ctx, (await requireViewer(ctx)).user.id, recipient_id, show_earnings ?? false),
 });
 
 /**
@@ -641,10 +663,23 @@ export const invitePreview = query({
 });
 
 /**
- * Port of manage_sharing_action's createShare. An identifier with @ inside it is an
- * email, matched only against verified addresses in Clerk. Anything else is a username,
- * with or without a leading @. N+1 has no phone sign-in, so phone numbers match nobody.
+ * The user a trimmed, non-empty identifier names, or null. An identifier with @ inside
+ * it is an email, matched only against verified addresses in Clerk. Anything else is a
+ * username, with or without a leading @. N+1 has no phone sign-in, so phone numbers
+ * match nobody.
  */
+export async function shareTargetFor(ctx: ActionCtx, identifier: string): Promise<string | null> {
+  if (identifier.includes("@") && !identifier.startsWith("@")) {
+    const clerkUsers = await clerkUsersWithVerifiedEmail(identifier);
+    return await ctx.runQuery(internal.sharing.userIdForClerkUsers, {
+      clerk_user_ids: clerkUsers.map((u) => u.id),
+    });
+  }
+  const username = identifier.toLowerCase().replace(/^@/, "");
+  return await ctx.runQuery(internal.sharing.userIdForUsername, { username });
+}
+
+/** Port of manage_sharing_action's createShare. */
 export const createShare = action({
   args: { identifier: v.string(), show_earnings: v.optional(v.boolean()) },
   handler: async (ctx, { identifier, show_earnings }): Promise<ShareResult> => {
@@ -652,20 +687,9 @@ export const createShare = action({
     if (owner === null) throw new ConvexError({ code: "not_authorized" });
     const trimmed = identifier.trim();
     if (trimmed === "") return shareFailure("no_identifier");
-
-    let target: string | null;
-    if (trimmed.includes("@") && !trimmed.startsWith("@")) {
-      const clerkUsers = await clerkUsersWithVerifiedEmail(trimmed);
-      target = await ctx.runQuery(internal.sharing.userIdForClerkUsers, {
-        clerk_user_ids: clerkUsers.map((u) => u.id),
-      });
-    } else {
-      const username = trimmed.toLowerCase().replace(/^@/, "");
-      target = await ctx.runQuery(internal.sharing.userIdForUsername, { username });
-    }
     return await ctx.runMutation(internal.sharing.startShare, {
       owner_id: owner,
-      target_id: target,
+      target_id: await shareTargetFor(ctx, trimmed),
       show_earnings: show_earnings ?? false,
     });
   },

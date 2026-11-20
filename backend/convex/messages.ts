@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { type ObjectType, v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import {
   internalMutation,
@@ -38,7 +38,7 @@ async function messageById(ctx: QueryCtx, id: string) {
 }
 
 /** Live messages older than the cursor, newest first. The index orders ties by id. */
-async function liveMessagesBefore(
+export async function liveMessagesBefore(
   ctx: QueryCtx,
   threadId: string,
   before: { created_at: string; id: string } | null,
@@ -61,7 +61,7 @@ async function liveMessagesBefore(
   return out;
 }
 
-async function page(
+export async function page(
   ctx: QueryCtx,
   threadId: string,
   viewerId: string,
@@ -226,164 +226,170 @@ async function refreshThreadPreview(ctx: MutationCtx, threadId: string) {
   });
 }
 
+const sendArgs = {
+  thread_id: v.string(),
+  client_id: v.string(),
+  body: v.optional(v.string()),
+  reply_to_message_id: v.optional(v.string()),
+  attachments: v.optional(
+    v.array(
+      v.object({
+        attachment_id: v.string(),
+        storage_id: v.id("_storage"),
+        mime_type: v.string(),
+        byte_size: v.number(),
+        width: v.optional(v.number()),
+        height: v.optional(v.number()),
+      }),
+    ),
+  ),
+  metadata: v.optional(v.any()),
+};
+
 /**
- * Port of send_message. Resending the same client_id returns the first message, so
- * the app's outbox can retry safely.
- *
- * expected_user_id is the sender the app queued the message for. It throws "wrong_user"
+ * Port of send_message, for the user the caller acts for. Resending the same client_id
+ * returns the first message, so the app's outbox and an agent can retry safely.
+ */
+export async function sendFor(ctx: MutationCtx, userId: string, args: ObjectType<typeof sendArgs>) {
+  if (!(await canPostToThread(ctx, args.thread_id, userId))) {
+    reject("posting_not_allowed", "Posting is not allowed for this thread");
+  }
+  if (args.reply_to_message_id !== undefined) {
+    const target = await messageById(ctx, args.reply_to_message_id);
+    if (target === null || target.thread_id !== args.thread_id || target.deleted_at !== undefined) {
+      reject("invalid", "Reply target must exist in the same thread");
+    }
+  }
+  const metadata = args.metadata ?? {};
+  const metadataProblem = metadataError(metadata);
+  if (metadataProblem !== null) reject("invalid", metadataProblem);
+
+  const existing = await ctx.db
+    .query("messages")
+    .withIndex("by_thread_sender_client", (q) =>
+      q.eq("thread_id", args.thread_id).eq("sender_user_id", userId).eq("client_id", args.client_id),
+    )
+    .unique();
+  if (existing !== null) return await messagePayload(ctx, existing, userId);
+
+  const body = normalizeBody(args.body);
+  if (body !== undefined && [...body].length > MAX_BODY) {
+    reject("invalid", "Message body exceeds the 5000 character limit");
+  }
+  if (isObjectionable(body)) reject("safety_filter", "Message blocked by safety filter");
+  const attachments = args.attachments ?? [];
+  if (body === undefined && attachments.length === 0 && richContentKind(metadata) === null) {
+    reject("invalid", "A message must include text, at least one attachment, or supported rich content");
+  }
+  if (attachments.length > MAX_ATTACHMENTS) reject("invalid", "Too many attachments");
+  const ids = attachments.map((a) => a.attachment_id);
+  if (new Set(ids).size !== ids.length) reject("invalid", "Attachment ids must be unique");
+  const dimension = (n: number | undefined) =>
+    n === undefined || (Number.isInteger(n) && n > 0 && n <= 2147483647);
+  const uploads = [];
+  for (const a of attachments) {
+    if (!ATTACHMENT_TYPES.has(a.mime_type)) reject("invalid", `Unsupported attachment mime type: ${a.mime_type}`);
+    const taken = await ctx.db
+      .query("message_attachments")
+      .withIndex("by_uuid", (q) => q.eq("id", a.attachment_id))
+      .first();
+    if (taken !== null) reject("invalid", "Attachment id is already used");
+    // Only the caller's own upload to this thread, as the storage.objects owner check did.
+    const upload = await ctx.db
+      .query("attachment_uploads")
+      .withIndex("by_storage_id", (q) => q.eq("storage_id", a.storage_id))
+      .unique();
+    if (upload === null || upload.user_id !== userId || upload.thread_id !== args.thread_id) {
+      reject("invalid", "Attachment upload not found for this thread and user");
+    }
+    uploads.push(upload);
+    const file = await ctx.db.system.get(a.storage_id);
+    if (file === null) reject("invalid", "Attachment object not found");
+    if (file.contentType !== a.mime_type) {
+      reject("invalid", "Attachment mime type does not match stored object metadata");
+    }
+    if (file.size !== a.byte_size) reject("invalid", "Attachment size does not match stored object metadata");
+    if (a.byte_size <= 0 || a.byte_size > MAX_ATTACHMENT_BYTES) {
+      reject("invalid", "Attachment size exceeds the 5 MB limit");
+    }
+    if (!dimension(a.width) || !dimension(a.height)) {
+      reject("invalid", "Attachment width and height must be positive integers");
+    }
+  }
+  for (const upload of uploads) await ctx.db.delete(upload._id);
+
+  const now = new Date().toISOString();
+  const id = crypto.randomUUID();
+  await ctx.db.insert("messages", {
+    id,
+    thread_id: args.thread_id,
+    sender_user_id: userId,
+    message_type: "user",
+    body,
+    client_id: args.client_id,
+    reply_to_message_id: args.reply_to_message_id,
+    metadata,
+    created_at: now,
+    revision: await nextRevision(ctx),
+  });
+  for (const [index, a] of attachments.entries()) {
+    await ctx.db.insert("message_attachments", {
+      id: a.attachment_id,
+      message_id: id,
+      attachment_index: index,
+      kind: "image",
+      storage_id: a.storage_id,
+      mime_type: a.mime_type,
+      byte_size: a.byte_size,
+      width: a.width,
+      height: a.height,
+      created_at: now,
+    });
+  }
+  const t = (await threadById(ctx, args.thread_id))!;
+  await ctx.db.patch(t._id, {
+    last_message_id: id,
+    last_message_sender_id: userId,
+    last_message_at: now,
+    revision: await nextRevision(ctx),
+  });
+  // update_thread_unread_counts_on_message_insert
+  const members = await ctx.db
+    .query("thread_memberships")
+    .withIndex("by_thread_user", (q) => q.eq("thread_id", args.thread_id))
+    .collect();
+  for (const m of members) {
+    if (m.status !== "active" || m.user_id === userId) continue;
+    const state = await ensureState(ctx, args.thread_id, m.user_id);
+    await ctx.db.patch(state._id, {
+      unread_count: state.unread_count + 1,
+      updated_at: now,
+      revision: await nextRevision(ctx),
+    });
+  }
+  const typing = await ctx.db
+    .query("typing_indicators")
+    .withIndex("by_thread_user", (q) => q.eq("thread_id", args.thread_id).eq("user_id", userId))
+    .unique();
+  if (typing !== null) await ctx.db.delete(typing._id);
+  const sent = (await messageById(ctx, id))!;
+  await queueThreadMessage(ctx, sent, t.kind);
+  return await messagePayload(ctx, sent, userId);
+}
+
+/**
+ * sendFor for the viewer. expected_user_id is the sender the app queued the message for. It throws "wrong_user"
  * when the viewer is someone else, so a queued message drained after an account switch
  * or the end of an impersonation can't go out as the other account, even in a thread
  * both are in. The share extension and the Siri intent send at once and don't know the
  * user id, so they leave it out.
  */
 export const send = mutation({
-  args: {
-    expected_user_id: v.optional(v.string()),
-    thread_id: v.string(),
-    client_id: v.string(),
-    body: v.optional(v.string()),
-    reply_to_message_id: v.optional(v.string()),
-    attachments: v.optional(
-      v.array(
-        v.object({
-          attachment_id: v.string(),
-          storage_id: v.id("_storage"),
-          mime_type: v.string(),
-          byte_size: v.number(),
-          width: v.optional(v.number()),
-          height: v.optional(v.number()),
-        }),
-      ),
-    ),
-    metadata: v.optional(v.any()),
-  },
-  handler: async (ctx, args) => {
+  args: { expected_user_id: v.optional(v.string()), ...sendArgs },
+  handler: async (ctx, { expected_user_id, ...args }) => {
     const { user } = await requireViewer(ctx);
-    if (args.expected_user_id !== undefined) requireExpectedUser(user.id, args.expected_user_id);
-    if (!(await canPostToThread(ctx, args.thread_id, user.id))) {
-      reject("posting_not_allowed", "Posting is not allowed for this thread");
-    }
-    if (args.reply_to_message_id !== undefined) {
-      const target = await messageById(ctx, args.reply_to_message_id);
-      if (target === null || target.thread_id !== args.thread_id || target.deleted_at !== undefined) {
-        reject("invalid", "Reply target must exist in the same thread");
-      }
-    }
-    const metadata = args.metadata ?? {};
-    const metadataProblem = metadataError(metadata);
-    if (metadataProblem !== null) reject("invalid", metadataProblem);
-
-    const existing = await ctx.db
-      .query("messages")
-      .withIndex("by_thread_sender_client", (q) =>
-        q.eq("thread_id", args.thread_id).eq("sender_user_id", user.id).eq("client_id", args.client_id),
-      )
-      .unique();
-    if (existing !== null) return await messagePayload(ctx, existing, user.id);
-
-    const body = normalizeBody(args.body);
-    if (body !== undefined && [...body].length > MAX_BODY) {
-      reject("invalid", "Message body exceeds the 5000 character limit");
-    }
-    if (isObjectionable(body)) reject("safety_filter", "Message blocked by safety filter");
-    const attachments = args.attachments ?? [];
-    if (body === undefined && attachments.length === 0 && richContentKind(metadata) === null) {
-      reject("invalid", "A message must include text, at least one attachment, or supported rich content");
-    }
-    if (attachments.length > MAX_ATTACHMENTS) reject("invalid", "Too many attachments");
-    const ids = attachments.map((a) => a.attachment_id);
-    if (new Set(ids).size !== ids.length) reject("invalid", "Attachment ids must be unique");
-    const dimension = (n: number | undefined) =>
-      n === undefined || (Number.isInteger(n) && n > 0 && n <= 2147483647);
-    const uploads = [];
-    for (const a of attachments) {
-      if (!ATTACHMENT_TYPES.has(a.mime_type)) reject("invalid", `Unsupported attachment mime type: ${a.mime_type}`);
-      const taken = await ctx.db
-        .query("message_attachments")
-        .withIndex("by_uuid", (q) => q.eq("id", a.attachment_id))
-        .first();
-      if (taken !== null) reject("invalid", "Attachment id is already used");
-      // Only the caller's own upload to this thread, as the storage.objects owner check did.
-      const upload = await ctx.db
-        .query("attachment_uploads")
-        .withIndex("by_storage_id", (q) => q.eq("storage_id", a.storage_id))
-        .unique();
-      if (upload === null || upload.user_id !== user.id || upload.thread_id !== args.thread_id) {
-        reject("invalid", "Attachment upload not found for this thread and user");
-      }
-      uploads.push(upload);
-      const file = await ctx.db.system.get(a.storage_id);
-      if (file === null) reject("invalid", "Attachment object not found");
-      if (file.contentType !== a.mime_type) {
-        reject("invalid", "Attachment mime type does not match stored object metadata");
-      }
-      if (file.size !== a.byte_size) reject("invalid", "Attachment size does not match stored object metadata");
-      if (a.byte_size <= 0 || a.byte_size > MAX_ATTACHMENT_BYTES) {
-        reject("invalid", "Attachment size exceeds the 5 MB limit");
-      }
-      if (!dimension(a.width) || !dimension(a.height)) {
-        reject("invalid", "Attachment width and height must be positive integers");
-      }
-    }
-    for (const upload of uploads) await ctx.db.delete(upload._id);
-
-    const now = new Date().toISOString();
-    const id = crypto.randomUUID();
-    await ctx.db.insert("messages", {
-      id,
-      thread_id: args.thread_id,
-      sender_user_id: user.id,
-      message_type: "user",
-      body,
-      client_id: args.client_id,
-      reply_to_message_id: args.reply_to_message_id,
-      metadata,
-      created_at: now,
-      revision: await nextRevision(ctx),
-    });
-    for (const [index, a] of attachments.entries()) {
-      await ctx.db.insert("message_attachments", {
-        id: a.attachment_id,
-        message_id: id,
-        attachment_index: index,
-        kind: "image",
-        storage_id: a.storage_id,
-        mime_type: a.mime_type,
-        byte_size: a.byte_size,
-        width: a.width,
-        height: a.height,
-        created_at: now,
-      });
-    }
-    const t = (await threadById(ctx, args.thread_id))!;
-    await ctx.db.patch(t._id, {
-      last_message_id: id,
-      last_message_sender_id: user.id,
-      last_message_at: now,
-      revision: await nextRevision(ctx),
-    });
-    // update_thread_unread_counts_on_message_insert
-    const members = await ctx.db
-      .query("thread_memberships")
-      .withIndex("by_thread_user", (q) => q.eq("thread_id", args.thread_id))
-      .collect();
-    for (const m of members) {
-      if (m.status !== "active" || m.user_id === user.id) continue;
-      const state = await ensureState(ctx, args.thread_id, m.user_id);
-      await ctx.db.patch(state._id, {
-        unread_count: state.unread_count + 1,
-        updated_at: now,
-        revision: await nextRevision(ctx),
-      });
-    }
-    const typing = await ctx.db
-      .query("typing_indicators")
-      .withIndex("by_thread_user", (q) => q.eq("thread_id", args.thread_id).eq("user_id", user.id))
-      .unique();
-    if (typing !== null) await ctx.db.delete(typing._id);
-    const sent = (await messageById(ctx, id))!;
-    await queueThreadMessage(ctx, sent, t.kind);
-    return await messagePayload(ctx, sent, user.id);
+    if (expected_user_id !== undefined) requireExpectedUser(user.id, expected_user_id);
+    return await sendFor(ctx, user.id, args);
   },
 });
 

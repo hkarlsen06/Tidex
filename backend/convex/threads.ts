@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { type ObjectType, v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
@@ -24,60 +24,63 @@ export async function requireAccess(ctx: QueryCtx, threadId: string, userId: str
   if (!(await canAccessThread(ctx, threadId, userId))) reject("thread_access_denied", "Thread access denied");
 }
 
-/**
- * The viewer's threads, newest first, with the unread direct message count. Replaces
- * get_inbox_sync_snapshot_v2, list_inbox_events_v2, list_my_threads and
- * get_unread_direct_message_count. Subscribe to it to keep the list current.
- */
-export const inbox = query({
-  args: {
-    limit: v.optional(v.number()),
-    before_last_message_at: v.optional(v.string()),
-    before_thread_id: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const { user } = await requireViewer(ctx);
-    const memberships = await ctx.db
-      .query("thread_memberships")
-      .withIndex("by_user_revision", (q) => q.eq("user_id", user.id))
-      .collect();
-    const summaries = (
-      await Promise.all(
-        memberships
-          .filter((m) => m.status === "active")
-          .map(async (m) => {
-            const thread = await threadById(ctx, m.thread_id);
-            return thread === null ? null : await threadSummary(ctx, thread, user.id);
-          }),
-      )
-    )
-      .filter((s) => s !== null)
-      .sort(
-        (a, b) =>
-          b.last_message_at.localeCompare(a.last_message_at) || b.thread_id.localeCompare(a.thread_id),
-      );
+const inboxArgs = {
+  limit: v.optional(v.number()),
+  before_last_message_at: v.optional(v.string()),
+  before_thread_id: v.optional(v.string()),
+};
 
-    const unread = summaries
-      .filter((s) => s.kind === "direct")
-      .reduce((sum, s) => sum + s.unread_count, 0);
-    const { before_last_message_at: at, before_thread_id: id } = args;
-    const after =
-      at === undefined || id === undefined
-        ? summaries
-        : summaries.filter((s) => s.last_message_at < at || (s.last_message_at === at && s.thread_id < id));
-    const limit = Math.min(Math.max(Math.floor(args.limit ?? 30), 1), 100);
-    const page = after.slice(0, limit);
-    const last = page.at(-1);
-    return {
-      threads: page,
-      unread_direct_message_count: unread,
-      has_more: after.length > limit,
-      next_cursor:
-        after.length > limit && last !== undefined
-          ? { before_last_message_at: last.last_message_at, before_thread_id: last.thread_id }
-          : null,
-    };
-  },
+/**
+ * The user's threads, newest first, with the unread direct message count. Replaces
+ * get_inbox_sync_snapshot_v2, list_inbox_events_v2, list_my_threads and
+ * get_unread_direct_message_count. Subscribe to threads.inbox to keep the list current.
+ */
+export async function inboxFor(ctx: QueryCtx, userId: string, args: ObjectType<typeof inboxArgs>) {
+  const memberships = await ctx.db
+    .query("thread_memberships")
+    .withIndex("by_user_revision", (q) => q.eq("user_id", userId))
+    .collect();
+  const summaries = (
+    await Promise.all(
+      memberships
+        .filter((m) => m.status === "active")
+        .map(async (m) => {
+          const thread = await threadById(ctx, m.thread_id);
+          return thread === null ? null : await threadSummary(ctx, thread, userId);
+        }),
+    )
+  )
+    .filter((s) => s !== null)
+    .sort(
+      (a, b) =>
+        b.last_message_at.localeCompare(a.last_message_at) || b.thread_id.localeCompare(a.thread_id),
+    );
+
+  const unread = summaries
+    .filter((s) => s.kind === "direct")
+    .reduce((sum, s) => sum + s.unread_count, 0);
+  const { before_last_message_at: at, before_thread_id: id } = args;
+  const after =
+    at === undefined || id === undefined
+      ? summaries
+      : summaries.filter((s) => s.last_message_at < at || (s.last_message_at === at && s.thread_id < id));
+  const limit = Math.min(Math.max(Math.floor(args.limit ?? 30), 1), 100);
+  const page = after.slice(0, limit);
+  const last = page.at(-1);
+  return {
+    threads: page,
+    unread_direct_message_count: unread,
+    has_more: after.length > limit,
+    next_cursor:
+      after.length > limit && last !== undefined
+        ? { before_last_message_at: last.last_message_at, before_thread_id: last.thread_id }
+        : null,
+  };
+}
+
+export const inbox = query({
+  args: inboxArgs,
+  handler: async (ctx, args) => await inboxFor(ctx, (await requireViewer(ctx)).user.id, args),
 });
 
 /** Read state for every member, for read receipts. Replaces the thread_user_state select. */
@@ -132,128 +135,137 @@ export async function ensureState(ctx: MutationCtx, threadId: string, userId: st
 }
 
 /** Port of get_or_create_direct_thread. Needs an unblocked share in either direction. */
+export async function getOrCreateDirectFor(ctx: MutationCtx, userId: string, other_user_id: string) {
+  const allowed =
+    other_user_id !== userId &&
+    !(await pairBlocked(ctx, userId, other_user_id)) &&
+    (await Promise.all(
+      [
+        [userId, other_user_id],
+        [other_user_id, userId],
+      ].map(([owner, viewer]) =>
+        ctx.db
+          .query("shift_shares")
+          .withIndex("by_owner_viewer", (q) => q.eq("owner_id", owner).eq("viewer_id", viewer))
+          .unique(),
+      ),
+    )).some((s) => s !== null);
+  if (!allowed) reject("direct_thread_not_allowed", "Direct thread creation is not allowed for this user pair");
+
+  const [low, high] = userId < other_user_id ? [userId, other_user_id] : [other_user_id, userId];
+  const now = new Date().toISOString();
+  let threadId = (
+    await ctx.db
+      .query("direct_threads")
+      .withIndex("by_pair", (q) => q.eq("user_low_id", low).eq("user_high_id", high))
+      .unique()
+  )?.thread_id;
+  if (threadId === undefined) {
+    threadId = crypto.randomUUID();
+    await ctx.db.insert("threads", {
+      id: threadId,
+      kind: "direct",
+      created_by_user_id: userId,
+      metadata: {},
+      last_message_at: now,
+      created_at: now,
+      revision: await nextRevision(ctx),
+    });
+    await ctx.db.insert("direct_threads", {
+      thread_id: threadId,
+      user_low_id: low,
+      user_high_id: high,
+      created_at: now,
+    });
+  }
+  for (const memberId of [low, high]) {
+    const existing = await membership(ctx, threadId, memberId);
+    if (existing === null) {
+      await ctx.db.insert("thread_memberships", {
+        thread_id: threadId,
+        user_id: memberId,
+        role: "member",
+        status: "active",
+        joined_at: now,
+        revision: await nextRevision(ctx),
+      });
+    } else if (existing.status !== "active" || existing.role !== "member") {
+      await ctx.db.patch(existing._id, {
+        role: "member",
+        status: "active",
+        left_at: undefined,
+        revision: await nextRevision(ctx),
+      });
+    }
+    await ensureState(ctx, threadId, memberId);
+  }
+  return await threadSummary(ctx, (await threadById(ctx, threadId))!, userId);
+}
+
 export const getOrCreateDirect = mutation({
   args: { other_user_id: v.string() },
-  handler: async (ctx, { other_user_id }) => {
-    const { user } = await requireViewer(ctx);
-    const allowed =
-      other_user_id !== user.id &&
-      !(await pairBlocked(ctx, user.id, other_user_id)) &&
-      (await Promise.all(
-        [
-          [user.id, other_user_id],
-          [other_user_id, user.id],
-        ].map(([owner, viewer]) =>
-          ctx.db
-            .query("shift_shares")
-            .withIndex("by_owner_viewer", (q) => q.eq("owner_id", owner).eq("viewer_id", viewer))
-            .unique(),
-        ),
-      )).some((s) => s !== null);
-    if (!allowed) reject("direct_thread_not_allowed", "Direct thread creation is not allowed for this user pair");
-
-    const [low, high] = user.id < other_user_id ? [user.id, other_user_id] : [other_user_id, user.id];
-    const now = new Date().toISOString();
-    let threadId = (
-      await ctx.db
-        .query("direct_threads")
-        .withIndex("by_pair", (q) => q.eq("user_low_id", low).eq("user_high_id", high))
-        .unique()
-    )?.thread_id;
-    if (threadId === undefined) {
-      threadId = crypto.randomUUID();
-      await ctx.db.insert("threads", {
-        id: threadId,
-        kind: "direct",
-        created_by_user_id: user.id,
-        metadata: {},
-        last_message_at: now,
-        created_at: now,
-        revision: await nextRevision(ctx),
-      });
-      await ctx.db.insert("direct_threads", {
-        thread_id: threadId,
-        user_low_id: low,
-        user_high_id: high,
-        created_at: now,
-      });
-    }
-    for (const memberId of [low, high]) {
-      const existing = await membership(ctx, threadId, memberId);
-      if (existing === null) {
-        await ctx.db.insert("thread_memberships", {
-          thread_id: threadId,
-          user_id: memberId,
-          role: "member",
-          status: "active",
-          joined_at: now,
-          revision: await nextRevision(ctx),
-        });
-      } else if (existing.status !== "active" || existing.role !== "member") {
-        await ctx.db.patch(existing._id, {
-          role: "member",
-          status: "active",
-          left_at: undefined,
-          revision: await nextRevision(ctx),
-        });
-      }
-      await ensureState(ctx, threadId, memberId);
-    }
-    return await threadSummary(ctx, (await threadById(ctx, threadId))!, user.id);
-  },
+  handler: async (ctx, { other_user_id }) =>
+    await getOrCreateDirectFor(ctx, (await requireViewer(ctx)).user.id, other_user_id),
 });
 
+const markReadArgs = { thread_id: v.string(), through_message_id: v.string() };
+
 /** Port of mark_thread_read. Only moves the read marker forward. */
-export const markRead = mutation({
-  args: { thread_id: v.string(), through_message_id: v.string() },
-  handler: async (ctx, { thread_id, through_message_id }) => {
-    const { user } = await requireViewer(ctx);
-    await requireAccess(ctx, thread_id, user.id);
-    const target = await ctx.db
-      .query("messages")
-      .withIndex("by_uuid", (q) => q.eq("id", through_message_id))
-      .unique();
-    if (target === null || target.thread_id !== thread_id) {
-      reject("invalid", "Read marker message does not belong to the thread");
-    }
-    const state = await ensureState(ctx, thread_id, user.id);
-    const current =
-      state.last_read_message_id === undefined
-        ? null
-        : await ctx.db
-            .query("messages")
-            .withIndex("by_uuid", (q) => q.eq("id", state.last_read_message_id!))
-            .unique();
-    const after = (m: Doc<"messages">, than: Doc<"messages">) =>
-      m.created_at > than.created_at || (m.created_at === than.created_at && m.id > than.id);
-    if (current === null || after(target, current)) {
-      const newlyRead = (
-        await ctx.db
+export async function markReadFor(
+  ctx: MutationCtx,
+  userId: string,
+  { thread_id, through_message_id }: ObjectType<typeof markReadArgs>,
+) {
+  await requireAccess(ctx, thread_id, userId);
+  const target = await ctx.db
+    .query("messages")
+    .withIndex("by_uuid", (q) => q.eq("id", through_message_id))
+    .unique();
+  if (target === null || target.thread_id !== thread_id) {
+    reject("invalid", "Read marker message does not belong to the thread");
+  }
+  const state = await ensureState(ctx, thread_id, userId);
+  const current =
+    state.last_read_message_id === undefined
+      ? null
+      : await ctx.db
           .query("messages")
-          .withIndex("by_thread_created_at", (q) => {
-            const thread = q.eq("thread_id", thread_id);
-            return current === null
-              ? thread.lte("created_at", target.created_at)
-              : thread.gte("created_at", current.created_at).lte("created_at", target.created_at);
-          })
-          .collect()
-      ).filter(
-        (m) =>
-          m.sender_user_id !== user.id &&
-          m.deleted_at === undefined &&
-          !after(m, target) &&
-          (current === null || after(m, current)),
-      ).length;
-      await ctx.db.patch(state._id, {
-        last_read_message_id: target.id,
-        last_read_at: target.created_at,
-        unread_count: Math.max(state.unread_count - newlyRead, 0),
-        updated_at: new Date().toISOString(),
-        revision: await nextRevision(ctx),
-      });
-    }
-    return stateRow((await ctx.db.get(state._id))!);
-  },
+          .withIndex("by_uuid", (q) => q.eq("id", state.last_read_message_id!))
+          .unique();
+  const after = (m: Doc<"messages">, than: Doc<"messages">) =>
+    m.created_at > than.created_at || (m.created_at === than.created_at && m.id > than.id);
+  if (current === null || after(target, current)) {
+    const newlyRead = (
+      await ctx.db
+        .query("messages")
+        .withIndex("by_thread_created_at", (q) => {
+          const thread = q.eq("thread_id", thread_id);
+          return current === null
+            ? thread.lte("created_at", target.created_at)
+            : thread.gte("created_at", current.created_at).lte("created_at", target.created_at);
+        })
+        .collect()
+    ).filter(
+      (m) =>
+        m.sender_user_id !== userId &&
+        m.deleted_at === undefined &&
+        !after(m, target) &&
+        (current === null || after(m, current)),
+    ).length;
+    await ctx.db.patch(state._id, {
+      last_read_message_id: target.id,
+      last_read_at: target.created_at,
+      unread_count: Math.max(state.unread_count - newlyRead, 0),
+      updated_at: new Date().toISOString(),
+      revision: await nextRevision(ctx),
+    });
+  }
+  return stateRow((await ctx.db.get(state._id))!);
+}
+
+export const markRead = mutation({
+  args: markReadArgs,
+  handler: async (ctx, args) => await markReadFor(ctx, (await requireViewer(ctx)).user.id, args),
 });
 
 export const setMuted = mutation({
