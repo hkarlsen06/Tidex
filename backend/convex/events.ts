@@ -3,7 +3,7 @@ import { reject, syncedTable } from "./lib/syncWrite";
 const TIME = /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/;
 const END_TIME = /^(?:(?:[01][0-9]|2[0-3]):[0-5][0-9]|24:00)$/;
 
-export const { insert, update, remove } = syncedTable("events", {
+const events = syncedTable("events", {
   check: async (_ctx, event) => {
     if (event.note.trim() === "") reject("invalid_row", "events_note_not_blank");
     if (event.notification_anchor_time !== undefined && !TIME.test(event.notification_anchor_time)) {
@@ -29,3 +29,7 @@ export const { insert, update, remove } = syncedTable("events", {
     if (!timed && !allDay) reject("invalid_row", "events_shape_valid");
   },
 });
+
+export const { insert, update, remove } = events;
+/** The same writes for a known user, for the MCP server. */
+export const eventWrites = { insert: events.insertFor, update: events.updateFor, remove: events.removeFor };

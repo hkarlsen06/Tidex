@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { type MutationCtx, mutation } from "./_generated/server";
 import { requireViewer } from "./lib/auth";
 import { checkColumns } from "./lib/columns";
 import { nextRevision } from "./lib/revision";
@@ -20,28 +20,37 @@ export const upsert = mutation({
   handler: async (ctx, { expected_user_id, ...args }) => {
     const { user } = await requireViewer(ctx);
     requireExpectedUser(user.id, expected_user_id);
-    if ((args.shift_reminder_minutes_array?.length ?? 0) > 4) reject("invalid_row", "max_four_reminders");
-    checkColumns("notification_preferences", args);
-    const existing = await ctx.db
-      .query("notification_preferences")
-      .withIndex("by_user_revision", (q) => q.eq("user_id", user.id))
-      .unique();
-    const fields = {
-      ...args,
-      updated_at: new Date().toISOString(),
-      revision: await nextRevision(ctx),
-    };
-    if (existing !== null) {
-      await ctx.db.patch(existing._id, fields);
-      return publicRow((await ctx.db.get(existing._id))!);
-    }
-    const id = await ctx.db.insert("notification_preferences", {
-      user_id: user.id,
-      shared_shifts_enabled: true,
-      shift_reminders_enabled: true,
-      shift_reminder_minutes_array: [300],
-      ...fields,
-    });
-    return publicRow((await ctx.db.get(id))!);
+    return await upsertNotificationPreferencesFor(ctx, user.id, args);
   },
 });
+
+/** The upsert for a known user. The MCP server calls it for the user its token names. */
+export async function upsertNotificationPreferencesFor(
+  ctx: MutationCtx,
+  userId: string,
+  args: { shared_shifts_enabled?: boolean; shift_reminders_enabled?: boolean; shift_reminder_minutes_array?: number[] },
+) {
+  if ((args.shift_reminder_minutes_array?.length ?? 0) > 4) reject("invalid_row", "max_four_reminders");
+  checkColumns("notification_preferences", args);
+  const existing = await ctx.db
+    .query("notification_preferences")
+    .withIndex("by_user_revision", (q) => q.eq("user_id", userId))
+    .unique();
+  const fields = {
+    ...args,
+    updated_at: new Date().toISOString(),
+    revision: await nextRevision(ctx),
+  };
+  if (existing !== null) {
+    await ctx.db.patch(existing._id, fields);
+    return publicRow((await ctx.db.get(existing._id))!);
+  }
+  const id = await ctx.db.insert("notification_preferences", {
+    user_id: userId,
+    shared_shifts_enabled: true,
+    shift_reminders_enabled: true,
+    shift_reminder_minutes_array: [300],
+    ...fields,
+  });
+  return publicRow((await ctx.db.get(id))!);
+}

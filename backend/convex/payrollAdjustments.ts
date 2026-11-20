@@ -4,7 +4,7 @@ const within = (value: string | undefined, max: number) => value === undefined |
 const trimmedWithin = (value: string | undefined, max: number) =>
   value === undefined || (chars(value.trim()) >= 1 && chars(value.trim()) <= max);
 
-export const { insert, update, remove } = syncedTable("payroll_adjustments", {
+const adjustments = syncedTable("payroll_adjustments", {
   check: async (ctx, adjustment, _prev, changed) => {
     if (changed.has("job_id") && adjustment.job_id !== undefined) {
       await requireLiveJob(ctx, adjustment.user_id, adjustment.job_id);
@@ -29,3 +29,7 @@ export const { insert, update, remove } = syncedTable("payroll_adjustments", {
     if (failed !== undefined) reject("invalid_row", failed[1]);
   },
 });
+
+export const { insert, update, remove } = adjustments;
+/** The same writes for a known user, for the MCP server. */
+export const adjustmentWrites = { insert: adjustments.insertFor, update: adjustments.updateFor, remove: adjustments.removeFor };

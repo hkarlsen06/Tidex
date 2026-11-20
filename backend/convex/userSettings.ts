@@ -31,6 +31,10 @@ const defaultable = [
   "ai_data_sharing_enabled",
   "wagey_showcase_seen",
 ] as const;
+type SettingsFields = Omit<
+  Doc<"user_settings">,
+  "_id" | "_creationTime" | "user_id" | "revision" | "created_at" | "updated_at" | "profile_picture_storage_id"
+>;
 const optionalFields = Object.entries(all.fields)
   .filter(([, validator]) => validator.isOptional === "optional")
   .map(([k]) => k);
@@ -136,29 +140,38 @@ export const update = mutation({
     set: all.partial(),
     clear: v.optional(v.array(v.union(...optionalFields.map((k) => v.literal(k))))),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { expected_user_id, ...args }) => {
     const { user } = await requireViewer(ctx);
-    requireExpectedUser(user.id, args.expected_user_id);
-    const prev = await ownSettings(ctx, user.id);
-    if (prev === null) return { status: "conflict" as const, row: null };
-    if (prev.revision !== args.expected_revision) {
-      return { status: "conflict" as const, row: await settingsRow(ctx, prev) };
-    }
-    checkColumns("user_settings", args.set);
-    const cleared = Object.fromEntries((args.clear ?? []).map((k) => [k, undefined]));
-    const revision = await nextRevision(ctx);
-    const patch = { ...args.set, ...cleared, updated_at: new Date().toISOString(), revision };
-    const next = { ...prev, ...patch } as Record<string, unknown>;
-    for (const k of Object.keys(cleared)) delete next[k];
-    check(next as Doc<"user_settings">);
-    await ctx.db.patch(prev._id, patch);
-    const changed = [...Object.keys(args.set), ...Object.keys(cleared)];
-    if (mirrored.some((k) => changed.includes(k))) {
-      await mirrorToDefaultJob(ctx, (await ctx.db.get(prev._id))!);
-    }
-    return { status: "ok" as const, row: await settingsRow(ctx, (await ctx.db.get(prev._id))!) };
+    requireExpectedUser(user.id, expected_user_id);
+    return await updateSettingsFor(ctx, user.id, args);
   },
 });
+
+/** The update for a known user. The MCP server calls it for the user its token names. */
+export async function updateSettingsFor(
+  ctx: MutationCtx,
+  userId: string,
+  args: { expected_revision: number; set: Partial<SettingsFields>; clear?: string[] },
+) {
+  const prev = await ownSettings(ctx, userId);
+  if (prev === null) return { status: "conflict" as const, row: null };
+  if (prev.revision !== args.expected_revision) {
+    return { status: "conflict" as const, row: await settingsRow(ctx, prev) };
+  }
+  checkColumns("user_settings", args.set);
+  const cleared = Object.fromEntries((args.clear ?? []).map((k) => [k, undefined]));
+  const revision = await nextRevision(ctx);
+  const patch = { ...args.set, ...cleared, updated_at: new Date().toISOString(), revision };
+  const next = { ...prev, ...patch } as Record<string, unknown>;
+  for (const k of Object.keys(cleared)) delete next[k];
+  check(next as Doc<"user_settings">);
+  await ctx.db.patch(prev._id, patch);
+  const changed = [...Object.keys(args.set), ...Object.keys(cleared)];
+  if (mirrored.some((k) => changed.includes(k))) {
+    await mirrorToDefaultJob(ctx, (await ctx.db.get(prev._id))!);
+  }
+  return { status: "ok" as const, row: await settingsRow(ctx, (await ctx.db.get(prev._id))!) };
+}
 
 /** Points the settings row at `storageId`, or clears the picture, and deletes the old file. */
 async function swapProfilePicture(ctx: MutationCtx, storageId: Id<"_storage"> | undefined) {
