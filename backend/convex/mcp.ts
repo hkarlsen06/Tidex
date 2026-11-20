@@ -3,25 +3,26 @@ import type { JSONWebKeySet } from "jose";
 import { internal } from "./_generated/api";
 import { type ActionCtx, httpAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { userByClerkId } from "./lib/auth";
+import { RATE_WINDOW_MS } from "./lib/mcp/db";
 import { handleMcpPost, resourceMetadata, type ToolOutcome } from "./lib/mcp/protocol";
 import type { McpTool } from "./lib/mcp/registry";
 import { ToolError } from "./lib/mcp/shiftTimes";
 import { checkKeySet, type KeySource, verifyAccessToken } from "./lib/mcp/token";
 import { payTools } from "./mcpPay";
 import { shiftTools } from "./mcpShifts";
+import { socialTools } from "./mcpSocial";
 
 // The MCP server: lets a user's AI agent read and change their Tidex data. See
 // docs/mcp-server.md. The HTTP action checks the OAuth token, its scopes and the
 // arguments, then runs the tool for the user the token names. Each area's tools live in
 // mcp<Area>.ts.
 
-const tools: McpTool[] = [...shiftTools, ...payTools];
+const tools: McpTool[] = [...shiftTools, ...payTools, ...socialTools];
 
 const KEYS_FRESH_MS = 60 * 60_000;
 // Clerk's keys are fetched at most this often, failed attempts included, so junk tokens
 // naming unknown keys can't make every request reach Clerk.
 const KEY_FETCH_COOLDOWN_MS = 60_000;
-const WINDOW_MS = 10 * 60_000;
 const MAX_CALLS = 120;
 const MAX_WRITES = 40;
 
@@ -104,14 +105,15 @@ export const consume = internalMutation({
   handler: async (ctx, { user_id, write }) => {
     const now = Date.now();
     const row = await ctx.db.query("mcp_rate_limits").withIndex("by_user", (q) => q.eq("user_id", user_id)).unique();
-    if (row === null || now - row.window_start >= WINDOW_MS) {
+    if (row === null || now - row.window_start >= RATE_WINDOW_MS) {
+      // Replacing the row also clears the sends that mcpSocial counts.
       const fresh = { user_id, window_start: now, calls: 1, writes: write ? 1 : 0 };
       if (row === null) await ctx.db.insert("mcp_rate_limits", fresh);
       else await ctx.db.replace(row._id, fresh);
       return null;
     }
     if (row.calls >= MAX_CALLS || (write && row.writes >= MAX_WRITES)) {
-      return Math.ceil((row.window_start + WINDOW_MS - now) / 1000);
+      return Math.ceil((row.window_start + RATE_WINDOW_MS - now) / 1000);
     }
     await ctx.db.patch(row._id, { calls: row.calls + 1, writes: row.writes + (write ? 1 : 0) });
     return null;

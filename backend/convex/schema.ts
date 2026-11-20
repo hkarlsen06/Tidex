@@ -759,6 +759,8 @@ export default defineSchema({
     window_start: v.number(),
     calls: v.number(),
     writes: v.number(),
+    // Messages sent and shares started in the window, which have a tighter cap.
+    sends: v.optional(v.number()),
   }).index("by_user", ["user_id"]),
 
   // Clerk's JWKS for verifying MCP access tokens. Action memory doesn't last between

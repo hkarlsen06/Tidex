@@ -6,6 +6,9 @@ import { ToolError } from "./shiftTimes";
 
 // Database helpers the MCP tool modules (mcp<Area>.ts) share.
 
+/** The fixed window mcp_rate_limits counts calls in. */
+export const RATE_WINDOW_MS = 10 * 60_000;
+
 /** A message the agent sees as the tool's result. */
 export function fail(message: string): never {
   throw new ConvexError({ code: "tool_error", message });
