@@ -81,7 +81,7 @@ Tariff pay uses the catalogue's current version only, so a tariff change dated b
 | `change_recurring_occurrence` | write | One date of a series: skip it, set its note, or turn it into a one-off shift (an exclusion plus a new shift, as the app does). |
 | `list_events`, `add_event`, `update_event`, `delete_event` | read, write | Timed and all-day events with up to four reminders. Reminders are local notifications, so the phone schedules them after the app next syncs. |
 | `list_payroll_adjustments`, `add_payroll_adjustment`, `update_payroll_adjustment`, `delete_payroll_adjustment` | read, write | Bonuses, back pay and corrections in the job's currency. A job without tax on the payout date gets `net_manual`, as in the app. |
-| `get_settings`, `update_settings` | read, write | Theme, calendar colour style, dashboard clock buttons, startup tab, schedule time zone and notification settings (shift reminders and friend shift alerts). |
+| `get_settings`, `update_settings` | read, write | Theme, calendar colour style, dashboard clock buttons, startup tab and schedule time zone. `get_settings` also shows the notification settings as the phone last saved them; they can't be changed here, because the app keeps its own copy and never takes a server change to it (`NotificationPreferencesRepository.saveFromServer`). |
 
 A recurring series that ends at midnight is stored with the end `00:00`, which the app reads the same way. The server's time column refuses `24:00` for recurring shifts, although the app itself sends it for such a series.
 
@@ -91,12 +91,12 @@ A recurring series that ends at midnight is stored with the end `00:00`, which t
 | --- | --- | --- | --- |
 | `list_friends` | read | People who share with the user and people the user shares with, with both sides' settings. Never email addresses; blocked pairs are left out and hidden ones marked. | none |
 | `get_friend_schedule` | read | A friend's shifts for up to 93 days on the friend's clock, with gross pay only when the friend shares earnings. Hidden and blocked friends are refused. | none |
-| `list_conversations`, `read_conversation` | read | Conversations and their messages. Images are listed by kind only, because their URLs need the app's session. Reading never marks a conversation as read. | none |
-| `send_message` | write | Plain text to a friend, starting the conversation if needed, tagged `sent_via: "mcp"` in the message metadata. | a message push, unless the friend muted the conversation |
+| `list_conversations`, `read_conversation` | read | Conversations, a page at a time, and their messages. Images are listed by kind only, because their URLs need the app's session. Reading never marks a conversation as read. | none |
+| `send_message` | write | Plain text to a friend, starting the conversation if needed, tagged `sent_via: "mcp"` in the message metadata. A retry with the same `client_id` returns the message already sent and doesn't count toward the send cap. | a message push, unless the friend muted the conversation |
 | `mark_conversation_read` | write | Marks a conversation as read. The friend sees the read receipt. | none |
 | `share_shifts_with` | write | Starts sharing the user's shifts with someone found by username or verified email. Earnings stay hidden unless asked for. | a share-started push, if the other person allows it |
 | `update_sharing` | write | Earnings and notifications on the user's share, and hidden and notifications for the friend's share. | none |
-| `stop_sharing` | write, destructive | Stops sharing the user's shifts with a friend. | none |
+| `stop_sharing` | write, destructive | Stops sharing the user's shifts with a friend. A blocked pair is refused, because deleting its share would lift the block. | none |
 
 Blocking, unblocking, reporting, typing indicators, screenshot reports, username and profile picture changes, and attachments stay in the app.
 

@@ -105,18 +105,23 @@ export const listConversations = {
   definition: {
     name: "list_conversations",
     title: "List conversations",
-    description: "The user's conversations, newest first, with the last message and the unread count of each.",
+    description:
+      "The user's conversations, newest first, with the last message and the unread count of each. When has_more is true, " +
+      "pass next_after_thread_id as after_thread_id for the next page.",
     inputSchema: {
       type: "object",
-      properties: { limit: { ...limit, description: "How many conversations, 30 when left out" } },
+      properties: {
+        limit: { ...limit, description: "How many conversations, 30 when left out" },
+        after_thread_id: { type: "string", description: "next_after_thread_id from the previous page" },
+      },
       additionalProperties: false,
     },
     annotations: { title: "List conversations", ...readOnly },
   },
   scope: "read",
   parse: (args) => {
-    allowOnly(args, ["limit"]);
-    return { limit: optionalLimit(args.limit) };
+    allowOnly(args, ["limit", "after_thread_id"]);
+    return { limit: optionalLimit(args.limit), after_thread_id: optionalString(args.after_thread_id, "after_thread_id") };
   },
 } satisfies ToolSpec;
 
@@ -169,7 +174,8 @@ export const sendMessage = {
       required: ["friend_id", "text"],
       additionalProperties: false,
     },
-    annotations: { title: "Send message", ...reachesOthers, idempotentHint: true },
+    // Only a call that passes client_id is safe to repeat, so the hint stays false.
+    annotations: { title: "Send message", ...reachesOthers, idempotentHint: false },
   },
   scope: "write",
   parse: (args) => {

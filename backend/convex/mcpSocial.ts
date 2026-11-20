@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { userByUuid } from "./lib/auth";
-import { canAccessThread, counterpartOf, richContentKind } from "./lib/messaging";
+import { canAccessThread, counterpartOf, pairBlocked, richContentKind } from "./lib/messaging";
 import { fail, live, RATE_WINDOW_MS, requireUser } from "./lib/mcp/db";
 import { shiftEarnings } from "./lib/mcp/earnings";
 import { type McpTool, tool } from "./lib/mcp/registry";
@@ -24,7 +24,7 @@ import {
   updateMyShareFor,
   updateSharerFor,
 } from "./sharing";
-import { getOrCreateDirectFor, inboxFor, markReadFor } from "./threads";
+import { getOrCreateDirectFor, inboxFor, markReadFor, threadById } from "./threads";
 
 // The MCP friends and messages tools. Each runs for the user the OAuth token names; mcp.ts
 // checks the token, the scope and the arguments first. None of these functions is public.
@@ -198,9 +198,15 @@ export const friendSchedule = internalQuery({
 });
 
 export const listConversations = internalQuery({
-  args: { user_id: v.string(), limit: v.optional(v.number()) },
-  handler: async (ctx, { user_id, limit }) => {
-    const inbox = await inboxFor(ctx, user_id, { limit });
+  args: { user_id: v.string(), limit: v.optional(v.number()), after_thread_id: v.optional(v.string()) },
+  handler: async (ctx, { user_id, limit, after_thread_id }) => {
+    let cursor = {};
+    if (after_thread_id !== undefined) {
+      const after = await threadById(ctx, after_thread_id);
+      if (after === null || !(await canAccessThread(ctx, after.id, user_id))) fail(NO_CONVERSATION);
+      cursor = { before_last_message_at: after.last_message_at, before_thread_id: after.id };
+    }
+    const inbox = await inboxFor(ctx, user_id, { limit, ...cursor });
     const conversations = await Promise.all(
       inbox.threads.map(async (t) => ({
         thread_id: t.thread_id,
@@ -220,7 +226,12 @@ export const listConversations = internalQuery({
               },
       })),
     );
-    return { conversations, unread_direct_messages: inbox.unread_direct_message_count, has_more: inbox.has_more };
+    return {
+      conversations,
+      unread_direct_messages: inbox.unread_direct_message_count,
+      has_more: inbox.has_more,
+      next_after_thread_id: inbox.next_cursor?.before_thread_id ?? null,
+    };
   },
 });
 
@@ -256,13 +267,21 @@ export const sendMessage = internalMutation({
     await sharesBetween(ctx, user.id, args.friend_id);
     const thread = await getOrCreateDirectFor(ctx, user.id, args.friend_id);
     if (thread === null) fail(NOT_A_FRIEND);
+    const clientId = args.client_id ?? crypto.randomUUID();
+    // A retry with the same client_id returns the message already sent and isn't a new send.
+    const retried = await ctx.db
+      .query("messages")
+      .withIndex("by_thread_sender_client", (q) =>
+        q.eq("thread_id", thread.thread_id).eq("sender_user_id", user.id).eq("client_id", clientId),
+      )
+      .unique();
     const sent = await sendFor(ctx, user.id, {
       thread_id: thread.thread_id,
-      client_id: args.client_id ?? crypto.randomUUID(),
+      client_id: clientId,
       body: args.text,
       metadata: { sent_via: "mcp" },
     });
-    await countSend(ctx, user.id);
+    if (retried === null) await countSend(ctx, user.id);
     return { thread_id: thread.thread_id, message: message(sent, user.id, await namesOf(ctx, [user.id])) };
   },
 });
@@ -348,6 +367,8 @@ export const stopSharing = internalMutation({
   args: { user_id: v.string(), friend_id: v.string() },
   handler: async (ctx, { user_id, friend_id }) => {
     const user = await requireUser(ctx, user_id);
+    // Deleting the only share of a blocked pair would lift the block, which stays in the app.
+    if (await pairBlocked(ctx, user.id, friend_id)) fail(NOT_A_FRIEND);
     const share = await shareBetween(ctx, user.id, friend_id);
     if (share !== null && !(await removeShareFor(ctx, user.id, friend_id))) fail(NOT_A_FRIEND);
     return { friend_id, i_share_with_them: false };
