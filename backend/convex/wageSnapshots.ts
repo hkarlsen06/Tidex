@@ -1,6 +1,6 @@
 import { reject, requireLiveJob, syncedTable } from "./lib/syncWrite";
 
-export const { insert, update, remove } = syncedTable("wage_snapshots", {
+const snapshots = syncedTable("wage_snapshots", {
   check: async (ctx, snapshot, _prev, changed) => {
     if (changed.has("job_id")) await requireLiveJob(ctx, snapshot.user_id, snapshot.job_id);
     const tax = snapshot.tax_percentage;
@@ -24,3 +24,7 @@ export const { insert, update, remove } = syncedTable("wage_snapshots", {
     }
   },
 });
+
+export const { insert, update, remove } = snapshots;
+/** The same writes for a known user, for the MCP server. */
+export const wageSnapshotWrites = { insert: snapshots.insertFor, update: snapshots.updateFor, remove: snapshots.removeFor };

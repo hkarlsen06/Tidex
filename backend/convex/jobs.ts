@@ -51,7 +51,7 @@ async function userSettings(ctx: MutationCtx, userId: string) {
     .unique();
 }
 
-export const { insert, update, remove } = syncedTable(
+const jobs = syncedTable(
   "jobs",
   {
     defaults: async (ctx, userId) => ({
@@ -139,6 +139,10 @@ export const { insert, update, remove } = syncedTable(
   ["is_default", "sort_order", "currency"],
 );
 
+export const { insert, update, remove } = jobs;
+/** The same writes for a known user, for the MCP server. */
+export const jobWrites = { insert: jobs.insertFor, update: jobs.updateFor, remove: jobs.removeFor };
+
 const historyTables = ["user_shifts", "recurring_shifts", "payroll_adjustments", "wage_snapshots"] as const;
 
 /**
@@ -147,86 +151,94 @@ const historyTables = ["user_shifts", "recurring_shifts", "payroll_adjustments",
  * history, unless any of those rows changed since the preview. A retry after a lost
  * success response returns the earlier deletion instead of failing.
  */
+export async function deleteArchivedFor(
+  ctx: MutationCtx,
+  userId: string,
+  { job_id, confirmation_token }: { job_id: string; confirmation_token?: string },
+) {
+  const job = await ctx.db
+    .query("jobs")
+    .withIndex("by_uuid", (q) => q.eq("id", job_id))
+    .unique();
+  if (job === null || job.user_id !== userId) reject("not_found", "workplace not found");
+
+  const receipt = {
+    job_id: job.id,
+    user_id: job.user_id,
+    job_name: job.name,
+    job_revision: job.revision,
+  };
+  if (job.deleted_at !== undefined) {
+    if (confirmation_token === undefined) reject("not_found", "workplace not found");
+    return {
+      ...receipt,
+      confirmation_token,
+      user_shifts: 0,
+      recurring_shifts: 0,
+      payroll_adjustments: 0,
+      wage_snapshots: 0,
+      deleted_at_epoch: Date.parse(job.deleted_at) / 1000,
+    };
+  }
+  if (job.archived_at === undefined || job.is_default) {
+    reject("not_archived", "archive the workplace before deleting it");
+  }
+
+  const history = Object.fromEntries(
+    await Promise.all(
+      historyTables.map(async (t) => {
+        const rows = await ctx.db
+          .query(t)
+          .withIndex("by_job", (q) => q.eq("job_id", job.id))
+          .collect();
+        return [t, rows.filter((r) => r.user_id === userId && r.deleted_at === undefined)] as const;
+      }),
+    ),
+  ) as { [T in (typeof historyTables)[number]]: Doc<T>[] };
+
+  // Every write gives its row a revision above all earlier ones. An added or edited
+  // row raises the highest revision, and a deleted one leaves the live history, so
+  // the count drops. Either changes the token.
+  const live = Object.values(history).flat();
+  const token = `${Math.max(job.revision, ...live.map((r) => r.revision))}:${live.length}`;
+  const result = {
+    ...receipt,
+    confirmation_token: token,
+    user_shifts: history.user_shifts.length,
+    recurring_shifts: history.recurring_shifts.length,
+    payroll_adjustments: history.payroll_adjustments.length,
+    wage_snapshots: history.wage_snapshots.length,
+    deleted_at_epoch: null as number | null,
+  };
+  if (confirmation_token === undefined) return result;
+  if (confirmation_token !== token) {
+    reject("history_changed", "workplace history changed; review deletion again");
+  }
+
+  const now = new Date();
+  const deletedAt = now.toISOString();
+  for (const row of live) {
+    await ctx.db.patch(row._id, {
+      deleted_at: deletedAt,
+      updated_at: deletedAt,
+      revision: await nextRevision(ctx),
+    });
+  }
+  for (const shift of history.user_shifts) await cancelShiftAdded(ctx, shift);
+  const jobRevision = await nextRevision(ctx);
+  await ctx.db.patch(job._id, {
+    deleted_at: deletedAt,
+    is_default: false,
+    updated_at: deletedAt,
+    revision: jobRevision,
+  });
+  return { ...result, job_revision: jobRevision, deleted_at_epoch: now.getTime() / 1000 };
+}
+
 export const deleteArchived = mutation({
   args: { job_id: v.string(), confirmation_token: v.optional(v.string()) },
-  handler: async (ctx, { job_id, confirmation_token }) => {
+  handler: async (ctx, args) => {
     const { user } = await requireViewer(ctx);
-    const job = await ctx.db
-      .query("jobs")
-      .withIndex("by_uuid", (q) => q.eq("id", job_id))
-      .unique();
-    if (job === null || job.user_id !== user.id) reject("not_found", "workplace not found");
-
-    const receipt = {
-      job_id: job.id,
-      user_id: job.user_id,
-      job_name: job.name,
-      job_revision: job.revision,
-    };
-    if (job.deleted_at !== undefined) {
-      if (confirmation_token === undefined) reject("not_found", "workplace not found");
-      return {
-        ...receipt,
-        confirmation_token,
-        user_shifts: 0,
-        recurring_shifts: 0,
-        payroll_adjustments: 0,
-        wage_snapshots: 0,
-        deleted_at_epoch: Date.parse(job.deleted_at) / 1000,
-      };
-    }
-    if (job.archived_at === undefined || job.is_default) {
-      reject("not_archived", "archive the workplace before deleting it");
-    }
-
-    const history = Object.fromEntries(
-      await Promise.all(
-        historyTables.map(async (t) => {
-          const rows = await ctx.db
-            .query(t)
-            .withIndex("by_job", (q) => q.eq("job_id", job.id))
-            .collect();
-          return [t, rows.filter((r) => r.user_id === user.id && r.deleted_at === undefined)] as const;
-        }),
-      ),
-    ) as { [T in (typeof historyTables)[number]]: Doc<T>[] };
-
-    // Every write gives its row a revision above all earlier ones. An added or edited
-    // row raises the highest revision, and a deleted one leaves the live history, so
-    // the count drops. Either changes the token.
-    const live = Object.values(history).flat();
-    const token = `${Math.max(job.revision, ...live.map((r) => r.revision))}:${live.length}`;
-    const result = {
-      ...receipt,
-      confirmation_token: token,
-      user_shifts: history.user_shifts.length,
-      recurring_shifts: history.recurring_shifts.length,
-      payroll_adjustments: history.payroll_adjustments.length,
-      wage_snapshots: history.wage_snapshots.length,
-      deleted_at_epoch: null as number | null,
-    };
-    if (confirmation_token === undefined) return result;
-    if (confirmation_token !== token) {
-      reject("history_changed", "workplace history changed; review deletion again");
-    }
-
-    const now = new Date();
-    const deletedAt = now.toISOString();
-    for (const row of live) {
-      await ctx.db.patch(row._id, {
-        deleted_at: deletedAt,
-        updated_at: deletedAt,
-        revision: await nextRevision(ctx),
-      });
-    }
-    for (const shift of history.user_shifts) await cancelShiftAdded(ctx, shift);
-    const jobRevision = await nextRevision(ctx);
-    await ctx.db.patch(job._id, {
-      deleted_at: deletedAt,
-      is_default: false,
-      updated_at: deletedAt,
-      revision: jobRevision,
-    });
-    return { ...result, job_revision: jobRevision, deleted_at_epoch: now.getTime() / 1000 };
+    return await deleteArchivedFor(ctx, user.id, args);
   },
 });
