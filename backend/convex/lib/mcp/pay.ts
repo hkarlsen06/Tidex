@@ -214,9 +214,12 @@ export function snapshotFields(settings: PaySettings, base: StoredSnapshot | nul
   const taxPercentage = taxEnabled ? (tax?.percentage ?? base?.tax_percentage) : undefined;
   if (taxEnabled && taxPercentage === undefined) throw new ToolError("tax.percentage is required when tax is on.");
 
-  // OnboardingData.usesSimpleSetup: a new job paid in another currency than kr gets no break deduction.
-  const breakEnabled = breaks?.enabled ?? base?.break_enabled ?? on.currency === "kr";
-  const storedMethod = base?.break_method === "none" ? undefined : base?.break_method;
+  // Existing pay keeps its break behaviour unless the call changes it; a missing break_enabled
+  // means on in the app (WageSnapshot.effectiveBreakEnabled). OnboardingData.usesSimpleSetup:
+  // new pay in another currency than kr gets no break deduction.
+  const breakEnabled = breaks?.enabled ?? (base === null ? on.currency === "kr" : (base.break_enabled ?? true));
+  // The pay editor turns method "none" into proportional only when the user switches breaks on.
+  const storedMethod = breaks?.enabled === true && base?.break_method === "none" ? undefined : base?.break_method;
 
   return {
     ...payFields,

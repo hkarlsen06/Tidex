@@ -14,6 +14,7 @@ import {
   snapshotInEffect,
   snapshotRow,
   snapshotUpdate,
+  type StoredSnapshot,
   updateJob,
 } from "../convex/lib/mcp/pay";
 import { ToolError } from "../convex/lib/mcp/shiftTimes";
@@ -245,4 +246,33 @@ describe("jobs", () => {
 test("the committed MCP contract fixture is what the builders produce", async () => {
   // Rewrite it with: bun backend/scripts/mcp-contract-fixture.ts
   expect(await Bun.file(FIXTURE_PATH).json()).toEqual(buildFixture());
+});
+
+describe("changing one part of existing pay", () => {
+  const stored = (fields: Partial<StoredSnapshot>): StoredSnapshot => ({
+    hourly_wage: 20,
+    supplements: { rules: [] },
+    overtime: { enabled: false, retainSupplements: false, rules: [], weeklyThresholdHours: 40 },
+    ...fields,
+  });
+
+  test("turning tax on leaves the break deduction the user had", () => {
+    const noDeduction = stored({ break_enabled: true, break_method: "none" });
+    const fields = snapshotFields(settings({ tax: { enabled: true, percentage: 30 } }), noDeduction, { date: "2026-12-01", currency: "kr" });
+    expect(fields.break_method).toBe("none");
+    expect(fields.tax_percentage).toBe(30);
+  });
+
+  test("pay in another currency keeps breaks on when the stored pay never said", () => {
+    const fields = snapshotFields(settings({ tax: { enabled: false } }), stored({}), { date: "2026-12-01", currency: "$" });
+    expect(fields.break_enabled).toBe(true);
+  });
+
+  test("switching breaks on replaces a stored 'none' method, as the pay editor does", () => {
+    const fields = snapshotFields(settings({ breaks: { enabled: true } }), stored({ break_enabled: false, break_method: "none" }), {
+      date: "2026-12-01",
+      currency: "kr",
+    });
+    expect(fields.break_method).toBe("proportional");
+  });
 });
