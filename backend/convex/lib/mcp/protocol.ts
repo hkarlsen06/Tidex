@@ -159,7 +159,12 @@ export async function handleMcpPost(request: Request, deps: McpDeps): Promise<Re
   const method = message.method;
   const params = isObject(message.params) ? message.params : {};
 
-  if (method === "initialize") {
+  const version = request.headers.get("MCP-Protocol-Version");
+  const meta = isObject(params._meta) ? params._meta : {};
+  // A body that declares 2026-07-28 gets that era's header checks even without the header.
+  const modern = version === MODERN_VERSION || meta[META_VERSION] === MODERN_VERSION;
+  // initialize belongs to the 2025 era; a 2026-07-28 request never opens with it.
+  if (method === "initialize" && !modern) {
     const requested = typeof params.protocolVersion === "string" ? params.protocolVersion : "";
     return json(200, {
       jsonrpc: "2.0",
@@ -173,10 +178,6 @@ export async function handleMcpPost(request: Request, deps: McpDeps): Promise<Re
     });
   }
 
-  const version = request.headers.get("MCP-Protocol-Version");
-  const meta = isObject(params._meta) ? params._meta : {};
-  // A body that declares 2026-07-28 gets that era's header checks even without the header.
-  const modern = version === MODERN_VERSION || meta[META_VERSION] === MODERN_VERSION;
   if (version !== null && !SUPPORTED_VERSIONS.includes(version) && !modern) {
     return rpcError(400, id, -32022, "Unsupported protocol version", { supported: SUPPORTED_VERSIONS, requested: version });
   }

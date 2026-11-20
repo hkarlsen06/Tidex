@@ -21,9 +21,9 @@ import { shiftWrites } from "./userShifts";
 // runs these internal functions for the user the token names. None of them is public.
 
 const KEYS_FRESH_MS = 60 * 60_000;
-// A token naming an unknown key refetches at most this often, so junk tokens can't make
-// every request reach Clerk.
-const KEYS_REFRESH_COOLDOWN_MS = 60_000;
+// Clerk's keys are fetched at most this often, failed attempts included, so junk tokens
+// naming unknown keys can't make every request reach Clerk.
+const KEY_FETCH_COOLDOWN_MS = 60_000;
 const WINDOW_MS = 10 * 60_000;
 const MAX_CALLS = 120;
 const MAX_WRITES = 40;
@@ -96,35 +96,65 @@ async function requireUser(ctx: QueryCtx, userId: string) {
 
 // ---------- Access ----------
 
-export const cachedKeys = internalQuery({
+const keyRow = (ctx: QueryCtx, issuer: string) =>
+  ctx.db.query("mcp_signing_keys").withIndex("by_issuer", (q) => q.eq("issuer", issuer)).unique();
+
+export const storedKeys = internalQuery({
   args: { issuer: v.string() },
   handler: async (ctx, { issuer }) => {
-    const row = await ctx.db.query("mcp_signing_keys").withIndex("by_issuer", (q) => q.eq("issuer", issuer)).unique();
-    return row === null ? null : { keys: row.keys as JSONWebKeySet, fetched_at: row.fetched_at };
+    const row = await keyRow(ctx, issuer);
+    return row?.keys === undefined ? null : { keys: row.keys as JSONWebKeySet, fetched_at: row.fetched_at };
+  },
+});
+
+/** True for the one request a minute that may fetch Clerk's keys. */
+export const claimKeyFetch = internalMutation({
+  args: { issuer: v.string() },
+  handler: async (ctx, { issuer }) => {
+    const now = Date.now();
+    const row = await keyRow(ctx, issuer);
+    if (row !== null && now - (row.attempted_at ?? 0) < KEY_FETCH_COOLDOWN_MS) return false;
+    if (row === null) await ctx.db.insert("mcp_signing_keys", { issuer, fetched_at: 0, attempted_at: now });
+    else await ctx.db.patch(row._id, { attempted_at: now });
+    return true;
   },
 });
 
 export const storeKeys = internalMutation({
   args: { issuer: v.string(), keys: v.any() },
   handler: async (ctx, { issuer, keys }) => {
-    const row = await ctx.db.query("mcp_signing_keys").withIndex("by_issuer", (q) => q.eq("issuer", issuer)).unique();
-    const fields = { issuer, keys, fetched_at: Date.now() };
-    if (row === null) await ctx.db.insert("mcp_signing_keys", fields);
-    else await ctx.db.replace(row._id, fields);
+    const row = await keyRow(ctx, issuer);
+    if (row !== null) await ctx.db.patch(row._id, { keys, fetched_at: Date.now() });
   },
 });
 
+/**
+ * Clerk's keys from mcp_signing_keys, fetched again after an hour, or sooner when a token
+ * names a key they lack. Stored keys stand in while a fetch fails.
+ */
 function clerkKeys(ctx: ActionCtx, issuer: string): KeySource {
   return async (refresh) => {
-    const cached = await ctx.runQuery(internal.mcp.cachedKeys, { issuer });
-    const maxAge = refresh ? KEYS_REFRESH_COOLDOWN_MS : KEYS_FRESH_MS;
-    if (cached !== null && Date.now() - cached.fetched_at < maxAge) return cached.keys;
-    const response = await fetch(`${issuer}/.well-known/jwks.json`);
-    if (!response.ok) throw new Error(`Clerk JWKS answered ${response.status}`);
-    const keys = (await response.json()) as JSONWebKeySet;
-    if (!Array.isArray(keys?.keys)) throw new Error("Clerk JWKS has no keys");
-    await ctx.runMutation(internal.mcp.storeKeys, { issuer, keys });
-    return keys;
+    const stored = await ctx.runQuery(internal.mcp.storedKeys, { issuer });
+    const age = stored === null ? Infinity : Date.now() - stored.fetched_at;
+    // Keys fetched moments ago are current, so a key they lack doesn't exist.
+    if (stored !== null && age < (refresh ? KEY_FETCH_COOLDOWN_MS : KEYS_FRESH_MS)) return stored.keys;
+    const fallback = refresh ? null : (stored?.keys ?? null);
+    if (!(await ctx.runMutation(internal.mcp.claimKeyFetch, { issuer }))) {
+      if (fallback !== null) return fallback;
+      throw new Error("Clerk's keys are being fetched by another request");
+    }
+    try {
+      const response = await fetch(`${issuer}/.well-known/jwks.json`);
+      if (!response.ok) throw new Error(`Clerk JWKS answered ${response.status}`);
+      const keys = (await response.json()) as JSONWebKeySet;
+      if (!Array.isArray(keys?.keys)) throw new Error("Clerk JWKS has no keys");
+      await ctx.runMutation(internal.mcp.storeKeys, { issuer, keys });
+      return keys;
+    } catch (error) {
+      if (fallback === null) throw error;
+      console.error("Clerk JWKS fetch failed; using stored keys", error);
+      return fallback;
+    }
   };
 }
 
@@ -310,15 +340,20 @@ export const updateShift = internalMutation({
     const prev = await ownShift(ctx, user.id, args.shift_id, args.revision);
     const set: Record<string, unknown> = {};
     const clear: string[] = [];
-    if (args.date !== undefined) set.shift_date = args.date;
+    // Only what differs from the stored shift is written.
+    if (args.date !== undefined && args.date !== prev.shift_date) set.shift_date = args.date;
     if (args.start !== undefined || args.end !== undefined) {
-      Object.assign(set, checked(() => movedTimes({ start: prev.start_time, end: prev.end_time }, args.start, args.end)));
+      const moved = checked(() => movedTimes({ start: prev.start_time, end: prev.end_time }, args.start, args.end));
+      const start = clockTime(prev.start_time);
+      if (moved.start_time !== start || moved.end_time !== storedEndTime(clockTime(prev.end_time), start)) {
+        Object.assign(set, moved);
+      }
     }
     if (args.job_id !== undefined && args.job_id !== prev.job_id) set.job_id = (await jobForShift(ctx, user.id, args.job_id)).id;
     if (args.note !== undefined) {
       const note = args.note.trim();
-      if (note === "") clear.push("note");
-      else set.note = note;
+      if (note === "" && prev.note !== undefined) clear.push("note");
+      else if (note !== "" && note !== prev.note) set.note = note;
     }
     // Nothing to change keeps the revision the agent holds.
     if (Object.keys(set).length === 0 && clear.length === 0) return { shift: oneOff(prev, await jobsOf(ctx, user.id)) };

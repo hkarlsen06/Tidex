@@ -4,17 +4,6 @@ import { createLocalJWKSet, errors, type JSONWebKeySet, jwtVerify } from "jose";
 // tokens come from the same issuer and keys but carry aud "convex", no client_id and no
 // at+jwt type (RFC 9068), so each of those checks keeps them out.
 
-const TOKEN_ERRORS = [
-  errors.JWTExpired,
-  errors.JWTInvalid,
-  errors.JWTClaimValidationFailed,
-  errors.JWSInvalid,
-  errors.JWSSignatureVerificationFailed,
-  errors.JOSEAlgNotAllowed,
-  errors.JWKSNoMatchingKey,
-  errors.JWKSMultipleMatchingKeys,
-];
-
 /**
  * Clerk's signing keys. `refresh` asks for a fresh copy because the token names a key the
  * cached copy lacks; the caller decides how often that may reach Clerk.
@@ -35,7 +24,11 @@ async function verify(token: string, keys: JSONWebKeySet, issuer: string, audien
   return payload.sub;
 }
 
-/** The Clerk user ID the token was issued for, or null when the token isn't valid for `audience`. */
+/**
+ * The Clerk user ID the token was issued for, or null when the token isn't valid for
+ * `audience`. An error from `keySource` propagates, so a Clerk outage isn't reported as a
+ * bad token.
+ */
 export async function verifyAccessToken(
   token: string,
   issuer: string,
@@ -43,17 +36,17 @@ export async function verifyAccessToken(
   keySource: KeySource,
 ): Promise<string | null> {
   try {
-    try {
-      return await verify(token, await keySource(false), issuer, audience);
-    } catch (error) {
-      // Clerk may have rotated its keys since they were cached.
-      if (!(error instanceof errors.JWKSNoMatchingKey)) throw error;
-      return await verify(token, await keySource(true), issuer, audience);
-    }
+    return await verify(token, await keySource(false), issuer, audience);
   } catch (error) {
-    // A bad token is a 401. Clerk's key endpoint failing is not the token's fault, so
-    // those errors reach the caller's 503.
-    if (TOKEN_ERRORS.some((type) => error instanceof type)) return null;
+    if (!(error instanceof errors.JOSEError)) throw error;
+    if (!(error instanceof errors.JWKSNoMatchingKey)) return null;
+  }
+  // Clerk may have rotated its keys since they were stored.
+  const fresh = await keySource(true);
+  try {
+    return await verify(token, fresh, issuer, audience);
+  } catch (error) {
+    if (error instanceof errors.JOSEError) return null;
     throw error;
   }
 }

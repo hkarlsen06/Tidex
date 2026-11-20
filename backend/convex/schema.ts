@@ -763,9 +763,11 @@ export default defineSchema({
 
   // Clerk's JWKS for verifying MCP access tokens. Action memory doesn't last between
   // requests, so without this every request would fetch the keys from Clerk.
+  // attempted_at limits fetches, failed ones included, to one a minute.
   mcp_signing_keys: defineTable({
     issuer: v.string(),
-    keys: json,
+    keys: v.optional(json),
     fetched_at: v.number(),
+    attempted_at: v.optional(v.number()),
   }).index("by_issuer", ["issuer"]),
 });
