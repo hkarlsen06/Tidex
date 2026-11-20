@@ -69,6 +69,9 @@ export const endsNextDay = (start: string, end: string) => minutes(clockTime(end
  */
 export function movedTimes(current: { start: string; end: string }, newStart?: string, newEnd?: string) {
   const start = newStart ?? clockTime(current.start);
+  const stored = { start_time: clockTime(current.start), end_time: storedEndTime(clockTime(current.end), clockTime(current.start)) };
+  // Resending the stored times is no change, even for a 24-hour shift whose times are equal.
+  if (newEnd !== undefined && start === stored.start_time && storedEndTime(newEnd, start) === stored.end_time) return stored;
   if (newEnd !== undefined) return shiftTimes(start, newEnd);
   if (newStart === undefined || newStart === clockTime(current.start)) {
     return { start_time: start, end_time: storedEndTime(clockTime(current.end), start) };

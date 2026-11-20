@@ -3,7 +3,7 @@ import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { shiftEarnings } from "../convex/lib/mcp/earnings";
 import { handleMcpPost, type McpDeps, MODERN_VERSION } from "../convex/lib/mcp/protocol";
 import { movedTimes, parseRange, shiftTimes } from "../convex/lib/mcp/shiftTimes";
-import { verifyAccessToken } from "../convex/lib/mcp/token";
+import { checkKeySet, verifyAccessToken } from "../convex/lib/mcp/token";
 import { parseArgs } from "../convex/lib/mcp/tools";
 import type { LiveActivityRegularShift } from "../convex/lib/shared/liveActivityScheduling";
 import type { WageSnapshot } from "../convex/lib/shared/payroll/types";
@@ -134,6 +134,14 @@ describe("MCP token verification", async () => {
     await expect(verifyAccessToken(token, issuer, RESOURCE, async () => ({ keys: "none" }) as never)).rejects.toThrow();
   });
 
+  test("only RS256 public keys that import replace the stored ones", async () => {
+    expect(await checkKeySet({ keys: [jwk] })).toEqual({ keys: [jwk] });
+    await expect(checkKeySet({ keys: [] })).rejects.toThrow();
+    await expect(checkKeySet({ keys: [{ kty: "RSA", kid: "current" }] })).rejects.toThrow();
+    await expect(checkKeySet({ keys: [{ ...jwk, n: "AQAB-not-a-modulus!" }] })).rejects.toThrow();
+    await expect(checkKeySet({ keys: [jwk, jwk] })).rejects.toThrow();
+  });
+
   test("Clerk's key endpoint failing is not reported as a bad token", async () => {
     const token = await sign({ aud: RESOURCE, client_id: "client" });
     await expect(verifyAccessToken(token, issuer, RESOURCE, async () => { throw new Error("Clerk JWKS answered 503"); })).rejects.toThrow("503");
@@ -257,6 +265,7 @@ describe("MCP shift times", () => {
     expect(movedTimes({ start: "16:00", end: "24:00" }, undefined, "00:00")).toEqual({ start_time: "16:00", end_time: "24:00" });
     expect(movedTimes({ start: "08:00", end: "08:00" }, "09:00")).toEqual({ start_time: "09:00", end_time: "09:00" });
     expect(movedTimes({ start: "00:00", end: "24:00" }, "00:00")).toEqual({ start_time: "00:00", end_time: "24:00" });
+    expect(movedTimes({ start: "08:00", end: "08:00" }, undefined, "08:00")).toEqual({ start_time: "08:00", end_time: "08:00" });
   });
 
   test("bad dates, times and ranges are refused", () => {

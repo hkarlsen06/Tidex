@@ -7,7 +7,7 @@ import { userByClerkId, userByUuid } from "./lib/auth";
 import { shiftEarnings } from "./lib/mcp/earnings";
 import { handleMcpPost, resourceMetadata, type ToolOutcome } from "./lib/mcp/protocol";
 import { addDays, clockTime, endsNextDay, movedTimes, shiftTimes, storedEndTime, ToolError } from "./lib/mcp/shiftTimes";
-import { type KeySource, verifyAccessToken } from "./lib/mcp/token";
+import { checkKeySet, type KeySource, verifyAccessToken } from "./lib/mcp/token";
 import { isWriteTool, parseArgs, type ToolName } from "./lib/mcp/tools";
 import { PAYROLL_REVISION } from "./lib/payrollCompatibility";
 import { scheduleTimeZone } from "./lib/scheduleTimeZone";
@@ -146,11 +146,8 @@ function clerkKeys(ctx: ActionCtx, issuer: string): KeySource {
     try {
       const response = await fetch(`${issuer}/.well-known/jwks.json`);
       if (!response.ok) throw new Error(`Clerk JWKS answered ${response.status}`);
-      const keys = (await response.json()) as JSONWebKeySet;
-      // Storing an empty or malformed set would turn every valid token away for an hour.
-      const valid = Array.isArray(keys?.keys) && keys.keys.length > 0 &&
-        keys.keys.every((key) => typeof key?.kty === "string" && typeof key.kid === "string");
-      if (!valid) throw new Error("Clerk JWKS has no usable keys");
+      // Storing a set that doesn't work would turn every valid token away for an hour.
+      const keys = await checkKeySet(await response.json());
       await ctx.runMutation(internal.mcp.storeKeys, { issuer, keys });
       return keys;
     } catch (error) {
