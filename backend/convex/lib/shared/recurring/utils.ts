@@ -91,6 +91,18 @@ export function isInPhase(dateISO: string, anchorISO: string, interval: number):
 }
 
 /**
+ * `date` plus `months`, on the same day of the month or the target month's last day,
+ * as Foundation's Calendar.date(byAdding: .month) gives in the app: 31 January plus one
+ * month is 28 February, not 3 March.
+ */
+function addMonthsClamped(date: Date, months: number): Date {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + months;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month, Math.min(date.getUTCDate(), lastDay)));
+}
+
+/**
  * Resolve the navigable date window from anchors and end condition
  *
  * @param anchors - Selected anchor dates by weekday
@@ -112,25 +124,13 @@ export function resolveEndWindow(
 
   if (endCondition === null) {
     // No end: show preview for N months
-    maxDate = new Date(Date.UTC(
-      minAnchor.getUTCFullYear(),
-      minAnchor.getUTCMonth() + previewMonthsIfNone,
-      minAnchor.getUTCDate()
-    ));
+    maxDate = addMonthsClamped(minAnchor, previewMonthsIfNone);
   } else if (endCondition.type === 'months') {
     // Add N months from earliest anchor, keeping same day of month
-    maxDate = new Date(Date.UTC(
-      minAnchor.getUTCFullYear(),
-      minAnchor.getUTCMonth() + endCondition.value,
-      minAnchor.getUTCDate()
-    ));
+    maxDate = addMonthsClamped(minAnchor, endCondition.value);
   } else if (endCondition.type === 'years') {
     // Add N years from earliest anchor, keeping same month and day
-    maxDate = new Date(Date.UTC(
-      minAnchor.getUTCFullYear() + endCondition.value,
-      minAnchor.getUTCMonth(),
-      minAnchor.getUTCDate()
-    ));
+    maxDate = addMonthsClamped(minAnchor, endCondition.value * 12);
   } else {
     // Specific end date - use the exact date, not end of month
     // Handle both formats: newer 'date' key and legacy 'value' key
