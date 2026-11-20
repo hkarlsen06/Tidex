@@ -61477,6 +61477,288 @@
         }
       }
     },
+    "auth.error.passwordBreached" : {
+      "comment" : "Shown under the password field when Clerk rejects a password because it appears in a known data breach. Shown on sign-up, password reset and password change.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ظهرت كلمة المرور هذه في تسريب بيانات. اختر كلمة مرور أخرى."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тази парола е открита при изтичане на данни. Изберете друга."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "এই পাসওয়ার্ডটি একটি ডেটা ফাঁসের ঘটনায় প্রকাশ পেয়েছে। অন্য একটি বেছে নিন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aquesta contrasenya ha aparegut en una filtració de dades. Tria'n una altra."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto heslo se objevilo při úniku dat. Vyberte jiné."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne adgangskode er blevet lækket i et databrud. Vælg en anden."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Passwort ist bei einem Datenleck aufgetaucht. Wähle ein anderes."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Αυτός ο κωδικός πρόσβασης έχει εμφανιστεί σε διαρροή δεδομένων. Διάλεξε έναν άλλο."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This password has appeared in a data breach. Choose a different one."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta contraseña ha aparecido en una filtración de datos. Elige otra."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See parool on lekkinud andmelekke käigus. Vali mõni muu."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "این رمز عبور در یک نشت اطلاعات دیده شده است. رمز دیگری انتخاب کنید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tämä salasana on paljastunut tietovuodossa. Valitse toinen."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lumabas na ang password na ito sa isang data breach. Pumili ng iba."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce mot de passe est apparu dans une fuite de données. Choisissez-en un autre."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הסיסמה הזו הופיעה בדליפת נתונים. בחר סיסמה אחרת."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह पासवर्ड किसी डेटा लीक में सामने आ चुका है। कोई दूसरा पासवर्ड चुनें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ova se lozinka pojavila u curenju podataka. Odaberi drugu."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ez a jelszó szerepelt egy adatszivárgásban. Válassz másikat."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kata sandi ini pernah muncul dalam kebocoran data. Pilih kata sandi lain."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Þetta lykilorð hefur komið fram í gagnaleka. Veldu annað."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa password è comparsa in una violazione di dati. Scegline un'altra."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このパスワードは過去のデータ漏洩で流出しています。別のパスワードを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 비밀번호는 데이터 유출 사고에서 노출된 적이 있습니다. 다른 비밀번호를 선택하세요."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Šis slaptažodis buvo rastas nutekintuose duomenyse. Pasirink kitą."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Šī parole ir atrasta datu noplūdē. Izvēlies citu."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette passordet har vært med i en datalekkasje. Velg et annet."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit wachtwoord is uitgelekt bij een datalek. Kies een ander wachtwoord."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette passordet har vore med i ein datalekkasje. Vel eit anna."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To hasło wyciekło w jednym z naruszeń danych. Wybierz inne."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta senha já apareceu em um vazamento de dados. Escolha outra."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Această parolă a apărut într-o scurgere de date. Alege alta."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот пароль уже был в утечке данных. Выберите другой."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto heslo bolo súčasťou úniku údajov. Vyberte iné."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To geslo se je že pojavilo v uhajanju podatkov. Izberi drugo."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ova lozinka se pojavila u curenju podataka. Izaberi drugu."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det här lösenordet har förekommit i en dataläcka. Välj ett annat."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenosiri hili limeonekana katika uvujaji wa data. Chagua lingine."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இந்தக் கடவுச்சொல் ஒரு தரவு மீறலில் வெளியாகியுள்ளது. வேறொன்றைத் தேர்ந்தெடுக்கவும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รหัสผ่านนี้เคยหลุดจากเหตุการณ์ข้อมูลรั่วไหล โปรดเลือกรหัสผ่านอื่น"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu şifre bir veri sızıntısında yer almış. Başka bir şifre seç."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цей пароль потрапив у витік даних. Виберіть інший."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ پاس ورڈ کسی ڈیٹا لیک میں سامنے آ چکا ہے۔ کوئی دوسرا پاس ورڈ منتخب کریں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mật khẩu này đã từng bị lộ trong một vụ rò rỉ dữ liệu. Hãy chọn mật khẩu khác."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此密码曾出现在数据泄露事件中。请选择其他密码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此密碼曾出現在資料外洩事件中。請選擇其他密碼。"
+          }
+        }
+      }
+    },
     "auth.error.passwordMin6" : {
       "comment" : "Password validation error",
       "extractionState" : "manual",

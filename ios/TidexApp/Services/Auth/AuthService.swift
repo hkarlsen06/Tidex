@@ -346,6 +346,7 @@ extension AuthService {
     "form_password_not_strong_enough": .authErrorPasswordMin8,
     "form_password_validation_failed": .authErrorPasswordMin8,
     "form_password_size_in_bytes_exceeded": .authErrorPasswordMin8,
+    "form_password_pwned": .authErrorPasswordBreached,
     "form_param_format_invalid": .authErrorInvalidEmailFormat,
     "form_code_incorrect": .authErrorInvalidCode,
     "verification_failed": .authErrorInvalidCode,
