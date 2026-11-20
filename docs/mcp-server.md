@@ -19,14 +19,22 @@ Every reply is one `application/json` body; the server never opens an SSE stream
 
 The MCP server is an OAuth resource server (RFC 9728):
 
-- `GET /.well-known/oauth-protected-resource/mcp`, and the same at `/.well-known/oauth-protected-resource` for clients that only try the root, return `{ resource, authorization_servers: [<Clerk issuer>], bearer_methods_supported, resource_name, resource_documentation }`.
-- A request without a token gets `401` with `WWW-Authenticate: Bearer resource_metadata="<that URL>"`, and a bad token adds `error="invalid_token"`. A valid token for a banned user, or for a Clerk user without a Tidex account, gets `403`, because signing in again would not help. The client then reads Clerk's metadata at `<issuer>/.well-known/oauth-authorization-server`, registers with a Client ID Metadata Document or Dynamic Client Registration, and runs the authorization code flow with PKCE and `resource=<MCP URL>`. The user signs in on Clerk's hosted page and approves the client on Clerk's consent screen.
-- `lib/mcp/token.ts` verifies the access token against Clerk's JWKS: `RS256`, `typ: at+jwt`, `iss` equal to `CLERK_JWT_ISSUER_DOMAIN`, `aud` exactly `MCP_RESOURCE_URL`, an unexpired `exp`, and a `client_id`. Action memory doesn't last between requests, so the keys are kept in `mcp_signing_keys` for an hour. A token naming a key they lack fetches them again. Only one request a minute may fetch, failed attempts included, so junk tokens can't make every request reach Clerk. When a fetch fails, the stored keys stand in; without stored keys, or when a token names a key Clerk may have just rotated in, the request gets `503`, not `401`. `sub` is the Clerk user ID, which maps to a Tidex user through `userByClerkId`, the same lookup the app's sessions use.
+- `GET /.well-known/oauth-protected-resource/mcp`, and the same at `/.well-known/oauth-protected-resource` for clients that only try the root, return `{ resource, authorization_servers: [<Clerk issuer>], bearer_methods_supported, scopes_supported: ["tidex:read", "tidex:write"], resource_name, resource_documentation }`.
+- A request without a token gets `401` with `WWW-Authenticate: Bearer scope="tidex:read", resource_metadata="<that URL>"`, and a bad token adds `error="invalid_token"`. A valid token for a banned user, or for a Clerk user without a Tidex account, gets `403`, because signing in again would not help. The client then reads Clerk's metadata at `<issuer>/.well-known/oauth-authorization-server`, registers with a Client ID Metadata Document or Dynamic Client Registration, and runs the authorization code flow with PKCE, `resource=<MCP URL>` and the scopes it asks for. The user signs in on Clerk's hosted page and approves the client on Clerk's consent screen.
+- `lib/mcp/token.ts` verifies the access token against Clerk's JWKS: `RS256`, `typ: at+jwt`, `iss` equal to `CLERK_JWT_ISSUER_DOMAIN`, `aud` exactly `MCP_RESOURCE_URL`, an unexpired `exp`, and a `client_id`. The space-separated `scope` claim lists the scopes the token grants. Action memory doesn't last between requests, so the keys are kept in `mcp_signing_keys` for an hour. A token naming a key they lack fetches them again. Only one request a minute may fetch, failed attempts included, so junk tokens can't make every request reach Clerk. When a fetch fails, the stored keys stand in; without stored keys, or when a token names a key Clerk may have just rotated in, the request gets `503`, not `401`. `sub` is the Clerk user ID, which maps to a Tidex user through `userByClerkId`, the same lookup the app's sessions use.
 - The app's Convex session tokens have `aud: "convex"`, no `client_id` and no `at+jwt` type, so `/mcp` rejects them. The OAuth tokens are not in `auth.config.ts`, so the app's Convex functions reject them. A leaked agent token reaches only the tools below.
 - Admin impersonation never applies. It is keyed to the app's Clerk session, and OAuth tokens carry no session.
 - Clerk access tokens last one day. Verification is local, so a client the user disconnects in Clerk keeps working until its token expires.
 
-Version 1 has one permission level and no custom scopes. Clerk's consent screen lists only "basic profile" and "email", so it doesn't tell the user the client can change their shifts. A `shifts` scope with a description would fix that; see [Open questions](#open-questions).
+### Scopes
+
+A token needs `tidex:read` for read tools and both `tidex:read` and `tidex:write` for write tools, because a write returns the changed data. `initialize`, `server/discover`, `tools/list` and `ping` need only a valid token, so a read-only client still sees every tool. Each tool's `scope` in its registry entry decides which it needs. The 401 challenge asks for `tidex:read` alone, so a client starts read-only and asks for more on its first write.
+
+A `tools/call` whose token lacks a scope the tool needs gets `403` with a JSON-RPC error that keeps the request's `id` and tells the agent which permission the user has to allow. The header names every scope the tool needs, so one new authorization covers it:
+
+```
+WWW-Authenticate: Bearer error="insufficient_scope", scope="tidex:read tidex:write", resource_metadata="<metadata URL>", error_description="..."
+```
 
 ## Tools
 
@@ -70,20 +78,20 @@ Clerk instance settings, under OAuth applications → Settings, or `PATCH /v1/in
 - `client_id_metadata_documents_advertised` and `dynamic_oauth_client_registration`: on. ChatGPT and Claude use CIMD when the server offers it and DCR otherwise.
 - `oauth_jwt_access_tokens` and `pkce_required`: on, the defaults.
 
-The development instance has these settings.
+The development instance has these settings. Each instance also needs the scopes `tidex:read` and `tidex:write`, created in the Clerk dashboard because the Backend API can't create scopes, with a description the consent screen shows. Without them no token carries a Tidex scope, and every `tools/call` gets `403`.
 
 ## Testing against dev
 
 1. Start the dev deployment (see AGENTS.md), push with `bunx convex dev --once` from `backend/`, and run `bunx convex env set MCP_RESOURCE_URL http://127.0.0.1:3211/mcp`.
 2. Register a client: `POST https://<dev issuer>/oauth/register` with a loopback `redirect_uris` entry and `token_endpoint_auth_method: "none"`.
-3. Open `<issuer>/oauth/authorize` with PKCE and `resource=http://127.0.0.1:3211/mcp` in a browser, sign in as a `+clerk_test` user (verification code `424242`), allow, and exchange the code at `<issuer>/oauth/token` with the same `resource`.
+3. Open `<issuer>/oauth/authorize` with PKCE, `resource=http://127.0.0.1:3211/mcp` and `scope=tidex:read tidex:write` in a browser, sign in as a `+clerk_test` user (verification code `424242`), allow, and exchange the code at `<issuer>/oauth/token` with the same `resource`.
 4. Connect with `@modelcontextprotocol/sdk` 1.x for the `initialize` era, or `@modelcontextprotocol/client` 2.x with `versionNegotiation: { mode: { pin: "2026-07-28" } }`, passing the token in an `Authorization` header.
 
 ## Production setup
 
 Not done. Each step changes production and waits for Hjalmar:
 
-1. Turn on the Clerk settings above on the production instance.
+1. Turn on the Clerk settings above on the production instance and create the two scopes there.
 2. Check that Clerk's hosted sign-in on the production instance works for every sign-in method Tidex offers, including Sign in with Apple on the web, because the OAuth flow signs the user in there and not in the app.
 3. `bunx convex env set MCP_RESOURCE_URL https://actions.tidex.no/mcp` against production, then `bun run deploy` from `backend/` on `main`.
 4. Check that Caddy passes `/.well-known/oauth-protected-resource*` and `/mcp` on `actions.tidex.no` to Convex unchanged.
@@ -91,5 +99,4 @@ Not done. Each step changes production and waits for Hjalmar:
 
 ## Open questions
 
-- A custom Clerk scope (for example `shifts`) would put "read and change your shifts" on the consent screen and allow a read-only connection. It needs the scope created in Clerk and added to the default scopes for dynamic clients.
 - Directory listings in ChatGPT's app directory and Claude's connector directory need their own review and submission.

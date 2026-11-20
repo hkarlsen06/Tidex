@@ -51,20 +51,23 @@ async function verify(token: string, keys: KeySet, issuer: string, audience: str
   });
   // jose accepts an aud array that contains the audience; only this resource is allowed.
   if (payload.aud !== audience || typeof payload.client_id !== "string" || typeof payload.sub !== "string") return null;
-  return payload.sub;
+  const scopes = typeof payload.scope === "string" ? payload.scope.split(" ").filter((scope) => scope !== "") : [];
+  return { clerkUserId: payload.sub, scopes: new Set(scopes) };
 }
 
+/** The Clerk user the token was issued for and the scopes it grants (its `scope` claim). */
+export type VerifiedToken = { clerkUserId: string; scopes: ReadonlySet<string> };
+
 /**
- * The Clerk user ID the token was issued for, or null when the token isn't valid for
- * `audience`. An error from `keySource` propagates, so a Clerk outage isn't reported as a
- * bad token.
+ * The token's user and scopes, or null when the token isn't valid for `audience`. An error
+ * from `keySource` propagates, so a Clerk outage isn't reported as a bad token.
  */
 export async function verifyAccessToken(
   token: string,
   issuer: string,
   audience: string,
   keySource: KeySource,
-): Promise<string | null> {
+): Promise<VerifiedToken | null> {
   // Clerk always names the key. Without a kid, jose would try every key in the set.
   try {
     if (typeof decodeProtectedHeader(token).kid !== "string") return null;

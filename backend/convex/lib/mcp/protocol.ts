@@ -1,4 +1,4 @@
-import type { ToolSpec } from "./registry";
+import type { Scope, ToolSpec } from "./registry";
 
 // MCP over Streamable HTTP, without sessions, for both protocol eras:
 // - 2026-07-28: no initialize. Every request carries its version in the
@@ -26,8 +26,20 @@ const INSTRUCTIONS =
 
 export type ToolOutcome = { ok: true; value: unknown } | { ok: false; message: string };
 
-/** A token that checks out names a Tidex user, unless that account is banned or gone. */
-export type Authentication = { userId: string } | "invalid_token" | "no_account";
+/**
+ * A token that checks out names a Tidex user and the OAuth scopes it grants, unless that
+ * account is banned or gone.
+ */
+export type Authentication = { userId: string; scopes: ReadonlySet<string> } | "invalid_token" | "no_account";
+
+/** The OAuth scopes a tool needs. A write tool's result shows the user's data, so it needs read too. */
+const REQUIRED_SCOPES: Record<Scope, string[]> = { read: ["tidex:read"], write: ["tidex:read", "tidex:write"] };
+
+const MISSING_SCOPE: Record<Scope, string> = {
+  read: "Reading the user's Tidex data needs the tidex:read permission. Ask the user to connect Tidex again and allow reading.",
+  write:
+    "Changing the user's Tidex data needs the tidex:write permission. Ask the user to connect Tidex again and allow changes.",
+};
 
 /** What the protocol needs to know about a tool; mcp.ts passes its full McpTool entries. */
 type Tool = Pick<ToolSpec, "definition" | "scope">;
@@ -53,6 +65,7 @@ export function resourceMetadata(resourceUrl: string, issuer: string) {
     resource: resourceUrl,
     authorization_servers: [issuer],
     bearer_methods_supported: ["header"],
+    scopes_supported: REQUIRED_SCOPES.write,
     resource_name: "Tidex",
     resource_documentation: "https://tidex.no",
   };
@@ -78,12 +91,29 @@ function headerValue(value: string | null): string | null {
   }
 }
 
+/** A client without a token first asks only to read, and steps up to tidex:write on its first write. */
 function unauthorized(resourceUrl: string, invalidToken: boolean) {
   const params = [
     ...(invalidToken ? ['error="invalid_token"'] : []),
+    `scope="${REQUIRED_SCOPES.read.join(" ")}"`,
     `resource_metadata="${resourceMetadataUrl(resourceUrl)}"`,
   ].join(", ");
   return json(401, { error: invalidToken ? "invalid_token" : "unauthorized" }, { "WWW-Authenticate": `Bearer ${params}` });
+}
+
+/** Names every scope the tool needs, so the client asks for all of them in one new authorization. */
+function insufficientScope(resourceUrl: string, id: Id, scope: Scope) {
+  const params = [
+    'error="insufficient_scope"',
+    `scope="${REQUIRED_SCOPES[scope].join(" ")}"`,
+    `resource_metadata="${resourceMetadataUrl(resourceUrl)}"`,
+    `error_description="${MISSING_SCOPE[scope]}"`,
+  ].join(", ");
+  return json(
+    403,
+    { jsonrpc: "2.0", id, error: { code: -32001, message: MISSING_SCOPE[scope] } },
+    { "WWW-Authenticate": `Bearer ${params}` },
+  );
 }
 
 /**
@@ -139,7 +169,7 @@ export async function handleMcpPost<T extends Tool>(request: Request, deps: McpD
   if (auth === "invalid_token") return unauthorized(deps.resourceUrl, true);
   // Signing in again would give the same answer, so this is not a 401.
   if (auth === "no_account") return json(403, { error: "This Tidex account is not available." });
-  const { userId } = auth;
+  const { userId, scopes } = auth;
 
   const text = await boundedText(request);
   if (text === null) return rpcError(413, null, -32600, "Request body is too large");
@@ -223,6 +253,9 @@ export async function handleMcpPost<T extends Tool>(request: Request, deps: McpD
     case "tools/call": {
       const tool = deps.tools.find((t) => t.definition.name === params.name);
       if (tool === undefined) return rpcError(200, id, -32602, `Unknown tool: ${String(params.name)}`);
+      if (!REQUIRED_SCOPES[tool.scope].every((needed) => scopes.has(needed))) {
+        return insufficientScope(deps.resourceUrl, id, tool.scope);
+      }
       const args = params.arguments ?? {};
       if (!isObject(args)) return rpcError(200, id, -32602, "arguments must be an object");
       const outcome = await deps.callTool(userId, tool, args);

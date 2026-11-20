@@ -12,7 +12,11 @@ const RESOURCE = "https://actions.tidex.no/mcp";
 const calls: { userId: string; name: string; args: unknown }[] = [];
 const deps: McpDeps = {
   resourceUrl: RESOURCE,
-  authenticate: async (token) => (token === "good" ? { userId: "user-1" } : token === "banned" ? "no_account" : "invalid_token"),
+  authenticate: async (token) => {
+    const scopes = { good: ["tidex:read", "tidex:write"], reader: ["tidex:read"], profile: ["profile", "email"] }[token];
+    if (scopes !== undefined) return { userId: "user-1", scopes: new Set(scopes) };
+    return token === "banned" ? "no_account" : "invalid_token";
+  },
   tools: [listJobs, addShift, deleteShift],
   callTool: async (userId, tool, args) => {
     const name = tool.definition.name;
@@ -41,8 +45,42 @@ describe("MCP authorization", () => {
     const response = await handleMcpPost(post({ jsonrpc: "2.0", id: 1, method: "tools/list" }, { Authorization: "" }), deps);
     expect(response.status).toBe(401);
     expect(response.headers.get("WWW-Authenticate")).toBe(
-      'Bearer resource_metadata="https://actions.tidex.no/.well-known/oauth-protected-resource/mcp"',
+      'Bearer scope="tidex:read", resource_metadata="https://actions.tidex.no/.well-known/oauth-protected-resource/mcp"',
     );
+  });
+
+  test("a read-only token can list and read, but a write asks for tidex:write too", async () => {
+    calls.length = 0;
+    const reader = { Authorization: "Bearer reader" };
+    const list = await handleMcpPost(post({ jsonrpc: "2.0", id: 1, method: "tools/list" }, reader), deps);
+    expect((await list.json()).result.tools.map((t: { name: string }) => t.name)).toContain("add_shift");
+    const read = await handleMcpPost(post({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "list_jobs" } }, reader), deps);
+    expect((await read.json()).result.structuredContent).toEqual({ echoed: "list_jobs" });
+
+    const write = await handleMcpPost(
+      post({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "add_shift", arguments: {} } }, reader),
+      deps,
+    );
+    expect(write.status).toBe(403);
+    const challenge = write.headers.get("WWW-Authenticate");
+    expect(challenge).toStartWith('Bearer error="insufficient_scope", scope="tidex:read tidex:write"');
+    expect(challenge).toContain('resource_metadata="https://actions.tidex.no/.well-known/oauth-protected-resource/mcp"');
+    const body = await write.json();
+    expect(body.id).toBe(3);
+    expect(body.error.message).toContain("tidex:write");
+    expect(calls.map((c) => c.name)).toEqual(["list_jobs"]);
+  });
+
+  test("a token without Tidex scopes can't read", async () => {
+    calls.length = 0;
+    const response = await handleMcpPost(
+      post({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "list_jobs" } }, { Authorization: "Bearer profile" }),
+      deps,
+    );
+    expect(response.status).toBe(403);
+    expect(response.headers.get("WWW-Authenticate")).toStartWith('Bearer error="insufficient_scope", scope="tidex:read",');
+    expect((await response.json()).error.message).toContain("tidex:read");
+    expect(calls).toHaveLength(0);
   });
 
   test("a rejected token gets invalid_token and never reaches a tool", async () => {
@@ -101,8 +139,12 @@ describe("MCP token verification", async () => {
       .setExpirationTime("1h")
       .sign(privateKey);
 
-  test("an OAuth token for the MCP endpoint names its Clerk user", async () => {
-    expect(await verifyAt(await sign({ aud: RESOURCE, client_id: "client" }))).toBe("user_clerk");
+  test("an OAuth token for the MCP endpoint names its Clerk user and the scopes in its scope claim", async () => {
+    expect(await verifyAt(await sign({ aud: RESOURCE, client_id: "client", scope: "profile tidex:read" }))).toEqual({
+      clerkUserId: "user_clerk",
+      scopes: new Set(["profile", "tidex:read"]),
+    });
+    expect((await verifyAt(await sign({ aud: RESOURCE, client_id: "client" })))?.scopes).toEqual(new Set());
   });
 
   test("the app's own session token is refused", async () => {

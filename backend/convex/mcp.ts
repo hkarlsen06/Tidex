@@ -163,10 +163,10 @@ export const endpoint = httpAction(async (ctx, request) => {
     return await handleMcpPost(request, {
       resourceUrl,
       authenticate: async (token) => {
-        const clerkUserId = await verifyAccessToken(token, issuer, resourceUrl, clerkKeys(ctx, issuer));
-        if (clerkUserId === null) return "invalid_token";
-        const userId = await ctx.runQuery(internal.mcp.userForToken, { clerk_user_id: clerkUserId });
-        return userId === null ? "no_account" : { userId };
+        const verified = await verifyAccessToken(token, issuer, resourceUrl, clerkKeys(ctx, issuer));
+        if (verified === null) return "invalid_token";
+        const userId = await ctx.runQuery(internal.mcp.userForToken, { clerk_user_id: verified.clerkUserId });
+        return userId === null ? "no_account" : { userId, scopes: verified.scopes };
       },
       tools,
       callTool: (userId, tool, args) => runTool(ctx, userId, tool, args),
