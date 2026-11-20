@@ -1,7 +1,7 @@
 import { cancelShiftAdded, queueShiftAdded } from "./lib/notify";
 import { requireLiveJob, syncedTable } from "./lib/syncWrite";
 
-export const { insert, update, remove } = syncedTable("user_shifts", {
+const shifts = syncedTable("user_shifts", {
   check: async (ctx, shift, _prev, changed) => {
     if (changed.has("job_id")) await requireLiveJob(ctx, shift.user_id, shift.job_id);
   },
@@ -9,3 +9,7 @@ export const { insert, update, remove } = syncedTable("user_shifts", {
   afterInsert: queueShiftAdded,
   afterRemove: cancelShiftAdded,
 });
+
+export const { insert, update, remove } = shifts;
+/** The same writes for a known user, for the MCP server. */
+export const shiftWrites = { insert: shifts.insertFor, update: shifts.updateFor, remove: shifts.removeFor };

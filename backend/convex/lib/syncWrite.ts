@@ -94,6 +94,92 @@ export function syncedTable<T extends IdTable>(
   const byUuid = async (ctx: MutationCtx, id: string) =>
     await ctx.db.query(table as IdTable).withIndex("by_uuid", (q) => q.eq("id", id)).unique() as SyncedDoc<T> | null;
 
+  // The writes take the user they act for. The app's mutations below pass the viewer, and
+  // the MCP server passes the user its OAuth token names.
+  const insertFor = async (
+    ctx: MutationCtx,
+    user: Doc<"users">,
+    { row, payroll_revision }: { row: Record<string, unknown> & { id: string }; payroll_revision?: string },
+  ) => {
+    const existing = await byUuid(ctx, row.id);
+    if (existing !== null) {
+      if (existing.user_id !== user.id) reject("id_taken");
+      await requireCompatibleJob(ctx, user.id, table, existing, payroll_revision);
+      return { status: "exists" as const, row: publicRow(existing) };
+    }
+    await requireCompatibleJob(ctx, user.id, table, row, payroll_revision);
+    checkColumns(table, row);
+    const now = new Date().toISOString();
+    const revision = await nextRevision(ctx);
+    const doc = {
+      ...(await hooks.defaults?.(ctx, user.id)),
+      ...row,
+      user_id: user.id,
+      created_at: now,
+      updated_at: now,
+      revision,
+    } as SyncedRow<T>;
+    const changed = new Set(Object.keys(row));
+    await hooks.check?.(ctx, doc, null, changed);
+    const saved = (await ctx.db.get(await ctx.db.insert(table as IdTable, doc)))! as SyncedDoc<T>;
+    await hooks.afterWrite?.(ctx, saved, changed);
+    await hooks.afterInsert?.(ctx, saved);
+    return { status: "ok" as const, row: publicRow(saved) };
+  };
+
+  const updateFor = async (
+    ctx: MutationCtx,
+    user: Doc<"users">,
+    args: {
+      id: string;
+      expected_revision: number;
+      set: Record<string, unknown>;
+      clear?: string[];
+      payroll_revision?: string;
+    },
+  ) => {
+    const prev = await byUuid(ctx, args.id);
+    if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
+    await requireCompatibleJob(ctx, user.id, table, prev, args.payroll_revision);
+    if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
+      return { status: "conflict" as const, row: publicRow(prev) };
+    }
+    await requireCompatibleJob(ctx, user.id, table, { ...prev, ...args.set }, args.payroll_revision);
+    checkColumns(table, args.set);
+    const cleared = Object.fromEntries((args.clear ?? []).map((k) => [k, undefined]));
+    const revision = await nextRevision(ctx);
+    const patch = { ...args.set, ...cleared, updated_at: new Date().toISOString(), revision };
+    const changed = new Set([...Object.keys(args.set), ...Object.keys(cleared)]);
+    const next = { ...prev, ...patch };
+    for (const k of Object.keys(cleared)) delete next[k];
+    await hooks.check?.(ctx, next, prev, changed);
+    await ctx.db.patch(prev._id as Id<IdTable>, patch);
+    const saved = (await ctx.db.get(prev._id))! as SyncedDoc<T>;
+    await hooks.afterWrite?.(ctx, saved, changed);
+    return { status: "ok" as const, row: publicRow(saved) };
+  };
+
+  /** Soft delete. The purge job removes the row later. */
+  const removeFor = async (
+    ctx: MutationCtx,
+    user: Doc<"users">,
+    args: { id: string; expected_revision: number; payroll_revision?: string },
+  ) => {
+    const prev = await byUuid(ctx, args.id);
+    if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
+    await requireCompatibleJob(ctx, user.id, table, prev, args.payroll_revision);
+    if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
+      return { status: "conflict" as const, row: publicRow(prev) };
+    }
+    await hooks.beforeRemove?.(ctx, prev);
+    const now = new Date().toISOString();
+    const revision = await nextRevision(ctx);
+    await ctx.db.patch(prev._id as Id<IdTable>, { ...hooks.removePatch, deleted_at: now, updated_at: now, revision });
+    const saved = (await ctx.db.get(prev._id))! as SyncedDoc<T>;
+    await hooks.afterRemove?.(ctx, saved);
+    return { status: "ok" as const, row: publicRow(saved) };
+  };
+
   const insert = mutation({
     args: { row: insertRow, expected_user_id: v.string(), payroll_revision: v.optional(v.string()) },
     handler: async (
@@ -102,30 +188,7 @@ export function syncedTable<T extends IdTable>(
     ) => {
       const { user } = await requireViewer(ctx);
       requireExpectedUser(user.id, expected_user_id);
-      const existing = await byUuid(ctx, row.id);
-      if (existing !== null) {
-        if (existing.user_id !== user.id) reject("id_taken");
-        await requireCompatibleJob(ctx, user.id, table, existing, payroll_revision);
-        return { status: "exists" as const, row: publicRow(existing) };
-      }
-      await requireCompatibleJob(ctx, user.id, table, row, payroll_revision);
-      checkColumns(table, row);
-      const now = new Date().toISOString();
-      const revision = await nextRevision(ctx);
-      const doc = {
-        ...(await hooks.defaults?.(ctx, user.id)),
-        ...row,
-        user_id: user.id,
-        created_at: now,
-        updated_at: now,
-        revision,
-      } as SyncedRow<T>;
-      const changed = new Set(Object.keys(row));
-      await hooks.check?.(ctx, doc, null, changed);
-      const saved = (await ctx.db.get(await ctx.db.insert(table as IdTable, doc)))! as SyncedDoc<T>;
-      await hooks.afterWrite?.(ctx, saved, changed);
-      await hooks.afterInsert?.(ctx, saved);
-      return { status: "ok" as const, row: publicRow(saved) };
+      return await insertFor(ctx, user, { row, payroll_revision });
     },
   });
 
@@ -138,64 +201,23 @@ export function syncedTable<T extends IdTable>(
       clear: v.optional(clearable),
       payroll_revision: v.optional(v.string()),
     },
-    handler: async (
-      ctx,
-      args: {
-        id: string;
-        expected_revision: number;
-        expected_user_id: string;
-        set: Record<string, unknown>;
-        clear?: string[];
-        payroll_revision?: string;
-      },
-    ) => {
+    handler: async (ctx, { expected_user_id, ...args }) => {
       const { user } = await requireViewer(ctx);
-      requireExpectedUser(user.id, args.expected_user_id);
-      const prev = await byUuid(ctx, args.id);
-      if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
-      await requireCompatibleJob(ctx, user.id, table, prev, args.payroll_revision);
-      if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
-        return { status: "conflict" as const, row: publicRow(prev) };
-      }
-      await requireCompatibleJob(ctx, user.id, table, { ...prev, ...args.set }, args.payroll_revision);
-      checkColumns(table, args.set);
-      const cleared = Object.fromEntries((args.clear ?? []).map((k) => [k, undefined]));
-      const revision = await nextRevision(ctx);
-      const patch = { ...args.set, ...cleared, updated_at: new Date().toISOString(), revision };
-      const changed = new Set([...Object.keys(args.set), ...Object.keys(cleared)]);
-      const next = { ...prev, ...patch };
-      for (const k of Object.keys(cleared)) delete next[k];
-      await hooks.check?.(ctx, next, prev, changed);
-      await ctx.db.patch(prev._id as Id<IdTable>, patch);
-      const saved = (await ctx.db.get(prev._id))! as SyncedDoc<T>;
-      await hooks.afterWrite?.(ctx, saved, changed);
-      return { status: "ok" as const, row: publicRow(saved) };
+      requireExpectedUser(user.id, expected_user_id);
+      return await updateFor(ctx, user, args as Parameters<typeof updateFor>[2]);
     },
   });
 
-  /** Soft delete. The purge job removes the row later. */
   const remove = mutation({
     args: { id: v.string(), expected_revision: v.number(), expected_user_id: v.string(), payroll_revision: v.optional(v.string()) },
-    handler: async (ctx, args) => {
+    handler: async (ctx, { expected_user_id, ...args }) => {
       const { user } = await requireViewer(ctx);
-      requireExpectedUser(user.id, args.expected_user_id);
-      const prev = await byUuid(ctx, args.id);
-      if (prev === null || prev.user_id !== user.id) return { status: "conflict" as const, row: null };
-      await requireCompatibleJob(ctx, user.id, table, prev, args.payroll_revision);
-      if (prev.deleted_at !== undefined || prev.revision !== args.expected_revision) {
-        return { status: "conflict" as const, row: publicRow(prev) };
-      }
-      await hooks.beforeRemove?.(ctx, prev);
-      const now = new Date().toISOString();
-      const revision = await nextRevision(ctx);
-      await ctx.db.patch(prev._id as Id<IdTable>, { ...hooks.removePatch, deleted_at: now, updated_at: now, revision });
-      const saved = (await ctx.db.get(prev._id))! as SyncedDoc<T>;
-      await hooks.afterRemove?.(ctx, saved);
-      return { status: "ok" as const, row: publicRow(saved) };
+      requireExpectedUser(user.id, expected_user_id);
+      return await removeFor(ctx, user, args);
     },
   });
 
-  return { insert, update, remove };
+  return { insert, update, remove, insertFor, updateFor, removeFor };
 }
 
 /** The job a shift, recurring shift, wage snapshot or payroll adjustment points to. */
