@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import {
   internalAction,
+  internalMutation,
   internalQuery,
   type MutationCtx,
   mutation,
@@ -1452,5 +1453,67 @@ export const setAdmin = mutation({
       new_value: { role: grant ? "admin" : null },
     });
     return { success: true, message: grant ? "Admin privileges granted" : "Admin privileges revoked" };
+  },
+});
+
+/**
+ * Gives an imported user without a Clerk user, such as a phone-only GoTrue account, the
+ * Clerk user of the account they made after cutover, then deletes that newer account.
+ * The old uuid stays, so shifts, shares and threads need no rewriting. Run by hand:
+ * bunx convex run --env-file .env.production admin:adoptClerkUser '{"user_id": "<old uuid>", "clerk_user_id": "user_..."}'
+ * The person signs out and in again afterwards, because the app cached the newer uuid.
+ */
+export const adoptClerkUser = internalAction({
+  args: { user_id: v.string(), clerk_user_id: v.string() },
+  handler: async (ctx, args): Promise<string> => {
+    const newer = await ctx.runMutation(internal.admin.moveClerkUser, args);
+    while (!(await ctx.runMutation(internal.account.step, { user_id: newer, first: false })));
+    return `Linked ${args.clerk_user_id} to ${args.user_id} and deleted account ${newer}`;
+  },
+});
+
+/** Moves the Clerk user to `user_id` and returns the uuid of the account it leaves. */
+export const moveClerkUser = internalMutation({
+  args: { user_id: v.string(), clerk_user_id: v.string() },
+  handler: async (ctx, { user_id, clerk_user_id }) => {
+    const target = await userByUuid(ctx, user_id);
+    if (target === null) throw new ConvexError(`No user ${user_id}`);
+    if (target.clerk_user_id !== undefined) throw new ConvexError(`${user_id} already has Clerk user ${target.clerk_user_id}`);
+    const newer = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", clerk_user_id))
+      .unique();
+    if (newer === null) throw new ConvexError(`No users row owns ${clerk_user_id}`);
+    // The newer account gets deleted, so it must hold nothing the person would miss.
+    const held = {
+      jobs: await ctx.db.query("jobs").withIndex("by_user_revision", (q) => q.eq("user_id", newer.id)).take(1),
+      shifts: await ctx.db.query("user_shifts").withIndex("by_user_revision", (q) => q.eq("user_id", newer.id)).take(1),
+      shares: await ctx.db.query("shift_shares").withIndex("by_owner_revision", (q) => q.eq("owner_id", newer.id)).take(1),
+      shared_with: await ctx.db.query("shift_shares").withIndex("by_viewer_revision", (q) => q.eq("viewer_id", newer.id)).take(1),
+      threads: await ctx.db.query("thread_memberships").withIndex("by_user_revision", (q) => q.eq("user_id", newer.id)).take(1),
+    };
+    const kept = Object.entries(held).filter(([, rows]) => rows.length > 0).map(([name]) => name);
+    if (kept.length > 0) throw new ConvexError(`${newer.id} has ${kept.join(", ")}. Move them by hand first.`);
+
+    await ctx.db.patch(newer._id, { clerk_user_id: undefined, revision: await nextRevision(ctx) });
+    await ctx.db.patch(target._id, {
+      clerk_user_id,
+      email: newer.email,
+      name: newer.name ?? target.name,
+      avatar_url: newer.avatar_url ?? target.avatar_url,
+      providers: [...new Set([...(target.providers ?? []), ...(newer.providers ?? [])])],
+      last_sign_in_at: newer.last_sign_in_at ?? target.last_sign_in_at,
+      revision: await nextRevision(ctx),
+    });
+    await ctx.db.insert("admin_audit_log", {
+      id: crypto.randomUUID(),
+      admin_email: "convex run",
+      action: "clerk_user_adopted",
+      target_user_id: target.id,
+      target_email: newer.email,
+      metadata: { clerk_user_id, deleted_user_id: newer.id },
+      created_at: new Date().toISOString(),
+    });
+    return newer.id;
   },
 });
