@@ -177,7 +177,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-11-10',
+    lastUpdatedDate: '2026-11-21',
     dateLocale: 'en-US',
     sections: [
       {
@@ -209,6 +209,7 @@ export const legalEn = {
           { text: 'Provide Friends messaging, image attachments, screenshot alerts, abuse reports, safety tooling, and user blocking.' },
           { text: 'Authenticate and manage your account.' },
           { text: 'Support optional sign-in with Apple and Google.' },
+          { text: 'Let an AI assistant you connect to Tidex, such as Claude or ChatGPT, read and change your Tidex data for you. This includes your shifts, jobs and pay, your messages with friends, and the schedules friends share with you. It can also send messages and start sharing for you.' },
           { text: 'Deliver push notifications and related in-app alerts if you enable them.' },
           { text: 'Communicate with you about the service.' },
           { text: 'Give support, fix problems, and count how many people use the app and its features.' },
@@ -276,7 +277,7 @@ export const legalEn = {
             },
           },
         ],
-        closingParagraph: 'Clerk handles sign-in for every account. Data is only shared with Google if you choose Google Sign-In, and with Apple when you use Apple sign-in or push notifications. No data is shared with third parties beyond those listed above.',
+        closingParagraph: 'Clerk handles sign-in for every account. Data is only shared with Google if you choose Google Sign-In, and with Apple when you use Apple sign-in or push notifications. If you connect an AI assistant to Tidex, the company behind it receives the data the assistant reads for you, and its own privacy policy covers that data. To end its access, remove Tidex in that assistant or contact us. No data is shared with third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',

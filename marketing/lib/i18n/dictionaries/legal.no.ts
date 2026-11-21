@@ -177,7 +177,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-11-10',
+    lastUpdatedDate: '2026-11-21',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -209,6 +209,7 @@ export const legalNo = {
           { text: 'Tilby vennemeldinger, bildevedlegg, skjermbildevarsler, misbruksrapportering, sikkerhetsfunksjoner og blokkering av brukere.' },
           { text: 'Autentisere og administrere kontoen din.' },
           { text: 'Støtte valgfri innlogging med Apple og Google.' },
+          { text: 'La en KI-assistent du kobler til Tidex, for eksempel Claude eller ChatGPT, lese og endre Tidex-dataene dine for deg. Det gjelder vaktene, jobbene og lønnen din, meldingene med venner og vaktplanene venner deler med deg. Den kan også sende meldinger og begynne å dele for deg.' },
           { text: 'Levere pushvarsler og relaterte varsler i appen dersom du aktiverer dem.' },
           { text: 'Kommunisere med deg om tjenesten.' },
           { text: 'Gi brukerstøtte, rette feil og telle hvor mange som bruker appen og funksjonene i den.' },
@@ -276,7 +277,7 @@ export const legalNo = {
             },
           },
         ],
-        closingParagraph: 'Clerk håndterer innloggingen for alle kontoer. Data deles kun med Google hvis du velger Google-innlogging, og med Apple når du bruker Apple-innlogging eller pushvarsler. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
+        closingParagraph: 'Clerk håndterer innloggingen for alle kontoer. Data deles kun med Google hvis du velger Google-innlogging, og med Apple når du bruker Apple-innlogging eller pushvarsler. Kobler du en KI-assistent til Tidex, får selskapet bak den dataene assistenten leser for deg, og selskapets egen personvernerklæring gjelder for de dataene. For å stoppe tilgangen fjerner du Tidex i assistenten eller kontakter oss. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',
