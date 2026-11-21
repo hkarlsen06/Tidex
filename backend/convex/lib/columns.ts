@@ -29,7 +29,9 @@ const columnKinds: Record<string, Record<string, Kind>> = {
 };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const TIMETZ = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d{1,6})?)?(Z|[+-]\d{2}(:?\d{2})?)?$/;
+// Postgres takes 24:00 as a time, and the app sends it for a recurring shift that ends at midnight.
+const TIMETZ =
+  /^(([01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d{1,6})?)?|24:00(:00(\.0{1,6})?)?)(Z|[+-]\d{2}(:?\d{2})?)?$/;
 
 const isInt = (value: unknown, min: number, max: number) =>
   Number.isInteger(value) && (value as number) >= min && (value as number) <= max;
