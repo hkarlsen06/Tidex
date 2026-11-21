@@ -60,9 +60,9 @@ describe("recurring shifts", () => {
     expect(() => series({ first_dates: [MONDAY, addDays(MONDAY, 7)] })).toThrow("two Mondays");
   });
 
-  test("a series that ends at midnight is stored so the server's time column accepts it, and ends the next day", () => {
+  test("a series that ends at midnight is stored as 24:00, as the app sends it, and the server accepts it", () => {
     const s = series({ first_dates: [MONDAY], start: "16:00", end: "24:00" });
-    expect(s.end_time).toBe("00:00");
+    expect(s.end_time).toBe("24:00");
     expect(() => checkColumns("recurring_shifts", { start_time: s.start_time, end_time: s.end_time })).not.toThrow();
   });
 

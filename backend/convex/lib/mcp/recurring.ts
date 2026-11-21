@@ -89,15 +89,7 @@ export function previewEnd(series: Pick<Series, "selected_days" | "end_condition
   return lastDate(series) ?? lastDate({ ...series, end_condition: { type: "years", value: 2 } })!;
 }
 
-/**
- * Recurring rows store a midnight end as 00:00: the server's timetz column rejects 24:00.
- * An end at or before the start is on the next day either way.
- */
-export function recurringTimes(start: string, end: string) {
-  const times = shiftTimes(start, end);
-  return { start_time: times.start_time, end_time: midnightAsZero(times.end_time) };
-}
-
+/** An older series may store a midnight end as 00:00, which means the same as 24:00. */
 const midnightAsZero = (end: string) => (end === "24:00" ? "00:00" : end);
 
 /** first_dates as selected_days: each date is the first shift on its weekday. */
@@ -206,7 +198,7 @@ export const addRecurringShift = {
     allowOnly(args, ["first_dates", "start", "end", "every_weeks", "ends", "job_id"]);
     const series = {
       selected_days: parseFirstDates(args.first_dates),
-      ...recurringTimes(parseTime(args.start, "start"), parseTime(args.end, "end", true)),
+      ...shiftTimes(parseTime(args.start, "start"), parseTime(args.end, "end", true)),
       repeat_interval_weeks: optional(args.every_weeks, everyWeeks) ?? 0,
       end_condition: optional(args.ends, parseEnds) ?? null,
     };
@@ -281,8 +273,7 @@ export function seriesUpdate(
   if (change.start !== undefined || change.end !== undefined) {
     const moved = movedTimes({ start: prev.start_time, end: prev.end_time }, change.start, change.end);
     if (moved.start_time !== clockTime(prev.start_time)) set.start_time = moved.start_time;
-    const end = midnightAsZero(moved.end_time);
-    if (end !== midnightAsZero(clockTime(prev.end_time))) set.end_time = end;
+    if (midnightAsZero(moved.end_time) !== midnightAsZero(clockTime(prev.end_time))) set.end_time = moved.end_time;
   }
   if (change.selected_days !== undefined && JSON.stringify(sortedKeys(change.selected_days)) !== JSON.stringify(sortedKeys(prev.selected_days))) {
     set.selected_days = change.selected_days;

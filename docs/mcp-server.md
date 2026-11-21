@@ -83,7 +83,7 @@ Tariff pay uses the catalogue's current version only, so a tariff change dated b
 | `list_payroll_adjustments`, `add_payroll_adjustment`, `update_payroll_adjustment`, `delete_payroll_adjustment` | read, write | Bonuses, back pay and corrections in the job's currency. A job without tax on the payout date gets `net_manual`, as in the app. |
 | `get_settings`, `update_settings` | read, write | Theme, calendar colour style, dashboard clock buttons, startup tab and schedule time zone. `get_settings` also shows the notification settings as the phone last saved them; they can't be changed here, because the app keeps its own copy and never takes a server change to it (`NotificationPreferencesRepository.saveFromServer`). |
 
-A recurring series that ends at midnight is stored with the end `00:00`, which the app reads the same way. The server's time column refuses `24:00` for recurring shifts, although the app itself sends it for such a series.
+A recurring series that ends at midnight is stored with the end `24:00`, as the app sends it. An older series may store `00:00`, which the app and the tools read the same way.
 
 ### Friends and messages
 
