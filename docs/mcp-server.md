@@ -2,7 +2,7 @@
 
 People can connect Tidex to an AI agent (Claude, ChatGPT, Cursor and other MCP clients) and let it do what they can do in the app: manage shifts, recurring shifts, events, jobs, pay and tariffs, payroll adjustments and settings, read their earnings, and talk to and share with friends. Account deletion, blocking and reporting, and features that live only on the phone stay out. The server is a Convex HTTP action at `/mcp` on the HTTP actions host, `https://actions.tidex.no/mcp` in production. Clerk is the OAuth authorization server.
 
-The HTTP actions, token checks and rate limits are in `backend/convex/mcp.ts`. Each area's tools are in their own module: `mcpShifts.ts`, `mcpPay.ts` (jobs, pay, tariffs), `mcpPlans.ts` (recurring shifts, events, payroll adjustments, settings) and `mcpSocial.ts` (friends and messages). The parts that need no Convex runtime are in `backend/convex/lib/mcp/`. The tests are `backend/scripts/mcp*.test.ts`, plus the iOS contract test described under [Tools](#tools). Production stays off until the steps in [Production setup](#production-setup) are done: without a valid `MCP_RESOURCE_URL`, every MCP route returns 404.
+The HTTP actions, token checks and rate limits are in `backend/convex/mcp.ts`. Each area's tools are in their own module: `mcpShifts.ts`, `mcpPay.ts` (jobs, pay, tariffs), `mcpPlans.ts` (recurring shifts, events, payroll adjustments, settings) and `mcpSocial.ts` (friends and messages). The parts that need no Convex runtime are in `backend/convex/lib/mcp/`. The tests are `backend/scripts/mcp*.test.ts`, plus the iOS contract test described under [Tools](#tools). Production has served it at `https://actions.tidex.no/mcp` since 2026-11-21. Without a valid `MCP_RESOURCE_URL`, every MCP route returns 404, so unsetting that variable turns it off.
 
 ## Protocol
 
@@ -132,13 +132,13 @@ The development instance has these settings. Each instance also needs the scopes
 
 ## Production setup
 
-Not done. Each step changes production and waits for Hjalmar:
+Done on 2026-11-21:
 
-1. Turn on the Clerk settings above on the production instance and create the two scopes there.
-2. Check that Clerk's hosted sign-in on the production instance works for every sign-in method Tidex offers, including Sign in with Apple on the web, because the OAuth flow signs the user in there and not in the app.
-3. `bunx convex env set MCP_RESOURCE_URL https://actions.tidex.no/mcp` against production, then `bun run deploy` from `backend/` on `main`.
-4. Check that Caddy passes `/.well-known/oauth-protected-resource*` and `/mcp` on `actions.tidex.no` to Convex unchanged.
-5. Disclose in the privacy policy that a user can let an AI service they connect read and change their Tidex data, including messages with friends and the schedules friends share with them.
+1. The production Clerk instance has the settings above, the scopes `tidex:read` and `tidex:write`, and `dynamic_client_allowed_scopes` set to `openid profile email offline_access tidex:read tidex:write`. A scope missing from that list can't be granted to Claude, ChatGPT or any other self-registered client.
+2. Sign in with Apple on Clerk's web page uses the Services ID `no.tidex.app.web`. Its return URLs in Apple Developer include `https://clerk.tidex.no/v1/oauth_callback`; without that entry Apple shows "Sign up not completed". The app's own Apple sign-in doesn't use this ID.
+3. `MCP_RESOURCE_URL` is `https://actions.tidex.no/mcp` on the production deployment.
+4. Caddy passes `/.well-known/oauth-protected-resource*` and `/mcp` on `actions.tidex.no` to Convex unchanged.
+5. The privacy policy (dated 2026-11-21, version unchanged) says a connected AI assistant can read and change Tidex data, including messages with friends and the schedules friends share.
 
 ## Open questions
 
