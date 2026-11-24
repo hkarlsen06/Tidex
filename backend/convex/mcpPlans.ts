@@ -1,61 +1,54 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
-import { adjustmentWrites } from "./payrollAdjustments";
+import { internalMutation, type QueryCtx } from "./_generated/server";
 import { eventWrites } from "./events";
 import { checked, fail, jobForShift, jobsOf, live, requireUser } from "./lib/mcp/db";
-import { adjustmentFields, changedEvent, type EventFields, eventFields } from "./lib/mcp/plans";
+import { computeAdjustmentWithPay } from "./lib/mcp/earnings";
+import { adjustmentFields, changedEvent, type EventFields, eventFields, eventView } from "./lib/mcp/plans";
 import * as specs from "./lib/mcp/plans";
 import {
   firstDate,
-  lastDate,
   overlappingDates,
-  planOccurrence,
   previewEnd,
+  recurringView,
   sameSeries,
   type Series,
   seriesDates,
   seriesUpdate,
-  stoppedEnd,
   storedEndCondition,
-  WEEKDAYS,
 } from "./lib/mcp/recurring";
 import * as recurring from "./lib/mcp/recurring";
 import { type McpTool, tool } from "./lib/mcp/registry";
-import { addDays, clockTime, endsNextDay } from "./lib/mcp/shiftTimes";
+import { addDays } from "./lib/mcp/shiftTimes";
 import { PAYROLL_REVISION } from "./lib/payrollCompatibility";
 import { saveScheduleTimeZone, scheduleTimeZone } from "./lib/scheduleTimeZone";
 import type { LiveActivityRegularShift } from "./lib/shared/liveActivityScheduling";
 import { applicableWageSnapshot, asSnapshot } from "./liveActivities";
-import { oneOff } from "./mcpShifts";
+import { adjustmentWrites } from "./payrollAdjustments";
 import { recurringWrites } from "./recurringShifts";
-import { shiftWrites } from "./userShifts";
 import { updateSettingsFor } from "./userSettings";
 
-// The MCP tools for recurring shifts, events, payroll adjustments and settings. Each runs
-// for the user the OAuth token names; mcp.ts checks the token, the scope and the
-// arguments first. lib/mcp/recurring.ts and lib/mcp/plans.ts build the rows. None of these functions is public.
+// The MCP tools for recurring shifts, events, payroll adjustments and settings.
+// Each runs for the user the OAuth token names; none of these functions is public.
 
 type Row<T extends "recurring_shifts" | "events" | "payroll_adjustments"> = Omit<Doc<T>, "_id" | "_creationTime">;
 
-const STALE = (listTool: string) => `It changed since you listed it. Call ${listTool} again and use the new revision.`;
-
-/** The row `id` of the user's, live and at `revision`. */
+/** The row `id` of the user's, live. */
 async function own<T extends "recurring_shifts" | "events" | "payroll_adjustments">(
   ctx: QueryCtx,
   table: T,
   userId: string,
   id: string,
-  revision: number,
-  listTool: string,
+  hint: string,
 ) {
   const row = (await ctx.db
     .query(table as "events")
     .withIndex("by_uuid", (q) => q.eq("id", id))
     .unique()) as Doc<T> | null;
-  if (row === null || row.user_id !== userId || row.deleted_at !== undefined) fail(`Nothing with that id. Use an id from ${listTool}.`);
-  if (row.revision !== revision) fail(STALE(listTool));
+  if (row === null || row.user_id !== userId || row.deleted_at !== undefined) {
+    fail(`Nothing found with id "${id}". ${hint}`);
+  }
   return row;
 }
 
@@ -87,42 +80,8 @@ const asSeries = (r: Row<"recurring_shifts">): Series => ({
   exclusions: (r.exclusions as string[] | undefined) ?? [],
 });
 
-const notesOf = (r: Row<"recurring_shifts">) => (r.date_specific_notes as Record<string, string> | undefined) ?? {};
-
-function recurringOut(r: Row<"recurring_shifts">, jobs: Doc<"jobs">[]) {
-  const series = asSeries(r);
-  return {
-    recurring_shift_id: r.id,
-    revision: r.revision,
-    job_id: r.job_id,
-    job_name: jobName(jobs, r.job_id),
-    start: clockTime(r.start_time),
-    end: clockTime(r.end_time),
-    ends_next_day: endsNextDay(r.start_time, r.end_time),
-    every_weeks: r.repeat_interval_weeks + 1,
-    days: Object.entries(series.selected_days)
-      .sort(([, a], [, b]) => a.localeCompare(b))
-      .map(([weekday, first_date]) => ({ weekday: WEEKDAYS[Number(weekday)], first_date })),
-    ends: series.end_condition ?? { type: "never" },
-    last_date: lastDate(series),
-    skipped_dates: [...series.exclusions].sort(),
-    notes: notesOf(r),
-  };
-}
-
 const recurringOf = async (ctx: QueryCtx, userId: string) =>
   live(await ctx.db.query("recurring_shifts").withIndex("by_user_revision", (q) => q.eq("user_id", userId)).collect());
-
-export const listRecurringShifts = internalQuery({
-  args: { user_id: v.string() },
-  handler: async (ctx, { user_id }) => {
-    const jobs = await jobsOf(ctx, user_id);
-    return {
-      time_zone: await scheduleTimeZone(ctx, user_id),
-      recurring_shifts: (await recurringOf(ctx, user_id)).map((r) => recurringOut(r, jobs)),
-    };
-  },
-});
 
 const endCondition = v.union(
   v.object({ type: v.literal("months"), value: v.number() }),
@@ -130,7 +89,7 @@ const endCondition = v.union(
   v.object({ type: v.literal("end_date"), date: v.string() }),
 );
 
-export const addRecurringShift = internalMutation({
+export const createRecurringShift = internalMutation({
   args: {
     user_id: v.string(),
     selected_days: v.record(v.string(), v.string()),
@@ -138,19 +97,19 @@ export const addRecurringShift = internalMutation({
     end_time: v.string(),
     repeat_interval_weeks: v.number(),
     end_condition: v.union(endCondition, v.null()),
-    job_id: v.optional(v.string()),
+    job: v.optional(v.string()),
   },
-  handler: async (ctx, { user_id, job_id, ...args }) => {
+  handler: async (ctx, { user_id, job: jobRef, ...args }) => {
     const user = await requireUser(ctx, user_id);
-    const job = await jobForShift(ctx, user.id, job_id);
+    const job = await jobForShift(ctx, user.id, jobRef);
     const jobs = await jobsOf(ctx, user.id);
     const series = { ...args, exclusions: [] };
     const others = await recurringOf(ctx, user.id);
-    // A retried call finds the series its first attempt added.
     const existing = others.find((r) => r.job_id === job.id && sameSeries({ ...r, ...asSeries(r) }, series));
-    if (existing !== undefined) return { recurring_shift: recurringOut(existing, jobs), already_existed: true, skipped_dates: [] };
+    if (existing !== undefined) {
+      return { recurring_shift: recurringView(existing, jobName(jobs, existing.job_id)), already_existed: true, skipped_dates: [] };
+    }
 
-    // AddShiftViewModel+RecurringShift: dates that overlap a shift the user already has are skipped.
     const from = firstDate(series);
     const to = previewEnd(series);
     const oneOffs = live(
@@ -179,124 +138,63 @@ export const addRecurringShift = internalMutation({
       },
       payroll_revision: PAYROLL_REVISION,
     });
-    return { recurring_shift: recurringOut(row as Row<"recurring_shifts">, jobs), already_existed: false, skipped_dates: skipped };
+    const inserted = row as Row<"recurring_shifts">;
+    return {
+      recurring_shift: recurringView(inserted, jobName(jobs, inserted.job_id)),
+      already_existed: false,
+      ...(skipped.length > 0 ? { skipped_dates: skipped } : {}),
+    };
   },
 });
-
-async function writeSeries(
-  ctx: Parameters<typeof recurringWrites.update>[0],
-  userId: string,
-  prev: Row<"recurring_shifts">,
-  change: { set: Record<string, unknown>; clear: string[] },
-) {
-  const jobs = await jobsOf(ctx, userId);
-  // Nothing to change keeps the revision the agent holds.
-  if (nothingChanged(change)) return recurringOut(prev, jobs);
-  const result = await recurringWrites.update(ctx, userId, {
-    id: prev.id,
-    expected_revision: prev.revision,
-    ...change,
-    payroll_revision: PAYROLL_REVISION,
-  });
-  if (result.status !== "ok") fail(STALE("list_recurring_shifts"));
-  return recurringOut(result.row as Row<"recurring_shifts">, jobs);
-}
-
-const ownSeries = (ctx: QueryCtx, userId: string, id: string, revision: number) =>
-  own(ctx, "recurring_shifts", userId, id, revision, "list_recurring_shifts");
 
 export const updateRecurringShift = internalMutation({
   args: {
     user_id: v.string(),
-    recurring_shift_id: v.string(),
-    revision: v.number(),
+    id: v.string(),
     selected_days: v.optional(v.record(v.string(), v.string())),
     start: v.optional(v.string()),
     end: v.optional(v.string()),
     repeat_interval_weeks: v.optional(v.number()),
     end_condition: v.optional(v.object({ value: v.union(endCondition, v.null()) })),
-    job_id: v.optional(v.string()),
+    job: v.optional(v.string()),
     unskip_dates: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, { user_id, recurring_shift_id, revision, job_id, ...change }) => {
+  handler: async (ctx, { user_id, id, job: jobRef, ...change }) => {
     const user = await requireUser(ctx, user_id);
-    const prev = await ownSeries(ctx, user.id, recurring_shift_id, revision);
+    const prev = await own(ctx, "recurring_shifts", user.id, id, "Use a recurring_shift id from get_overview.");
+    const jobs = await jobsOf(ctx, user.id);
     const update = checked(() => seriesUpdate({ ...asSeries(prev), start_time: prev.start_time, end_time: prev.end_time }, change));
-    if (job_id !== undefined && job_id !== prev.job_id) update.set.job_id = (await jobForShift(ctx, user.id, job_id)).id;
-    return { recurring_shift: await writeSeries(ctx, user.id, prev, update) };
-  },
-});
-
-export const stopRecurringShift = internalMutation({
-  args: { user_id: v.string(), recurring_shift_id: v.string(), revision: v.number(), last_date: v.string() },
-  handler: async (ctx, args) => {
-    const user = await requireUser(ctx, args.user_id);
-    const prev = await ownSeries(ctx, user.id, args.recurring_shift_id, args.revision);
-    const end = checked(() => stoppedEnd(asSeries(prev), args.last_date));
-    return { recurring_shift: await writeSeries(ctx, user.id, prev, { set: { end_condition: end }, clear: [] }) };
+    if (jobRef !== undefined) {
+      const targetJob = await jobForShift(ctx, user.id, jobRef);
+      if (targetJob.id !== prev.job_id) update.set.job_id = targetJob.id;
+    }
+    if (nothingChanged(update)) return { recurring_shift: recurringView(prev, jobName(jobs, prev.job_id)) };
+    const result = await recurringWrites.update(ctx, user.id, {
+      id: prev.id,
+      expected_revision: prev.revision,
+      ...update,
+      payroll_revision: PAYROLL_REVISION,
+    });
+    if (result.status !== "ok") fail("The recurring shift changed during the update. Try again.");
+    const row = result.row as Row<"recurring_shifts">;
+    return { recurring_shift: recurringView(row, jobName(jobs, row.job_id)) };
   },
 });
 
 export const deleteRecurringShift = internalMutation({
-  args: { user_id: v.string(), recurring_shift_id: v.string(), revision: v.number() },
+  args: { user_id: v.string(), id: v.string() },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.user_id);
-    const prev = await ownSeries(ctx, user.id, args.recurring_shift_id, args.revision);
+    const prev = await own(ctx, "recurring_shifts", user.id, args.id, "Use a recurring_shift id from get_overview.");
     const result = await recurringWrites.remove(ctx, user.id, {
       id: prev.id,
       expected_revision: prev.revision,
       payroll_revision: PAYROLL_REVISION,
     });
-    if (result.status !== "ok") fail(STALE("list_recurring_shifts"));
-    return { deleted: recurringOut(result.row as Row<"recurring_shifts">, await jobsOf(ctx, user.id)) };
-  },
-});
-
-export const changeRecurringOccurrence = internalMutation({
-  args: {
-    user_id: v.string(),
-    recurring_shift_id: v.string(),
-    revision: v.number(),
-    date: v.string(),
-    change: v.union(
-      v.object({ kind: v.literal("skip") }),
-      v.object({ kind: v.literal("note"), note: v.string() }),
-      v.object({
-        kind: v.literal("change"),
-        date: v.optional(v.string()),
-        start: v.optional(v.string()),
-        end: v.optional(v.string()),
-        note: v.optional(v.string()),
-      }),
-    ),
-  },
-  handler: async (ctx, args) => {
-    const user = await requireUser(ctx, args.user_id);
-    const prev = await ownSeries(ctx, user.id, args.recurring_shift_id, args.revision);
-    const series = asSeries(prev);
-    if (!seriesDates(series, args.date, args.date).includes(args.date)) {
-      fail(`${args.date} is not a date of this series; it may be skipped or changed already. list_shifts shows its dates.`);
-    }
-    const plan = checked(() =>
-      planOccurrence(
-        { start_time: prev.start_time, end_time: prev.end_time, exclusions: series.exclusions, date_specific_notes: notesOf(prev) },
-        args.date,
-        args.change,
-      ),
-    );
-    // The app adds the one-off shift to the series' job, which needs pay set up.
-    const job = plan.shift === undefined ? null : await jobForShift(ctx, user.id, prev.job_id);
-    const next = {
-      exclusions: plan.exclusions ?? prev.exclusions,
-      date_specific_notes: plan.date_specific_notes === undefined ? prev.date_specific_notes : (plan.date_specific_notes ?? undefined),
-    };
-    const recurring_shift = await writeSeries(ctx, user.id, prev, diff(prev, next, ["exclusions", "date_specific_notes"]));
-    if (plan.shift === undefined || job === null) return { recurring_shift };
-    const { row } = await shiftWrites.insert(ctx, user.id, {
-      row: { id: crypto.randomUUID(), job_id: job.id, ...plan.shift },
-      payroll_revision: PAYROLL_REVISION,
-    });
-    return { recurring_shift, shift: oneOff(row as Parameters<typeof oneOff>[0], await jobsOf(ctx, user.id)) };
+    if (result.status !== "ok") fail("The recurring shift changed during deletion. Try again.");
+    const jobs = await jobsOf(ctx, user.id);
+    const row = result.row as Row<"recurring_shifts">;
+    return { deleted: recurringView(row, jobName(jobs, row.job_id)) };
   },
 });
 
@@ -313,34 +211,8 @@ const EVENT_COLUMNS = [
   "notification_anchor_time",
 ];
 
-function eventOut(e: Row<"events">) {
-  const reminders = e.notification_minutes_array ?? [];
-  return {
-    event_id: e.id,
-    revision: e.revision,
-    date: e.start_date,
-    end_date: e.end_date,
-    all_day: e.is_all_day,
-    note: e.note,
-    ...(e.is_all_day
-      ? { reminder_days_before: reminders.map((m) => m / (24 * 60)), reminder_time: e.notification_anchor_time ?? null }
-      : { start: e.start_time ?? null, end: e.end_time ?? null, reminder_minutes: reminders }),
-  };
-}
-
 const eventsOf = async (ctx: QueryCtx, userId: string) =>
   live(await ctx.db.query("events").withIndex("by_user_revision", (q) => q.eq("user_id", userId)).collect());
-
-export const listEvents = internalQuery({
-  args: { user_id: v.string(), from: v.string(), to: v.string() },
-  handler: async (ctx, { user_id, from, to }) => ({
-    time_zone: await scheduleTimeZone(ctx, user_id),
-    events: (await eventsOf(ctx, user_id))
-      .filter((e) => e.start_date <= to && e.end_date >= from)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date) || (a.start_time ?? "").localeCompare(b.start_time ?? ""))
-      .map(eventOut),
-  }),
-});
 
 const eventFieldsValidator = {
   start_date: v.string(),
@@ -353,24 +225,22 @@ const eventFieldsValidator = {
   notification_anchor_time: v.optional(v.string()),
 };
 
-export const addEvent = internalMutation({
+export const createEvent = internalMutation({
   args: { user_id: v.string(), ...eventFieldsValidator },
   handler: async (ctx, { user_id, ...fields }) => {
     const user = await requireUser(ctx, user_id);
-    // A retried call finds the event its first attempt added.
     const key = ["start_date", "end_date", "is_all_day", "start_time", "end_time", "note"] as const;
     const existing = (await eventsOf(ctx, user.id)).find((e) => key.every((k) => e[k] === fields[k]));
-    if (existing !== undefined) return { event: eventOut(existing), already_existed: true };
+    if (existing !== undefined) return { event: eventView(existing), already_existed: true };
     const { row } = await eventWrites.insert(ctx, user.id, { row: { id: crypto.randomUUID(), ...fields }, payroll_revision: PAYROLL_REVISION });
-    return { event: eventOut(row as Row<"events">), already_existed: false };
+    return { event: eventView(row as Row<"events">), already_existed: false };
   },
 });
 
 export const updateEvent = internalMutation({
   args: {
     user_id: v.string(),
-    event_id: v.string(),
-    revision: v.number(),
+    id: v.string(),
     change: v.object({
       note: v.optional(v.string()),
       date: v.optional(v.string()),
@@ -385,24 +255,33 @@ export const updateEvent = internalMutation({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.user_id);
-    const prev = await own(ctx, "events", user.id, args.event_id, args.revision, "list_events");
+    const prev = await own(ctx, "events", user.id, args.id, "Use an event id from get_schedule.");
     const next: EventFields = checked(() => eventFields(changedEvent(prev, args.change)));
     const change = diff(prev, next, EVENT_COLUMNS);
-    if (nothingChanged(change)) return { event: eventOut(prev) };
-    const result = await eventWrites.update(ctx, user.id, { id: prev.id, expected_revision: prev.revision, ...change, payroll_revision: PAYROLL_REVISION });
-    if (result.status !== "ok") fail(STALE("list_events"));
-    return { event: eventOut(result.row as Row<"events">) };
+    if (nothingChanged(change)) return { event: eventView(prev) };
+    const result = await eventWrites.update(ctx, user.id, {
+      id: prev.id,
+      expected_revision: prev.revision,
+      ...change,
+      payroll_revision: PAYROLL_REVISION,
+    });
+    if (result.status !== "ok") fail("The event changed during the update. Try again.");
+    return { event: eventView(result.row as Row<"events">) };
   },
 });
 
 export const deleteEvent = internalMutation({
-  args: { user_id: v.string(), event_id: v.string(), revision: v.number() },
+  args: { user_id: v.string(), id: v.string() },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.user_id);
-    const prev = await own(ctx, "events", user.id, args.event_id, args.revision, "list_events");
-    const result = await eventWrites.remove(ctx, user.id, { id: prev.id, expected_revision: prev.revision, payroll_revision: PAYROLL_REVISION });
-    if (result.status !== "ok") fail(STALE("list_events"));
-    return { deleted: eventOut(result.row as Row<"events">) };
+    const prev = await own(ctx, "events", user.id, args.id, "Use an event id from get_schedule.");
+    const result = await eventWrites.remove(ctx, user.id, {
+      id: prev.id,
+      expected_revision: prev.revision,
+      payroll_revision: PAYROLL_REVISION,
+    });
+    if (result.status !== "ok") fail("The event changed during deletion. Try again.");
+    return { deleted: eventView(result.row as Row<"events">) };
   },
 });
 
@@ -421,28 +300,24 @@ const ADJUSTMENT_COLUMNS = [
   "payout_date",
 ];
 
-function adjustmentOut(a: Row<"payroll_adjustments">, jobs: Doc<"jobs">[]) {
-  return {
-    adjustment_id: a.id,
-    revision: a.revision,
-    job_id: a.job_id ?? null,
-    job_name: jobName(jobs, a.job_id),
-    amount: a.amount,
-    currency: a.currency,
-    category: a.category,
-    tax_treatment: a.tax_treatment,
-    description: a.description,
-    note: a.note ?? null,
-    earned_from: a.earned_from_date ?? null,
-    earned_to: a.earned_to_date ?? null,
-    payout_date: a.payout_date,
-  };
-}
-
 const adjustmentsOf = async (ctx: QueryCtx, userId: string) =>
   live(await ctx.db.query("payroll_adjustments").withIndex("by_user_revision", (q) => q.eq("user_id", userId)).collect());
 
-/** The job's currency, and whether the pay that applies on `payoutDate` has tax. */
+async function adjustmentOut(ctx: QueryCtx, userId: string, a: Row<"payroll_adjustments">, jobs: Doc<"jobs">[]) {
+  const [rawSnapshots, settings] = await Promise.all([
+    ctx.db.query("wage_snapshots").withIndex("by_user_revision", (q) => q.eq("user_id", userId)).collect(),
+    ctx.db.query("user_settings").withIndex("by_user_revision", (q) => q.eq("user_id", userId)).unique(),
+  ]);
+  const snapshots = live(rawSnapshots).map(asSnapshot);
+  const { raw: _raw, ...computed } = computeAdjustmentWithPay(
+    a,
+    jobs,
+    (jobId, date) => applicableWageSnapshot({ user_id: userId, job_id: jobId, shift_date: date } as LiveActivityRegularShift, snapshots),
+    settings?.half_tax_month,
+  );
+  return computed;
+}
+
 async function payFor(ctx: QueryCtx, userId: string, job: Doc<"jobs">, payoutDate: string) {
   const snapshots = live(
     await ctx.db.query("wage_snapshots").withIndex("by_user_revision", (q) => q.eq("user_id", userId)).collect(),
@@ -451,23 +326,10 @@ async function payFor(ctx: QueryCtx, userId: string, job: Doc<"jobs">, payoutDat
   return { id: job.id, currency: job.currency, taxEnabled: applicableWageSnapshot(shift, snapshots)?.tax_enabled === true };
 }
 
-export const listPayrollAdjustments = internalQuery({
-  args: { user_id: v.string(), from: v.string(), to: v.string() },
-  handler: async (ctx, { user_id, from, to }) => {
-    const jobs = await jobsOf(ctx, user_id);
-    return {
-      adjustments: (await adjustmentsOf(ctx, user_id))
-        .filter((a) => a.payout_date >= from && a.payout_date <= to)
-        .sort((a, b) => a.payout_date.localeCompare(b.payout_date))
-        .map((a) => adjustmentOut(a, jobs)),
-    };
-  },
-});
-
-export const addPayrollAdjustment = internalMutation({
+export const createPayrollAdjustment = internalMutation({
   args: {
     user_id: v.string(),
-    job_id: v.optional(v.string()),
+    job: v.optional(v.string()),
     amount: v.number(),
     description: v.string(),
     note: v.optional(v.string()),
@@ -477,32 +339,32 @@ export const addPayrollAdjustment = internalMutation({
     earned_to: v.optional(v.string()),
     payout_date: v.string(),
   },
-  handler: async (ctx, { user_id, job_id, ...draft }) => {
+  handler: async (ctx, { user_id, job: jobRef, ...draft }) => {
     const user = await requireUser(ctx, user_id);
-    const job = await jobForShift(ctx, user.id, job_id);
+    const job = await jobForShift(ctx, user.id, jobRef);
     const pay = await payFor(ctx, user.id, job, draft.payout_date);
     const row = checked(() => adjustmentFields(draft, pay));
     const jobs = await jobsOf(ctx, user.id);
-    // A retried call finds the adjustment its first attempt added.
     const existing = (await adjustmentsOf(ctx, user.id)).find(
       (a) => a.job_id === row.job_id && a.payout_date === row.payout_date && a.amount === row.amount && a.description === row.description,
     );
-    if (existing !== undefined) return { adjustment: adjustmentOut(existing, jobs), already_existed: true };
+    if (existing !== undefined) {
+      return { adjustment: await adjustmentOut(ctx, user.id, existing, jobs), already_existed: true };
+    }
     const result = await adjustmentWrites.insert(ctx, user.id, {
       row: { id: crypto.randomUUID(), ...row } as Parameters<typeof adjustmentWrites.insert>[2]["row"],
       payroll_revision: PAYROLL_REVISION,
     });
-    return { adjustment: adjustmentOut(result.row as Row<"payroll_adjustments">, jobs), already_existed: false };
+    return { adjustment: await adjustmentOut(ctx, user.id, result.row as Row<"payroll_adjustments">, jobs), already_existed: false };
   },
 });
 
 export const updatePayrollAdjustment = internalMutation({
   args: {
     user_id: v.string(),
-    adjustment_id: v.string(),
-    revision: v.number(),
+    id: v.string(),
     change: v.object({
-      job_id: v.optional(v.string()),
+      job: v.optional(v.string()),
       amount: v.optional(v.number()),
       description: v.optional(v.string()),
       category: v.optional(v.string()),
@@ -513,15 +375,17 @@ export const updatePayrollAdjustment = internalMutation({
       note: v.optional(v.string()),
     }),
   },
-  handler: async (ctx, { user_id, adjustment_id, revision, change }) => {
+  handler: async (ctx, { user_id, id, change }) => {
     const user = await requireUser(ctx, user_id);
-    const prev = await own(ctx, "payroll_adjustments", user.id, adjustment_id, revision, "list_payroll_adjustments");
+    const prev = await own(ctx, "payroll_adjustments", user.id, id, "Use an adjustment id from get_earnings.");
     const jobs = await jobsOf(ctx, user.id);
-    const jobId = change.job_id ?? prev.job_id;
-    if (jobId === undefined) fail("This adjustment has no job. Give job_id.");
-    const job = jobId === prev.job_id ? jobs.find((j) => j.id === jobId) : await jobForShift(ctx, user.id, jobId);
-    if (job === undefined) fail("The adjustment's job is gone. Give a job_id from list_jobs.");
-    // "" removes an earned date.
+    const job =
+      change.job !== undefined
+        ? await jobForShift(ctx, user.id, change.job)
+        : prev.job_id !== undefined
+          ? jobs.find((j) => j.id === prev.job_id)
+          : undefined;
+    if (job === undefined) fail("This adjustment has no active job. Pass job (ID or name).");
     const earned = (given: string | undefined, stored: string | undefined) => (given === "" ? undefined : (given ?? stored));
     const draft = {
       amount: change.amount ?? prev.amount,
@@ -536,71 +400,35 @@ export const updatePayrollAdjustment = internalMutation({
     const pay = await payFor(ctx, user.id, job, draft.payout_date);
     const next = checked(() => adjustmentFields(draft, pay));
     const update = diff(prev, next, ADJUSTMENT_COLUMNS);
-    if (nothingChanged(update)) return { adjustment: adjustmentOut(prev, jobs) };
+    if (nothingChanged(update)) return { adjustment: await adjustmentOut(ctx, user.id, prev, jobs) };
     const result = await adjustmentWrites.update(ctx, user.id, {
       id: prev.id,
       expected_revision: prev.revision,
       ...update,
       payroll_revision: PAYROLL_REVISION,
     });
-    if (result.status !== "ok") fail(STALE("list_payroll_adjustments"));
-    return { adjustment: adjustmentOut(result.row as Row<"payroll_adjustments">, jobs) };
+    if (result.status !== "ok") fail("The payroll adjustment changed during the update. Try again.");
+    return { adjustment: await adjustmentOut(ctx, user.id, result.row as Row<"payroll_adjustments">, jobs) };
   },
 });
 
 export const deletePayrollAdjustment = internalMutation({
-  args: { user_id: v.string(), adjustment_id: v.string(), revision: v.number() },
+  args: { user_id: v.string(), id: v.string() },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.user_id);
-    const prev = await own(ctx, "payroll_adjustments", user.id, args.adjustment_id, args.revision, "list_payroll_adjustments");
+    const prev = await own(ctx, "payroll_adjustments", user.id, args.id, "Use an adjustment id from get_earnings.");
     const result = await adjustmentWrites.remove(ctx, user.id, {
       id: prev.id,
       expected_revision: prev.revision,
       payroll_revision: PAYROLL_REVISION,
     });
-    if (result.status !== "ok") fail(STALE("list_payroll_adjustments"));
-    return { deleted: adjustmentOut(result.row as Row<"payroll_adjustments">, await jobsOf(ctx, user.id)) };
+    if (result.status !== "ok") fail("The payroll adjustment changed during deletion. Try again.");
+    const jobs = await jobsOf(ctx, user.id);
+    return { deleted: await adjustmentOut(ctx, user.id, result.row as Row<"payroll_adjustments">, jobs) };
   },
 });
 
 // ---------- Settings ----------
-
-const settingsOf = (ctx: QueryCtx, userId: string) =>
-  ctx.db.query("user_settings").withIndex("by_user_revision", (q) => q.eq("user_id", userId)).unique();
-
-/** The stored preferences, or the defaults notificationPreferences.upsert gives a first write. */
-async function preferencesOf(ctx: QueryCtx, userId: string) {
-  const row = await ctx.db
-    .query("notification_preferences")
-    .withIndex("by_user_revision", (q) => q.eq("user_id", userId))
-    .unique();
-  return {
-    shared_shifts_enabled: row?.shared_shifts_enabled ?? true,
-    shift_reminders_enabled: row?.shift_reminders_enabled ?? true,
-    shift_reminder_minutes_array: row?.shift_reminder_minutes_array ?? (row === null ? [300] : []),
-  };
-}
-
-async function settingsOut(ctx: QueryCtx, userId: string) {
-  const settings = await settingsOf(ctx, userId);
-  const prefs = await preferencesOf(ctx, userId);
-  return {
-    theme: settings?.theme ?? null,
-    calendar_content_color_style: settings?.calendar_content_color_style ?? null,
-    show_dashboard_clock_buttons: settings?.show_dashboard_clock_buttons ?? null,
-    default_startup_tab: settings?.default_startup_tab ?? null,
-    schedule_time_zone: await scheduleTimeZone(ctx, userId),
-    // NotificationSettingsViewModel shows reminders as off while there is no reminder time.
-    shift_reminders_enabled: prefs.shift_reminders_enabled && prefs.shift_reminder_minutes_array.length > 0,
-    shift_reminder_minutes: [...prefs.shift_reminder_minutes_array].sort((a, b) => b - a),
-    shared_shifts_enabled: prefs.shared_shifts_enabled,
-  };
-}
-
-export const getSettings = internalQuery({
-  args: { user_id: v.string() },
-  handler: async (ctx, { user_id }) => ({ settings: await settingsOut(ctx, user_id) }),
-});
 
 const literals = <T extends string>(values: readonly T[]) => v.union(...values.map((value) => v.literal(value)));
 
@@ -618,7 +446,7 @@ export const updateSettings = internalMutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.user_id);
     if (Object.keys(args.user_settings).length > 0) {
-      const prev = await settingsOf(ctx, user.id);
+      const prev = await ctx.db.query("user_settings").withIndex("by_user_revision", (q) => q.eq("user_id", user.id)).unique();
       if (prev === null) fail("The user has no settings yet. They need to open the Tidex app once first.");
       const { set } = diff(prev, args.user_settings, Object.keys(args.user_settings));
       if (Object.keys(set).length > 0) await updateSettingsFor(ctx, user.id, { expected_revision: prev.revision, set });
@@ -626,31 +454,70 @@ export const updateSettings = internalMutation({
     if (args.schedule_time_zone !== undefined && args.schedule_time_zone !== (await scheduleTimeZone(ctx, user.id))) {
       await saveScheduleTimeZone(ctx, user.id, args.schedule_time_zone, false);
     }
-    return { settings: await settingsOut(ctx, user.id) };
+    const updated = await ctx.db.query("user_settings").withIndex("by_user_revision", (q) => q.eq("user_id", user.id)).unique();
+    return {
+      time_zone: await scheduleTimeZone(ctx, user.id),
+      settings: {
+        theme: updated?.theme ?? null,
+        calendar_color_style: updated?.calendar_content_color_style ?? null,
+        show_clock_buttons: updated?.show_dashboard_clock_buttons ?? null,
+        startup_tab: updated?.default_startup_tab ?? null,
+      },
+    };
   },
 });
 
 export const planTools: McpTool[] = [
-  tool(recurring.listRecurringShifts, (ctx, user_id) => ctx.runQuery(internal.mcpPlans.listRecurringShifts, { user_id })),
-  tool(recurring.addRecurringShift, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.addRecurringShift, { user_id, ...args })),
-  tool(recurring.updateRecurringShift, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.updateRecurringShift, { user_id, ...args })),
-  tool(recurring.stopRecurringShift, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.stopRecurringShift, { user_id, ...args })),
-  tool(recurring.deleteRecurringShift, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.deleteRecurringShift, { user_id, ...args })),
-  tool(recurring.changeRecurringOccurrence, (ctx, user_id, args) =>
-    ctx.runMutation(internal.mcpPlans.changeRecurringOccurrence, { user_id, ...args }),
+  tool(recurring.saveRecurringShift, (ctx, user_id, args) =>
+    args.mode === "create"
+      ? ctx.runMutation(internal.mcpPlans.createRecurringShift, {
+          user_id,
+          selected_days: args.selected_days,
+          start_time: args.start_time,
+          end_time: args.end_time,
+          repeat_interval_weeks: args.repeat_interval_weeks,
+          end_condition: args.end_condition,
+          job: args.job,
+        })
+      : ctx.runMutation(internal.mcpPlans.updateRecurringShift, {
+          user_id,
+          id: args.id,
+          selected_days: args.selected_days,
+          start: args.start,
+          end: args.end,
+          repeat_interval_weeks: args.repeat_interval_weeks,
+          end_condition: args.end_condition,
+          job: args.job,
+          unskip_dates: args.unskip_dates,
+        }),
   ),
-  tool(specs.listEvents, (ctx, user_id, args) => ctx.runQuery(internal.mcpPlans.listEvents, { user_id, ...args })),
-  tool(specs.addEvent, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.addEvent, { user_id, ...args })),
-  tool(specs.updateEvent, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.updateEvent, { user_id, ...args })),
+  tool(recurring.deleteRecurringShift, (ctx, user_id, args) =>
+    ctx.runMutation(internal.mcpPlans.deleteRecurringShift, { user_id, ...args }),
+  ),
+  tool(specs.saveEvent, (ctx, user_id, args) =>
+    args.mode === "create"
+      ? ctx.runMutation(internal.mcpPlans.createEvent, { user_id, ...args.fields })
+      : ctx.runMutation(internal.mcpPlans.updateEvent, { user_id, id: args.id, change: args.change }),
+  ),
   tool(specs.deleteEvent, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.deleteEvent, { user_id, ...args })),
-  tool(specs.listPayrollAdjustments, (ctx, user_id, args) => ctx.runQuery(internal.mcpPlans.listPayrollAdjustments, { user_id, ...args })),
-  tool(specs.addPayrollAdjustment, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.addPayrollAdjustment, { user_id, ...args })),
-  tool(specs.updatePayrollAdjustment, (ctx, user_id, args) =>
-    ctx.runMutation(internal.mcpPlans.updatePayrollAdjustment, { user_id, ...args }),
+  tool(specs.savePayrollAdjustment, (ctx, user_id, args) =>
+    args.mode === "create"
+      ? ctx.runMutation(internal.mcpPlans.createPayrollAdjustment, {
+          user_id,
+          job: args.job,
+          amount: args.amount,
+          description: args.description,
+          note: args.note,
+          category: args.category,
+          tax_treatment: args.tax_treatment,
+          earned_from: args.earned_from,
+          earned_to: args.earned_to,
+          payout_date: args.payout_date,
+        })
+      : ctx.runMutation(internal.mcpPlans.updatePayrollAdjustment, { user_id, id: args.id, change: args.change }),
   ),
   tool(specs.deletePayrollAdjustment, (ctx, user_id, args) =>
     ctx.runMutation(internal.mcpPlans.deletePayrollAdjustment, { user_id, ...args }),
   ),
-  tool(specs.getSettings, (ctx, user_id) => ctx.runQuery(internal.mcpPlans.getSettings, { user_id })),
   tool(specs.updateSettings, (ctx, user_id, args) => ctx.runMutation(internal.mcpPlans.updateSettings, { user_id, ...args })),
 ];

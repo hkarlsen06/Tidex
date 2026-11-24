@@ -14,7 +14,7 @@ export function fail(message: string): never {
   throw new ConvexError({ code: "tool_error", message });
 }
 
-/** Runs a shift-time helper, turning its ToolError into a message the agent sees. */
+/** Runs a helper, turning its ToolError into a message the agent sees. */
 export function checked<T>(run: () => T): T {
   try {
     return run();
@@ -41,14 +41,49 @@ export async function jobsWithPay(ctx: QueryCtx, userId: string) {
 export const activeJobs = (jobs: Doc<"jobs">[]) =>
   jobs.filter((j) => j.archived_at === undefined).sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
 
-/** A live, unarchived job of the user's with pay set up: the given one, else the default, else the first. */
-export async function jobForShift(ctx: QueryCtx, userId: string, jobId: string | undefined) {
-  const jobs = activeJobs(await jobsOf(ctx, userId));
-  const job = jobId === undefined ? (jobs.find((j) => j.is_default) ?? jobs[0]) : jobs.find((j) => j.id === jobId);
-  if (job === undefined) {
-    fail(jobId === undefined ? "The user has no jobs yet. Add one with add_job first." : "No active job with that job_id. Use list_jobs.");
+/** Formats available jobs into a short hint when a lookup misses or is ambiguous. */
+function jobListHint(jobs: Doc<"jobs">[]): string {
+  if (jobs.length === 0) return "The user has no jobs yet. Add one with save_job first.";
+  const list = jobs.map((j) => `${j.name} (${j.id})`).join(", ");
+  return `Available jobs: ${list}.`;
+}
+
+/**
+ * Resolves a job by ID or case-insensitive name. When `ref` is omitted, picks the
+ * default active job (or first active job).
+ */
+export function matchJob(
+  jobs: Doc<"jobs">[],
+  ref: string | undefined,
+  options: { includeArchived?: boolean } = {},
+): Doc<"jobs"> {
+  const pool = options.includeArchived ? jobs : activeJobs(jobs);
+  if (ref === undefined) {
+    const active = activeJobs(jobs);
+    const chosen = active.find((j) => j.is_default) ?? active[0];
+    if (chosen === undefined) fail("The user has no jobs yet. Add one with save_job first.");
+    return chosen;
   }
-  if (!(await jobsWithPay(ctx, userId)).has(job.id)) fail(`Set up pay for ${job.name} with set_pay first.`);
+  const trimmed = ref.trim();
+  const byId = pool.find((j) => j.id === trimmed);
+  if (byId !== undefined) return byId;
+  const lower = trimmed.toLowerCase();
+  const byName = pool.filter((j) => j.name.trim().toLowerCase() === lower);
+  if (byName.length === 1) return byName[0]!;
+  if (byName.length > 1) {
+    const choices = byName.map((j) => `${j.name} (${j.id})`).join(", ");
+    fail(`Multiple jobs match "${trimmed}". Pass the exact job ID instead: ${choices}.`);
+  }
+  fail(`No ${options.includeArchived ? "" : "active "}job matches "${trimmed}". ${jobListHint(pool)}`);
+}
+
+/** A live, unarchived job of the user's with pay set up: matched by ID or name, else default. */
+export async function jobForShift(ctx: QueryCtx, userId: string, jobRef: string | undefined) {
+  const jobs = await jobsOf(ctx, userId);
+  const job = matchJob(jobs, jobRef, { includeArchived: false });
+  if (!(await jobsWithPay(ctx, userId)).has(job.id)) {
+    fail(`Set up pay for ${job.name} with set_pay first.`);
+  }
   return job;
 }
 

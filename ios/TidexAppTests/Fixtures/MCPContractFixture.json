@@ -29,10 +29,11 @@
       "is_default": false,
       "sort_order": 1,
       "payroll_day": 20,
+      "half_tax_month": 12,
       "pay_period": {
         "type": "monthly",
         "startDay": 16,
-        "payoutMonthOffset": 1
+        "payoutMonthOffset": 0
       },
       "user_id": "00000000-0000-4000-8000-000000000001",
       "created_at": "2026-11-20T12:00:00.000Z",
@@ -562,7 +563,8 @@
           }
         ]
       },
-      "tax_enabled": false,
+      "tax_enabled": true,
+      "tax_percentage": 30,
       "break_enabled": true,
       "break_method": "proportional",
       "break_threshold_hours": 5.5,
@@ -895,7 +897,8 @@
           }
         ]
       },
-      "tax_enabled": false,
+      "tax_enabled": true,
+      "tax_percentage": 30,
       "break_enabled": true,
       "break_method": "proportional",
       "break_threshold_hours": 5.5,
@@ -1058,16 +1061,27 @@
       {
         "currency": "$",
         "gross_pay": 1299.99,
+        "net_pay": 1065.99,
+        "tax_deducted": 234,
+        "effective_tax_percent": 18,
+        "base_pay": 1148,
+        "supplement_pay": 151.99,
         "paid_hours": 61,
+        "overtime_hours": 8,
         "shifts": 8
       },
       {
         "currency": "kr",
         "gross_pay": 14183.93,
+        "net_pay": 10596.6,
+        "tax_deducted": 3587.33,
+        "effective_tax_percent": 25.29,
+        "half_tax_applied": true,
+        "base_pay": 8353.31,
+        "supplement_pay": 5830.62,
         "paid_hours": 33.5,
         "shifts": 5
       }
-    ],
-    "shifts_without_pay_setup": 0
+    ]
   }
 }

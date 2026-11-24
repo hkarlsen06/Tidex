@@ -10,6 +10,8 @@ final class MCPContractFixtureTests: XCTestCase {
     struct Total: Decodable {
       let currency: String
       let gross_pay: Double  // swiftlint:disable:this identifier_name
+      let net_pay: Double  // swiftlint:disable:this identifier_name
+      let tax_deducted: Double  // swiftlint:disable:this identifier_name
       let paid_hours: Double  // swiftlint:disable:this identifier_name
       let shifts: Int
     }
@@ -63,15 +65,15 @@ final class MCPContractFixtureTests: XCTestCase {
         "user_id": fixture.user_id, "theme": "system",
       ]))
     let range = fixture.earnings
+    let visibleRange = (
+      start: try XCTUnwrap(Date.fromISODateString(range.from)),
+      end: try XCTUnwrap(Date.fromISODateString(range.to))
+    )
     let computed = PayrollEngine.computeShiftsForMonth(
       .init(
         year: 2_026, month: 12, shifts: fixture.shifts.map { $0.toShiftRow() }, recurring: [],
         snapshots: fixture.wage_snapshots.map { $0.toWageSnapshot() }, settings: settings,
-        visibleRange: (
-          start: try XCTUnwrap(Date.fromISODateString(range.from)),
-          end: try XCTUnwrap(Date.fromISODateString(range.to))
-        ),
-        jobs: jobs)
+        visibleRange: visibleRange, jobs: jobs)
     ).filter { $0.shiftDate >= range.from && $0.shiftDate <= range.to }
 
     let currencyByJob = Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0.currency) })
@@ -83,7 +85,13 @@ final class MCPContractFixtureTests: XCTestCase {
       XCTAssertEqual(shifts.count, total.shifts, total.currency)
       XCTAssertEqual(
         shifts.reduce(0) { $0 + $1.computed.gross }, total.gross_pay, accuracy: 0.01,
-        "\(total.currency) gross differs from the server's: \(detail)")
+        "\(total.currency) gross: \(detail)")
+      XCTAssertEqual(
+        shifts.reduce(0) { $0 + $1.netPay }, total.net_pay, accuracy: 0.01,
+        "\(total.currency) net: \(detail)")
+      XCTAssertEqual(
+        shifts.reduce(0) { $0 + $1.taxAmount }, total.tax_deducted, accuracy: 0.01,
+        "\(total.currency) tax: \(detail)")
       XCTAssertEqual(
         shifts.reduce(0) { $0 + $1.computed.paidHours }, total.paid_hours, accuracy: 0.01,
         total.currency)

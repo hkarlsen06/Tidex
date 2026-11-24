@@ -18,7 +18,8 @@ import { socialTools } from "./mcpSocial";
 // arguments, then runs the tool for the user the token names. Each area's tools live in
 // mcp<Area>.ts.
 
-const tools: McpTool[] = [...shiftTools, ...payTools, ...planTools, ...socialTools];
+const [overviewTool, ...jobAndPayTools] = payTools;
+const tools: McpTool[] = [overviewTool!, ...shiftTools, ...planTools, ...jobAndPayTools, ...socialTools];
 
 const KEYS_FRESH_MS = 60 * 60_000;
 // Clerk's keys are fetched at most this often, failed attempts included, so junk tokens

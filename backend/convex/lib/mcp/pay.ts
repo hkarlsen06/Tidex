@@ -1,13 +1,31 @@
 import type { BreakMethod, OvertimeConfig, SupplementRule } from "../shared/payroll/types";
 import { type CatalogueEntry, tariffCatalogue } from "../tariffCatalogue";
-import { allowOnly, type Args, optional, optionalString, requiredString, today } from "./args";
+import {
+  adds,
+  allowOnly,
+  type Args,
+  boolean,
+  date,
+  destructive,
+  integer,
+  jobRef,
+  numberRange,
+  oneOf,
+  optional,
+  optionalString,
+  positive,
+  readOnly,
+  requiredString,
+  time,
+  today,
+  updates,
+} from "./args";
 import type { ToolSpec } from "./registry";
 import { parseDate, parseTime, ToolError } from "./shiftTimes";
 
-// The job, pay and tariff tools: their arguments, and the job and wage snapshot rows they
-// write. The rows match what the app writes (JobsRepository, OnboardingData,
-// WageSnapshotEditorSheet), because one row the app can't decode stops the user's sync of
-// that table. The server barely checks the JSON columns, so everything is checked here.
+// The overview, job, pay and tariff tools, plus the job and wage_snapshots row builders.
+// Rows match what the iOS app writes (JobsRepository, OnboardingData, WageSnapshotEditorSheet),
+// verified by backend/scripts/mcp-contract-fixture.ts and MCPContractFixtureTests.swift.
 
 // ---------- Data ----------
 
@@ -42,12 +60,12 @@ export type StoredSnapshot = Partial<Omit<SnapshotFields, "hourly_wage" | "suppl
 
 export type PayChoice =
   | { type: "tariff"; tariff_type_id: string; level: number }
-  | { type: "custom"; hourly_wage: number; supplements?: SupplementRule[]; overtime?: OvertimeChoice };
-export type OvertimeChoice = { enabled: false } | { enabled: true; weekly_threshold_hours: number };
+  | { type: "custom"; hourly_wage?: number; supplements?: SupplementRule[]; overtime?: OvertimeChoice };
+export type OvertimeChoice = { enabled: false } | { enabled: true; weekly_threshold_hours?: number };
 export type TaxChoice = { enabled: boolean; percentage?: number };
 export type BreakChoice = { enabled: boolean; method?: BreakMethod; threshold_hours?: number; deduction_minutes?: number };
 
-/** What set_pay and add_job change. Whatever is left out comes from the snapshot in effect. */
+/** What set_pay and save_job (create) change. Anything omitted stays from the snapshot in effect. */
 export type PaySettings = { pay?: PayChoice; tax?: TaxChoice; breaks?: BreakChoice };
 
 /** WorkplaceColor.curatedHexPalette, the colors the app offers. */
@@ -56,7 +74,7 @@ export const JOB_COLORS = [
   "#6366F1", "#8B5CF6", "#10B981", "#84CC16", "#F97316", "#EAB308", "#F43F5E", "#D946EF",
   "#0EA5E9", "#2563EB", "#16A34A", "#DC2626", "#EA580C", "#7C3AED", "#0891B2", "#BE123C",
 ];
-const DEFAULT_COLOR = JOB_COLORS[0];
+const DEFAULT_COLOR = JOB_COLORS[0]!;
 
 /** CurrencyConfig.groups, the currency symbols the app offers. */
 export const CURRENCIES = [
@@ -91,7 +109,7 @@ const MAX_SUPPLEMENT_RULES = 50;
 
 export function tariffEntry(tariffTypeId: string): CatalogueEntry {
   const entry = tariffCatalogue.find((e) => e.type.id === tariffTypeId);
-  if (entry === undefined) throw new ToolError(`No tariff with tariff_type_id ${tariffTypeId}. Use list_tariffs.`);
+  if (entry === undefined) throw new ToolError(`No tariff with tariff_type_id ${tariffTypeId}. Use find_tariffs.`);
   return entry;
 }
 
@@ -99,45 +117,88 @@ function tariffChoices(entry: CatalogueEntry) {
   return Object.fromEntries((entry.type.presentation?.options ?? []).map((o) => [o.dimension_id, o.value_en]));
 }
 
-/** The catalogue grouped by agreement, each variant with the choices that pick it. */
-export function listTariffs(search: string | undefined) {
-  const needle = search?.trim().toLowerCase();
-  type Variant = { tariff_type_id: string; choices: Record<string, string>; levels: number };
-  const families = new Map<string, { family_id: string; name: string; name_nb: string; kind: string; variants: Variant[] }>();
-  for (const entry of tariffCatalogue) {
-    const p = entry.type.presentation;
-    if (p === undefined) continue;
-    const haystack = [p.name_en, p.name_nb, entry.type.display_name_en, entry.type.id, ...p.search_terms].join(" ").toLowerCase();
-    if (needle && !haystack.includes(needle)) continue;
-    const family = families.get(p.family_id) ?? { family_id: p.family_id, name: p.name_en, name_nb: p.name_nb, kind: p.kind, variants: [] };
-    family.variants.push({ tariff_type_id: entry.type.id, choices: tariffChoices(entry), levels: entry.version.categories.length });
-    families.set(p.family_id, family);
-  }
-  return { tariffs: [...families.values()] };
+function tariffLevels(entry: CatalogueEntry) {
+  return entry.version.categories.map((c) => ({
+    level: c.level,
+    label: c.label_en,
+    label_nb: c.label_nb,
+    hourly_wage: entry.version.rates[String(c.level)],
+  }));
 }
 
-/** One tariff's levels, rates and rules, in plain terms. */
+/** One tariff's full levels, rates and rules. */
 export function getTariff(tariffTypeId: string) {
-  const { type, version } = tariffEntry(tariffTypeId);
+  const entry = tariffEntry(tariffTypeId);
+  const { type, version } = entry;
+  const ov = overtimeSummary(version.overtime);
   return {
     tariff_type_id: type.id,
     name: type.display_name_en,
     name_nb: type.display_name_nb,
-    choices: tariffChoices({ type, version }),
+    choices: tariffChoices(entry),
     currency: "kr",
     valid_from: version.effective_date,
     valid_through: version.valid_through,
     coverage: version.coverage_note_en,
     source_url: version.source_url,
-    levels: version.categories.map((c) => ({
-      level: c.level,
-      label: c.label_en,
-      label_nb: c.label_nb,
-      hourly_wage: version.rates[String(c.level)],
-    })),
-    supplement_rules: version.supplements.rules.length,
-    overtime: overtimeView(version.overtime),
+    levels: tariffLevels(entry),
+    supplement_rules_count: version.supplements.rules.length,
+    ...ov,
   };
+}
+
+/**
+ * Searches tariffs or inspects one tariff_type_id. When search narrows to at most 5
+ * variants, includes levels directly on each variant so one call is enough.
+ */
+export function findTariffs(args: { search?: string; tariff_type_id?: string }) {
+  if (args.tariff_type_id !== undefined) {
+    return { tariff: getTariff(args.tariff_type_id) };
+  }
+  const needle = args.search?.trim().toLowerCase();
+  const matched: CatalogueEntry[] = [];
+  for (const entry of tariffCatalogue) {
+    const p = entry.type.presentation;
+    if (p === undefined) continue;
+    const haystack = [p.name_en, p.name_nb, entry.type.display_name_en, entry.type.id, ...p.search_terms].join(" ").toLowerCase();
+    if (needle && !haystack.includes(needle)) continue;
+    matched.push(entry);
+  }
+  const includeLevels = needle !== undefined && matched.length <= 10;
+  const families = new Map<
+    string,
+    {
+      family_id: string;
+      name: string;
+      name_nb: string;
+      kind: string;
+      variants: Record<string, unknown>[];
+    }
+  >();
+  for (const entry of matched) {
+    const p = entry.type.presentation!;
+    const family = families.get(p.family_id) ?? {
+      family_id: p.family_id,
+      name: p.name_en,
+      name_nb: p.name_nb,
+      kind: p.kind,
+      variants: [],
+    };
+    family.variants.push({
+      tariff_type_id: entry.type.id,
+      choices: tariffChoices(entry),
+      level_count: entry.version.categories.length,
+      ...(includeLevels
+        ? {
+            valid_from: entry.version.effective_date,
+            valid_through: entry.version.valid_through,
+            levels: tariffLevels(entry),
+          }
+        : {}),
+    });
+    families.set(p.family_id, family);
+  }
+  return { tariffs: [...families.values()] };
 }
 
 /** The level's label in a tariff the catalogue still has, else null. */
@@ -153,17 +214,17 @@ const isCustom = (s: StoredSnapshot | null) => s !== null && s.wage_level === un
 const clone = <T>(value: T): T => structuredClone(value);
 
 /** A tariff level's pay on `date`, as OnboardingData builds it. Tariff pay is always in kr. */
-function tariffPay(choice: { tariff_type_id: string; level: number }, date: string) {
+function tariffPay(choice: { tariff_type_id: string; level: number }, dateStr: string) {
   const { type, version } = tariffEntry(choice.tariff_type_id);
   const rate = version.rates[String(choice.level)];
   if (rate === undefined) {
     const levels = version.categories.map((c) => c.level).join(", ");
-    throw new ToolError(`${type.display_name_en} has no level ${choice.level}. Levels: ${levels}. Use get_tariff.`);
+    throw new ToolError(`${type.display_name_en} has no level ${choice.level}. Levels: ${levels}. Use find_tariffs.`);
   }
-  if (date < version.effective_date || date > version.valid_through) {
+  if (dateStr < version.effective_date || dateStr > version.valid_through) {
     throw new ToolError(
-      `Tidex has ${type.display_name_en} rates from ${version.effective_date} to ${version.valid_through}, not for ${date}. ` +
-        "Use custom pay for that date.",
+      `Tidex has ${type.display_name_en} rates from ${version.effective_date} to ${version.valid_through}, not for ${dateStr}. ` +
+        "Pass hourly_wage for custom pay on that date.",
     );
   }
   return {
@@ -177,30 +238,42 @@ function tariffPay(choice: { tariff_type_id: string; level: number }, date: stri
 
 /**
  * The fields of the wage snapshot `settings` describe. `base` is the snapshot being changed,
- * else the one in effect on `date`, else null for a new job's base pay. What `settings`
- * leaves out comes from `base`, as the app's editor pre-fills from it, else from the app's
- * new-job defaults.
+ * else the one in effect on `date`, else null for a new job's base pay. Anything omitted
+ * comes from `base`, or from the app's new-job defaults.
  */
 export function snapshotFields(settings: PaySettings, base: StoredSnapshot | null, on: { date: string; currency: string }): SnapshotFields {
   const { pay, tax, breaks } = settings;
 
   let payFields: Pick<SnapshotFields, "hourly_wage" | "wage_level" | "tariff_type_id" | "supplements" | "overtime">;
   if (pay?.type === "tariff") {
-    if (on.currency !== "kr") throw new ToolError("Tariff pay needs a job paid in kr. Use custom pay for this job.");
+    if (on.currency !== "kr") throw new ToolError("Tariff pay needs a job paid in kr. Pass hourly_wage for custom pay.");
     payFields = tariffPay(pay, on.date);
   } else if (pay?.type === "custom") {
     const keep = isCustom(base);
+    if (pay.hourly_wage === undefined && !keep) {
+      throw new ToolError("hourly_wage is required when setting custom pay or switching from a tariff.");
+    }
+    const baseOvertime = base?.overtime as Partial<OvertimeConfig> | undefined;
     const overtime = pay.overtime;
     payFields = {
-      hourly_wage: pay.hourly_wage,
-      supplements: pay.supplements !== undefined ? { rules: pay.supplements } : keep ? clone(base!.supplements as SnapshotFields["supplements"]) : { rules: [] },
+      hourly_wage: pay.hourly_wage ?? base!.hourly_wage,
+      supplements:
+        pay.supplements !== undefined
+          ? { rules: pay.supplements }
+          : keep
+            ? clone(base!.supplements as SnapshotFields["supplements"])
+            : { rules: [] },
       overtime:
         overtime === undefined
-          ? keep ? clone(base!.overtime as OvertimeConfig) : OVERTIME_OFF
-          : overtime.enabled ? seededOvertime(overtime.weekly_threshold_hours) : OVERTIME_OFF,
+          ? keep
+            ? clone(base!.overtime as OvertimeConfig)
+            : OVERTIME_OFF
+          : overtime.enabled
+            ? seededOvertime(overtime.weekly_threshold_hours ?? (keep ? baseOvertime?.weeklyThresholdHours : undefined) ?? 40)
+            : OVERTIME_OFF,
     };
   } else {
-    if (base === null) throw new ToolError("pay is required: give a tariff level or a custom hourly wage.");
+    if (base === null) throw new ToolError("Give either hourly_wage (custom pay) or tariff_type_id and tariff_level.");
     payFields = {
       hourly_wage: base.hourly_wage,
       ...(base.wage_level === undefined ? {} : { wage_level: base.wage_level }),
@@ -212,13 +285,11 @@ export function snapshotFields(settings: PaySettings, base: StoredSnapshot | nul
 
   const taxEnabled = tax?.enabled ?? base?.tax_enabled ?? false;
   const taxPercentage = taxEnabled ? (tax?.percentage ?? base?.tax_percentage) : undefined;
-  if (taxEnabled && taxPercentage === undefined) throw new ToolError("tax.percentage is required when tax is on.");
+  if (taxEnabled && taxPercentage === undefined) throw new ToolError("tax_percent is required when tax is enabled.");
 
-  // Existing pay keeps its break behaviour unless the call changes it; a missing break_enabled
-  // means on in the app (WageSnapshot.effectiveBreakEnabled). OnboardingData.usesSimpleSetup:
-  // new pay in another currency than kr gets no break deduction.
+  // Existing pay keeps its break behaviour unless changed; a missing break_enabled means on in the app.
+  // New pay in a currency other than kr defaults to breaks off (OnboardingData.usesSimpleSetup).
   const breakEnabled = breaks?.enabled ?? (base === null ? on.currency === "kr" : (base.break_enabled ?? true));
-  // The pay editor turns method "none" into proportional only when the user switches breaks on.
   const storedMethod = breaks?.enabled === true && base?.break_method === "none" ? undefined : base?.break_method;
 
   return {
@@ -259,8 +330,8 @@ function canonical(value: unknown): string {
 }
 
 /** The snapshot that prices a shift on `date`: the latest dated one on or before it, else the base. */
-export function snapshotInEffect<S extends { from_date?: string }>(snapshots: S[], date: string): S | null {
-  const dated = snapshots.filter((s) => s.from_date !== undefined && s.from_date <= date);
+export function snapshotInEffect<S extends { from_date?: string }>(snapshots: S[], dateStr: string): S | null {
+  const dated = snapshots.filter((s) => s.from_date !== undefined && s.from_date <= dateStr);
   dated.sort((a, b) => b.from_date!.localeCompare(a.from_date!));
   return dated[0] ?? snapshots.find((s) => s.from_date === undefined) ?? null;
 }
@@ -301,7 +372,7 @@ export const placement = (active: { sort_order: number }[]) => ({
 /** Why archiving `job` is refused, as JobsRepository.archiveJob refuses it, or null. */
 export function archiveRefusal(job: { id: string; is_default: boolean }, active: { id: string }[]) {
   if (active.length <= 1) return "The user's only active job can't be archived. Add another job first.";
-  if (job.is_default) return "The default job can't be archived. Make another job the default with update_job first.";
+  if (job.is_default) return "The default job can't be archived. Make another job the default with save_job first.";
   return null;
 }
 
@@ -322,39 +393,11 @@ export function payPeriodView(stored: unknown) {
   return { type: "calendar_month" };
 }
 
-export function jobView(
-  job: {
-    id: string;
-    revision: number;
-    name: string;
-    color?: string;
-    currency: string;
-    is_default: boolean;
-    archived_at?: string;
-    payroll_day?: number;
-    half_tax_month?: HalfTaxMonth;
-    pay_period?: unknown;
-  },
-  paySetUp: boolean,
-) {
-  return {
-    job_id: job.id,
-    revision: job.revision,
-    name: job.name,
-    color: job.color ?? null,
-    currency: job.currency,
-    is_default: job.is_default,
-    archived: job.archived_at !== undefined,
-    pay_set_up: paySetUp,
-    payroll_day: job.payroll_day ?? 15,
-    half_tax_month: job.half_tax_month === undefined ? "none" : HALF_TAX_NAMES[job.half_tax_month],
-    pay_period: payPeriodView(job.pay_period),
-  };
-}
-
-function overtimeView(stored: unknown) {
+function overtimeSummary(stored: unknown) {
   const o = stored as Partial<OvertimeConfig> | null | undefined;
-  return o?.enabled === true ? { enabled: true, weekly_threshold_hours: o.weeklyThresholdHours ?? 40 } : { enabled: false };
+  return o?.enabled === true
+    ? { overtime_enabled: true, overtime_weekly_hours: o.weeklyThresholdHours ?? 40 }
+    : { overtime_enabled: false };
 }
 
 function supplementView(rule: SupplementRule) {
@@ -367,43 +410,83 @@ function supplementView(rule: SupplementRule) {
   };
 }
 
-/** A job's wage snapshots in plain terms, base pay first, then each dated change. */
-export function payView(
-  job: { id: string; name: string; currency: string },
-  snapshots: (StoredSnapshot & { id: string; revision: number; from_date?: string })[],
+/** Flat, consistent view of one wage snapshot. Never mixes string and array types. */
+export function paySnapshotView(
+  s: StoredSnapshot & { id: string; from_date?: string },
+  options: { includeSupplements: boolean; untilDate?: string | null },
+) {
+  const rules = ((s.supplements as { rules?: SupplementRule[] } | null)?.rules ?? []) as SupplementRule[];
+  const isTariff = s.wage_level !== undefined;
+  const tariff = isTariff ? tariffLevelLabel(s.tariff_type_id, s.wage_level) : null;
+  const breakEnabled = (s.break_enabled ?? true) && s.break_method !== "none";
+  const taxEnabled = s.tax_enabled ?? false;
+  return {
+    ...(options.untilDate !== undefined ? { from_date: s.from_date ?? null, until_date: options.untilDate } : {}),
+    type: isTariff ? ("tariff" as const) : ("custom" as const),
+    hourly_wage: s.hourly_wage,
+    ...(isTariff
+      ? {
+          tariff_type_id: s.tariff_type_id ?? null,
+          tariff_level: s.wage_level,
+          ...(tariff?.tariff_name ? { tariff_name: tariff.tariff_name } : {}),
+          ...(tariff?.level_label ? { level_label: tariff.level_label } : {}),
+        }
+      : {}),
+    supplement_rules_count: rules.length,
+    ...(options.includeSupplements ? { supplements: rules.map(supplementView) } : {}),
+    ...overtimeSummary(s.overtime),
+    tax_enabled: taxEnabled,
+    ...(taxEnabled ? { tax_percent: s.tax_percentage ?? 0 } : {}),
+    break_enabled: breakEnabled,
+    ...(breakEnabled
+      ? {
+          break_method: s.break_method ?? "proportional",
+          break_threshold_hours: s.break_threshold_hours ?? 5.5,
+          break_minutes: s.break_deduction_minutes ?? 30,
+        }
+      : {}),
+  };
+}
+
+export function jobView(
+  job: {
+    id: string;
+    name: string;
+    color?: string;
+    currency: string;
+    is_default: boolean;
+    archived_at?: string;
+    payroll_day?: number;
+    half_tax_month?: HalfTaxMonth;
+    pay_period?: unknown;
+  },
+  snapshots: (StoredSnapshot & { id: string; from_date?: string })[],
+  options: { today: string; includePayHistory?: boolean },
 ) {
   const ordered = [...snapshots].sort((a, b) => (a.from_date ?? "").localeCompare(b.from_date ?? ""));
-  const dates = ordered.flatMap((s) => (s.from_date === undefined ? [] : [s.from_date]));
+  const hasBase = ordered.some((s) => s.from_date === undefined);
+  const current = hasBase ? snapshotInEffect(ordered, options.today) : null;
+  const dated = ordered.flatMap((s) => (s.from_date === undefined ? [] : [s.from_date]));
+
   return {
-    job_id: job.id,
-    job_name: job.name,
+    id: job.id,
+    name: job.name,
     currency: job.currency,
-    pay_set_up: ordered.some((s) => s.from_date === undefined),
-    pay: ordered.map((s) => {
-      const next = dates.find((d) => s.from_date === undefined || d > s.from_date);
-      const rules = ((s.supplements as { rules?: SupplementRule[] } | null)?.rules ?? []) as SupplementRule[];
-      const tariff = s.wage_level === undefined ? null : tariffLevelLabel(s.tariff_type_id, s.wage_level);
-      return {
-        snapshot_id: s.id,
-        revision: s.revision,
-        from_date: s.from_date ?? null,
-        until_date: next === undefined ? null : next,
-        pay:
-          s.wage_level === undefined
-            ? { type: "custom" }
-            : { type: "tariff", tariff_type_id: s.tariff_type_id ?? null, level: s.wage_level, ...tariff },
-        hourly_wage: s.hourly_wage,
-        supplements: s.wage_level === undefined ? rules.map(supplementView) : `${rules.length} rules from the tariff`,
-        overtime: overtimeView(s.overtime),
-        tax: { enabled: s.tax_enabled ?? false, percentage: s.tax_enabled ? (s.tax_percentage ?? 0) : null },
-        breaks: {
-          enabled: (s.break_enabled ?? true) && s.break_method !== "none",
-          method: s.break_method ?? "proportional",
-          threshold_hours: s.break_threshold_hours ?? 5.5,
-          deduction_minutes: s.break_deduction_minutes ?? 30,
-        },
-      };
-    }),
+    is_default: job.is_default,
+    ...(job.archived_at !== undefined ? { archived: true } : {}),
+    ...(job.color ? { color: job.color } : {}),
+    payroll_day: job.payroll_day ?? 15,
+    half_tax_month: job.half_tax_month === undefined ? "none" : HALF_TAX_NAMES[job.half_tax_month],
+    pay_period: payPeriodView(job.pay_period),
+    current_pay: current === null ? null : paySnapshotView(current, { includeSupplements: false }),
+    ...(options.includePayHistory
+      ? {
+          pay_history: ordered.map((s) => {
+            const next = dated.find((d) => s.from_date === undefined || d > s.from_date) ?? null;
+            return paySnapshotView(s, { includeSupplements: true, untilDate: next });
+          }),
+        }
+      : {}),
   };
 }
 
@@ -412,35 +495,6 @@ export function payView(
 function object(value: unknown, field: string): Args {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new ToolError(`${field} must be an object.`);
   return value as Args;
-}
-
-function number(value: unknown, field: string, min: number, max: number, integer = false): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max || (integer && !Number.isInteger(value))) {
-    throw new ToolError(`${field} must be ${integer ? "a whole number" : "a number"} from ${min} to ${max}.`);
-  }
-  return value;
-}
-
-function positive(value: unknown, field: string, max: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > max) {
-    throw new ToolError(`${field} must be a number above 0 and at most ${max}.`);
-  }
-  return value;
-}
-
-function boolean(value: unknown, field: string): boolean {
-  if (typeof value !== "boolean") throw new ToolError(`${field} must be true or false.`);
-  return value;
-}
-
-function oneOf<T extends string>(value: unknown, field: string, options: readonly T[]): T {
-  if (!options.includes(value as T)) throw new ToolError(`${field} must be one of: ${options.join(", ")}.`);
-  return value as T;
-}
-
-function requiredRevision(value: unknown, from: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) throw new ToolError(`revision is required. Get it from ${from}.`);
-  return value;
 }
 
 function jobName(value: unknown): string {
@@ -459,7 +513,7 @@ function currency(value: unknown): string {
   return oneOf(value, "currency", CURRENCIES);
 }
 
-const payrollDay = (value: unknown) => number(value, "payroll_day", 1, 31, true);
+const payrollDay = (value: unknown) => integer(value, "payroll_day", 1, 31);
 
 function halfTaxMonth(value: unknown): HalfTaxMonth | null {
   const name = oneOf(value, "half_tax_month", ["none", "november", "december"] as const);
@@ -476,16 +530,15 @@ export function parsePayPeriod(value: unknown): PayPeriod | null {
   }
   if (type === "monthly") {
     allowOnly(p, ["type", "start_day", "payout_month_offset"]);
-    const startDay = number(p.start_day, "pay_period.start_day", 1, 28, true);
-    const payoutMonthOffset = number(p.payout_month_offset, "pay_period.payout_month_offset", 0, 1, true) as 0 | 1;
-    // PayPeriod.calendarMonth: the app stores it as no value.
+    const startDay = integer(p.start_day, "pay_period.start_day", 1, 28);
+    const payoutMonthOffset = integer(p.payout_month_offset, "pay_period.payout_month_offset", 0, 1) as 0 | 1;
     return startDay === 1 && payoutMonthOffset === 1 ? null : { type, startDay, payoutMonthOffset };
   }
   allowOnly(p, ["type", "period_end", "payout_delay_days"]);
   return {
     type,
     anchorEnd: parseDate(p.period_end, "pay_period.period_end"),
-    payoutDelayDays: number(p.payout_delay_days, "pay_period.payout_delay_days", 0, 27, true),
+    payoutDelayDays: integer(p.payout_delay_days, "pay_period.payout_delay_days", 0, 27),
   };
 }
 
@@ -494,7 +547,7 @@ export function parseSupplement(value: unknown, field: string): SupplementRule {
   const r = object(value, field);
   allowOnly(r, ["days", "from", "to", "amount", "percent"]);
   if (!Array.isArray(r.days) || r.days.length === 0) throw new ToolError(`${field}.days must list weekdays from 1 (Monday) to 7 (Sunday).`);
-  const days = [...new Set(r.days.map((d) => number(d, `${field}.days`, 1, 7, true)))].sort((a, b) => a - b);
+  const days = [...new Set(r.days.map((d) => integer(d, `${field}.days`, 1, 7)))].sort((a, b) => a - b);
   const from = parseTime(r.from, `${field}.from`) as SupplementRule["from"];
   const to = parseTime(r.to, `${field}.to`, true) as SupplementRule["to"];
   if (from === to) throw new ToolError(`${field}: from and to can't be the same time.`);
@@ -508,84 +561,91 @@ export function parseSupplement(value: unknown, field: string): SupplementRule {
     : { days, from, to, percent: positive(r.percent, `${field}.percent`, 1000) };
 }
 
-function parsePay(value: unknown): PayChoice {
-  const p = object(value, "pay");
-  const type = oneOf(p.type, "pay.type", ["tariff", "custom"] as const);
-  if (type === "tariff") {
-    allowOnly(p, ["type", "tariff_type_id", "level"]);
-    return {
-      type,
-      tariff_type_id: requiredString(p.tariff_type_id, "pay.tariff_type_id"),
-      level: number(p.level, "pay.level", -1000, 1000, true),
+/** Parses flat pay, tax and break fields into PaySettings. */
+export function parseFlatPaySettings(args: Args): PaySettings {
+  const tariffId = optionalString(args.tariff_type_id, "tariff_type_id");
+  const tariffLevel = optional(args.tariff_level, (v) => integer(v, "tariff_level", -1000, 1000));
+  const hourlyWage = optional(args.hourly_wage, (v) => positive(v, "hourly_wage", 1_000_000));
+  const supplements = optional(args.supplements, (items) => {
+    if (!Array.isArray(items) || items.length > MAX_SUPPLEMENT_RULES) {
+      throw new ToolError(`supplements must be a list of at most ${MAX_SUPPLEMENT_RULES} rules.`);
+    }
+    return items.map((rule, i) => parseSupplement(rule, `supplements[${i}]`));
+  });
+  const overtimeEnabled = optional(args.overtime_enabled, (v) => boolean(v, "overtime_enabled"));
+  const overtimeWeeklyHours = optional(args.overtime_weekly_hours, (v) => positive(v, "overtime_weekly_hours", 168));
+
+  const hasTariff = tariffId !== undefined || tariffLevel !== undefined;
+  const hasCustom =
+    hourlyWage !== undefined || supplements !== undefined || overtimeEnabled !== undefined || overtimeWeeklyHours !== undefined;
+  if (hasTariff && hasCustom) {
+    throw new ToolError("Give either tariff fields (tariff_type_id, tariff_level) or custom pay fields (hourly_wage, supplements, overtime), not both.");
+  }
+
+  let pay: PayChoice | undefined;
+  if (hasTariff) {
+    if (tariffId === undefined || tariffLevel === undefined) {
+      throw new ToolError("Tariff pay requires both tariff_type_id and tariff_level.");
+    }
+    pay = { type: "tariff", tariff_type_id: tariffId, level: tariffLevel };
+  } else if (hasCustom) {
+    let overtime: OvertimeChoice | undefined;
+    if (overtimeEnabled === false) {
+      if (overtimeWeeklyHours !== undefined) throw new ToolError("overtime_weekly_hours can't be set when overtime_enabled is false.");
+      overtime = { enabled: false };
+    } else if (overtimeEnabled === true || overtimeWeeklyHours !== undefined) {
+      overtime = { enabled: true, ...(overtimeWeeklyHours !== undefined ? { weekly_threshold_hours: overtimeWeeklyHours } : {}) };
+    }
+    pay = {
+      type: "custom",
+      ...(hourlyWage !== undefined ? { hourly_wage: hourlyWage } : {}),
+      ...(supplements !== undefined ? { supplements } : {}),
+      ...(overtime !== undefined ? { overtime } : {}),
     };
   }
-  allowOnly(p, ["type", "hourly_wage", "supplements", "overtime"]);
-  const supplements = optional(p.supplements, (list) => {
-    if (!Array.isArray(list) || list.length > MAX_SUPPLEMENT_RULES) {
-      throw new ToolError(`pay.supplements must be a list of at most ${MAX_SUPPLEMENT_RULES} rules.`);
-    }
-    return list.map((rule, i) => parseSupplement(rule, `pay.supplements[${i}]`));
-  });
-  const overtime = optional(p.overtime, (v): OvertimeChoice => {
-    const o = object(v, "pay.overtime");
-    allowOnly(o, ["enabled", "weekly_threshold_hours"]);
-    if (!boolean(o.enabled, "pay.overtime.enabled")) return { enabled: false };
-    const hours = optional(o.weekly_threshold_hours, (h) => positive(h, "pay.overtime.weekly_threshold_hours", 168));
-    return { enabled: true, weekly_threshold_hours: hours ?? 40 };
-  });
+
+  const taxEnabled = optional(args.tax_enabled, (v) => boolean(v, "tax_enabled"));
+  const taxPercent = optional(args.tax_percent, (v) => numberRange(v, "tax_percent", 0, 100));
+  let tax: TaxChoice | undefined;
+  if (taxEnabled === false) {
+    tax = { enabled: false };
+  } else if (taxEnabled === true || taxPercent !== undefined) {
+    tax = { enabled: true, ...(taxPercent !== undefined ? { percentage: taxPercent } : {}) };
+  }
+
+  const breakEnabled = optional(args.break_enabled, (v) => boolean(v, "break_enabled"));
+  const breakMethod = optional(args.break_method, (v) => oneOf(v, "break_method", BREAK_METHODS));
+  const breakThreshold = optional(args.break_threshold_hours, (v) => numberRange(v, "break_threshold_hours", 1, 12));
+  const breakMinutes = optional(args.break_minutes, (v) => integer(v, "break_minutes", 5, 120));
+  let breaks: BreakChoice | undefined;
+  if (breakEnabled === false) {
+    breaks = { enabled: false };
+  } else if (breakEnabled === true || breakMethod !== undefined || breakThreshold !== undefined || breakMinutes !== undefined) {
+    breaks = {
+      enabled: true,
+      ...(breakMethod !== undefined ? { method: breakMethod } : {}),
+      ...(breakThreshold !== undefined ? { threshold_hours: breakThreshold } : {}),
+      ...(breakMinutes !== undefined ? { deduction_minutes: breakMinutes } : {}),
+    };
+  }
+
   return {
-    type,
-    hourly_wage: positive(p.hourly_wage, "pay.hourly_wage", 1_000_000),
-    ...(supplements === undefined ? {} : { supplements }),
-    ...(overtime === undefined ? {} : { overtime }),
+    ...(pay !== undefined ? { pay } : {}),
+    ...(tax !== undefined ? { tax } : {}),
+    ...(breaks !== undefined ? { breaks } : {}),
   };
 }
 
-function parseTax(value: unknown): TaxChoice {
-  const t = object(value, "tax");
-  allowOnly(t, ["enabled", "percentage"]);
-  const percentage = optional(t.percentage, (v) => number(v, "tax.percentage", 0, 100));
-  return { enabled: boolean(t.enabled, "tax.enabled"), ...(percentage === undefined ? {} : { percentage }) };
-}
+// ---------- Shared schemas ----------
 
-function parseBreaks(value: unknown): BreakChoice {
-  const b = object(value, "breaks");
-  allowOnly(b, ["enabled", "method", "threshold_hours", "deduction_minutes"]);
-  const method = optional(b.method, (v) => oneOf(v, "breaks.method", BREAK_METHODS));
-  const threshold = optional(b.threshold_hours, (v) => number(v, "breaks.threshold_hours", 1, 12));
-  const minutes = optional(b.deduction_minutes, (v) => number(v, "breaks.deduction_minutes", 5, 120, true));
-  return {
-    enabled: boolean(b.enabled, "breaks.enabled"),
-    ...(method === undefined ? {} : { method }),
-    ...(threshold === undefined ? {} : { threshold_hours: threshold }),
-    ...(minutes === undefined ? {} : { deduction_minutes: minutes }),
-  };
-}
-
-function paySettings(args: Args): PaySettings {
-  const pay = optional(args.pay, parsePay);
-  const tax = optional(args.tax, parseTax);
-  const breaks = optional(args.breaks, parseBreaks);
-  return { ...(pay && { pay }), ...(tax && { tax }), ...(breaks && { breaks }) };
-}
-
-// ---------- Tool definitions ----------
-
-const readOnly = { readOnlyHint: true, openWorldHint: false };
-const jobId = { type: "string", description: "A job_id from list_jobs" };
-const jobRevision = {
-  type: "number",
-  description: "The job's revision from list_jobs. A change made since then makes the call fail; list the jobs again.",
-};
-const date = { type: "string", format: "date", description: "YYYY-MM-DD" };
-const time = { type: "string", pattern: "^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$", description: "HH:mm, 24-hour clock" };
+const endTimeSchema = { type: "string", pattern: "^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$", description: "HH:mm, 24-hour clock" };
 
 const payPeriodSchema = {
   type: "object",
   description:
-    "How workdays group into paydays. calendar_month: the 1st to the last day, paid the month after. " +
-    "monthly: a month starting on start_day (1-28), paid in the month the period ends (payout_month_offset 0) or the month after (1). " +
-    "biweekly: 14-day periods, one of which ends on period_end, paid payout_delay_days (0-27) after each period ends.",
+    "How workdays group into paydays. calendar_month: 1st to last day, paid next month. " +
+    "monthly: starts on start_day (1-28), paid in end month (payout_month_offset 0) or month after (1). " +
+    "biweekly: 14-day periods, one ending on period_end, paid payout_delay_days (0-27) later.",
   properties: {
     type: { type: "string", enum: ["calendar_month", "monthly", "biweekly"] },
     start_day: { type: "integer", minimum: 1, maximum: 28 },
@@ -596,172 +656,158 @@ const payPeriodSchema = {
   required: ["type"],
   additionalProperties: false,
 };
-const payrollDaySchema = { type: "integer", minimum: 1, maximum: 31, description: "Day of the month pay arrives, for monthly pay periods." };
+
+const payrollDaySchema = { type: "integer", minimum: 1, maximum: 31, description: "Day of month pay arrives for monthly pay periods (default 15)." };
 const halfTaxSchema = {
   type: "string",
   enum: ["none", "november", "december"],
-  description: "The month with half tax (Norwegian halv skatt), or none.",
+  description: "Month with half tax (Norwegian halv skatt), or none.",
 };
-const colorSchema = { type: "string", enum: JOB_COLORS, description: "The job's color in the app." };
+const colorSchema = { type: "string", enum: JOB_COLORS, description: "Hex color from the app palette." };
 
 const supplementSchema = {
   type: "object",
-  description: "Extra pay for hours worked in a time window. Give amount or percent, not both. A window with to before from runs past midnight.",
+  description: "Extra pay per hour in a time window. Give either amount or percent. A window where to <= from crosses midnight.",
   properties: {
-    days: { type: "array", items: { type: "integer", minimum: 1, maximum: 7 }, description: "Weekdays, 1 = Monday to 7 = Sunday" },
+    days: { type: "array", items: { type: "integer", minimum: 1, maximum: 7 }, description: "Weekdays, 1 = Monday to 7 = Sunday." },
     from: time,
-    to: time,
-    amount: { type: "number", description: "Added per hour, in the job's currency" },
-    percent: { type: "number", description: "Percent of the hourly wage added per hour" },
+    to: endTimeSchema,
+    amount: { type: "number", exclusiveMinimum: 0, description: "Fixed extra per hour in the job currency." },
+    percent: { type: "number", exclusiveMinimum: 0, description: "Extra percent of the hourly wage." },
   },
   required: ["days", "from", "to"],
   additionalProperties: false,
 };
-const paySchema = {
-  type: "object",
-  description:
-    "tariff: a level of a Norwegian collective agreement from list_tariffs and get_tariff, with its supplements and overtime rules, in kr. " +
-    "custom: the user's own hourly_wage with optional supplements and overtime. " +
-    "Overtime on uses the app's standard rules (50% before 21:00 on weekdays, 100% after, on Sundays and on holidays) above weekly_threshold_hours (default 40).",
-  properties: {
-    type: { type: "string", enum: ["tariff", "custom"] },
-    tariff_type_id: { type: "string" },
-    level: { type: "integer" },
-    hourly_wage: { type: "number", exclusiveMinimum: 0 },
-    supplements: { type: "array", items: supplementSchema, maxItems: MAX_SUPPLEMENT_RULES },
-    overtime: {
-      type: "object",
-      properties: { enabled: { type: "boolean" }, weekly_threshold_hours: { type: "number", exclusiveMinimum: 0, maximum: 168 } },
-      required: ["enabled"],
-      additionalProperties: false,
-    },
+
+const flatPayProperties = {
+  hourly_wage: { type: "number", exclusiveMinimum: 0, description: "Custom hourly wage in the job currency." },
+  tariff_type_id: { type: "string", description: "Norwegian tariff ID from find_tariffs (use with tariff_level; job must be in kr)." },
+  tariff_level: { type: "integer", description: "Tariff level from find_tariffs (use with tariff_type_id)." },
+  supplements: {
+    type: "array",
+    items: supplementSchema,
+    maxItems: MAX_SUPPLEMENT_RULES,
+    description: "Custom supplement rules (replaces existing rules for custom pay).",
   },
-  required: ["type"],
-  additionalProperties: false,
-};
-const taxSchema = {
-  type: "object",
-  description: "The tax percentage the app deducts to estimate net pay.",
-  properties: { enabled: { type: "boolean" }, percentage: { type: "number", minimum: 0, maximum: 100 } },
-  required: ["enabled"],
-  additionalProperties: false,
-};
-const breaksSchema = {
-  type: "object",
-  description:
-    "An unpaid break deducted from shifts longer than threshold_hours. method: proportional spreads it over the shift, " +
-    "base_only takes it from hours without supplements first, end_of_shift from the shift's end.",
-  properties: {
-    enabled: { type: "boolean" },
-    method: { type: "string", enum: BREAK_METHODS },
-    threshold_hours: { type: "number", minimum: 1, maximum: 12 },
-    deduction_minutes: { type: "integer", minimum: 5, maximum: 120 },
-  },
-  required: ["enabled"],
-  additionalProperties: false,
+  overtime_enabled: { type: "boolean", description: "Enable standard weekly overtime rules (50% weekdays before 21:00, 100% evenings/Sundays/holidays)." },
+  overtime_weekly_hours: { type: "number", exclusiveMinimum: 0, maximum: 168, description: "Weekly hours before overtime starts (default 40)." },
+  tax_enabled: { type: "boolean", description: "Deduct tax percentage to estimate net pay." },
+  tax_percent: { type: "number", minimum: 0, maximum: 100, description: "Tax percentage (0-100). Passing this enables tax." },
+  break_enabled: { type: "boolean", description: "Deduct an unpaid break on long shifts (default on for kr jobs)." },
+  break_method: { type: "string", enum: BREAK_METHODS, description: "How break time is deducted: proportional (default), base_only, or end_of_shift." },
+  break_threshold_hours: { type: "number", minimum: 1, maximum: 12, description: "Minimum shift length in hours before break deduction applies (default 5.5)." },
+  break_minutes: { type: "integer", minimum: 5, maximum: 120, description: "Unpaid break length in minutes (default 30)." },
 };
 
-export const listJobs = {
-  definition: {
-    name: "list_jobs",
-    title: "List jobs",
-    description:
-      "The user's jobs with their currency, color, pay period, payday and whether pay is set up. " +
-      "Each has a revision for update_job. Archived jobs are left out unless include_archived is true.",
-    inputSchema: {
-      type: "object",
-      properties: { include_archived: { type: "boolean" } },
-      additionalProperties: false,
-    },
-    annotations: { title: "List jobs", ...readOnly },
-  },
-  scope: "read",
-  parse: (args) => {
-    allowOnly(args, ["include_archived"]);
-    return { include_archived: optional(args.include_archived, (v) => boolean(v, "include_archived")) ?? false };
-  },
-} satisfies ToolSpec;
+const FLAT_PAY_KEYS = Object.keys(flatPayProperties);
 
-export const addJob = {
+// ---------- Tool definitions ----------
+
+export const getOverview = {
   definition: {
-    name: "add_job",
-    title: "Add job",
+    name: "get_overview",
+    title: "Get overview",
     description:
-      "Adds a job with its base pay, as adding a job in the app does. The first active job becomes the default. " +
-      "currency defaults to the default job's currency, else kr; tariff pay is always in kr. " +
-      "Without tax the app shows gross pay as net; without breaks a 30-minute break is deducted from shifts over 5.5 hours in kr jobs. " +
-      "An active job with the same name is returned unchanged instead of a copy.",
+      "Start here to orient yourself. Returns today's date and local time in the user's time zone, active jobs with their current pay and tax settings, " +
+      "recurring shift series, app settings, unread message count and friend count. " +
+      "Pass include_pay_history: true for full pay timelines and supplement rules, or include_archived: true for archived jobs.",
     inputSchema: {
       type: "object",
       properties: {
-        name: { type: "string", minLength: 1, maxLength: 100 },
-        color: colorSchema,
-        currency: { type: "string", enum: CURRENCIES },
-        payroll_day: payrollDaySchema,
-        half_tax_month: halfTaxSchema,
-        pay_period: payPeriodSchema,
-        pay: paySchema,
-        tax: taxSchema,
-        breaks: breaksSchema,
+        include_archived: { type: "boolean", description: "Include archived jobs (default false)." },
+        include_pay_history: { type: "boolean", description: "Include full pay history and supplement rules per job (default false)." },
       },
-      required: ["name", "pay"],
       additionalProperties: false,
     },
-    annotations: { title: "Add job", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { title: "Get overview", ...readOnly },
   },
-  scope: "write",
+  scope: "read",
   parse: (args) => {
-    allowOnly(args, ["name", "color", "currency", "payroll_day", "half_tax_month", "pay_period", "pay", "tax", "breaks"]);
-    const settings = paySettings(args);
-    if (settings.pay === undefined) throw new ToolError("pay is required: give a tariff level or a custom hourly wage.");
-    const chosenCurrency = optional(args.currency, currency);
-    if (settings.pay.type === "tariff" && chosenCurrency !== undefined && chosenCurrency !== "kr") {
-      throw new ToolError("Tariff pay is in kr. Leave out currency or use custom pay.");
-    }
-    const halfTax = optional(args.half_tax_month, halfTaxMonth);
-    const payPeriod = optional(args.pay_period, parsePayPeriod);
+    allowOnly(args, ["include_archived", "include_pay_history"]);
     return {
-      name: jobName(args.name),
-      color: optional(args.color, jobColor) ?? DEFAULT_COLOR,
-      currency: settings.pay.type === "tariff" ? "kr" : chosenCurrency,
-      payroll_day: optional(args.payroll_day, payrollDay) ?? 15,
-      ...(halfTax ? { half_tax_month: halfTax } : {}),
-      ...(payPeriod ? { pay_period: payPeriod } : {}),
-      settings,
-      today: today(),
+      include_archived: optional(args.include_archived, (v) => boolean(v, "include_archived")) ?? false,
+      include_pay_history: optional(args.include_pay_history, (v) => boolean(v, "include_pay_history")) ?? false,
     };
   },
 } satisfies ToolSpec;
 
-export const updateJob = {
+export const saveJob = {
   definition: {
-    name: "update_job",
-    title: "Change job",
+    name: "save_job",
+    title: "Create or update job",
     description:
-      "Changes a job's name, color, payday, half-tax month or pay period, makes it the default job, or archives or restores it. " +
-      "Give only what changes. Archiving hides the job from new shifts and keeps its history; the default job and the only active job can't be archived. " +
-      "The currency can't change.",
+      "Creates a new job with its base pay (omit id) or updates an existing job's details (pass id). " +
+      "When creating: pass name plus either hourly_wage or tariff_type_id and tariff_level (currency defaults to default job currency or kr; tariff jobs are always kr). " +
+      "When updating: pass id plus any of name, color, payroll_day, half_tax_month, pay_period, make_default or archived. Use set_pay to change an existing job's pay.",
     inputSchema: {
       type: "object",
       properties: {
-        job_id: jobId,
-        revision: jobRevision,
+        id: { type: "string", description: "Job ID or name to update. Omit to create a new job." },
         name: { type: "string", minLength: 1, maxLength: 100 },
         color: colorSchema,
+        currency: { type: "string", enum: CURRENCIES, description: "Job currency (only when creating a job; cannot change later)." },
         payroll_day: payrollDaySchema,
         half_tax_month: halfTaxSchema,
         pay_period: payPeriodSchema,
-        make_default: { type: "boolean", enum: [true], description: "true makes this the default job." },
-        archived: { type: "boolean", description: "true archives the job, false restores it." },
+        make_default: { type: "boolean", enum: [true], description: "Set this job as the default job (update only)." },
+        archived: { type: "boolean", description: "true archives the job, false restores it (update only)." },
+        ...flatPayProperties,
       },
-      required: ["job_id", "revision"],
       additionalProperties: false,
     },
-    annotations: { title: "Change job", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    annotations: { title: "Create or update job", ...adds },
   },
   scope: "write",
   parse: (args) => {
-    allowOnly(args, ["job_id", "revision", "name", "color", "payroll_day", "half_tax_month", "pay_period", "make_default", "archived"]);
+    allowOnly(args, [
+      "id",
+      "name",
+      "color",
+      "currency",
+      "payroll_day",
+      "half_tax_month",
+      "pay_period",
+      "make_default",
+      "archived",
+      ...FLAT_PAY_KEYS,
+    ]);
+    const id = optionalString(args.id, "id");
+    if (id === undefined) {
+      // Create mode
+      if (args.make_default !== undefined || args.archived !== undefined) {
+        throw new ToolError("make_default and archived apply only when updating an existing job with id.");
+      }
+      const settings = parseFlatPaySettings(args);
+      if (settings.pay === undefined || (settings.pay.type === "custom" && settings.pay.hourly_wage === undefined)) {
+        throw new ToolError("New jobs need hourly_wage (custom pay) or both tariff_type_id and tariff_level.");
+      }
+      const chosenCurrency = optional(args.currency, currency);
+      if (settings.pay.type === "tariff" && chosenCurrency !== undefined && chosenCurrency !== "kr") {
+        throw new ToolError("Tariff pay is in kr. Leave out currency or use custom pay.");
+      }
+      const halfTax = optional(args.half_tax_month, halfTaxMonth);
+      const payPeriod = optional(args.pay_period, parsePayPeriod);
+      return {
+        mode: "create" as const,
+        name: jobName(args.name),
+        color: optional(args.color, jobColor) ?? DEFAULT_COLOR,
+        currency: settings.pay.type === "tariff" ? "kr" : chosenCurrency,
+        payroll_day: optional(args.payroll_day, payrollDay) ?? 15,
+        ...(halfTax ? { half_tax_month: halfTax } : {}),
+        ...(payPeriod ? { pay_period: payPeriod } : {}),
+        settings,
+        today: today(),
+      };
+    }
+
+    // Update mode
+    const payArgsUsed = FLAT_PAY_KEYS.filter((k) => args[k] !== undefined && args[k] !== null);
+    if (payArgsUsed.length > 0) {
+      throw new ToolError(`Use set_pay to change pay settings (${payArgsUsed.join(", ")}) on an existing job.`);
+    }
+    if (args.currency !== undefined && args.currency !== null) {
+      throw new ToolError("A job's currency cannot be changed after creation.");
+    }
     const makeDefault = optional(args.make_default, (v) => boolean(v, "make_default"));
     if (makeDefault === false) throw new ToolError("make_default can only be true. Make another job the default instead.");
     const archived = optional(args.archived, (v) => boolean(v, "archived"));
@@ -778,7 +824,7 @@ export const updateJob = {
     if (Object.values(changes).every((v) => v === undefined)) {
       throw new ToolError("Give at least one of name, color, payroll_day, half_tax_month, pay_period, make_default or archived.");
     }
-    return { job_id: requiredString(args.job_id, "job_id"), revision: requiredRevision(args.revision, "list_jobs"), ...changes };
+    return { mode: "update" as const, job: id, ...changes };
   },
 } satisfies ToolSpec;
 
@@ -787,77 +833,57 @@ export const deleteJob = {
     name: "delete_job",
     title: "Delete job",
     description:
-      "Deletes an archived job with all its shifts, recurring shifts, pay settings and payroll adjustments. It can't be undone. " +
-      "Call it first without confirmation_token: it deletes nothing and returns what would be deleted and a token. " +
-      "Show that to the user, and call again with the token only after they confirm. Archive the job with update_job first.",
+      "Permanently deletes an archived job and all its shifts, recurring shifts, pay settings and payroll adjustments. " +
+      "First call without confirmation_token to preview row counts and get a token. Show the counts to the user, then call again with confirmation_token after they confirm. " +
+      "Archive the job with save_job first.",
     inputSchema: {
       type: "object",
-      properties: { job_id: jobId, confirmation_token: { type: "string", description: "The token from the first call" } },
-      required: ["job_id"],
+      properties: {
+        job: { type: "string", description: "Archived job ID or name." },
+        confirmation_token: { type: "string", description: "Token returned by the first preview call." },
+      },
+      required: ["job"],
       additionalProperties: false,
     },
-    annotations: { title: "Delete job", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    annotations: { title: "Delete job", ...destructive, idempotentHint: true },
   },
   scope: "write",
   parse: (args) => {
-    allowOnly(args, ["job_id", "confirmation_token"]);
+    allowOnly(args, ["job", "confirmation_token"]);
     const token = optionalString(args.confirmation_token, "confirmation_token");
-    return { job_id: requiredString(args.job_id, "job_id"), ...(token ? { confirmation_token: token } : {}) };
+    return { job: requiredString(args.job, "job"), ...(token ? { confirmation_token: token } : {}) };
   },
 } satisfies ToolSpec;
 
-export const listTariffsSpec = {
+export const findTariffsSpec = {
   definition: {
-    name: "list_tariffs",
-    title: "List tariffs",
+    name: "find_tariffs",
+    title: "Find tariffs",
     description:
-      "The Norwegian collective agreements and statutory minimum wages Tidex can calculate, grouped by agreement. " +
-      "An agreement with several variants lists the choices (such as week length or work arrangement) that pick each tariff_type_id. " +
-      "search filters by name in English or Norwegian.",
-    inputSchema: { type: "object", properties: { search: { type: "string", maxLength: 100 } }, additionalProperties: false },
-    annotations: { title: "List tariffs", ...readOnly },
-  },
-  scope: "read",
-  parse: (args) => {
-    allowOnly(args, ["search"]);
-    return { search: optionalString(args.search, "search") };
-  },
-} satisfies ToolSpec;
-
-export const getTariffSpec = {
-  definition: {
-    name: "get_tariff",
-    title: "Get tariff",
-    description: "A tariff's levels with the hourly wage of each, the dates its rates cover, what it includes, and its overtime rule. Pass a level to set_pay.",
+      "Searches Norwegian collective agreements and statutory minimum wages, or returns full details for one tariff_type_id. " +
+      "Pass search (English or Norwegian name, e.g. 'rema', 'varehandel', 'renhold') to list matching agreements, or pass tariff_type_id for all levels, hourly rates, valid dates and overtime rules.",
     inputSchema: {
       type: "object",
-      properties: { tariff_type_id: { type: "string", description: "A tariff_type_id from list_tariffs" } },
-      required: ["tariff_type_id"],
+      properties: {
+        search: { type: "string", maxLength: 100, description: "Filter agreements by English or Norwegian name." },
+        tariff_type_id: { type: "string", description: "Exact tariff_type_id to inspect full levels and rates." },
+      },
       additionalProperties: false,
     },
-    annotations: { title: "Get tariff", ...readOnly },
+    annotations: { title: "Find tariffs", ...readOnly },
   },
   scope: "read",
   parse: (args) => {
-    allowOnly(args, ["tariff_type_id"]);
-    return { tariff_type_id: requiredString(args.tariff_type_id, "tariff_type_id") };
-  },
-} satisfies ToolSpec;
-
-export const getPay = {
-  definition: {
-    name: "get_pay",
-    title: "Get pay",
-    description:
-      "A job's pay settings: the base pay, then each dated change. Each applies from its from_date until the next one; " +
-      "the base pay applies before the first dated change. Each has a snapshot_id and revision for set_pay and delete_pay_change.",
-    inputSchema: { type: "object", properties: { job_id: jobId }, required: ["job_id"], additionalProperties: false },
-    annotations: { title: "Get pay", ...readOnly },
-  },
-  scope: "read",
-  parse: (args) => {
-    allowOnly(args, ["job_id"]);
-    return { job_id: requiredString(args.job_id, "job_id") };
+    allowOnly(args, ["search", "tariff_type_id"]);
+    const search = optionalString(args.search, "search");
+    const tariff_type_id = optionalString(args.tariff_type_id, "tariff_type_id");
+    if (search !== undefined && tariff_type_id !== undefined) {
+      throw new ToolError("Give either search or tariff_type_id, not both.");
+    }
+    return {
+      ...(search !== undefined ? { search } : {}),
+      ...(tariff_type_id !== undefined ? { tariff_type_id } : {}),
+    };
   },
 } satisfies ToolSpec;
 
@@ -866,57 +892,44 @@ export const setPay = {
     name: "set_pay",
     title: "Set pay",
     description:
-      "Sets a job's pay. Without from_date it changes the base pay; with from_date it sets the pay from that date on, such as a raise, " +
-      "and changes the pay already set for that date if there is one. Give only what changes: pay, tax and breaks left out are kept from the pay in effect on that date. " +
-      "Changing pay that exists needs its revision from get_pay. Tariff pay uses the agreement's rates, supplements and overtime rules.",
+      "Sets a job's base pay (omit from_date), sets or updates pay starting on from_date (e.g. a raise), or removes a dated pay change (pass from_date and remove: true). " +
+      "Pass only the fields to change; omitted pay, tax and break fields stay as they are on that date. " +
+      "Omit job to update the default job.",
     inputSchema: {
       type: "object",
       properties: {
-        job_id: jobId,
-        from_date: date,
-        revision: { type: "number", description: "The revision from get_pay of the pay being changed" },
-        pay: paySchema,
-        tax: taxSchema,
-        breaks: breaksSchema,
+        job: jobRef,
+        from_date: { ...date, description: "Date this pay change starts (YYYY-MM-DD). Omit to change base pay." },
+        remove: { type: "boolean", enum: [true], description: "Pass true with from_date to delete that dated pay change." },
+        ...flatPayProperties,
       },
-      required: ["job_id"],
       additionalProperties: false,
     },
-    annotations: { title: "Set pay", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    annotations: { title: "Set pay", ...updates },
   },
   scope: "write",
   parse: (args) => {
-    allowOnly(args, ["job_id", "from_date", "revision", "pay", "tax", "breaks"]);
-    const settings = paySettings(args);
-    if (Object.keys(settings).length === 0) throw new ToolError("Give at least one of pay, tax or breaks.");
+    allowOnly(args, ["job", "from_date", "remove", ...FLAT_PAY_KEYS]);
+    const job = optionalString(args.job, "job");
     const fromDate = optional(args.from_date, (v) => parseDate(v, "from_date"));
-    const revision = optional(args.revision, (v) => requiredRevision(v, "get_pay"));
+    const remove = optional(args.remove, (v) => boolean(v, "remove"));
+    if (remove === true) {
+      if (fromDate === undefined) throw new ToolError("from_date is required when remove is true. Base pay cannot be deleted.");
+      const extra = FLAT_PAY_KEYS.filter((k) => args[k] !== undefined && args[k] !== null);
+      if (extra.length > 0) throw new ToolError("remove: true cannot be combined with pay fields.");
+      return { action: "remove" as const, ...(job !== undefined ? { job } : {}), from_date: fromDate };
+    }
+    if (remove === false) throw new ToolError("remove can only be true.");
+    const settings = parseFlatPaySettings(args);
+    if (Object.keys(settings).length === 0) {
+      throw new ToolError("Give at least one pay, tax or break field to change.");
+    }
     return {
-      job_id: requiredString(args.job_id, "job_id"),
-      ...(fromDate ? { from_date: fromDate } : {}),
-      ...(revision !== undefined ? { revision } : {}),
+      action: "set" as const,
+      ...(job !== undefined ? { job } : {}),
+      ...(fromDate !== undefined ? { from_date: fromDate } : {}),
       settings,
       today: today(),
     };
-  },
-} satisfies ToolSpec;
-
-export const deletePayChange = {
-  definition: {
-    name: "delete_pay_change",
-    title: "Delete pay change",
-    description: "Deletes a dated pay change, so the pay before it applies again. The base pay can't be deleted; change it with set_pay.",
-    inputSchema: {
-      type: "object",
-      properties: { snapshot_id: { type: "string", description: "A snapshot_id from get_pay" }, revision: { type: "number" } },
-      required: ["snapshot_id", "revision"],
-      additionalProperties: false,
-    },
-    annotations: { title: "Delete pay change", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-  },
-  scope: "write",
-  parse: (args) => {
-    allowOnly(args, ["snapshot_id", "revision"]);
-    return { snapshot_id: requiredString(args.snapshot_id, "snapshot_id"), revision: requiredRevision(args.revision, "get_pay") };
   },
 } satisfies ToolSpec;

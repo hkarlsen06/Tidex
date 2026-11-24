@@ -82,3 +82,32 @@ export function movedTimes(current: { start: string; end: string }, newStart?: s
   // Not shiftTimes: a 24-hour shift keeps equal clock times, as in the app.
   return { start_time: start, end_time: storedEndTime(clock(minutes(start) + length), start) };
 }
+
+/** Unified ID for a recurring shift occurrence so update_shift and delete_shifts handle it directly. */
+export function recurringOccurrenceId(recurringId: string, date: string): string {
+  return `recurring:${recurringId}:${date}`;
+}
+
+export type ParsedShiftId =
+  | { kind: "one_off"; shiftId: string }
+  | { kind: "recurring"; recurringId: string; date: string };
+
+/** Splits a shift id from get_schedule into a one-off shift or a recurring occurrence. */
+export function parseShiftId(id: string): ParsedShiftId {
+  if (id.startsWith("recurring:")) {
+    const rest = id.slice("recurring:".length);
+    const sep = rest.lastIndexOf(":");
+    if (sep > 0) {
+      const recurringId = rest.slice(0, sep);
+      const date = rest.slice(sep + 1);
+      try {
+        parseDate(date, "id");
+        return { kind: "recurring", recurringId, date };
+      } catch {
+        // Fall through and reject cleanly below.
+      }
+    }
+    throw new ToolError("Invalid recurring shift id. Use an id returned by get_schedule.");
+  }
+  return { kind: "one_off", shiftId: id };
+}

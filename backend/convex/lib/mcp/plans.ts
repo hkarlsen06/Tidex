@@ -4,32 +4,27 @@ import {
   allowOnly,
   type Args,
   boolean,
-  changes,
   date,
+  destructive,
   endTime,
   integer,
-  jobId,
+  jobRef,
   list,
   nearDate,
   oneOf,
   optional,
   optionalString,
-  readOnly,
-  requiredRevision,
   requiredString,
-  revision,
   text,
   time,
+  updates,
 } from "./args";
 import type { ToolSpec } from "./registry";
-import { addDays, MINUTES_PER_DAY, minutes, parseRange, parseTime, ToolError } from "./shiftTimes";
+import { addDays, MINUTES_PER_DAY, minutes, parseTime, ToolError } from "./shiftTimes";
 
-// The tools for events, payroll adjustments and settings, the arguments each one accepts,
-// and the rows they write. The server checks little inside the JSON columns, and one row
-// the app can't decode stops its sync of that table, so every row is built here the way
-// the app builds it. Recurring shifts are in recurring.ts.
+// Tools for events, payroll adjustments and app settings, plus the row builders that match
+// the iOS app's sync format.
 
-const MAX_LIST_DAYS = 366;
 const MAX_REMINDERS = 4;
 /** The app's reminder picker goes up to 48 hours and 59 minutes. */
 const MAX_REMINDER_MINUTES = 48 * 60 + 59;
@@ -43,18 +38,6 @@ function reminderList(value: unknown, field: string, parse: (item: unknown) => n
 
 const reminderMinutes = (value: unknown, field: string) =>
   reminderList(value, field, (m) => integer(m, field, 1, MAX_REMINDER_MINUTES));
-
-const rangeSchema = (what: string) => ({
-  type: "object" as const,
-  properties: { from: { ...date, description: `First ${what} date, YYYY-MM-DD` }, to: { ...date, description: `Last ${what} date, YYYY-MM-DD` } },
-  required: ["from", "to"],
-  additionalProperties: false as const,
-});
-
-function listRange(args: Args) {
-  allowOnly(args, ["from", "to"]);
-  return parseRange(args.from, args.to, MAX_LIST_DAYS);
-}
 
 // ---------- Events ----------
 
@@ -83,6 +66,24 @@ export type EventDraft = {
 };
 
 const MAX_EVENT_NOTE = 1000;
+
+/** Clean formatted view of an event, shared by get_schedule and save_event. */
+export function eventView(e: EventFields & { id: string }) {
+  const reminders = e.notification_minutes_array ?? [];
+  return {
+    id: e.id,
+    date: e.start_date,
+    ...(e.end_date !== e.start_date ? { end_date: e.end_date } : {}),
+    all_day: e.is_all_day,
+    ...(!e.is_all_day && e.start_time ? { start: e.start_time.slice(0, 5), end: e.end_time?.slice(0, 5) ?? null } : {}),
+    note: e.note,
+    ...(reminders.length > 0
+      ? e.is_all_day
+        ? { reminder_days_before: reminders.map((m) => m / MINUTES_PER_DAY), reminder_time: e.notification_anchor_time ?? null }
+        : { reminder_minutes: reminders }
+      : {}),
+  };
+}
 
 /** The row the app writes for `draft`, after the app's and the server's checks. */
 export function eventFields(draft: EventDraft): EventFields {
@@ -132,15 +133,15 @@ export function changedEvent(prev: EventFields, change: Partial<EventDraft> & { 
   if (timed && change.all_day === true) throw new ToolError("all_day: true can't be combined with start or end.");
   const allDay = change.all_day === true || (!timed && change.all_day !== false && prev.is_all_day);
   if (!allDay && !timed && prev.is_all_day) throw new ToolError("Give start and end to make an all-day event timed.");
-  const date = change.date ?? prev.start_date;
+  const dateStr = change.date ?? prev.start_date;
   const keepsKind = allDay === prev.is_all_day;
   const stored = prev.notification_minutes_array ?? [];
   if (allDay) {
     const length = keepsKind ? Math.round((Date.parse(prev.end_date) - Date.parse(prev.start_date)) / 86_400_000) : 0;
     return {
       note: change.note ?? prev.note,
-      date,
-      end_date: change.end_date ?? addDays(date, length),
+      date: dateStr,
+      end_date: change.end_date ?? addDays(dateStr, length),
       reminder_days_before: change.reminder_days_before ?? (keepsKind ? stored.map((m) => m / MINUTES_PER_DAY) : undefined),
       reminder_time: change.reminder_time ?? (keepsKind ? prev.notification_anchor_time : undefined),
       reminder_minutes: change.reminder_minutes,
@@ -148,7 +149,7 @@ export function changedEvent(prev: EventFields, change: Partial<EventDraft> & { 
   }
   return {
     note: change.note ?? prev.note,
-    date,
+    date: dateStr,
     end_date: change.end_date,
     start: change.start ?? prev.start_time,
     end: change.end ?? prev.end_time,
@@ -158,29 +159,28 @@ export function changedEvent(prev: EventFields, change: Partial<EventDraft> & { 
   };
 }
 
-const eventId = { type: "string", description: "An event_id from list_events" };
 const eventProperties = {
-  note: { type: "string", maxLength: MAX_EVENT_NOTE, description: "What the event is. Required, not blank." },
-  date: { ...date, description: "The event's date, or an all-day event's first date" },
-  end_date: { ...date, description: "An all-day event's last date. Leave out for one day." },
+  id: { type: "string", description: "Event ID from get_schedule to update. Omit to create a new event." },
+  note: { type: "string", maxLength: MAX_EVENT_NOTE, description: "Event description (required when creating)." },
+  date: { ...date, description: "Event date, or first date of a multi-day all-day event (required when creating)." },
+  end_date: { ...date, description: "Last date for a multi-day all-day event." },
   start: time,
   end: { ...endTime, description: "HH:mm, after start on the same day. 24:00 is midnight." },
+  all_day: { type: "boolean", description: "Pass true when updating a timed event to make it all-day." },
   reminder_minutes: {
     type: "array",
     items: { type: "integer", minimum: 1, maximum: MAX_REMINDER_MINUTES },
     maxItems: MAX_REMINDERS,
-    description: "Timed events: reminders this many minutes before start. An empty list removes them.",
+    description: "Timed events: minutes before start. Empty list removes reminders.",
   },
   reminder_days_before: {
     type: "array",
     items: { type: "integer", minimum: 0, maximum: 2 },
     maxItems: 3,
-    description: "All-day events: reminders on the day (0), the day before (1) or two days before (2). An empty list removes them.",
+    description: "All-day events: 0 (same day), 1 (day before), or 2 (two days before). Empty list removes reminders.",
   },
-  reminder_time: { ...time, description: "All-day events: the clock time reminders go off. Required with reminder_days_before." },
+  reminder_time: { ...time, description: "All-day events: clock time reminders fire (required with reminder_days_before)." },
 };
-const reminderNote =
-  "Reminders are notifications on the user's phone. The app schedules them the next time it syncs, so they need the app opened once.";
 
 function parseEventDraft(args: Args): Partial<EventDraft> {
   return {
@@ -197,66 +197,39 @@ function parseEventDraft(args: Args): Partial<EventDraft> {
   };
 }
 
-export const listEvents = {
+export const saveEvent = {
   definition: {
-    name: "list_events",
-    title: "List events",
+    name: "save_event",
+    title: "Create or update event",
     description:
-      "The user's private calendar events (not shifts) that fall on any date from `from` to `to`, at most 366 days, with their reminders.",
-    inputSchema: rangeSchema("event"),
-    annotations: { title: "List events", ...readOnly },
-  },
-  scope: "read",
-  parse: listRange,
-} satisfies ToolSpec;
-
-export const addEvent = {
-  definition: {
-    name: "add_event",
-    title: "Add event",
-    description:
-      "Adds a private calendar event. With start and end it is timed on one date; without them it is all-day and may span to end_date. " +
-      `${reminderNote} Adding the same event again returns the existing one.`,
-    inputSchema: { type: "object", properties: eventProperties, required: ["note", "date"], additionalProperties: false },
-    annotations: { title: "Add event", ...adds },
+      "Creates a private calendar event (omit id) or updates an existing event (pass id from get_schedule). " +
+      "Events with start and end are timed on one day; without them they are all-day and may span to end_date. " +
+      "Reminders are local phone notifications scheduled the next time the app syncs.",
+    inputSchema: { type: "object", properties: eventProperties, additionalProperties: false },
+    annotations: { title: "Create or update event", ...adds },
   },
   scope: "write",
   parse: (args) => {
     allowOnly(args, Object.keys(eventProperties));
+    const id = optionalString(args.id, "id");
     const draft = parseEventDraft(args);
-    if (draft.note === undefined) throw new ToolError("note is required.");
-    if (draft.date === undefined) throw new ToolError("date is required.");
-    return eventFields(draft as EventDraft);
-  },
-} satisfies ToolSpec;
+    const allDay = optional(args.all_day, (v) => boolean(v, "all_day"));
 
-export const updateEvent = {
-  definition: {
-    name: "update_event",
-    title: "Change event",
-    description:
-      "Changes an event. Give only what changes. start and end make it timed; all_day: true makes it all-day. " +
-      "Moving an all-day event's date keeps its length. Reminders stay unless it changes between timed and all-day. " +
-      reminderNote,
-    inputSchema: {
-      type: "object",
-      properties: {
-        event_id: eventId,
-        revision: revision("list_events"),
-        ...eventProperties,
-        all_day: { type: "boolean", description: "true makes the event all-day" },
-      },
-      required: ["event_id", "revision"],
-      additionalProperties: false,
-    },
-    annotations: { title: "Change event", ...changes },
-  },
-  scope: "write",
-  parse: (args) => {
-    allowOnly(args, ["event_id", "revision", "all_day", ...Object.keys(eventProperties)]);
-    const change = { ...parseEventDraft(args), all_day: optional(args.all_day, (v) => boolean(v, "all_day")) };
-    if (Object.values(change).every((v) => v === undefined)) throw new ToolError("Give at least one thing to change.");
-    return { event_id: requiredString(args.event_id, "event_id"), revision: requiredRevision(args.revision, "list_events"), change };
+    if (id === undefined) {
+      if (allDay === true && (draft.start !== undefined || draft.end !== undefined)) {
+        throw new ToolError("all_day: true can't be combined with start or end.");
+      }
+      if (allDay === false && (draft.start === undefined || draft.end === undefined)) {
+        throw new ToolError("Give start and end for a timed event.");
+      }
+      if (draft.note === undefined) throw new ToolError("note is required.");
+      if (draft.date === undefined) throw new ToolError("date is required.");
+      return { mode: "create" as const, fields: eventFields(draft as EventDraft) };
+    }
+
+    const change = { ...draft, all_day: allDay };
+    if (Object.values(change).every((v) => v === undefined)) throw new ToolError("Give at least one field to update.");
+    return { mode: "update" as const, id, change };
   },
 } satisfies ToolSpec;
 
@@ -264,19 +237,19 @@ export const deleteEvent = {
   definition: {
     name: "delete_event",
     title: "Delete event",
-    description: "Deletes an event and, once the app syncs, its reminders.",
+    description: "Deletes a private calendar event by its id from get_schedule. Confirm with the user first.",
     inputSchema: {
       type: "object",
-      properties: { event_id: eventId, revision: revision("list_events") },
-      required: ["event_id", "revision"],
+      properties: { id: { type: "string", description: "Event ID from get_schedule." } },
+      required: ["id"],
       additionalProperties: false,
     },
-    annotations: { title: "Delete event", ...changes },
+    annotations: { title: "Delete event", ...destructive },
   },
   scope: "write",
   parse: (args) => {
-    allowOnly(args, ["event_id", "revision"]);
-    return { event_id: requiredString(args.event_id, "event_id"), revision: requiredRevision(args.revision, "list_events") };
+    allowOnly(args, ["id"]);
+    return { id: requiredString(args.id, "id") };
   },
 } satisfies ToolSpec;
 
@@ -325,33 +298,32 @@ export function adjustmentFields(draft: AdjustmentDraft, job: { id: string; curr
   };
 }
 
-const adjustmentId = { type: "string", description: "An adjustment_id from list_payroll_adjustments" };
 const adjustmentProperties = {
-  job_id: { ...jobId, description: "A job_id from list_jobs. Without it, the default job." },
-  amount: { type: "number", description: "In the job's currency. Negative for a deduction. Not 0." },
-  description: { type: "string", maxLength: MAX_DESCRIPTION, description: "A short label, such as Christmas bonus" },
-  category: { type: "string", enum: ADJUSTMENT_CATEGORIES, description: "Default correction" },
+  id: { type: "string", description: "Adjustment ID from get_earnings to update. Omit to create a new adjustment." },
+  job: jobRef,
+  amount: { type: "number", description: "Amount in the job currency. Negative for a deduction. Not 0." },
+  description: { type: "string", maxLength: MAX_DESCRIPTION, description: "Short label such as Christmas bonus." },
+  category: { type: "string", enum: ADJUSTMENT_CATEGORIES, description: "Default correction." },
   tax_treatment: {
     type: "string",
     enum: TAX_TREATMENTS,
-    description: "gross_taxable (default) is taxed like pay; net_manual is paid out as is. Always net_manual when the job's pay has no tax.",
+    description: "gross_taxable (default) is taxed like pay; net_manual is paid out as is. Forced to net_manual when the job has no tax.",
   },
-  payout_date: { ...date, description: "The payday it is paid on" },
-  earned_from: { ...date, description: "First date of the work it pays for. Give with earned_to; empty text on both removes them." },
-  earned_to: { ...date, description: "Last date of the work it pays for" },
-  note: { type: "string", maxLength: MAX_ADJUSTMENT_NOTE, description: "An empty note removes the note." },
+  payout_date: { ...date, description: "Payday this adjustment is paid on (YYYY-MM-DD)." },
+  earned_from: { ...date, description: "Optional start of earned period. Pass empty string with earned_to to clear." },
+  earned_to: { ...date, description: "Optional end of earned period." },
+  note: { type: "string", maxLength: MAX_ADJUSTMENT_NOTE, description: "Optional note. Pass empty string to clear." },
 };
 
 const parseAmount = (v: unknown) => {
   if (typeof v !== "number" || !Number.isFinite(v) || v === 0) throw new ToolError("amount must be a number other than 0.");
   return v;
 };
-/** A date, or "" to remove it. */
 const dateOrBlank = (field: string) => (v: unknown) => (v === "" ? "" : nearDate(v, field));
 
 function parseAdjustment(args: Args) {
   return {
-    job_id: optionalString(args.job_id, "job_id"),
+    job: optionalString(args.job, "job"),
     amount: optional(args.amount, parseAmount),
     description: optional(args.description, (v) => text(v, "description", MAX_DESCRIPTION)),
     category: optional(args.category, (v) => oneOf(v, "category", ADJUSTMENT_CATEGORIES)),
@@ -363,81 +335,39 @@ function parseAdjustment(args: Args) {
   };
 }
 
-export const listPayrollAdjustments = {
+export const savePayrollAdjustment = {
   definition: {
-    name: "list_payroll_adjustments",
-    title: "List payroll adjustments",
+    name: "save_payroll_adjustment",
+    title: "Create or update payroll adjustment",
     description:
-      "Bonuses, back pay and corrections the user added to their payslips, paid out from `from` to `to`, at most 366 days. " +
-      "get_earnings does not include them.",
-    inputSchema: rangeSchema("payout"),
-    annotations: { title: "List payroll adjustments", ...readOnly },
-  },
-  scope: "read",
-  parse: listRange,
-} satisfies ToolSpec;
-
-export const addPayrollAdjustment = {
-  definition: {
-    name: "add_payroll_adjustment",
-    title: "Add payroll adjustment",
-    description:
-      "Adds a bonus, back pay or correction to a payday, in the job's currency. The job needs its pay set up. " +
-      "Adding the same adjustment again returns the existing one.",
-    inputSchema: {
-      type: "object",
-      properties: adjustmentProperties,
-      required: ["amount", "description", "payout_date"],
-      additionalProperties: false,
-    },
-    annotations: { title: "Add payroll adjustment", ...adds },
+      "Creates a bonus, back pay or correction on a payday (omit id) or updates an existing one (pass id from get_earnings). " +
+      "When creating: pass amount, description and payout_date; omit job to use the default job.",
+    inputSchema: { type: "object", properties: adjustmentProperties, additionalProperties: false },
+    annotations: { title: "Create or update payroll adjustment", ...adds },
   },
   scope: "write",
   parse: (args) => {
     allowOnly(args, Object.keys(adjustmentProperties));
-    const { earned_from, earned_to, ...parsed } = parseAdjustment(args);
-    if (parsed.amount === undefined) throw new ToolError("amount is required.");
-    if (parsed.description === undefined) throw new ToolError("description is required.");
-    if (parsed.payout_date === undefined) throw new ToolError("payout_date is required.");
-    const draft = {
-      ...parsed,
-      amount: parsed.amount,
-      description: parsed.description,
-      payout_date: parsed.payout_date,
-      category: parsed.category ?? "correction",
-      earned_from: earned_from || undefined,
-      earned_to: earned_to || undefined,
-    };
-    // Checks the draft now; the job's currency and tax come in the mutation.
-    adjustmentFields(draft, { id: "", currency: "", taxEnabled: true });
-    return draft;
-  },
-} satisfies ToolSpec;
-
-export const updatePayrollAdjustment = {
-  definition: {
-    name: "update_payroll_adjustment",
-    title: "Change payroll adjustment",
-    description:
-      "Changes a payroll adjustment. Give only what changes. A new job_id also takes that job's currency and tax.",
-    inputSchema: {
-      type: "object",
-      properties: { adjustment_id: adjustmentId, revision: revision("list_payroll_adjustments"), ...adjustmentProperties },
-      required: ["adjustment_id", "revision"],
-      additionalProperties: false,
-    },
-    annotations: { title: "Change payroll adjustment", ...changes },
-  },
-  scope: "write",
-  parse: (args) => {
-    allowOnly(args, ["adjustment_id", "revision", ...Object.keys(adjustmentProperties)]);
-    const change = parseAdjustment(args);
-    if (Object.values(change).every((v) => v === undefined)) throw new ToolError("Give at least one thing to change.");
-    return {
-      adjustment_id: requiredString(args.adjustment_id, "adjustment_id"),
-      revision: requiredRevision(args.revision, "list_payroll_adjustments"),
-      change,
-    };
+    const id = optionalString(args.id, "id");
+    const parsed = parseAdjustment(args);
+    if (id === undefined) {
+      if (parsed.amount === undefined) throw new ToolError("amount is required.");
+      if (parsed.description === undefined) throw new ToolError("description is required.");
+      if (parsed.payout_date === undefined) throw new ToolError("payout_date is required.");
+      const draft = {
+        ...parsed,
+        amount: parsed.amount,
+        description: parsed.description,
+        payout_date: parsed.payout_date,
+        category: parsed.category ?? "correction",
+        earned_from: parsed.earned_from || undefined,
+        earned_to: parsed.earned_to || undefined,
+      };
+      adjustmentFields(draft, { id: "", currency: "", taxEnabled: true });
+      return { mode: "create" as const, ...draft };
+    }
+    if (Object.values(parsed).every((v) => v === undefined)) throw new ToolError("Give at least one field to update.");
+    return { mode: "update" as const, id, change: parsed };
   },
 } satisfies ToolSpec;
 
@@ -445,22 +375,19 @@ export const deletePayrollAdjustment = {
   definition: {
     name: "delete_payroll_adjustment",
     title: "Delete payroll adjustment",
-    description: "Deletes a payroll adjustment.",
+    description: "Deletes a payroll adjustment by its id from get_earnings. Confirm with the user first.",
     inputSchema: {
       type: "object",
-      properties: { adjustment_id: adjustmentId, revision: revision("list_payroll_adjustments") },
-      required: ["adjustment_id", "revision"],
+      properties: { id: { type: "string", description: "Adjustment ID from get_earnings." } },
+      required: ["id"],
       additionalProperties: false,
     },
-    annotations: { title: "Delete payroll adjustment", ...changes },
+    annotations: { title: "Delete payroll adjustment", ...destructive },
   },
   scope: "write",
   parse: (args) => {
-    allowOnly(args, ["adjustment_id", "revision"]);
-    return {
-      adjustment_id: requiredString(args.adjustment_id, "adjustment_id"),
-      revision: requiredRevision(args.revision, "list_payroll_adjustments"),
-    };
+    allowOnly(args, ["id"]);
+    return { id: requiredString(args.id, "id") };
   },
 } satisfies ToolSpec;
 
@@ -470,7 +397,6 @@ export const THEMES = ["system", "light", "dark"] as const;
 export const CALENDAR_COLORS = ["workplace", "monochrome"] as const;
 export const STARTUP_TABS = ["home", "shifts", "stats", "sharing"] as const;
 
-/** A settings change, split by where each setting is stored. */
 export type SettingsChange = {
   user_settings: Partial<{
     theme: (typeof THEMES)[number];
@@ -483,59 +409,40 @@ export type SettingsChange = {
 
 const settingsProperties = {
   theme: { type: "string", enum: THEMES },
-  calendar_content_color_style: {
+  calendar_color_style: {
     type: "string",
     enum: CALENDAR_COLORS,
-    description: "workplace colors calendar entries by job; monochrome uses one color",
+    description: "workplace colors calendar entries by job; monochrome uses one color.",
   },
-  show_dashboard_clock_buttons: { type: "boolean", description: "Clock in and out buttons on the home screen" },
-  default_startup_tab: { type: "string", enum: STARTUP_TABS, description: "The tab the app opens on" },
-  schedule_time_zone: {
+  show_clock_buttons: { type: "boolean", description: "Show clock in and out buttons on the home screen." },
+  startup_tab: { type: "string", enum: STARTUP_TABS, description: "Tab the app opens on." },
+  time_zone: {
     type: "string",
-    description: "The IANA time zone the user's shift times are in, such as Europe/Oslo",
+    description: "IANA time zone for shift clock times, such as Europe/Oslo.",
   },
 };
-
-export const getSettings = {
-  definition: {
-    name: "get_settings",
-    title: "Get settings",
-    description:
-      "The user's app settings and schedule time zone, plus their notification settings as last saved from the phone. " +
-      "Notification settings can only be changed in the Tidex app.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    annotations: { title: "Get settings", ...readOnly },
-  },
-  scope: "read",
-  parse: (args) => {
-    allowOnly(args, []);
-    return {};
-  },
-} satisfies ToolSpec;
 
 export const updateSettings = {
   definition: {
     name: "update_settings",
-    title: "Change settings",
+    title: "Update settings",
     description:
-      "Changes app settings. Give only what changes. Changing schedule_time_zone changes which instant every shift time " +
-      "means. Notification settings live on the user's phone and can only be changed in the Tidex app.",
+      "Updates app settings and schedule time zone. Pass only what changes. " +
+      "Notification settings are stored on the phone and can only be changed in the Tidex app.",
     inputSchema: { type: "object", properties: settingsProperties, additionalProperties: false },
-    annotations: { title: "Change settings", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { title: "Update settings", ...updates },
   },
   scope: "write",
   parse: (args): SettingsChange => {
     allowOnly(args, Object.keys(settingsProperties));
     const settings = {
       theme: optional(args.theme, (v) => oneOf(v, "theme", THEMES)),
-      calendar_content_color_style: optional(args.calendar_content_color_style, (v) =>
-        oneOf(v, "calendar_content_color_style", CALENDAR_COLORS),
-      ),
-      show_dashboard_clock_buttons: optional(args.show_dashboard_clock_buttons, (v) => boolean(v, "show_dashboard_clock_buttons")),
-      default_startup_tab: optional(args.default_startup_tab, (v) => oneOf(v, "default_startup_tab", STARTUP_TABS)),
+      calendar_content_color_style: optional(args.calendar_color_style, (v) => oneOf(v, "calendar_color_style", CALENDAR_COLORS)),
+      show_dashboard_clock_buttons: optional(args.show_clock_buttons, (v) => boolean(v, "show_clock_buttons")),
+      default_startup_tab: optional(args.startup_tab, (v) => oneOf(v, "startup_tab", STARTUP_TABS)),
     };
-    const zone = optional(args.schedule_time_zone, (v) => {
-      if (typeof v !== "string" || !isScheduleTimeZone(v)) throw new ToolError("schedule_time_zone must be an IANA time zone such as Europe/Oslo.");
+    const zone = optional(args.time_zone, (v) => {
+      if (typeof v !== "string" || !isScheduleTimeZone(v)) throw new ToolError("time_zone must be an IANA time zone such as Europe/Oslo.");
       return v;
     });
     const defined = <T extends object>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;

@@ -4,30 +4,26 @@ import {
   allowOnly,
   type Args,
   boolean,
-  changes,
   date,
+  destructive,
   endTime,
   integer,
-  jobId,
+  jobRef,
   list,
   nearDate,
   optional,
   optionalString,
-  readOnly,
-  requiredRevision,
   requiredString,
-  revision,
   time,
 } from "./args";
+import { WEEKDAYS } from "./payPeriod";
 import type { ToolSpec } from "./registry";
-import { addDays, clockTime, MINUTES_PER_DAY, minutes, movedTimes, parseDate, parseTime, shiftTimes, ToolError } from "./shiftTimes";
+import { addDays, clockTime, endsNextDay, MINUTES_PER_DAY, minutes, movedTimes, parseDate, parseTime, shiftTimes, ToolError } from "./shiftTimes";
 
-// The recurring shift tools, the arguments each one accepts, and the series columns they
-// write. The server checks little inside the JSON columns, and one row the app can't
-// decode stops its sync of recurring_shifts, so every value is built here the way the app
-// builds it.
+// The recurring shift tools and the series columns they write. Values match the iOS app's
+// Codable sync format so recurring_shifts stays decodable.
 
-export const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+export { WEEKDAYS };
 
 /** recurring_shifts.end_condition as the app writes it. Omitted means the series never ends. */
 export type EndCondition = { type: "months"; value: number } | { type: "years"; value: number } | { type: "end_date"; date: string };
@@ -56,7 +52,7 @@ export function seriesDates(series: Series, from: string, to: string): string[] 
   const dates: string[] = [];
   for (let month = from.slice(0, 7); month <= to.slice(0, 7); month = addDays(`${month}-28`, 7).slice(0, 7)) {
     const [year, m] = month.split("-").map(Number);
-    for (const shift of generateVirtualShiftsForMonth({ year, month: m }, draft)) {
+    for (const shift of generateVirtualShiftsForMonth({ year: year!, month: m! }, draft)) {
       if (shift.date >= from && shift.date <= to) dates.push(shift.date);
     }
   }
@@ -75,7 +71,7 @@ export function sameSeries(a: Series & { start_time: string; end_time: string },
   );
 }
 
-export const firstDate = (series: Pick<Series, "selected_days">) => Object.values(series.selected_days).sort()[0];
+export const firstDate = (series: Pick<Series, "selected_days">) => Object.values(series.selected_days).sort()[0]!;
 
 /** The series' last possible date, or null when it never ends. */
 export function lastDate(series: Pick<Series, "selected_days" | "end_condition">): string | null {
@@ -92,6 +88,47 @@ export function previewEnd(series: Pick<Series, "selected_days" | "end_condition
 /** An older series may store a midnight end as 00:00, which means the same as 24:00. */
 const midnightAsZero = (end: string) => (end === "24:00" ? "00:00" : end);
 
+/** Clean formatted view of a recurring series, used by get_overview and save_recurring_shift. */
+export function recurringView(
+  r: {
+    id: string;
+    job_id: string;
+    start_time: string;
+    end_time: string;
+    repeat_interval_weeks: number;
+    selected_days: unknown;
+    end_condition?: unknown;
+    exclusions?: unknown;
+    date_specific_notes?: unknown;
+  },
+  jobName: string | null,
+) {
+  const series: Series = {
+    selected_days: r.selected_days as Record<string, string>,
+    repeat_interval_weeks: r.repeat_interval_weeks,
+    end_condition: storedEndCondition(r.end_condition),
+    exclusions: (r.exclusions as string[] | undefined) ?? [],
+  };
+  const notes = (r.date_specific_notes as Record<string, string> | undefined) ?? {};
+  const skipped = [...series.exclusions].sort();
+  const last = lastDate(series);
+  return {
+    id: r.id,
+    job_id: r.job_id,
+    job_name: jobName,
+    start: clockTime(r.start_time),
+    end: clockTime(r.end_time),
+    ...(endsNextDay(r.start_time, r.end_time) ? { ends_next_day: true } : {}),
+    every_weeks: r.repeat_interval_weeks + 1,
+    days: Object.entries(series.selected_days)
+      .sort(([, a], [, b]) => a.localeCompare(b))
+      .map(([weekday, first_date]) => ({ weekday: WEEKDAYS[Number(weekday)], first_date })),
+    end_date: last,
+    ...(skipped.length > 0 ? { skipped_dates: skipped } : {}),
+    ...(Object.keys(notes).length > 0 ? { notes } : {}),
+  };
+}
+
 /** first_dates as selected_days: each date is the first shift on its weekday. */
 function parseFirstDates(value: unknown): Record<string, string> {
   const dates = list(value, "first_dates", 7).map((d) => nearDate(d, "first_dates"));
@@ -105,25 +142,21 @@ function parseFirstDates(value: unknown): Record<string, string> {
   return days;
 }
 
-function parseEnds(value: unknown): EndCondition | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new ToolError("ends must be an object with a type.");
-  const ends = value as Args;
-  switch (ends.type) {
-    case "never":
-      allowOnly(ends, ["type"]);
-      return null;
-    case "months":
-      allowOnly(ends, ["type", "value"]);
-      return { type: "months", value: integer(ends.value, "ends.value", 1, 24) };
-    case "years":
-      allowOnly(ends, ["type", "value"]);
-      return { type: "years", value: integer(ends.value, "ends.value", 1, 5) };
-    case "end_date":
-      allowOnly(ends, ["type", "date"]);
-      return { type: "end_date", date: nearDate(ends.date, "ends.date") };
-    default:
-      throw new ToolError("ends.type must be never, months, years or end_date.");
-  }
+/** Parses flat end parameters into an EndCondition update (undefined = unchanged, null = never ends). */
+function parseFlatEnd(args: Args): { value: EndCondition | null } | undefined {
+  const endDate = optional(args.end_date, (v) => nearDate(v, "end_date"));
+  const endMonths = optional(args.end_after_months, (v) => integer(v, "end_after_months", 1, 24));
+  const endYears = optional(args.end_after_years, (v) => integer(v, "end_after_years", 1, 5));
+  const neverEnds = optional(args.never_ends, (v) => boolean(v, "never_ends"));
+  if (neverEnds === false) throw new ToolError("never_ends can only be true. Pass end_date, end_after_months or end_after_years to set an end.");
+
+  const chosen = [endDate !== undefined, endMonths !== undefined, endYears !== undefined, neverEnds === true].filter(Boolean).length;
+  if (chosen > 1) throw new ToolError("Give at most one of end_date, end_after_months, end_after_years or never_ends.");
+  if (chosen === 0) return undefined;
+  if (neverEnds === true) return { value: null };
+  if (endDate !== undefined) return { value: { type: "end_date", date: endDate } };
+  if (endMonths !== undefined) return { value: { type: "months", value: endMonths } };
+  return { value: { type: "years", value: endYears! } };
 }
 
 /** A series that has at least its first date. */
@@ -136,123 +169,87 @@ export function checkSeries(series: Pick<Series, "selected_days" | "end_conditio
 
 const everyWeeks = (value: unknown) => integer(value, "every_weeks", 1, 9) - 1;
 
-const recurringId = { type: "string", description: "A recurring_shift_id from list_recurring_shifts or list_shifts" };
-const recurringRevision = revision("list_recurring_shifts or list_shifts (recurring_revision)");
-const firstDates = {
+const firstDatesSchema = {
   type: "array",
   items: date,
   minItems: 1,
   maxItems: 7,
-  description: "The first shift on each weekday the series repeats on, one date per weekday. Every repeat counts from these dates.",
-};
-const every = { type: "integer", minimum: 1, maximum: 9, description: "1 is every week, 2 every second week, up to 9." };
-const ends = {
-  type: "object",
-  description:
-    'When the series stops. {"type": "never"}, {"type": "months", "value": 1-24} or {"type": "years", "value": 1-5} ' +
-    'counted from the earliest first date, or {"type": "end_date", "date": "YYYY-MM-DD"} with that date included.',
-  properties: {
-    type: { type: "string", enum: ["never", "months", "years", "end_date"] },
-    value: { type: "integer", minimum: 1, maximum: 24 },
-    date,
-  },
-  required: ["type"],
-  additionalProperties: false,
+  description: "First shift date for each weekday the series repeats on (one date per weekday).",
 };
 
-export const listRecurringShifts = {
+export const saveRecurringShift = {
   definition: {
-    name: "list_recurring_shifts",
-    title: "List recurring shifts",
+    name: "save_recurring_shift",
+    title: "Create or update recurring shift",
     description:
-      "The user's repeating shift series: times, weekdays, how often and until when they repeat, skipped dates and per-date notes. " +
-      "list_shifts shows the dates each series puts in a range.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    annotations: { title: "List recurring shifts", ...readOnly },
-  },
-  scope: "read",
-  parse: (args) => {
-    allowOnly(args, []);
-    return {};
-  },
-} satisfies ToolSpec;
-
-export const addRecurringShift = {
-  definition: {
-    name: "add_recurring_shift",
-    title: "Add recurring shift",
-    description:
-      "Adds a series of shifts that repeats on the weekdays of first_dates. Without job_id it goes to the default job. " +
-      "As in the Tidex app, dates where the user already has a shift that overlaps are skipped; the result lists them. " +
-      "Adding the same series again returns the existing one.",
-    inputSchema: {
-      type: "object",
-      properties: { first_dates: firstDates, start: time, end: endTime, every_weeks: every, ends, job_id: jobId },
-      required: ["first_dates", "start", "end"],
-      additionalProperties: false,
-    },
-    annotations: { title: "Add recurring shift", ...adds },
-  },
-  scope: "write",
-  parse: (args) => {
-    allowOnly(args, ["first_dates", "start", "end", "every_weeks", "ends", "job_id"]);
-    const series = {
-      selected_days: parseFirstDates(args.first_dates),
-      ...shiftTimes(parseTime(args.start, "start"), parseTime(args.end, "end", true)),
-      repeat_interval_weeks: optional(args.every_weeks, everyWeeks) ?? 0,
-      end_condition: optional(args.ends, parseEnds) ?? null,
-    };
-    checkSeries(series);
-    return { ...series, job_id: optionalString(args.job_id, "job_id") };
-  },
-} satisfies ToolSpec;
-
-export const updateRecurringShift = {
-  definition: {
-    name: "update_recurring_shift",
-    title: "Change recurring shift",
-    description:
-      "Changes a whole series: times, weekdays, how often it repeats, when it ends, or its job. Give only what changes. " +
-      "A new start without a new end keeps the shift's length. first_dates replaces all weekdays. " +
-      "unskip_dates puts skipped dates back. To change a single date use change_recurring_occurrence.",
+      "Creates a repeating shift series (omit id) or updates/stops an existing series (pass id from get_overview or a shift's recurring_id). " +
+      "When creating: pass first_dates, start and end (overlapping existing shifts are automatically skipped). " +
+      "When updating: pass id plus only what changes; pass end_date to stop future shifts after that date while keeping past ones. " +
+      "To edit or delete a single date of a series, use update_shift or delete_shifts with that date's shift id from get_schedule.",
     inputSchema: {
       type: "object",
       properties: {
-        recurring_shift_id: recurringId,
-        revision: recurringRevision,
-        first_dates: firstDates,
+        id: { type: "string", description: "Recurring series ID to update. Omit to create a new series." },
+        first_dates: firstDatesSchema,
         start: time,
         end: endTime,
-        every_weeks: every,
-        ends,
-        job_id: jobId,
-        unskip_dates: { type: "array", items: date, maxItems: 100, description: "Skipped dates to put back in the series" },
+        every_weeks: { type: "integer", minimum: 1, maximum: 9, description: "Repeat interval in weeks: 1 = weekly (default), 2 = every 2 weeks, up to 9." },
+        end_date: { ...date, description: "Last date included in the series (YYYY-MM-DD)." },
+        end_after_months: { type: "integer", minimum: 1, maximum: 24, description: "Stop after this many months from the earliest first date." },
+        end_after_years: { type: "integer", minimum: 1, maximum: 5, description: "Stop after this many years from the earliest first date." },
+        never_ends: { type: "boolean", enum: [true], description: "Pass true to remove an existing end date so the series repeats indefinitely." },
+        job: jobRef,
+        unskip_dates: { type: "array", items: date, maxItems: 100, description: "Skipped dates to restore to the series (update only)." },
       },
-      required: ["recurring_shift_id", "revision"],
       additionalProperties: false,
     },
-    annotations: { title: "Change recurring shift", ...changes },
+    annotations: { title: "Create or update recurring shift", ...adds },
   },
   scope: "write",
   parse: (args) => {
-    allowOnly(args, ["recurring_shift_id", "revision", "first_dates", "start", "end", "every_weeks", "ends", "job_id", "unskip_dates"]);
+    allowOnly(args, [
+      "id",
+      "first_dates",
+      "start",
+      "end",
+      "every_weeks",
+      "end_date",
+      "end_after_months",
+      "end_after_years",
+      "never_ends",
+      "job",
+      "unskip_dates",
+    ]);
+    const id = optionalString(args.id, "id");
+    const endUpdate = parseFlatEnd(args);
+
+    if (id === undefined) {
+      if (args.unskip_dates !== undefined && args.unskip_dates !== null) {
+        throw new ToolError("unskip_dates applies only when updating an existing series with id.");
+      }
+      const series = {
+        selected_days: parseFirstDates(args.first_dates),
+        ...shiftTimes(parseTime(args.start, "start"), parseTime(args.end, "end", true)),
+        repeat_interval_weeks: optional(args.every_weeks, everyWeeks) ?? 0,
+        end_condition: endUpdate?.value ?? null,
+      };
+      checkSeries(series);
+      return { mode: "create" as const, ...series, job: optionalString(args.job, "job") };
+    }
+
     const parsed = {
-      recurring_shift_id: requiredString(args.recurring_shift_id, "recurring_shift_id"),
-      revision: requiredRevision(args.revision, "list_recurring_shifts"),
       selected_days: optional(args.first_dates, parseFirstDates),
       start: optional(args.start, (v) => parseTime(v, "start")),
       end: optional(args.end, (v) => parseTime(v, "end", true)),
       repeat_interval_weeks: optional(args.every_weeks, everyWeeks),
-      // Absent leaves the end alone; {type: "never"} removes it.
-      end_condition: args.ends === undefined || args.ends === null ? undefined : { value: parseEnds(args.ends) },
-      job_id: optionalString(args.job_id, "job_id"),
+      end_condition: endUpdate,
+      job: optionalString(args.job, "job"),
       unskip_dates: optional(args.unskip_dates, (v) => list(v, "unskip_dates", 100).map((d) => parseDate(d, "unskip_dates"))),
     };
-    const { recurring_shift_id, revision, ...change } = parsed;
-    if (Object.values(change).every((v) => v === undefined)) {
-      throw new ToolError("Give at least one of first_dates, start, end, every_weeks, ends, job_id or unskip_dates.");
+    if (Object.values(parsed).every((v) => v === undefined)) {
+      throw new ToolError("Give at least one field to update (first_dates, start, end, every_weeks, end_date, never_ends, job or unskip_dates).");
     }
-    return parsed;
+    return { mode: "update" as const, id, ...parsed };
   },
 } satisfies ToolSpec;
 
@@ -298,160 +295,72 @@ export function seriesUpdate(
 
 const sortedKeys = (record: Record<string, string>) => Object.fromEntries(Object.entries(record).sort());
 
-export const stopRecurringShift = {
-  definition: {
-    name: "stop_recurring_shift",
-    title: "Stop recurring shift",
-    description:
-      "Ends a series after last_date, which keeps its last shift. Earlier shifts stay. It can't make a series run longer; use update_recurring_shift for that.",
-    inputSchema: {
-      type: "object",
-      properties: { recurring_shift_id: recurringId, revision: recurringRevision, last_date: date },
-      required: ["recurring_shift_id", "revision", "last_date"],
-      additionalProperties: false,
-    },
-    annotations: { title: "Stop recurring shift", ...changes },
-  },
-  scope: "write",
-  parse: (args) => {
-    allowOnly(args, ["recurring_shift_id", "revision", "last_date"]);
-    return {
-      recurring_shift_id: requiredString(args.recurring_shift_id, "recurring_shift_id"),
-      revision: requiredRevision(args.revision, "list_recurring_shifts"),
-      last_date: nearDate(args.last_date, "last_date"),
-    };
-  },
-} satisfies ToolSpec;
-
-/** The end_condition that stops `series` after `last`, refusing one that would lengthen it. */
-export function stoppedEnd(series: Pick<Series, "selected_days" | "end_condition">, last: string): EndCondition {
-  const current = lastDate(series);
-  if (current !== null && current <= last) throw new ToolError(`The series already ends on ${current}.`);
-  const end: EndCondition = { type: "end_date", date: last };
-  checkSeries({ selected_days: series.selected_days, end_condition: end });
-  return end;
-}
-
 export const deleteRecurringShift = {
   definition: {
     name: "delete_recurring_shift",
     title: "Delete recurring shift",
     description:
-      "Deletes a whole series, past dates included. One-off shifts made from its dates stay. To end it from a date and keep earlier shifts, use stop_recurring_shift.",
+      "Deletes an entire repeating shift series, including past occurrences. To end future shifts while keeping past ones, use save_recurring_shift with end_date instead. " +
+      "Confirm with the user first.",
     inputSchema: {
       type: "object",
-      properties: { recurring_shift_id: recurringId, revision: recurringRevision },
-      required: ["recurring_shift_id", "revision"],
+      properties: { id: { type: "string", description: "Recurring series ID from get_overview or a shift's recurring_id." } },
+      required: ["id"],
       additionalProperties: false,
     },
-    annotations: { title: "Delete recurring shift", ...changes },
+    annotations: { title: "Delete recurring shift", ...destructive },
   },
   scope: "write",
   parse: (args) => {
-    allowOnly(args, ["recurring_shift_id", "revision"]);
-    return {
-      recurring_shift_id: requiredString(args.recurring_shift_id, "recurring_shift_id"),
-      revision: requiredRevision(args.revision, "list_recurring_shifts"),
-    };
+    allowOnly(args, ["id"]);
+    return { id: requiredString(args.id, "id") };
   },
 } satisfies ToolSpec;
 
-const MAX_NOTE_LENGTH = 500;
-
-/** What change_recurring_occurrence does to one date of a series. */
+/** What update_shift or delete_shifts does to one date of a recurring series. */
 export type OccurrenceChange =
   | { kind: "skip" }
   /** "" removes the note. */
   | { kind: "note"; note: string }
   /** Becomes a one-off shift. Absent fields keep the date's values. */
-  | { kind: "change"; date?: string; start?: string; end?: string; note?: string };
-
-export const changeRecurringOccurrence = {
-  definition: {
-    name: "change_recurring_occurrence",
-    title: "Change one date of a recurring shift",
-    description:
-      "Changes one date of a series, as the Tidex app does. skip: true removes that date only. " +
-      "A note alone sets that date's note (an empty note removes it). " +
-      "A new_date, start or end takes the date out of the series and adds a one-off shift with the changes on the series' job; " +
-      "a new start without a new end keeps the shift's length, and the date's note moves to the new shift unless note is given.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        recurring_shift_id: recurringId,
-        revision: recurringRevision,
-        date: { ...date, description: "The date to change, as list_shifts shows it" },
-        skip: { type: "boolean", description: "true removes this date from the series" },
-        new_date: date,
-        start: time,
-        end: endTime,
-        note: { type: "string", maxLength: MAX_NOTE_LENGTH },
-      },
-      required: ["recurring_shift_id", "revision", "date"],
-      additionalProperties: false,
-    },
-    annotations: { title: "Change one date of a recurring shift", ...changes },
-  },
-  scope: "write",
-  parse: (args) => {
-    allowOnly(args, ["recurring_shift_id", "revision", "date", "skip", "new_date", "start", "end", "note"]);
-    const target = {
-      recurring_shift_id: requiredString(args.recurring_shift_id, "recurring_shift_id"),
-      revision: requiredRevision(args.revision, "list_recurring_shifts"),
-      date: parseDate(args.date, "date"),
-    };
-    const note = optionalString(args.note, "note", MAX_NOTE_LENGTH);
-    const moved = {
-      date: optional(args.new_date, (v) => nearDate(v, "new_date")),
-      start: optional(args.start, (v) => parseTime(v, "start")),
-      end: optional(args.end, (v) => parseTime(v, "end", true)),
-    };
-    const moves = Object.values(moved).some((v) => v !== undefined);
-    if (optional(args.skip, (v) => boolean(v, "skip")) === true) {
-      if (moves || note !== undefined) throw new ToolError("skip can't be combined with other changes.");
-      return { ...target, change: { kind: "skip" } as OccurrenceChange };
-    }
-    if (moves) return { ...target, change: { kind: "change", ...moved, note } as OccurrenceChange };
-    if (note !== undefined) return { ...target, change: { kind: "note", note } as OccurrenceChange };
-    throw new ToolError("Give skip: true, a note, or at least one of new_date, start or end.");
-  },
-} satisfies ToolSpec;
+  | { kind: "change"; date?: string; start?: string; end?: string; note?: string; forceDetach?: boolean };
 
 /**
  * ShiftsViewModel+Editing.convertVirtualShift: the series columns to write, and the
- * one-off shift to add when the date's day or times change.
+ * one-off shift to add when the date's day, times or job change.
  */
 export function planOccurrence(
   series: { start_time: string; end_time: string; exclusions: string[]; date_specific_notes: Record<string, string> },
-  date: string,
+  dateStr: string,
   change: OccurrenceChange,
 ) {
   const notes = { ...series.date_specific_notes };
   const notesColumn = () => (Object.keys(notes).length === 0 ? null : notes);
-  const excluded = () => [...new Set([...series.exclusions, date])].sort();
+  const excluded = () => [...new Set([...series.exclusions, dateStr])].sort();
   if (change.kind === "skip") return { exclusions: excluded() };
 
   const note = change.note?.trim();
   if (change.kind === "change") {
     const times = movedTimes({ start: series.start_time, end: series.end_time }, change.start, change.end);
     const unchanged =
-      (change.date ?? date) === date &&
+      !change.forceDetach &&
+      (change.date ?? dateStr) === dateStr &&
       times.start_time === clockTime(series.start_time) &&
       minutes(times.end_time) % MINUTES_PER_DAY === minutes(clockTime(series.end_time)) % MINUTES_PER_DAY;
     // The app keeps the date in the series when only its note changes.
     if (!unchanged) {
-      const shiftNote = note === undefined ? notes[date] : note || undefined;
-      delete notes[date];
+      const shiftNote = note === undefined ? notes[dateStr] : note || undefined;
+      delete notes[dateStr];
       return {
         exclusions: excluded(),
         date_specific_notes: notesColumn(),
-        shift: { shift_date: change.date ?? date, ...times, ...(shiftNote ? { note: shiftNote } : {}) },
+        shift: { shift_date: change.date ?? dateStr, ...times, ...(shiftNote ? { note: shiftNote } : {}) },
       };
     }
     if (note === undefined) return {};
   }
-  if (note) notes[date] = note;
-  else delete notes[date];
+  if (note) notes[dateStr] = note;
+  else delete notes[dateStr];
   return { date_specific_notes: notesColumn() };
 }
 

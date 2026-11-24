@@ -1,8 +1,8 @@
 # Tidex MCP server
 
-People can connect Tidex to an AI agent (Claude, ChatGPT, Cursor and other MCP clients) and let it do what they can do in the app: manage shifts, recurring shifts, events, jobs, pay and tariffs, payroll adjustments and settings, read their earnings, and talk to and share with friends. Account deletion, blocking and reporting, and features that live only on the phone stay out. The server is a Convex HTTP action at `/mcp` on the HTTP actions host, `https://actions.tidex.no/mcp` in production. Clerk is the OAuth authorization server.
+People can connect Tidex to an AI agent (Claude, ChatGPT, Cursor and other MCP clients) and let it do what they can do in the app: read their schedule and after-tax earnings, manage shifts, recurring shifts, events, jobs, pay and tariffs, payroll adjustments and settings, and talk to and share schedules with friends. Account deletion, blocking and reporting, and features that live only on the phone stay out. The server is a Convex HTTP action at `/mcp` on the HTTP actions host, `https://actions.tidex.no/mcp` in production. Clerk is the OAuth authorization server.
 
-The HTTP actions, token checks and rate limits are in `backend/convex/mcp.ts`. Each area's tools are in their own module: `mcpShifts.ts`, `mcpPay.ts` (jobs, pay, tariffs), `mcpPlans.ts` (recurring shifts, events, payroll adjustments, settings) and `mcpSocial.ts` (friends and messages). The parts that need no Convex runtime are in `backend/convex/lib/mcp/`. The tests are `backend/scripts/mcp*.test.ts`, plus the iOS contract test described under [Tools](#tools). Production has served it at `https://actions.tidex.no/mcp` since 2026-11-21. Without a valid `MCP_RESOURCE_URL`, every MCP route returns 404, so unsetting that variable turns it off.
+The HTTP actions, token checks and rate limits live in `backend/convex/mcp.ts`. Tool handlers live in four modules: `mcpPay.ts` (overview, jobs, pay, tariffs), `mcpShifts.ts` (schedule, earnings, shifts), `mcpPlans.ts` (recurring shifts, events, payroll adjustments, settings) and `mcpSocial.ts` (friends and messages). The pure helpers, argument parsers, pay-period math and after-tax earnings engine live in `backend/convex/lib/mcp/`. Tests live in `backend/scripts/mcp*.test.ts`, plus the iOS contract test described under [Tools](#tools). Production has served `/mcp` at `https://actions.tidex.no/mcp` since 2026-11-21. Without a valid `MCP_RESOURCE_URL`, every MCP route returns 404, so unsetting that variable turns it off.
 
 ## Protocol
 
@@ -38,71 +38,67 @@ WWW-Authenticate: Bearer error="insufficient_scope", scope="tidex:read tidex:wri
 
 ## Tools
 
-All dates are `YYYY-MM-DD` and all times `HH:mm` on the user's own clock, as the app shows them. A date the agent writes must be within five years of today, which catches a mistyped year. An optional argument sent as `null` counts as left out, as strict clients such as ChatGPT send them. A shift whose end is at or before its start ends the next day. A midnight end is stored as `24:00` when the start isn't `00:00`, as the app's `ShiftSchedule` does. Equal start and end times are refused, except when moving the start of a 24-hour shift keeps its length.
+All dates are `YYYY-MM-DD`, month shortcuts are `YYYY-MM`, and times are `HH:mm` on the user's own clock. A date the agent writes must be within five years of today, which catches a mistyped year. An optional argument sent as `null` counts as left out, as strict clients such as ChatGPT send them. A shift whose end is at or before its start ends the next day. A midnight end is stored as `24:00` when the start isn't `00:00`, as the app's `ShiftSchedule` does. Equal start and end times are refused, except when moving the start of a 24-hour shift keeps its length.
 
-Every write that changes or deletes an existing row takes the `revision` the list or get tool returned. A revision that no longer matches fails with a message telling the agent to list again, so an agent can't overwrite a change made on the phone. Adds return the existing row instead of a copy when the same thing already exists, so a retried call adds nothing. Writes go through the same insert, update and remove code as the app's sync (`syncedTable` in `lib/syncWrite.ts`, and the `*For` functions split out of the messaging, sharing and settings mutations), for the user the token names and with the current `PAYROLL_REVISION`. They get new revisions, so the app pulls them on its next `sync.revisions` update.
+Tools do not ask agents to pass internal `revision` tokens. Mutations read the current row inside Convex and write through `syncedTable` in `lib/syncWrite.ts` (and the `*For` functions split out of messaging, sharing and settings) with the current `PAYROLL_REVISION`, so the iOS app pulls every change on its next `sync.revisions` update. Jobs and friends can be passed by ID or name (and friends also by username). Adds return the existing row instead of a copy when the same item already exists.
 
-The app reads a synced table in pages and one row it can't decode stops that table syncing for the user, so the builders in `lib/mcp/` write exactly what the app writes. `backend/scripts/mcp-contract-fixture.ts` writes `ios/TidexAppTests/Fixtures/MCPContractFixture.json` from those builders: jobs, custom and tariff pay with a raise, and shifts with the gross pay the server computes. `mcp-pay.test.ts` fails when the committed fixture is stale, and `MCPContractFixtureTests` in the iOS tests decodes every row with the app's sync types and prices the shifts with the app's payroll code, which must match the server's gross. Regenerate the fixture with `bun backend/scripts/mcp-contract-fixture.ts` after changing a builder.
+The app reads each synced table in pages and one row it can't decode stops that table syncing for the user, so the builders in `lib/mcp/` write the exact shapes the app writes. `backend/scripts/mcp-contract-fixture.ts` writes `ios/TidexAppTests/Fixtures/MCPContractFixture.json` from those builders: jobs with pay periods and half-tax month, custom and tariff pay with raises, and shifts with the gross, net and tax amounts the server computes. `mcp-pay.test.ts` fails when the committed fixture is stale, and `MCPContractFixtureTests` in the iOS tests decodes every row with the app's sync types and checks gross pay, net pay, tax deducted and paid hours against `PayrollEngine`. Regenerate the fixture with `bun backend/scripts/mcp-contract-fixture.ts` after changing a builder.
 
-### Shifts
-
-| Tool | Kind | What it does |
-| --- | --- | --- |
-| `list_shifts` | read | Shifts from `from` to `to`, at most 93 days, with the schedule time zone. One-off shifts carry `shift_id` and `revision`; recurring dates carry `recurring_shift_id`, `recurring_revision` and their note. |
-| `get_earnings` | read | Gross pay and paid hours per currency for shifts dated `from` to `to`, at most 93 days, and how many shifts were left out because their job has no pay set up. |
-| `add_shift` | write | Adds a one-off shift, to the default job unless `job_id` is given. The job needs pay set up, as in the app. |
-| `update_shift` | write | Changes date, times, job or note of a one-off shift. A new start without a new end keeps the length, as Siri's move does. |
-| `delete_shift` | write, destructive | Soft-deletes a one-off shift. |
-
-`get_earnings` uses the payroll code Live Activities use (`computeShift`, conflict exclusion and weekly overtime in `lib/shared`), counting the way the app's `SharingComputeCore.computeShiftsInRange` does. It leaves out net pay and payroll adjustments, because the app taxes each shift by its payout date and half-tax month, which the server doesn't model. Adding a shift queues the same debounced friend notification as adding it in the app.
-
-### Jobs and pay
+### Overview, schedule and shifts
 
 | Tool | Kind | What it does |
 | --- | --- | --- |
-| `list_jobs` | read | Jobs with pay period, payday, half-tax month, colour, currency, default and archived flags, and whether pay is set up. |
-| `add_job` | write | Adds a job and its base pay in one transaction, as the app does. The first active job becomes the default. Colours come from the app's palette; currency is a symbol such as `kr` or `$`, and a tariff job is always `kr`. |
-| `update_job` | write | Name, colour, payday, half-tax month, pay period, default, archive or restore. Currency can't change. Archiving refuses the default job and the last active job, as the app does. |
-| `delete_job` | write, destructive | Deletes an archived job and its history in two calls: the first returns counts and a `confirmation_token`, the second deletes. |
-| `list_tariffs`, `get_tariff` | read | The tariff catalogue: agreements grouped by family with the choices that pick a `tariff_type_id`, then that tariff's levels, hourly rates and dates. |
-| `get_pay` | read | A job's base pay and each dated pay change. |
-| `set_pay` | write | Sets the base pay, or the pay from a date. Tariff pay copies the catalogue version's rate for the level, supplements and overtime, as onboarding does. Custom pay takes an hourly wage, supplement rules (days 1 to 7, Monday first, times, an amount or a percent) and optional overtime with the app's default rules. Tax and breaks are fields of their own. Anything left out comes from the pay in effect on that date. |
-| `delete_pay_change` | write, destructive | Deletes a dated pay change. The base pay can't be deleted. |
+| `get_overview` | read | Today's date and time in the user's time zone, active jobs with their current pay and tax settings, recurring shift series, app and notification settings, unread message count and friend count. Pass `include_pay_history: true` for full pay timelines and supplement rules, or `include_archived: true` for archived jobs. |
+| `get_schedule` | read | Shifts (one-off and recurring occurrences), calendar events and a pay summary for a `month` or `from`/`to` range (up to 366 days, defaulting to 14 days from today). Each shift includes hours, break minutes, gross pay, net pay after tax, tax deducted, effective tax percent, half-tax flag and payout date. One-off shifts use their UUID and recurring occurrences use `recurring:<series_id>:<YYYY-MM-DD>`; both work directly in `update_shift` and `delete_shifts`. |
+| `get_earnings` | read | Gross pay, net pay after tax, tax deducted, base pay, supplements, overtime, paid hours and payroll adjustments per currency and job. `by: "worked"` (default) sums shifts worked in a `month` or `from`/`to` range (up to 366 days). `by: "payout"` sums paychecks paid out in a `month` using each job's pay period, half-tax month and payroll adjustments. |
+| `add_shifts` | write | Adds 1 to 50 one-off shifts in one call, resolving `job` by ID or name (defaulting to the default job). Existing identical shifts are returned without creating duplicates. |
+| `update_shift` | write | Updates any shift by its `id` from `get_schedule` (one-off shift or recurring occurrence). A new `start` without `end` keeps the length. On a recurring occurrence, changing only `note` updates that date's note on the series; changing date, times or job converts that date into a one-off shift. |
+| `delete_shifts` | write, destructive | Deletes 1 to 50 shifts by their `ids` from `get_schedule`. One-off shifts are soft-deleted and recurring occurrences are skipped on their series. |
 
-Tariff pay uses the catalogue's current version only, so a tariff change dated before that version's start is refused with a suggestion to use custom pay.
+`lib/mcp/payPeriod.ts` ports `ios/Shared/PayPeriod.swift`, and `lib/mcp/earnings.ts` mirrors `SharingComputeCore.computeShiftsInRange` and `PayrollAdjustmentCalculator.swift`: weekly overtime from the start of the ISO week, conflict exclusion, payout-date tax snapshot lookup and Norwegian half-tax months (`november` or `december`). Adding a shift queues the same debounced friend notification as adding it in the app.
 
-### Plans and settings
+### Recurring shifts, events, adjustments and settings
 
 | Tool | Kind | What it does |
 | --- | --- | --- |
-| `list_recurring_shifts` | read | Series with times, weekdays, repeat interval, end, skipped dates and notes. |
-| `add_recurring_shift` | write | Adds a series from one first date per weekday, `every_weeks` (1 to 9) and `ends`. Dates that overlap existing shifts are skipped, as in the app, and returned as `skipped_dates`. |
-| `update_recurring_shift`, `stop_recurring_shift`, `delete_recurring_shift` | write | Change the whole series, end it after a date, or delete it. |
-| `change_recurring_occurrence` | write | One date of a series: skip it, set its note, or turn it into a one-off shift (an exclusion plus a new shift, as the app does). |
-| `list_events`, `add_event`, `update_event`, `delete_event` | read, write | Timed and all-day events with up to four reminders. Reminders are local notifications, so the phone schedules them after the app next syncs. |
-| `list_payroll_adjustments`, `add_payroll_adjustment`, `update_payroll_adjustment`, `delete_payroll_adjustment` | read, write | Bonuses, back pay and corrections in the job's currency. A job without tax on the payout date gets `net_manual`, as in the app. |
-| `get_settings`, `update_settings` | read, write | Theme, calendar colour style, dashboard clock buttons, startup tab and schedule time zone. `get_settings` also shows the notification settings as the phone last saved them; they can't be changed here, because the app keeps its own copy and never takes a server change to it (`NotificationPreferencesRepository.saveFromServer`). |
+| `save_recurring_shift` | write | Creates a repeating shift series (omit `id`) or updates/stops an existing series (pass `id`). Uses flat end fields (`end_date`, `end_after_months`, `end_after_years`, `never_ends`). Overlapping dates are skipped on creation and returned as `skipped_dates`. |
+| `delete_recurring_shift` | write, destructive | Deletes a whole repeating series, past dates included. |
+| `save_event` | write | Creates (omit `id`) or updates (pass `id`) a private calendar event, timed or all-day, with up to four local phone reminders. |
+| `delete_event` | write, destructive | Deletes an event by `id`. |
+| `save_payroll_adjustment` | write | Creates (omit `id`) or updates (pass `id`) a bonus, back pay or correction on a payday, returning its taxed `net_amount`. A job without tax on `payout_date` gets `net_manual`. |
+| `delete_payroll_adjustment` | write, destructive | Deletes a payroll adjustment by `id`. |
+| `update_settings` | write | Updates `theme`, `calendar_color_style`, `show_clock_buttons`, `startup_tab` and `time_zone`. Notification preferences live on the phone and can only be read in `get_overview`. |
 
-A recurring series that ends at midnight is stored with the end `24:00`, as the app sends it. An older series may store `00:00`, which the app and the tools read the same way.
+A recurring series that ends at midnight is stored with the end `24:00`, as the app sends it. An older series may store `00:00`, which the app and tools read the same way.
+
+### Jobs, pay and tariffs
+
+| Tool | Kind | What it does |
+| --- | --- | --- |
+| `save_job` | write | Creates a job and its base pay in one transaction (omit `id`) with flat pay, tax and break fields, or updates an existing job's name, color, payday, half-tax month, pay period, default flag or archived state (pass `id`). |
+| `delete_job` | write, destructive | Permanently deletes an archived job and its history in two calls: first without `confirmation_token` to preview row counts and get a token, then with the token after user confirmation. |
+| `set_pay` | write | Sets a job's base pay (omit `from_date`), adds or updates a dated pay change (`from_date`), or removes a dated pay change (`from_date` with `remove: true`) using flat fields (`hourly_wage`, `tariff_type_id`, `tariff_level`, `supplements`, `overtime_enabled`, `overtime_weekly_hours`, `tax_enabled`, `tax_percent`, `break_enabled`, `break_method`, `break_threshold_hours`, `break_minutes`). Omitted fields stay as they are on that date. |
+| `find_tariffs` | read | Searches Norwegian collective agreements and statutory minimum wages (`search`) or returns full levels, hourly wages, validity dates and overtime rules for one `tariff_type_id`. Narrow searches (10 or fewer matching variants) include levels directly. |
+
+Tariff pay uses the catalogue's current version only, so a tariff change dated outside that version's validity window is refused with a suggestion to pass `hourly_wage` for custom pay.
 
 ### Friends and messages
 
 | Tool | Kind | What it does | Pushes to other people |
 | --- | --- | --- | --- |
-| `list_friends` | read | People who share with the user and people the user shares with, with both sides' settings. Never email addresses; blocked pairs are left out and hidden ones marked. | none |
-| `get_friend_schedule` | read | A friend's shifts for up to 93 days on the friend's clock, with gross pay only when the friend shares earnings. Hidden and blocked friends are refused. | none |
-| `list_conversations`, `read_conversation` | read | Conversations, a page at a time, and their messages. Images are listed by kind only, because their URLs need the app's session. Reading never marks a conversation as read. | none |
-| `send_message` | write | Plain text to a friend, starting the conversation if needed, tagged `sent_via: "mcp"` in the message metadata. A retry with the same `client_id` returns the message already sent and doesn't count toward the send cap. | a message push, unless the friend muted the conversation |
-| `mark_conversation_read` | write | Marks a conversation as read. The friend sees the read receipt. | none |
-| `share_shifts_with` | write | Starts sharing the user's shifts with someone found by username or verified email. Earnings stay hidden unless asked for. | a share-started push, if the other person allows it |
-| `update_sharing` | write | Earnings and notifications on the user's share, and hidden and notifications for the friend's share. | none |
-| `stop_sharing` | write, destructive | Stops sharing the user's shifts with a friend. A blocked pair is refused, because deleting its share would lift the block. | none |
+| `list_friends` | read | Friends with flat sharing flags (`shares_with_me`, `i_share_with_them`, earnings visibility, mute, hidden), `thread_id` and `unread_count`. Never returns email addresses; blocked pairs are excluded. | none |
+| `get_friend_schedule` | read | A friend's shifts for a `month` or `from`/`to` range (up to 366 days, defaulting to 14 days), resolved by friend ID, username or name. Includes gross pay, net pay after tax, tax deducted and summary totals only when the friend shares earnings. Hidden and blocked friends are refused. | none |
+| `get_messages` | read | Without `friend` or `thread_id`, lists conversations newest first with unread counts and pagination. With `friend` (ID, username or name) or `thread_id`, reads messages oldest first. Never marks messages as read. | none |
+| `send_message` | write | Sends a plain-text message by `friend` or `thread_id`, tagged `sent_via: "mcp"` in metadata. Passing the same `client_id` makes retries idempotent. | message push, unless the friend muted the conversation |
+| `mark_read` | write | Marks all messages in a conversation as read by `friend` or `thread_id`. Sends a read receipt. | none |
+| `update_sharing` | write | Starts sharing with a Tidex user (`username_or_email`, earnings hidden unless `show_my_earnings: true`) or updates sharing flags (`show_my_earnings`, `notify_them`, `hidden`, `notify_me`) for an existing `friend`. | share-started push on new shares, if the other person allows it |
+| `stop_sharing` | write, destructive | Stops sharing the user's shifts with a `friend`. Blocked pairs are refused so deleting a share can't lift a block. | none |
 
 Blocking, unblocking, reporting, typing indicators, screenshot reports, username and profile picture changes, and attachments stay in the app.
 
 ### Adding a tool
 
-Each tool is one `McpTool` entry (`lib/mcp/registry.ts`): its `definition` for `tools/list`, its `scope` (`read` or `write`), a `parse` that checks the arguments and throws `ToolError` with a message for the agent, and a `run` that calls the area's internal Convex function for the user. Put the definition, scope and parser in `lib/mcp/<area>.ts` so `bun test` can import them without Convex. Put the internal functions in `mcp<Area>.ts`, which also exports the area's list, as `mcpShifts.ts` exports `shiftTools`. Add that list to `tools` in `mcp.ts` with one spread. The order of that array is the order `tools/list` returns. The rate limit counts a `write` tool as a write.
+Each tool is one `McpTool` entry (`lib/mcp/registry.ts`): its `definition` for `tools/list`, its `scope` (`read` or `write`), a `parse` that checks arguments and throws `ToolError`, and a `run` that calls the area's internal Convex function for the user. Put the definition, scope and parser in `lib/mcp/<area>.ts` so `bun test` can import them without Convex. Put the internal functions in `mcp<Area>.ts`, export the area's tool array, and include it in `tools` in `mcp.ts`.
 
 ## Limits
 
@@ -115,7 +111,7 @@ Deployment environment variables:
 - `MCP_RESOURCE_URL`: the public MCP URL. Its path must be `/mcp`; any other value turns the server off and logs an error. Production: `https://actions.tidex.no/mcp`. Dev: `http://127.0.0.1:3211/mcp`.
 - `CLERK_JWT_ISSUER_DOMAIN`: already set. It is the issuer for both app sessions and OAuth tokens.
 
-Clerk instance settings, under OAuth applications → Settings, or `PATCH /v1/instance/oauth_application_settings` in the Backend API:
+Clerk instance settings, under OAuth applications -> Settings, or `PATCH /v1/instance/oauth_application_settings` in the Backend API:
 
 - `aud_claim_enabled` and `aud_claim_refresh_backfill_enabled`: on, so tokens carry the `resource` as `aud`.
 - `client_id_metadata_documents_advertised` and `dynamic_oauth_client_registration`: on. ChatGPT and Claude use CIMD when the server offers it and DCR otherwise.

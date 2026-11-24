@@ -35,6 +35,7 @@ import type * as lib_mcp_args from "../lib/mcp/args.js";
 import type * as lib_mcp_db from "../lib/mcp/db.js";
 import type * as lib_mcp_earnings from "../lib/mcp/earnings.js";
 import type * as lib_mcp_pay from "../lib/mcp/pay.js";
+import type * as lib_mcp_payPeriod from "../lib/mcp/payPeriod.js";
 import type * as lib_mcp_plans from "../lib/mcp/plans.js";
 import type * as lib_mcp_protocol from "../lib/mcp/protocol.js";
 import type * as lib_mcp_recurring from "../lib/mcp/recurring.js";
@@ -136,6 +137,7 @@ declare const fullApi: ApiFromModules<{
   "lib/mcp/db": typeof lib_mcp_db;
   "lib/mcp/earnings": typeof lib_mcp_earnings;
   "lib/mcp/pay": typeof lib_mcp_pay;
+  "lib/mcp/payPeriod": typeof lib_mcp_payPeriod;
   "lib/mcp/plans": typeof lib_mcp_plans;
   "lib/mcp/protocol": typeof lib_mcp_protocol;
   "lib/mcp/recurring": typeof lib_mcp_recurring;

@@ -1,17 +1,27 @@
 // Writes ios/TidexAppTests/Fixtures/MCPContractFixture.json: job and wage snapshot rows built
-// by the MCP pay tools' builders, shifts as add_shift stores them, and the gross pay that
-// get_earnings computes for them. MCPContractFixtureTests decodes the rows with the app's
-// sync types and prices the shifts with the app's payroll code, so a row the app can't
-// decode, or pay the two sides compute differently, fails a test.
+// by the MCP pay tools' builders, shifts as add_shifts stores them, and the gross and net
+// after-tax pay that get_earnings computes for them. MCPContractFixtureTests decodes the rows
+// with the app's sync types and prices the shifts with the app's payroll code, so a row the
+// app can't decode, or gross/net pay the two sides compute differently, fails a test.
 //
 //   bun backend/scripts/mcp-contract-fixture.ts         rewrite the fixture
 //
 // mcp-pay.test.ts fails while the committed file differs from what this builds.
 
 import type { Doc } from "../convex/_generated/dataModel";
-import { shiftEarnings } from "../convex/lib/mcp/earnings";
-import { jobRow, placement, setPay, snapshotFields, snapshotInEffect, snapshotRow } from "../convex/lib/mcp/pay";
+import { workedEarningsReport } from "../convex/lib/mcp/earnings";
+import {
+  type HalfTaxMonth,
+  jobRow,
+  type PayPeriod,
+  placement,
+  setPay,
+  snapshotFields,
+  snapshotInEffect,
+  snapshotRow,
+} from "../convex/lib/mcp/pay";
 import { shiftTimes } from "../convex/lib/mcp/shiftTimes";
+import type { LiveActivityRegularShift } from "../convex/lib/shared/liveActivityScheduling";
 import { applicableWageSnapshot, asRegularShift, asSnapshot } from "../convex/liveActivities";
 
 export const FIXTURE_PATH = new URL("../../ios/TidexAppTests/Fixtures/MCPContractFixture.json", import.meta.url);
@@ -35,10 +45,20 @@ function stored<R extends object>(row: R) {
 const storedJob = (row: ReturnType<typeof jobRow>) => stored({ monthly_goal: 20000, ...row });
 type StoredSnapshot = ReturnType<typeof stored<ReturnType<typeof snapshotRow>>>;
 
-/** pay, tax and breaks as an agent passes them to set_pay. */
-const settingsFrom = (args: Record<string, unknown>) => setPay.parse({ job_id: "fixture", ...args }).settings;
+/** Flat pay, tax and break fields as an agent passes them to set_pay. */
+function settingsFrom(args: Record<string, unknown>) {
+  const parsed = setPay.parse({ job: "fixture", ...args });
+  if (parsed.action !== "set") throw new Error("Expected set action");
+  return parsed.settings;
+}
 
-function job(name: string, currency: string, args: Record<string, unknown>, active: { sort_order: number }[]) {
+function job(
+  name: string,
+  currency: string,
+  args: Record<string, unknown>,
+  active: { sort_order: number }[],
+  options: { payPeriod?: PayPeriod; halfTaxMonth?: HalfTaxMonth } = {},
+) {
   const { sortOrder, isDefault } = placement(active);
   const row = storedJob(
     jobRow({
@@ -49,7 +69,8 @@ function job(name: string, currency: string, args: Record<string, unknown>, acti
       isDefault,
       sortOrder,
       payrollDay: 20,
-      payPeriod: { type: "monthly", startDay: 16, payoutMonthOffset: 1 },
+      halfTaxMonth: options.halfTaxMonth,
+      payPeriod: options.payPeriod ?? { type: "monthly", startDay: 16, payoutMonthOffset: 1 },
     }),
   );
   const fields = snapshotFields(settingsFrom(args), null, { date: TODAY, currency });
@@ -73,30 +94,41 @@ export function buildFixture() {
     "Café",
     "$",
     {
-      pay: {
-        type: "custom",
-        hourly_wage: 18.5,
-        supplements: [
-          { days: [1, 2, 3, 4, 5], from: "18:00", to: "24:00", amount: 2.5 },
-          { days: [6, 7], from: "00:00", to: "24:00", percent: 30 },
-        ],
-        overtime: { enabled: true, weekly_threshold_hours: 40 },
-      },
-      tax: { enabled: true, percentage: 18 },
-      breaks: { enabled: true },
+      hourly_wage: 18.5,
+      supplements: [
+        { days: [1, 2, 3, 4, 5], from: "18:00", to: "24:00", amount: 2.5 },
+        { days: [6, 7], from: "00:00", to: "24:00", percent: 30 },
+      ],
+      overtime_enabled: true,
+      overtime_weekly_hours: 40,
+      tax_enabled: true,
+      tax_percent: 18,
+      break_enabled: true,
     },
     [],
   );
-  const customRaise = raise(custom.row, [custom.baseline], "2026-12-15", { pay: { type: "custom", hourly_wage: 20 } });
+  const customRaise = raise(custom.row, [custom.baseline], "2026-12-15", { hourly_wage: 20 });
 
+  // Renhold pays on the 20th of the month the 16th-15th period ends, with December half-tax:
+  // Dec 8 and Dec 13 are paid Dec 20 (15% tax); Dec 24, 25 and 31 are paid Jan 20 (30% tax).
   const tariff = job(
     "Renhold",
     "kr",
-    { pay: { type: "tariff", tariff_type_id: "cleaning_nho_375", level: 1 } },
+    {
+      tariff_type_id: "cleaning_nho_375",
+      tariff_level: 1,
+      tax_enabled: true,
+      tax_percent: 30,
+    },
     [custom.row],
+    {
+      payPeriod: { type: "monthly", startDay: 16, payoutMonthOffset: 0 },
+      halfTaxMonth: 12,
+    },
   );
   const tariffRaise = raise(tariff.row, [tariff.baseline], "2026-12-14", {
-    pay: { type: "tariff", tariff_type_id: "cleaning_nho_375", level: 2 },
+    tariff_type_id: "cleaning_nho_375",
+    tariff_level: 2,
   });
 
   const shifts = [
@@ -119,18 +151,26 @@ export function buildFixture() {
 
   const jobs = [custom.row, tariff.row];
   const snapshots = [custom.baseline, customRaise, tariff.baseline, tariffRaise];
-  // The same steps as mcpShifts.earnings, on the same rows.
   const priced = snapshots.map((s) => asSnapshot(s as unknown as Doc<"wage_snapshots">));
-  const earnings = shiftEarnings({
+  const earnings = workedEarningsReport({
     from: FROM,
     to: TO,
     regular: shifts.map((s) => asRegularShift(s as unknown as Doc<"user_shifts">)),
     recurring: [],
+    jobs,
+    adjustments: [],
     snapshotFor: (s) => applicableWageSnapshot(s, priced),
-    currencyFor: (jobId) => jobs.find((j) => j.id === jobId)?.currency ?? "NOK",
+    snapshotForJobDate: (jobId, date) =>
+      applicableWageSnapshot({ user_id: USER_ID, job_id: jobId, shift_date: date } as LiveActivityRegularShift, priced),
   });
 
-  return { user_id: USER_ID, jobs, wage_snapshots: snapshots, shifts, earnings: { from: FROM, to: TO, ...earnings } };
+  return {
+    user_id: USER_ID,
+    jobs,
+    wage_snapshots: snapshots,
+    shifts,
+    earnings: { from: FROM, to: TO, totals: earnings.totals },
+  };
 }
 
 export const fixtureJSON = () => `${JSON.stringify(buildFixture(), null, 2)}\n`;

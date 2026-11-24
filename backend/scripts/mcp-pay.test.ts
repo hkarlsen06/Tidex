@@ -1,30 +1,34 @@
 import { describe, expect, test } from "bun:test";
 import type { Doc } from "../convex/_generated/dataModel";
-import { shiftEarnings } from "../convex/lib/mcp/earnings";
+import { workedEarningsReport } from "../convex/lib/mcp/earnings";
 import {
-  addJob,
   archiveRefusal,
+  findTariffs,
   getTariff,
-  listTariffs,
+  jobView,
   payPeriodView,
-  payView,
   placement,
+  saveJob,
   setPay,
   snapshotFields,
   snapshotInEffect,
   snapshotRow,
   snapshotUpdate,
   type StoredSnapshot,
-  updateJob,
 } from "../convex/lib/mcp/pay";
 import { ToolError } from "../convex/lib/mcp/shiftTimes";
+import type { LiveActivityRegularShift } from "../convex/lib/shared/liveActivityScheduling";
 import { tariffCatalogue } from "../convex/lib/tariffCatalogue";
 import { applicableWageSnapshot, asRegularShift, asSnapshot } from "../convex/liveActivities";
 import { buildFixture, FIXTURE_PATH } from "./mcp-contract-fixture";
 
 const USER = "user-1";
 const JOB = "job-1";
-const settings = (args: Record<string, unknown>) => setPay.parse({ job_id: JOB, ...args }).settings;
+function settings(args: Record<string, unknown>) {
+  const parsed = setPay.parse({ job: JOB, ...args });
+  if (parsed.action !== "set") throw new Error("expected set");
+  return parsed.settings;
+}
 const newPay = (args: Record<string, unknown>, currency = "kr") => snapshotFields(settings(args), null, { date: "2026-11-20", currency });
 
 function storedSnapshot(id: string, fromDate: string | undefined, fields: ReturnType<typeof newPay>) {
@@ -35,16 +39,19 @@ function storedSnapshot(id: string, fromDate: string | undefined, fields: Return
 function gross(snapshots: ReturnType<typeof storedSnapshot>[], shifts: [date: string, start: string, end: string][]) {
   const priced = snapshots.map((s) => asSnapshot(s as unknown as Doc<"wage_snapshots">));
   const dates = shifts.map(([date]) => date).sort();
-  return shiftEarnings({
-    from: dates[0],
+  return workedEarningsReport({
+    from: dates[0]!,
     to: dates.at(-1)!,
     regular: shifts.map(([date, start, end], i) =>
       asRegularShift({ id: `s${i}`, user_id: USER, job_id: JOB, shift_date: date, start_time: start, end_time: end } as Doc<"user_shifts">),
     ),
     recurring: [],
+    jobs: [{ id: JOB, name: "Job", currency: "kr" }],
+    adjustments: [],
     snapshotFor: (shift) => applicableWageSnapshot(shift, priced),
-    currencyFor: () => "kr",
-  }).totals[0].gross_pay;
+    snapshotForJobDate: (jobId, date) =>
+      applicableWageSnapshot({ user_id: USER, job_id: jobId, shift_date: date } as LiveActivityRegularShift, priced),
+  }).totals[0]!.gross_pay;
 }
 
 const refused = (run: () => unknown) => {
@@ -62,7 +69,7 @@ describe("tariff pay", () => {
   const level = retail.version.categories.at(-1)!.level;
 
   test("a tariff level pays that level's rate with the agreement's supplements and overtime", () => {
-    const pay = newPay({ pay: { type: "tariff", tariff_type_id: "hk_retail", level } });
+    const pay = newPay({ tariff_type_id: "hk_retail", tariff_level: level });
     expect(pay.hourly_wage).toBe(retail.version.rates[String(level)]);
     expect(pay.wage_level).toBe(level);
     expect(pay.tariff_type_id).toBe("hk_retail");
@@ -73,41 +80,44 @@ describe("tariff pay", () => {
   test("negative and three-digit tariff levels are accepted when the tariff has them", () => {
     const entry = tariffCatalogue.find((e) => e.version.categories.some((c) => c.level >= 100))!;
     const high = entry.version.categories.find((c) => c.level >= 100)!.level;
-    expect(newPay({ pay: { type: "tariff", tariff_type_id: entry.type.id, level: high } }).hourly_wage).toBe(entry.version.rates[String(high)]);
-    expect(newPay({ pay: { type: "tariff", tariff_type_id: "hk_retail", level: -1 } }).wage_level).toBe(-1);
+    expect(newPay({ tariff_type_id: entry.type.id, tariff_level: high }).hourly_wage).toBe(entry.version.rates[String(high)]);
+    expect(newPay({ tariff_type_id: "hk_retail", tariff_level: -1 }).wage_level).toBe(-1);
   });
 
   test("a level the tariff lacks is refused with the levels it has", () => {
-    expect(refused(() => newPay({ pay: { type: "tariff", tariff_type_id: "hk_retail", level: 99 } }))).toContain("Levels:");
+    expect(refused(() => newPay({ tariff_type_id: "hk_retail", tariff_level: 99 }))).toContain("Levels:");
   });
 
   test("tariff pay is refused for a job paid in another currency", () => {
-    expect(refused(() => newPay({ pay: { type: "tariff", tariff_type_id: "hk_retail", level } }, "$"))).toContain("kr");
-    expect(refused(() => addJob.parse({ name: "Shop", currency: "€", pay: { type: "tariff", tariff_type_id: "hk_retail", level } }))).toContain("kr");
-    expect(addJob.parse({ name: "Shop", pay: { type: "tariff", tariff_type_id: "hk_retail", level } }).currency).toBe("kr");
+    expect(refused(() => newPay({ tariff_type_id: "hk_retail", tariff_level: level }, "$"))).toContain("kr");
+    expect(refused(() => saveJob.parse({ name: "Shop", currency: "€", tariff_type_id: "hk_retail", tariff_level: level }))).toContain("kr");
+    const created = saveJob.parse({ name: "Shop", tariff_type_id: "hk_retail", tariff_level: level });
+    expect(created.mode === "create" && created.currency).toBe("kr");
   });
 
   test("a date before the catalogue's rates is refused", () => {
     expect(
-      refused(() => snapshotFields(settings({ pay: { type: "tariff", tariff_type_id: "hk_retail", level } }), null, { date: "2025-01-01", currency: "kr" })),
+      refused(() => snapshotFields(settings({ tariff_type_id: "hk_retail", tariff_level: level }), null, { date: "2025-01-01", currency: "kr" })),
     ).toContain("custom pay");
   });
 
-  test("get_tariff lists every level with its wage, and list_tariffs finds agreements by Norwegian name", () => {
+  test("find_tariffs inspects one tariff and searches by Norwegian name, auto-including levels on narrow matches", () => {
     expect(getTariff("hk_retail").levels).toHaveLength(retail.version.categories.length);
-    const found = listTariffs("renhold").tariffs.flatMap((f) => f.variants.map((v) => v.tariff_type_id));
-    expect(found).toContain("cleaning_nho_375");
-    expect(found).not.toContain("hk_retail");
+    const narrow = findTariffs({ search: "renhold" });
+    const variants = narrow.tariffs!.flatMap((f) => f.variants);
+    expect(variants.map((v) => v.tariff_type_id)).toContain("cleaning_nho_375");
+    expect(variants.map((v) => v.tariff_type_id)).not.toContain("hk_retail");
+    expect(variants[0]!.levels).toBeDefined();
   });
 });
 
 describe("custom pay", () => {
   test("a raise from a date pays the new wage from that date and the old one before it", () => {
-    const baseline = storedSnapshot("w1", undefined, newPay({ pay: { type: "custom", hourly_wage: 200 }, breaks: { enabled: false } }));
+    const baseline = storedSnapshot("w1", undefined, newPay({ hourly_wage: 200, break_enabled: false }));
     const raise = storedSnapshot(
       "w2",
       "2026-12-15",
-      snapshotFields(settings({ pay: { type: "custom", hourly_wage: 230 } }), snapshotInEffect([baseline], "2026-12-15"), {
+      snapshotFields(settings({ hourly_wage: 230 }), snapshotInEffect([baseline], "2026-12-15"), {
         date: "2026-12-15",
         currency: "kr",
       }),
@@ -118,43 +128,60 @@ describe("custom pay", () => {
 
   test("a raise keeps the supplements, overtime, tax and breaks of the pay in effect", () => {
     const base = newPay({
-      pay: { type: "custom", hourly_wage: 200, supplements: [{ days: [6], from: "00:00", to: "24:00", amount: 50 }], overtime: { enabled: true } },
-      tax: { enabled: true, percentage: 30 },
-      breaks: { enabled: true, deduction_minutes: 45 },
+      hourly_wage: 200,
+      supplements: [{ days: [6], from: "00:00", to: "24:00", amount: 50 }],
+      overtime_enabled: true,
+      tax_percent: 30,
+      break_minutes: 45,
     });
-    const raised = snapshotFields(settings({ pay: { type: "custom", hourly_wage: 230 } }), base, { date: "2026-12-15", currency: "kr" });
+    const raised = snapshotFields(settings({ hourly_wage: 230 }), base, { date: "2026-12-15", currency: "kr" });
     expect(raised).toEqual({ ...base, hourly_wage: 230 });
+  });
+
+  test("updating only overtime or supplements on a custom job keeps its existing hourly wage", () => {
+    const base = newPay({ hourly_wage: 215, break_enabled: false });
+    const updated = snapshotFields(settings({ overtime_weekly_hours: 37.5 }), base, { date: "2026-12-01", currency: "kr" });
+    expect(updated.hourly_wage).toBe(215);
+    expect(updated.overtime.enabled).toBe(true);
+    expect(updated.overtime.weeklyThresholdHours).toBe(37.5);
   });
 
   test("a supplement adds its amount per hour in its window, including across midnight", () => {
     const night = storedSnapshot(
       "w1",
       undefined,
-      newPay({ pay: { type: "custom", hourly_wage: 100, supplements: [{ days: [1, 2, 3, 4, 5, 6, 7], from: "22:00", to: "06:00", amount: 20 }] }, breaks: { enabled: false } }),
+      newPay({
+        hourly_wage: 100,
+        supplements: [{ days: [1, 2, 3, 4, 5, 6, 7], from: "22:00", to: "06:00", amount: 20 }],
+        break_enabled: false,
+      }),
     );
     expect(gross([night], [["2026-12-09", "20:00", "02:00"]])).toBe(6 * 100 + 4 * 20);
   });
 
   test("overtime pays 50% extra above the weekly threshold", () => {
-    const pay = (overtime: unknown) =>
-      storedSnapshot("w1", undefined, newPay({ pay: { type: "custom", hourly_wage: 100, overtime }, breaks: { enabled: false } }));
+    const pay = (args: Record<string, unknown>) =>
+      storedSnapshot("w1", undefined, newPay({ hourly_wage: 100, break_enabled: false, ...args }));
     const week: [string, string, string][] = ["07", "08", "09", "10"].map((d) => [`2026-12-${d}`, "08:00", "18:00"]);
-    expect(gross([pay({ enabled: false })], week)).toBe(4000);
-    expect(gross([pay({ enabled: true, weekly_threshold_hours: 37.5 })], week)).toBe(4000 + 2.5 * 50);
+    expect(gross([pay({ overtime_enabled: false })], week)).toBe(4000);
+    expect(gross([pay({ overtime_weekly_hours: 37.5 })], week)).toBe(4000 + 2.5 * 50);
   });
 
   test("a new kr job deducts the app's default break and a job in another currency doesn't", () => {
-    expect(newPay({ pay: { type: "custom", hourly_wage: 200 } }).break_enabled).toBe(true);
-    expect(newPay({ pay: { type: "custom", hourly_wage: 20 } }, "$").break_enabled).toBe(false);
+    expect(newPay({ hourly_wage: 200 }).break_enabled).toBe(true);
+    expect(newPay({ hourly_wage: 20 }, "$").break_enabled).toBe(false);
   });
 
-  test("tax needs a percentage when it is turned on", () => {
-    expect(refused(() => newPay({ pay: { type: "custom", hourly_wage: 200 }, tax: { enabled: true } }))).toContain("tax.percentage");
+  test("tax needs a percentage when turned on without one, and tax_percent alone turns tax on", () => {
+    expect(refused(() => newPay({ hourly_wage: 200, tax_enabled: true }))).toContain("tax_percent");
+    const withTax = newPay({ hourly_wage: 200, tax_percent: 28 });
+    expect(withTax.tax_enabled).toBe(true);
+    expect(withTax.tax_percentage).toBe(28);
   });
 
   test("invalid supplement rules are refused with what to fix", () => {
     const supplement = (rule: Record<string, unknown>) => () =>
-      settings({ pay: { type: "custom", hourly_wage: 200, supplements: [{ days: [1], from: "18:00", to: "21:00", ...rule }] } });
+      settings({ hourly_wage: 200, supplements: [{ days: [1], from: "18:00", to: "21:00", ...rule }] });
     expect(refused(supplement({ amount: 20, percent: 10 }))).toContain("exactly one of amount");
     expect(refused(supplement({}))).toContain("exactly one of amount");
     expect(refused(supplement({ days: [], amount: 20 }))).toContain("weekdays");
@@ -167,31 +194,49 @@ describe("custom pay", () => {
 });
 
 describe("saving pay", () => {
-  test("setting pay that is already stored changes nothing, so a retry keeps the revision", () => {
-    const fields = newPay({ pay: { type: "custom", hourly_wage: 200 } });
+  test("setting pay that is already stored changes nothing", () => {
+    const fields = newPay({ hourly_wage: 200 });
     expect(snapshotUpdate(storedSnapshot("w1", undefined, fields), fields)).toBeNull();
   });
 
   test("switching from tariff to custom pay clears the tariff level", () => {
-    const tariff = storedSnapshot("w1", undefined, newPay({ pay: { type: "tariff", tariff_type_id: "hk_retail", level: 1 } }));
-    const custom = snapshotFields(settings({ pay: { type: "custom", hourly_wage: 250 } }), tariff, { date: "2026-11-20", currency: "kr" });
+    const tariff = storedSnapshot("w1", undefined, newPay({ tariff_type_id: "hk_retail", tariff_level: 1 }));
+    const custom = snapshotFields(settings({ hourly_wage: 250 }), tariff, { date: "2026-11-20", currency: "kr" });
     const update = snapshotUpdate(tariff, custom);
     expect(update?.clear).toEqual(["wage_level", "tariff_type_id"]);
     expect(update?.set.supplements).toEqual({ rules: [] });
   });
 
-  test("get_pay shows each change with the date the next one starts", () => {
-    const fields = newPay({ pay: { type: "custom", hourly_wage: 200 } });
-    const view = payView({ id: JOB, name: "Café", currency: "kr" }, [
-      storedSnapshot("w3", "2027-01-01", fields),
-      storedSnapshot("w1", undefined, fields),
-      storedSnapshot("w2", "2026-12-15", fields),
+  test("set_pay supports removing a dated pay change and refuses removing base pay", () => {
+    expect(setPay.parse({ job: "Café", from_date: "2026-12-15", remove: true })).toEqual({
+      action: "remove",
+      job: "Café",
+      from_date: "2026-12-15",
+    });
+    expect(refused(() => setPay.parse({ job: "Café", remove: true }))).toContain("from_date is required");
+  });
+
+  test("jobView returns flat current_pay and consistent pay_history with supplement arrays", () => {
+    const tariffFields = newPay({ tariff_type_id: "hk_retail", tariff_level: 1 });
+    const customFields = newPay({ hourly_wage: 250 });
+    const view = jobView(
+      { id: JOB, name: "Café", currency: "kr", is_default: true },
+      [
+        storedSnapshot("w3", "2027-01-01", customFields),
+        storedSnapshot("w1", undefined, tariffFields),
+        storedSnapshot("w2", "2026-12-15", customFields),
+      ],
+      { today: "2026-12-20", includePayHistory: true },
+    );
+    expect(view.current_pay?.hourly_wage).toBe(250);
+    expect(view.pay_history!.map((p) => [p.from_date, p.until_date])).toEqual([
+      [null, "2026-12-15"],
+      ["2026-12-15", "2027-01-01"],
+      ["2027-01-01", null],
     ]);
-    expect(view.pay.map((p) => [p.snapshot_id, p.from_date, p.until_date])).toEqual([
-      ["w1", null, "2026-12-15"],
-      ["w2", "2026-12-15", "2027-01-01"],
-      ["w3", "2027-01-01", null],
-    ]);
+    // Supplements are always an array in pay_history, never a polymorphic string.
+    expect(Array.isArray(view.pay_history![0]!.supplements)).toBe(true);
+    expect(view.pay_history![0]!.supplement_rules_count).toBeGreaterThan(0);
   });
 });
 
@@ -202,9 +247,9 @@ describe("jobs", () => {
   ];
 
   test("archiving refuses the default job and the only active job", () => {
-    expect(archiveRefusal(active[0], active)).toContain("default job");
-    expect(archiveRefusal(active[1], [active[1]])).toContain("only active job");
-    expect(archiveRefusal(active[1], active)).toBeNull();
+    expect(archiveRefusal(active[0]!, active)).toContain("default job");
+    expect(archiveRefusal(active[1]!, [active[1]!])).toContain("only active job");
+    expect(archiveRefusal(active[1]!, active)).toBeNull();
   });
 
   test("a new job goes last, and the first job becomes the default", () => {
@@ -213,7 +258,11 @@ describe("jobs", () => {
   });
 
   test("a calendar month is stored as no pay period, as the app stores it", () => {
-    const parsed = (pay_period: unknown) => updateJob.parse({ job_id: JOB, revision: 1, pay_period }).pay_period;
+    const parsed = (pay_period: unknown) => {
+      const res = saveJob.parse({ id: JOB, pay_period });
+      if (res.mode !== "update") throw new Error("expected update");
+      return res.pay_period;
+    };
     expect(parsed({ type: "calendar_month" })).toBeNull();
     expect(parsed({ type: "monthly", start_day: 1, payout_month_offset: 1 })).toBeNull();
     expect(parsed({ type: "monthly", start_day: 16, payout_month_offset: 0 })).toEqual({ type: "monthly", startDay: 16, payoutMonthOffset: 0 });
@@ -231,15 +280,17 @@ describe("jobs", () => {
   });
 
   test("a color outside the app's palette is refused", () => {
-    expect(refused(() => addJob.parse({ name: "Bar", color: "#123456", pay: { type: "custom", hourly_wage: 200 } }))).toContain("color");
-    expect(addJob.parse({ name: " Bar ", color: "#22c55e", pay: { type: "custom", hourly_wage: 200 } })).toMatchObject({
+    expect(refused(() => saveJob.parse({ name: "Bar", color: "#123456", hourly_wage: 200 }))).toContain("color");
+    expect(saveJob.parse({ name: " Bar ", color: "#22c55e", hourly_wage: 200 })).toMatchObject({
+      mode: "create",
       name: "Bar",
       color: "#22C55E",
     });
   });
 
-  test("make_default can't be combined with archiving", () => {
-    expect(refused(() => updateJob.parse({ job_id: JOB, revision: 1, make_default: true, archived: true }))).toContain("archived");
+  test("make_default can't be combined with archiving, and pay fields on update redirect to set_pay", () => {
+    expect(refused(() => saveJob.parse({ id: JOB, make_default: true, archived: true }))).toContain("archived");
+    expect(refused(() => saveJob.parse({ id: JOB, hourly_wage: 250 }))).toContain("set_pay");
   });
 });
 
@@ -258,18 +309,18 @@ describe("changing one part of existing pay", () => {
 
   test("turning tax on leaves the break deduction the user had", () => {
     const noDeduction = stored({ break_enabled: true, break_method: "none" });
-    const fields = snapshotFields(settings({ tax: { enabled: true, percentage: 30 } }), noDeduction, { date: "2026-12-01", currency: "kr" });
+    const fields = snapshotFields(settings({ tax_percent: 30 }), noDeduction, { date: "2026-12-01", currency: "kr" });
     expect(fields.break_method).toBe("none");
     expect(fields.tax_percentage).toBe(30);
   });
 
   test("pay in another currency keeps breaks on when the stored pay never said", () => {
-    const fields = snapshotFields(settings({ tax: { enabled: false } }), stored({}), { date: "2026-12-01", currency: "$" });
+    const fields = snapshotFields(settings({ tax_enabled: false }), stored({}), { date: "2026-12-01", currency: "$" });
     expect(fields.break_enabled).toBe(true);
   });
 
   test("switching breaks on replaces a stored 'none' method, as the pay editor does", () => {
-    const fields = snapshotFields(settings({ breaks: { enabled: true } }), stored({ break_enabled: false, break_method: "none" }), {
+    const fields = snapshotFields(settings({ break_enabled: true }), stored({ break_enabled: false, break_method: "none" }), {
       date: "2026-12-01",
       currency: "kr",
     });

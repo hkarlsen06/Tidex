@@ -16,14 +16,15 @@ const MAX_BODY_BYTES = 64 * 1024;
 const META_VERSION = "io.modelcontextprotocol/protocolVersion";
 const META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
-export const SERVER_INFO = { name: "tidex", title: "Tidex", version: "1.0.0" };
+export const SERVER_INFO = { name: "tidex", title: "Tidex", version: "2.0.0" };
 
 const INSTRUCTIONS =
-  "Tidex tracks the user's work shifts, jobs and pay, and lets them share shifts and talk with friends. Dates are " +
-  "YYYY-MM-DD and times are HH:mm on the user's local clock; a shift whose end is at or before its start ends the " +
-  "next day. List before you change or delete something, and pass the id and revision the list returned. Confirm " +
-  "with the user before you delete anything, and before you send a message or start sharing, because the friend " +
-  "gets a notification.";
+  "Tidex tracks the user's work shifts, jobs, pay, tax and calendar events, and lets them share schedules and chat with friends. " +
+  "Call get_overview first when you need today's date, time zone, jobs, pay setup or recurring shifts. " +
+  "Dates are YYYY-MM-DD and times are HH:mm on the user's local clock; a shift whose end is at or before start ends the next day. " +
+  "get_schedule returns shifts with both gross and after-tax net pay, and its shift ids work directly in update_shift and delete_shifts for both one-off and recurring shifts. " +
+  "Use get_earnings for worked-period totals or payout-month paychecks (by: 'payout'). " +
+  "Jobs and friends can be passed by ID or name. Confirm with the user before deleting data, sending messages or starting a share.";
 
 export type ToolOutcome = { ok: true; value: unknown } | { ok: false; message: string };
 

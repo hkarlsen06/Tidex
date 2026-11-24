@@ -1,26 +1,23 @@
 import { describe, expect, test } from "bun:test";
 import { checkColumns } from "../convex/lib/columns";
 import {
-  addEvent,
-  addPayrollAdjustment,
   adjustmentFields,
   changedEvent,
   eventFields,
+  saveEvent,
+  savePayrollAdjustment,
   updateSettings,
 } from "../convex/lib/mcp/plans";
 import {
-  addRecurringShift,
-  changeRecurringOccurrence,
   overlappingDates,
   planOccurrence,
   previewEnd,
   sameSeries,
+  saveRecurringShift,
   type Series,
   seriesDates,
   seriesUpdate,
-  stoppedEnd,
   storedEndCondition,
-  updateRecurringShift,
 } from "../convex/lib/mcp/recurring";
 import { addDays } from "../convex/lib/mcp/shiftTimes";
 
@@ -33,15 +30,14 @@ const MONDAY = (() => {
 const WEDNESDAY = addDays(MONDAY, 2);
 
 function series(args: Record<string, unknown>): Series & { start_time: string; end_time: string } {
-  const parsed = addRecurringShift.parse({ start: "08:00", end: "16:00", ...args });
+  const parsed = saveRecurringShift.parse({ start: "08:00", end: "16:00", ...args });
+  if (parsed.mode !== "create") throw new Error("expected create");
   return { ...parsed, exclusions: [] };
 }
 
-const weekdays = (dates: string[]) => dates.map((d) => new Date(`${d}T00:00:00Z`).getUTCDay());
-
 describe("recurring shifts", () => {
-  test("a weekly series on Monday and Wednesday has those dates until its end date, the end date included", () => {
-    const s = series({ first_dates: [MONDAY, WEDNESDAY], ends: { type: "end_date", date: addDays(MONDAY, 14) } });
+  test("a weekly series on Monday and Wednesday has those dates until end_date, the end date included", () => {
+    const s = series({ first_dates: [MONDAY, WEDNESDAY], end_date: addDays(MONDAY, 14) });
     expect(seriesDates(s, addDays(MONDAY, -7), addDays(MONDAY, 60))).toEqual([
       MONDAY,
       WEDNESDAY,
@@ -58,6 +54,10 @@ describe("recurring shifts", () => {
 
   test("two first dates on the same weekday are refused", () => {
     expect(() => series({ first_dates: [MONDAY, addDays(MONDAY, 7)] })).toThrow("two Mondays");
+  });
+
+  test("multiple flat end fields at once are refused", () => {
+    expect(() => series({ first_dates: [MONDAY], end_date: addDays(MONDAY, 14), end_after_months: 2 })).toThrow("at most one");
   });
 
   test("a series that ends at midnight is stored as 24:00, as the app sends it, and the server accepts it", () => {
@@ -77,8 +77,7 @@ describe("recurring shifts", () => {
   test("changing a date's times takes it out of the series and adds a one-off shift that keeps the date's note", () => {
     const s = series({ first_dates: [MONDAY] });
     const date = addDays(MONDAY, 7);
-    const { change } = changeRecurringOccurrence.parse({ recurring_shift_id: "r", revision: 1, date, start: "10:00" });
-    const plan = planOccurrence({ ...s, date_specific_notes: { [date]: "Cover for Ola" } }, date, change);
+    const plan = planOccurrence({ ...s, date_specific_notes: { [date]: "Cover for Ola" } }, date, { kind: "change", start: "10:00" });
     expect(plan.shift).toEqual({ shift_date: date, start_time: "10:00", end_time: "18:00", note: "Cover for Ola" });
     expect(plan.exclusions).toEqual([date]);
     expect(plan.date_specific_notes).toBeNull();
@@ -87,20 +86,16 @@ describe("recurring shifts", () => {
 
   test("a note alone keeps the date in the series", () => {
     const s = series({ first_dates: [MONDAY] });
-    const { change } = changeRecurringOccurrence.parse({ recurring_shift_id: "r", revision: 1, date: MONDAY, note: " Bring keys " });
-    expect(planOccurrence({ ...s, date_specific_notes: {} }, MONDAY, change)).toEqual({ date_specific_notes: { [MONDAY]: "Bring keys" } });
-    const sameTimes = changeRecurringOccurrence.parse({ recurring_shift_id: "r", revision: 1, date: MONDAY, start: "08:00", note: "" });
-    expect(planOccurrence({ ...s, date_specific_notes: { [MONDAY]: "old" } }, MONDAY, sameTimes.change)).toEqual({
+    expect(planOccurrence({ ...s, date_specific_notes: {} }, MONDAY, { kind: "note", note: " Bring keys " })).toEqual({
+      date_specific_notes: { [MONDAY]: "Bring keys" },
+    });
+    expect(planOccurrence({ ...s, date_specific_notes: { [MONDAY]: "old" } }, MONDAY, { kind: "change", start: "08:00", note: "" })).toEqual({
       date_specific_notes: null,
     });
   });
 
-  test("skip can't be combined with a change", () => {
-    expect(() => changeRecurringOccurrence.parse({ recurring_shift_id: "r", revision: 1, date: MONDAY, skip: true, start: "09:00" })).toThrow();
-  });
-
   test("a new series skips dates where the user already works, including the morning after a night shift", () => {
-    const s = series({ first_dates: [MONDAY, WEDNESDAY], ends: { type: "months", value: 1 } });
+    const s = series({ first_dates: [MONDAY, WEDNESDAY], end_after_months: 1 });
     const dates = seriesDates(s, MONDAY, previewEnd(s));
     const existing = [
       { date: addDays(MONDAY, 7), start: "12:00:00", end: "14:00:00" },
@@ -120,24 +115,26 @@ describe("recurring shifts", () => {
     expect(previewEnd(s)).toBe(`${Number(MONDAY.slice(0, 4)) + 2}${MONDAY.slice(4)}`);
   });
 
-  test("stopping a series ends it after the last date and never makes it longer", () => {
-    const s = series({ first_dates: [MONDAY], ends: { type: "months", value: 2 } });
-    const end = stoppedEnd(s, addDays(MONDAY, 7));
-    expect(seriesDates({ ...s, end_condition: end }, MONDAY, addDays(MONDAY, 60))).toEqual([MONDAY, addDays(MONDAY, 7)]);
-    expect(() => stoppedEnd(s, addDays(MONDAY, 200))).toThrow("already ends");
-    expect(() => stoppedEnd(s, addDays(MONDAY, -1))).toThrow("delete_recurring_shift");
-  });
-
-  test("a new start keeps the shift's length, and ends: never removes the end", () => {
-    const s = { ...series({ first_dates: [MONDAY], start: "22:00", end: "06:00", ends: { type: "years", value: 1 } }), end_time: "06:00:00+00" };
-    const change = updateRecurringShift.parse({ recurring_shift_id: "r", revision: 1, start: "18:00", ends: { type: "never" } });
+  test("a new start keeps the shift's length, and never_ends removes the end", () => {
+    const s = { ...series({ first_dates: [MONDAY], start: "22:00", end: "06:00", end_after_years: 1 }), end_time: "06:00:00+00" };
+    const change = saveRecurringShift.parse({ id: "r", start: "18:00", never_ends: true });
+    if (change.mode !== "update") throw new Error("expected update");
     expect(seriesUpdate(s, change)).toEqual({ set: { start_time: "18:00", end_time: "02:00" }, clear: ["end_condition"] });
   });
 
+  test("stopping a series sets end_date cleanly via save_recurring_shift", () => {
+    const s = series({ first_dates: [MONDAY], end_after_months: 2 });
+    const change = saveRecurringShift.parse({ id: "r", end_date: addDays(MONDAY, 7) });
+    if (change.mode !== "update") throw new Error("expected update");
+    const update = seriesUpdate(s, change);
+    expect(update.set.end_condition).toEqual({ type: "end_date", date: addDays(MONDAY, 7) });
+    expect(() => seriesUpdate(s, { end_condition: { value: { type: "end_date", date: addDays(MONDAY, -1) } } })).toThrow("delete_recurring_shift");
+  });
+
   test("adding the same series again is recognised, whatever the stored time format or weekday order", () => {
-    const added = series({ first_dates: [MONDAY, WEDNESDAY], start: "16:00", end: "24:00", ends: { type: "months", value: 3 } });
+    const added = series({ first_dates: [MONDAY, WEDNESDAY], start: "16:00", end: "24:00", end_after_months: 3 });
     const stored = {
-      ...series({ first_dates: [WEDNESDAY, MONDAY], start: "16:00", end: "00:00", ends: { type: "months", value: 3 } }),
+      ...series({ first_dates: [WEDNESDAY, MONDAY], start: "16:00", end: "00:00", end_after_months: 3 }),
       start_time: "16:00:00+00",
       end_time: "00:00:00+00",
       exclusions: [MONDAY],
@@ -153,12 +150,18 @@ describe("recurring shifts", () => {
 });
 
 describe("events", () => {
+  const createEvent = (args: Record<string, unknown>) => {
+    const res = saveEvent.parse(args);
+    if (res.mode !== "create") throw new Error("expected create");
+    return res.fields;
+  };
+
   test("an all-day reminder without a reminder time is refused", () => {
-    expect(() => addEvent.parse({ note: "Exam", date: MONDAY, reminder_days_before: [1] })).toThrow("reminder_time is required");
+    expect(() => createEvent({ note: "Exam", date: MONDAY, reminder_days_before: [1] })).toThrow("reminder_time is required");
   });
 
   test("all-day reminders are stored as whole days before, largest first, with the clock time", () => {
-    expect(addEvent.parse({ note: " Exam ", date: MONDAY, end_date: WEDNESDAY, reminder_days_before: [0, 2], reminder_time: "09:00" })).toEqual({
+    expect(createEvent({ note: " Exam ", date: MONDAY, end_date: WEDNESDAY, reminder_days_before: [0, 2], reminder_time: "09:00" })).toEqual({
       start_date: MONDAY,
       end_date: WEDNESDAY,
       is_all_day: true,
@@ -169,15 +172,15 @@ describe("events", () => {
   });
 
   test("a timed event can't run past midnight, but may end at 24:00", () => {
-    expect(() => addEvent.parse({ note: "Party", date: MONDAY, start: "22:00", end: "02:00" })).toThrow("past midnight");
-    expect(addEvent.parse({ note: "Party", date: MONDAY, start: "22:00", end: "24:00", reminder_minutes: [15, 60] })).toMatchObject({
+    expect(() => createEvent({ note: "Party", date: MONDAY, start: "22:00", end: "02:00" })).toThrow("past midnight");
+    expect(createEvent({ note: "Party", date: MONDAY, start: "22:00", end: "24:00", reminder_minutes: [15, 60] })).toMatchObject({
       end_time: "24:00",
       notification_minutes_array: [60, 15],
     });
   });
 
   test("a timed event refuses all-day reminders", () => {
-    expect(() => addEvent.parse({ note: "Call", date: MONDAY, start: "10:00", end: "11:00", reminder_days_before: [1] })).toThrow();
+    expect(() => createEvent({ note: "Call", date: MONDAY, start: "10:00", end: "11:00", reminder_days_before: [1] })).toThrow();
   });
 
   test("making a timed event all-day drops its minute reminders", () => {
@@ -196,10 +199,11 @@ describe("events", () => {
 });
 
 describe("payroll adjustments", () => {
-  const draft = addPayrollAdjustment.parse({ amount: 1500, description: " Christmas bonus ", category: "bonus", payout_date: MONDAY });
+  const created = savePayrollAdjustment.parse({ amount: 1500, description: " Christmas bonus ", category: "bonus", payout_date: MONDAY });
+  if (created.mode !== "create") throw new Error("expected create");
 
   test("an adjustment on a job whose pay has no tax is paid out as is, in the job's currency", () => {
-    expect(adjustmentFields({ ...draft, tax_treatment: "gross_taxable" }, { id: "job", currency: "€", taxEnabled: false })).toEqual({
+    expect(adjustmentFields({ ...created, tax_treatment: "gross_taxable" }, { id: "job", currency: "€", taxEnabled: false })).toEqual({
       job_id: "job",
       amount: 1500,
       currency: "€",
@@ -211,26 +215,26 @@ describe("payroll adjustments", () => {
   });
 
   test("an adjustment on a taxed job is taxed like pay unless told otherwise", () => {
-    expect(adjustmentFields(draft, { id: "job", currency: "kr", taxEnabled: true }).tax_treatment).toBe("gross_taxable");
+    expect(adjustmentFields(created, { id: "job", currency: "kr", taxEnabled: true }).tax_treatment).toBe("gross_taxable");
   });
 
   test("a zero amount, a half earned range and a backwards earned range are refused", () => {
-    expect(() => addPayrollAdjustment.parse({ amount: 0, description: "x", payout_date: MONDAY })).toThrow("other than 0");
-    expect(() => addPayrollAdjustment.parse({ amount: 1, description: "x", payout_date: MONDAY, earned_from: MONDAY })).toThrow("both");
+    expect(() => savePayrollAdjustment.parse({ amount: 0, description: "x", payout_date: MONDAY })).toThrow("other than 0");
+    expect(() => savePayrollAdjustment.parse({ amount: 1, description: "x", payout_date: MONDAY, earned_from: MONDAY })).toThrow("both");
     expect(() =>
-      addPayrollAdjustment.parse({ amount: 1, description: "x", payout_date: MONDAY, earned_from: WEDNESDAY, earned_to: MONDAY }),
+      savePayrollAdjustment.parse({ amount: 1, description: "x", payout_date: MONDAY, earned_from: WEDNESDAY, earned_to: MONDAY }),
     ).toThrow("after earned_to");
   });
 });
 
 describe("settings", () => {
   test("settings are routed to the table that stores them, and an unknown time zone is refused", () => {
-    expect(updateSettings.parse({ theme: "dark", schedule_time_zone: "Europe/Oslo" })).toEqual({
+    expect(updateSettings.parse({ theme: "dark", time_zone: "Europe/Oslo" })).toEqual({
       user_settings: { theme: "dark" },
       schedule_time_zone: "Europe/Oslo",
     });
-    expect(() => updateSettings.parse({ schedule_time_zone: "CET+1" })).toThrow("IANA");
-    expect(() => updateSettings.parse({ default_startup_tab: "add" })).toThrow();
+    expect(() => updateSettings.parse({ time_zone: "CET+1" })).toThrow("IANA");
+    expect(() => updateSettings.parse({ startup_tab: "add" })).toThrow();
   });
 
   test("notification settings can't be changed, because the phone keeps its own copy", () => {

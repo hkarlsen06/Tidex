@@ -1,13 +1,22 @@
 import { describe, expect, test } from "bun:test";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
-import { shiftEarnings } from "../convex/lib/mcp/earnings";
+import {
+  computeAdjustmentWithPay,
+  computeShiftsWithPay,
+  type JobPayMeta,
+  payoutEarningsReport,
+  workedEarningsReport,
+} from "../convex/lib/mcp/earnings";
+import { getOverview } from "../convex/lib/mcp/pay";
+import { payWindowForDate, payWindowsPaidInMonth } from "../convex/lib/mcp/payPeriod";
 import { handleMcpPost, type McpDeps, MODERN_VERSION } from "../convex/lib/mcp/protocol";
-import { movedTimes, parseRange, shiftTimes } from "../convex/lib/mcp/shiftTimes";
+import { addShifts, deleteShifts, getEarnings, getSchedule, updateShift } from "../convex/lib/mcp/shifts";
+import { movedTimes, parseRange, parseShiftId, recurringOccurrenceId, shiftTimes } from "../convex/lib/mcp/shiftTimes";
 import { checkKeySet, verifyAccessToken } from "../convex/lib/mcp/token";
-import { listJobs } from "../convex/lib/mcp/pay";
-import { addShift, deleteShift, updateShift } from "../convex/lib/mcp/shifts";
 import type { LiveActivityRegularShift } from "../convex/lib/shared/liveActivityScheduling";
 import type { WageSnapshot } from "../convex/lib/shared/payroll/types";
+import { getOverview as getOverviewHandler } from "../convex/mcpPay";
+import { getEarnings as getEarningsHandler, getSchedule as getScheduleHandler } from "../convex/mcpShifts";
 
 const RESOURCE = "https://actions.tidex.no/mcp";
 const calls: { userId: string; name: string; args: unknown }[] = [];
@@ -18,7 +27,7 @@ const deps: McpDeps = {
     if (scopes !== undefined) return { userId: "user-1", scopes: new Set(scopes) };
     return token === "banned" ? "no_account" : "invalid_token";
   },
-  tools: [listJobs, addShift, deleteShift],
+  tools: [getOverview, addShifts, deleteShifts],
   callTool: async (userId, tool, args) => {
     const name = tool.definition.name;
     calls.push({ userId, name, args });
@@ -54,12 +63,12 @@ describe("MCP authorization", () => {
     calls.length = 0;
     const reader = { Authorization: "Bearer reader" };
     const list = await handleMcpPost(post({ jsonrpc: "2.0", id: 1, method: "tools/list" }, reader), deps);
-    expect((await list.json()).result.tools.map((t: { name: string }) => t.name)).toContain("add_shift");
-    const read = await handleMcpPost(post({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "list_jobs" } }, reader), deps);
-    expect((await read.json()).result.structuredContent).toEqual({ echoed: "list_jobs" });
+    expect((await list.json()).result.tools.map((t: { name: string }) => t.name)).toContain("add_shifts");
+    const read = await handleMcpPost(post({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "get_overview" } }, reader), deps);
+    expect((await read.json()).result.structuredContent).toEqual({ echoed: "get_overview" });
 
     const write = await handleMcpPost(
-      post({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "add_shift", arguments: {} } }, reader),
+      post({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "add_shifts", arguments: {} } }, reader),
       deps,
     );
     expect(write.status).toBe(403);
@@ -69,13 +78,13 @@ describe("MCP authorization", () => {
     const body = await write.json();
     expect(body.id).toBe(3);
     expect(body.error.message).toContain("tidex:write");
-    expect(calls.map((c) => c.name)).toEqual(["list_jobs"]);
+    expect(calls.map((c) => c.name)).toEqual(["get_overview"]);
   });
 
   test("a token without Tidex scopes can't read", async () => {
     calls.length = 0;
     const response = await handleMcpPost(
-      post({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "list_jobs" } }, { Authorization: "Bearer profile" }),
+      post({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_overview" } }, { Authorization: "Bearer profile" }),
       deps,
     );
     expect(response.status).toBe(403);
@@ -87,7 +96,7 @@ describe("MCP authorization", () => {
   test("a rejected token gets invalid_token and never reaches a tool", async () => {
     calls.length = 0;
     const response = await handleMcpPost(
-      post({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "list_jobs" } }, { Authorization: "Bearer stolen" }),
+      post({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_overview" } }, { Authorization: "Bearer stolen" }),
       deps,
     );
     expect(response.status).toBe(401);
@@ -228,7 +237,7 @@ describe("MCP protocol", () => {
     const list = await (
       await handleMcpPost(post({ jsonrpc: "2.0", id: 2, method: "tools/list" }, { "MCP-Protocol-Version": "2025-06-18" }), deps)
     ).json();
-    expect(list.result.tools.map((t: { name: string }) => t.name)).toContain("add_shift");
+    expect(list.result.tools.map((t: { name: string }) => t.name)).toContain("add_shifts");
     expect(list.result.resultType).toBeUndefined();
   });
 
@@ -246,21 +255,21 @@ describe("MCP protocol", () => {
     const call = await (
       await handleMcpPost(
         post(
-          { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "list_jobs", arguments: {}, _meta: modernMeta } },
-          modernHeaders("tools/call", "list_jobs"),
+          { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "get_overview", arguments: {}, _meta: modernMeta } },
+          modernHeaders("tools/call", "get_overview"),
         ),
         deps,
       )
     ).json();
-    expect(call.result.structuredContent).toEqual({ echoed: "list_jobs" });
-    expect(calls).toEqual([{ userId: "user-1", name: "list_jobs", args: {} }]);
+    expect(call.result.structuredContent).toEqual({ echoed: "get_overview" });
+    expect(calls).toEqual([{ userId: "user-1", name: "get_overview", args: {} }]);
   });
 
   test("a 2026-07-28 header that disagrees with the body is refused", async () => {
     const response = await handleMcpPost(
       post(
-        { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "delete_shift", arguments: {}, _meta: modernMeta } },
-        modernHeaders("tools/call", "list_jobs"),
+        { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "delete_shifts", arguments: {}, _meta: modernMeta } },
+        modernHeaders("tools/call", "get_overview"),
       ),
       deps,
     );
@@ -270,7 +279,7 @@ describe("MCP protocol", () => {
 
   test("a body that declares 2026-07-28 can't skip that era's header checks", async () => {
     const response = await handleMcpPost(
-      post({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "delete_shift", arguments: {}, _meta: modernMeta } }),
+      post({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "delete_shifts", arguments: {}, _meta: modernMeta } }),
       deps,
     );
     expect(response.status).toBe(400);
@@ -310,7 +319,7 @@ describe("MCP protocol", () => {
   });
 });
 
-describe("MCP shift times", () => {
+describe("MCP shift times and shift tools", () => {
   test("a shift ending at midnight stays on its day, as in the app", () => {
     expect(shiftTimes("18:00", "00:00")).toEqual({ start_time: "18:00", end_time: "24:00" });
     expect(shiftTimes("00:00", "08:00")).toEqual({ start_time: "00:00", end_time: "08:00" });
@@ -325,80 +334,507 @@ describe("MCP shift times", () => {
     expect(movedTimes({ start: "08:00", end: "08:00" }, undefined, "08:00")).toEqual({ start_time: "08:00", end_time: "08:00" });
   });
 
-  test("bad dates, times and ranges are refused", () => {
-    expect(() => addShift.parse({ date: "2026-02-30", start: "08:00", end: "16:00" })).toThrow("date");
-    expect(() => addShift.parse({ date: "2026-02-03", start: "24:00", end: "08:00" })).toThrow("start");
-    expect(() => addShift.parse({ date: "2026-02-03", start: "8:00", end: "16:00" })).toThrow("start");
-    expect(() => updateShift.parse({ shift_id: "s", revision: 4 })).toThrow("at least one");
-    expect(() => parseRange("2026-01-01", "2026-06-01", 93)).toThrow("93");
+  test("unified shift ids distinguish one-off shifts and recurring occurrences", () => {
+    const id = recurringOccurrenceId("series-uuid-1", "2026-11-25");
+    expect(id).toBe("recurring:series-uuid-1:2026-11-25");
+    expect(parseShiftId(id)).toEqual({ kind: "recurring", recurringId: "series-uuid-1", date: "2026-11-25" });
+    expect(parseShiftId("shift-uuid-1")).toEqual({ kind: "one_off", shiftId: "shift-uuid-1" });
+    expect(() => parseShiftId("recurring:broken")).toThrow("Invalid recurring shift id");
+  });
+
+  test("bad dates, times, ranges and empty batches are refused", () => {
+    expect(() => addShifts.parse({ shifts: [] })).toThrow("at least one");
+    expect(() => addShifts.parse({ shifts: [{ date: "2026-02-30", start: "08:00", end: "16:00" }] })).toThrow("date");
+    expect(() => addShifts.parse({ shifts: [{ date: "2026-02-03", start: "24:00", end: "08:00" }] })).toThrow("start");
+    expect(() => addShifts.parse({ shifts: [{ date: "2026-02-03", start: "8:00", end: "16:00" }] })).toThrow("start");
+    expect(() => addShifts.parse({ shifts: [{ date: "2206-02-03", start: "08:00", end: "16:00" }] })).toThrow("five years");
+    expect(() => updateShift.parse({ id: "s" })).toThrow("at least one");
+    expect(() => parseRange("2026-01-01", "2027-01-05", 366)).toThrow("366");
     expect(() => shiftTimes("08:00", "08:00")).toThrow("same time");
-    expect(() => addShift.parse({ date: "2206-02-03", start: "08:00", end: "16:00" })).toThrow("five years");
+    expect(() => getSchedule.parse({ month: "2026-11", from: "2026-11-01" })).toThrow("not both");
+    expect(() => getEarnings.parse({ by: "payout", from: "2026-11-01", to: "2026-11-30" })).toThrow("month");
   });
 
   test("null stands for a left-out optional argument, as strict clients send it", () => {
-    expect(updateShift.parse({ shift_id: "s", revision: 4, date: null, start: "09:00", end: null, job_id: null, note: null })).toEqual({
-      shift_id: "s", revision: 4, date: undefined, start: "09:00", end: undefined, job_id: undefined, note: undefined,
+    expect(updateShift.parse({ id: "s", date: null, start: "09:00", end: null, job: null, note: null })).toEqual({
+      id: "s",
+      date: undefined,
+      start: "09:00",
+      end: undefined,
+      job: undefined,
+      note: undefined,
     });
   });
 });
 
-describe("MCP earnings", () => {
-  const snapshot = (hourly: number, threshold: number | null): WageSnapshot =>
+describe("MCP pay periods, tax and earnings", () => {
+  const snapshot = (
+    hourly: number,
+    options: { threshold?: number | null; taxEnabled?: boolean; taxPercent?: number } = {},
+  ): WageSnapshot =>
     ({
-      id: "wage", user_id: "user", job_id: "job", from_date: null,
-      hourly_wage: hourly, wage_level: null, tariff_type_id: null,
+      id: "wage",
+      user_id: "user",
+      job_id: "job",
+      from_date: null,
+      hourly_wage: hourly,
+      wage_level: null,
+      tariff_type_id: null,
       supplements: { rules: [] },
-      overtime: threshold === null ? null : {
-        enabled: true,
-        weeklyThresholdHours: threshold,
-        rules: [false, true].map((appliesOnHolidays) => ({
-          days: [1, 2, 3, 4, 5, 6, 7], from: "00:00", to: "24:00", percent: 50, appliesOnHolidays,
-        })),
-      },
-      tax_enabled: false, tax_percentage: 0,
-      break_enabled: false, break_method: "none", break_threshold_hours: 0, break_deduction_minutes: 0,
+      overtime:
+        options.threshold == null
+          ? null
+          : {
+              enabled: true,
+              weeklyThresholdHours: options.threshold,
+              rules: [false, true].map((appliesOnHolidays) => ({
+                days: [1, 2, 3, 4, 5, 6, 7],
+                from: "00:00",
+                to: "24:00",
+                percent: 50,
+                appliesOnHolidays,
+              })),
+            },
+      tax_enabled: options.taxEnabled ?? false,
+      tax_percentage: options.taxPercent ?? 0,
+      break_enabled: false,
+      break_method: "none",
+      break_threshold_hours: 0,
+      break_deduction_minutes: 0,
     }) as WageSnapshot;
-  const shift = (id: string, shift_date: string, start_time: string, end_time: string): LiveActivityRegularShift => ({
-    id, user_id: "user", job_id: "job", shift_date, start_time, end_time, custom_pause_windows: null, custom_supplements: null,
-  });
-  const earn = (from: string, to: string, regular: LiveActivityRegularShift[], wage: WageSnapshot | null) =>
-    shiftEarnings({ from, to, regular, recurring: [], snapshotFor: () => wage, currencyFor: () => "NOK" });
 
-  test("gross pay and paid hours add up over the range", () => {
-    const result = earn("2026-02-02", "2026-02-08", [shift("a", "2026-02-02", "08:00", "16:00"), shift("b", "2026-02-03", "22:00", "02:00")], snapshot(200, null));
-    expect(result.totals).toEqual([{ currency: "NOK", gross_pay: 2400, paid_hours: 12, shifts: 2 }]);
+  const shift = (id: string, shift_date: string, start_time: string, end_time: string, job_id = "job"): LiveActivityRegularShift => ({
+    id,
+    user_id: "user",
+    job_id,
+    shift_date,
+    start_time,
+    end_time,
+    custom_pause_windows: null,
+    custom_supplements: null,
+  });
+
+  const job: JobPayMeta = { id: "job", name: "Café", currency: "kr", payroll_day: 15, is_default: true };
+
+  test("gross pay, net pay after tax, tax deducted and paid hours add up over a range", () => {
+    const result = workedEarningsReport({
+      from: "2026-02-02",
+      to: "2026-02-08",
+      regular: [shift("a", "2026-02-02", "08:00", "16:00"), shift("b", "2026-02-03", "22:00", "02:00")],
+      recurring: [],
+      jobs: [job],
+      adjustments: [],
+      snapshotFor: () => snapshot(200, { taxEnabled: true, taxPercent: 30 }),
+      snapshotForJobDate: () => snapshot(200, { taxEnabled: true, taxPercent: 30 }),
+    });
+    expect(result.totals).toEqual([
+      {
+        currency: "kr",
+        gross_pay: 2400,
+        net_pay: 1680,
+        tax_deducted: 720,
+        effective_tax_percent: 30,
+        base_pay: 2400,
+        supplement_pay: 0,
+        paid_hours: 12,
+        shifts: 2,
+      },
+    ]);
+  });
+
+  test("half-tax month halves tax on shifts paid out in that month", () => {
+    // Calendar month job paid on the 15th of the next month with half-tax in December:
+    // November shifts are paid December 15 at half tax (15%), December shifts are paid January 15 at full tax (30%).
+    const halfTaxJob: JobPayMeta = { ...job, half_tax_month: 12 };
+    const wage = snapshot(200, { taxEnabled: true, taxPercent: 30 });
+    const computed = computeShiftsWithPay({
+      from: "2026-11-25",
+      to: "2026-12-05",
+      regular: [shift("nov", "2026-11-25", "08:00", "16:00"), shift("dec", "2026-12-02", "08:00", "16:00")],
+      recurring: [],
+      jobs: [halfTaxJob],
+      snapshotFor: () => wage,
+    });
+    const nov = computed.shifts.find((s) => s.id === "nov")!;
+    const dec = computed.shifts.find((s) => s.id === "dec")!;
+    expect(nov.payout_date).toBe("2026-12-15");
+    expect(nov.half_tax_applied).toBe(true);
+    expect(nov.effective_tax_percent).toBe(15);
+    expect(nov.gross_pay).toBe(1600);
+    expect(nov.net_pay).toBe(1360);
+    expect(nov.tax_deducted).toBe(240);
+
+    expect(dec.payout_date).toBe("2027-01-15");
+    expect(dec.half_tax_applied).toBe(false);
+    expect(dec.effective_tax_percent).toBe(30);
+    expect(dec.net_pay).toBe(1120);
+  });
+
+  test("payout mode calculates exact December paycheck from November work window plus adjustments", () => {
+    const halfTaxJob: JobPayMeta = { ...job, half_tax_month: 12 };
+    const wage = snapshot(200, { taxEnabled: true, taxPercent: 30 });
+    const report = payoutEarningsReport({
+      monthKey: "2026-12",
+      year: 2026,
+      month: 12,
+      monthFrom: "2026-12-01",
+      monthTo: "2026-12-31",
+      regular: [
+        shift("nov", "2026-11-20", "08:00", "16:00"), // in Nov work window -> paid Dec 15 (1600 gross, 15% tax -> 1360 net)
+        shift("dec", "2026-12-05", "08:00", "16:00"), // in Dec work window -> paid Jan 15 (excluded from Dec payout)
+      ],
+      recurring: [],
+      jobs: [halfTaxJob],
+      adjustments: [
+        {
+          id: "adj-1",
+          job_id: "job",
+          amount: 1000,
+          currency: "kr",
+          category: "bonus",
+          tax_treatment: "gross_taxable",
+          description: "Christmas bonus",
+          payout_date: "2026-12-15",
+        },
+        {
+          id: "adj-2",
+          job_id: "job",
+          amount: 500,
+          currency: "kr",
+          category: "correction",
+          tax_treatment: "net_manual",
+          description: "Meal allowance",
+          payout_date: "2026-12-15",
+        },
+      ],
+      snapshotFor: () => wage,
+      snapshotForJobDate: () => wage,
+    });
+
+    // Shift: 1600 gross, 1360 net (15% half tax)
+    // Bonus (gross_taxable in Dec half-tax): 1000 gross, 850 net
+    // Allowance (net_manual): 500 gross, 500 net
+    // Total: 3100 gross, 2710 net, 390 tax
+    expect(report.totals).toHaveLength(1);
+    expect(report.totals[0]).toMatchObject({
+      currency: "kr",
+      gross_pay: 3100,
+      net_pay: 2710,
+      tax_deducted: 390,
+      shifts_gross: 1600,
+      shifts_net: 1360,
+      adjustments_gross: 1500,
+      adjustments_net: 1350,
+      half_tax_applied: true,
+      shifts: 1,
+    });
+    expect(report.payouts).toHaveLength(1);
+    expect(report.payouts[0]).toMatchObject({
+      work_from: "2026-11-01",
+      work_to: "2026-11-30",
+      payout_date: "2026-12-15",
+      net_pay: 2710,
+    });
+  });
+
+  test("biweekly and custom monthly pay periods match PayPeriod.swift", () => {
+    const customMonthly = { type: "monthly" as const, startDay: 16, payoutMonthOffset: 0 as const };
+    expect(payWindowForDate(customMonthly, 20, "2026-12-10")).toEqual({
+      start: "2026-11-16",
+      end: "2026-12-15",
+      payoutDate: "2026-12-20",
+      payoutMonth: 12,
+    });
+    expect(payWindowsPaidInMonth(customMonthly, 20, 2026, 12)).toEqual([
+      { start: "2026-11-16", end: "2026-12-15", payoutDate: "2026-12-20", payoutMonth: 12 },
+    ]);
+
+    const biweekly = { type: "biweekly" as const, anchorEnd: "2026-11-08", payoutDelayDays: 5 };
+    expect(payWindowsPaidInMonth(biweekly, 15, 2026, 11)).toEqual([
+      { start: "2026-10-26", end: "2026-11-08", payoutDate: "2026-11-13", payoutMonth: 11 },
+      { start: "2026-11-09", end: "2026-11-22", payoutDate: "2026-11-27", payoutMonth: 11 },
+    ]);
   });
 
   test("overtime from earlier in the week counts for a range that starts mid-week", () => {
-    // 2026-02-02 is a Monday. Ten hours before the range use up the 10-hour threshold.
-    const result = earn(
-      "2026-02-04",
-      "2026-02-04",
-      [shift("mon", "2026-02-02", "08:00", "18:00"), shift("wed", "2026-02-04", "08:00", "10:00")],
-      snapshot(200, 10),
-    );
-    expect(result.totals).toEqual([{ currency: "NOK", gross_pay: 600, paid_hours: 2, shifts: 1 }]);
+    const result = workedEarningsReport({
+      from: "2026-02-04",
+      to: "2026-02-04",
+      regular: [shift("mon", "2026-02-02", "08:00", "18:00"), shift("wed", "2026-02-04", "08:00", "10:00")],
+      recurring: [],
+      jobs: [job],
+      adjustments: [],
+      snapshotFor: () => snapshot(200, { threshold: 10 }),
+      snapshotForJobDate: () => snapshot(200, { threshold: 10 }),
+    });
+    expect(result.totals[0]).toMatchObject({ gross_pay: 600, net_pay: 600, paid_hours: 2, overtime_hours: 2, shifts: 1 });
   });
 
   test("overlapping shifts on a date count once, as in the app", () => {
-    const result = earn("2026-02-02", "2026-02-02", [shift("a", "2026-02-02", "08:00", "12:00"), shift("b", "2026-02-02", "10:00", "14:00")], snapshot(200, null));
+    const result = workedEarningsReport({
+      from: "2026-02-02",
+      to: "2026-02-02",
+      regular: [shift("a", "2026-02-02", "08:00", "12:00"), shift("b", "2026-02-02", "10:00", "14:00")],
+      recurring: [],
+      jobs: [job],
+      adjustments: [],
+      snapshotFor: () => snapshot(200),
+      snapshotForJobDate: () => snapshot(200),
+    });
     expect(result.totals[0]!.shifts).toBe(1);
   });
 
   test("a shift without pay can't push an overlapping paid shift out of the total", () => {
-    const paid = snapshot(300, null);
-    const result = shiftEarnings({
-      from: "2026-02-02", to: "2026-02-02", recurring: [], currencyFor: () => "NOK",
-      regular: [shift("paid", "2026-02-02", "08:00", "12:00"), { ...shift("unpaid", "2026-02-02", "10:00", "14:00"), job_id: "other" }],
+    const paid = snapshot(300);
+    const result = workedEarningsReport({
+      from: "2026-02-02",
+      to: "2026-02-02",
+      recurring: [],
+      jobs: [job, { id: "other", name: "Other", currency: "kr" }],
+      adjustments: [],
+      regular: [shift("paid", "2026-02-02", "08:00", "12:00"), shift("unpaid", "2026-02-02", "10:00", "14:00", "other")],
       snapshotFor: (s) => (s.job_id === "job" ? paid : null),
+      snapshotForJobDate: (id) => (id === "job" ? paid : null),
     });
-    expect(result.totals).toEqual([{ currency: "NOK", gross_pay: 1200, paid_hours: 4, shifts: 1 }]);
+    expect(result.totals[0]).toMatchObject({ gross_pay: 1200, paid_hours: 4, shifts: 1 });
     expect(result.shifts_without_pay_setup).toBe(1);
   });
 
-  test("shifts on a job without pay are reported, not priced with a guessed wage", () => {
-    const result = earn("2026-02-02", "2026-02-02", [shift("a", "2026-02-02", "08:00", "12:00")], null);
-    expect(result.totals).toEqual([]);
-    expect(result.shifts_without_pay_setup).toBe(1);
+  test("adjustments compute net pay based on tax_treatment", () => {
+    const wage = snapshot(200, { taxEnabled: true, taxPercent: 25 });
+    const taxable = computeAdjustmentWithPay(
+      {
+        id: "a1",
+        job_id: "job",
+        amount: 2000,
+        currency: "kr",
+        category: "bonus",
+        tax_treatment: "gross_taxable",
+        description: "Bonus",
+        payout_date: "2026-05-15",
+      },
+      [job],
+      () => wage,
+    );
+    expect(taxable).toMatchObject({ amount: 2000, net_amount: 1500, tax_deducted: 500, effective_tax_percent: 25 });
+
+    const manual = computeAdjustmentWithPay(
+      {
+        id: "a2",
+        job_id: "job",
+        amount: 2000,
+        currency: "kr",
+        category: "correction",
+        tax_treatment: "net_manual",
+        description: "Reimbursement",
+        payout_date: "2026-05-15",
+      },
+      [job],
+      () => wage,
+    );
+    expect(manual).toMatchObject({ amount: 2000, net_amount: 2000, tax_deducted: 0, effective_tax_percent: 0 });
+  });
+});
+
+describe("MCP query handlers end-to-end", () => {
+  type Row = Record<string, unknown>;
+  type Handler = { _handler: (ctx: unknown, args: unknown) => Promise<unknown> };
+  const run = <T>(fn: unknown, ctx: unknown, args: Row) => (fn as Handler)._handler(ctx, args) as Promise<T>;
+
+  function makeDb() {
+    const tables: Record<string, Row[]> = {
+      users: [{ id: "u1", name: "Hjalmar" }],
+      profiles: [{ id: "u1", username: "hjalmar", schedule_time_zone: "Europe/Oslo" }],
+      user_settings: [
+        {
+          user_id: "u1",
+          theme: "dark",
+          calendar_content_color_style: "workplace",
+          show_dashboard_clock_buttons: true,
+          default_startup_tab: "home",
+          payroll_day: 15,
+          revision: 1,
+        },
+      ],
+      notification_preferences: [],
+      jobs: [
+        {
+          id: "job-1",
+          user_id: "u1",
+          name: "Rema 1000",
+          color: "#3B82F6",
+          currency: "kr",
+          is_default: true,
+          sort_order: 0,
+          payroll_day: 15,
+          half_tax_month: 12,
+          revision: 1,
+        },
+      ],
+      wage_snapshots: [
+        {
+          id: "snap-1",
+          user_id: "u1",
+          job_id: "job-1",
+          hourly_wage: 200,
+          supplements: { rules: [] },
+          overtime: { enabled: false, retainSupplements: false, rules: [], weeklyThresholdHours: 40 },
+          tax_enabled: true,
+          tax_percentage: 30,
+          break_enabled: true,
+          break_method: "proportional",
+          break_threshold_hours: 5.5,
+          break_deduction_minutes: 30,
+          revision: 1,
+        },
+      ],
+      user_shifts: [
+        { id: "shift-1", user_id: "u1", job_id: "job-1", shift_date: "2026-11-10", start_time: "08:00", end_time: "16:00", note: "Opening", revision: 1 },
+      ],
+      recurring_shifts: [
+        {
+          id: "rec-1",
+          user_id: "u1",
+          job_id: "job-1",
+          start_time: "12:00",
+          end_time: "16:00",
+          repeat_interval_weeks: 0,
+          selected_days: { "5": "2026-11-06" },
+          exclusions: [],
+          date_specific_notes: { "2026-11-13": "Friday team" },
+          revision: 1,
+        },
+      ],
+      events: [
+        { id: "evt-1", user_id: "u1", start_date: "2026-11-12", end_date: "2026-11-12", is_all_day: false, start_time: "18:00", end_time: "19:00", note: "Dentist", revision: 1 },
+      ],
+      payroll_adjustments: [
+        {
+          id: "adj-1",
+          user_id: "u1",
+          job_id: "job-1",
+          amount: 1000,
+          currency: "kr",
+          category: "bonus",
+          tax_treatment: "gross_taxable",
+          description: "Holiday bonus",
+          payout_date: "2026-12-15",
+          revision: 1,
+        },
+      ],
+      shift_shares: [],
+      thread_memberships: [],
+      thread_user_state: [],
+      threads: [],
+    };
+    return {
+      db: {
+        query(table: string) {
+          let rows = tables[table] ?? [];
+          const index = {
+            eq(field: string, value: unknown) {
+              rows = rows.filter((r) => r[field] === value);
+              return index;
+            },
+            gte(field: string, value: string) {
+              rows = rows.filter((r) => (r[field] as string) >= value);
+              return index;
+            },
+            lte(field: string, value: string) {
+              rows = rows.filter((r) => (r[field] as string) <= value);
+              return index;
+            },
+          };
+          const query = {
+            withIndex(_name: string, range?: (q: typeof index) => unknown) {
+              range?.(index);
+              return query;
+            },
+            collect: async () => rows,
+            unique: async () => rows[0] ?? null,
+            first: async () => rows[0] ?? null,
+          };
+          return query;
+        },
+      },
+    };
+  }
+
+  test("get_overview returns jobs with current_pay, recurring shifts, settings and time_zone", async () => {
+    const overview = await run<Row>(getOverviewHandler, makeDb(), {
+      user_id: "u1",
+      include_archived: false,
+      include_pay_history: false,
+    });
+    expect(overview.time_zone).toBe("Europe/Oslo");
+    expect((overview.jobs as Row[])[0]).toMatchObject({
+      id: "job-1",
+      name: "Rema 1000",
+      half_tax_month: "december",
+      current_pay: { type: "custom", hourly_wage: 200, tax_enabled: true, tax_percent: 30, break_enabled: true, break_minutes: 30 },
+    });
+    expect((overview.recurring_shifts as Row[])[0]).toMatchObject({ id: "rec-1", job_name: "Rema 1000", every_weeks: 1 });
+  });
+
+  test("get_schedule returns shifts with unified ids, net pay after half-tax, events and summary", async () => {
+    const sched = await run<Row>(getScheduleHandler, makeDb(), {
+      user_id: "u1",
+      from: "2026-11-10",
+      to: "2026-11-14",
+      include_events: true,
+    });
+    const shifts = sched.shifts as Row[];
+    expect(shifts).toHaveLength(2);
+    // One-off shift: 8h - 30m break = 7.5h * 200 = 1500 gross; paid Dec 15 (half tax 15%) -> 1275 net.
+    expect(shifts[0]).toMatchObject({
+      id: "shift-1",
+      date: "2026-11-10",
+      weekday: "Tuesday",
+      note: "Opening",
+      paid_hours: 7.5,
+      break_minutes: 30,
+      gross_pay: 1500,
+      net_pay: 1275,
+      tax_deducted: 225,
+      effective_tax_percent: 15,
+      half_tax_applied: true,
+      payout_date: "2026-12-15",
+    });
+    // Recurring occurrence: unified id, 4h (under 5.5h break threshold) * 200 = 800 gross -> 680 net.
+    expect(shifts[1]).toMatchObject({
+      id: "recurring:rec-1:2026-11-13",
+      recurring_id: "rec-1",
+      note: "Friday team",
+      paid_hours: 4,
+      gross_pay: 800,
+      net_pay: 680,
+    });
+    expect(sched.summary).toEqual([
+      { currency: "kr", shifts: 2, paid_hours: 11.5, gross_pay: 2300, net_pay: 1955, tax_deducted: 345 },
+    ]);
+    expect(sched.events).toEqual([
+      { id: "evt-1", date: "2026-11-12", all_day: false, start: "18:00", end: "19:00", note: "Dentist" },
+    ]);
+  });
+
+  test("get_earnings supports job filter by name and payout month with adjustments", async () => {
+    const payout = await run<Row>(getEarningsHandler, makeDb(), {
+      user_id: "u1",
+      by: "payout",
+      month: "2026-12",
+      job: "rema 1000",
+    });
+    // Nov 2026 shifts: shift-1 (1500) + 4 Fridays (6, 13, 20, 27 -> 4 * 800 = 3200) = 4700 shifts gross
+    // + 1000 bonus = 5700 gross; all at 15% December half-tax -> 4845 net, 855 tax.
+    expect((payout.totals as Row[])[0]).toMatchObject({
+      currency: "kr",
+      shifts: 5,
+      shifts_gross: 4700,
+      adjustments_gross: 1000,
+      gross_pay: 5700,
+      net_pay: 4845,
+      tax_deducted: 855,
+      half_tax_applied: true,
+    });
   });
 });
