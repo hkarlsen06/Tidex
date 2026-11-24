@@ -29,6 +29,7 @@ import type * as lib_calendarFeed_project from "../lib/calendarFeed/project.js";
 import type * as lib_calendarFeed_types from "../lib/calendarFeed/types.js";
 import type * as lib_clerk from "../lib/clerk.js";
 import type * as lib_columns from "../lib/columns.js";
+import type * as lib_deviceNames from "../lib/deviceNames.js";
 import type * as lib_liveActivityDelivery from "../lib/liveActivityDelivery.js";
 import type * as lib_mcp_args from "../lib/mcp/args.js";
 import type * as lib_mcp_db from "../lib/mcp/db.js";
@@ -129,6 +130,7 @@ declare const fullApi: ApiFromModules<{
   "lib/calendarFeed/types": typeof lib_calendarFeed_types;
   "lib/clerk": typeof lib_clerk;
   "lib/columns": typeof lib_columns;
+  "lib/deviceNames": typeof lib_deviceNames;
   "lib/liveActivityDelivery": typeof lib_liveActivityDelivery;
   "lib/mcp/args": typeof lib_mcp_args;
   "lib/mcp/db": typeof lib_mcp_db;
