@@ -11,6 +11,7 @@ import {
   query,
 } from "./_generated/server";
 import { requireViewer, userByUuid } from "./lib/auth";
+import { deviceName } from "./lib/deviceNames";
 import { getClerkUser, setClerkBan } from "./lib/clerk";
 import { messagePayload } from "./lib/messaging";
 import { enqueue, queueFeedbackResponded, scheduleSender } from "./lib/notify";
@@ -409,7 +410,7 @@ export const userStats = query({
               previousAppVersion: activity.previous_app_version ?? null,
               previousBuildNumber: activity.previous_build_number ?? null,
               osVersion: activity.os_version ?? null,
-              deviceModel: activity.device_model ?? null,
+              deviceModel: deviceName(activity.device_model) ?? null,
               locale: activity.locale ?? null,
               appLanguage: activity.app_language ?? null,
               timeZone: activity.time_zone ?? null,
@@ -808,7 +809,7 @@ export const stats = query({
         },
         breakdown("App version", [...latestDevice.values()].map((d) => d.app_version)),
         collapsed(breakdown("iOS version", openers.map((o) => o.os_version?.match(/^iOS [0-9]+/)?.[0]))),
-        collapsed(breakdown("Device", openers.map((o) => o.device_model))),
+        collapsed(breakdown("Device", openers.map((o) => deviceName(o.device_model)))),
         collapsed(breakdown("App language", openers.map((o) => o.app_language))),
         collapsed(
           breakdown(
